@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  SectionHeader, Button, Notice, StoreRail, CourseCard, FestivalRow, DistrictRow,
+  SectionHeader, TextButton, Notice, StoreRail, CourseCard, FestivalRow, DistrictRow,
 } from "../../design-systems/index.js";
 import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
 
@@ -80,12 +80,20 @@ export function DiscoverPanel({
                   divider={i < shownFestivals.length - 1} onClick={() => onOpenFestival(f)} />
               ))}
             </div>
-            {restFestivals > 0 ? (
-              <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-3) 0 0" }}>
-                <Button variant="outline" size="sm" icon="chevron-down"
-                  onClick={() => setFestivalLimit(festivals.length)}>
-                  축제 {restFestivals}건 더 보기
-                </Button>
+            {/* 펼침/접힘 손잡이. 축제는 한 번에 전부 펼치므로 둘 중 하나만 나온다 */}
+            {restFestivals > 0 || festivalLimit > FESTIVAL_PREVIEW ? (
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                {restFestivals > 0 ? (
+                  <TextButton iconEnd="chevron-down" aria-expanded={false}
+                    onClick={() => setFestivalLimit(festivals.length)}>
+                    축제 {restFestivals}건 더 보기
+                  </TextButton>
+                ) : (
+                  <TextButton iconEnd="chevron-up" aria-expanded
+                    onClick={() => setFestivalLimit(FESTIVAL_PREVIEW)}>
+                    축제 접기
+                  </TextButton>
+                )}
               </div>
             ) : null}
           </>
@@ -143,11 +151,22 @@ export function DiscoverPanel({
               divider={i < Math.min(limit, districts.length) - 1} onClick={() => onOpenDistrict(d)} />
           ))}
         </div>
-        {rest > 0 ? (
-          <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-4) 0" }}>
-            <Button variant="outline" icon="chevron-down" onClick={() => setLimit(n => n + DISTRICT_PAGE_SIZE)}>
-              {rest}곳 더 보기
-            </Button>
+        {/* 이쪽은 축제와 달리 8곳씩 끊어 붙인다 (31곳을 한 번에 펼치면 탭 최하단이라는
+            배치가 무의미해진다). 그래서 펼치는 중에는 [더 보기]와 [접기]가 함께 나온다 —
+            여덟 곳을 더 봤는데 되돌릴 길이 없으면 처음 상태로 가려고 탭을 나갔다 와야 한다. */}
+        {rest > 0 || limit > DISTRICT_PAGE_SIZE ? (
+          <div style={{ display: "flex", justifyContent: "center", gap: "var(--space-4)" }}>
+            {rest > 0 ? (
+              <TextButton iconEnd="chevron-down" aria-expanded={limit > DISTRICT_PAGE_SIZE}
+                onClick={() => setLimit(n => n + DISTRICT_PAGE_SIZE)}>
+                {rest}곳 더 보기
+              </TextButton>
+            ) : null}
+            {limit > DISTRICT_PAGE_SIZE ? (
+              <TextButton tone="muted" iconEnd="chevron-up" onClick={() => setLimit(DISTRICT_PAGE_SIZE)}>
+                접기
+              </TextButton>
+            ) : null}
           </div>
         ) : null}
       </section>
