@@ -127,6 +127,11 @@ export function MainApp({ qr = null, noDistrict = false }) {
      달라지면 저절로 다시 열린다 (FacilitySummary 머리말). */
   const [warnDismissed, setWarnDismissed] = React.useState(null);
 
+  /* 상점가 탭 축제 배너(U-FT-03)를 닫았는지. 같은 이유로 셸이 들고 있다 — DistrictSheet 는
+     상점가 탭일 때만 존재한다. 값은 닫은 **축제의 id** 다: 축제가 다음 것으로 넘어가면
+     다시 보여야 하므로, 기억할 것은 "한 번 닫았다"가 아니라 "이 축제를 닫았다"이다. */
+  const [festivalDismissed, setFestivalDismissed] = React.useState(null);
+
   const [sheetH, setSheetH] = React.useState(0);          /* 시트 실측 높이(px) */
   const [previewH, setPreviewH] = React.useState(0);      /* 미리보기 카드 실측 높이(px) */
   const [filterH, setFilterH] = React.useState(0);        /* 상단 필터 바 실측 높이(px) */
@@ -394,6 +399,25 @@ export function MainApp({ qr = null, noDistrict = false }) {
       receipt={receipt}
       onBack={back}
       onSubmit={submitReport} />
+
+  /* ── S12 축제 전체보기 ─────────────────────────────────────────────────
+         둘러보기 탭은 진행중·예정만 보여주고, 종료를 포함한 전체는 여기서 다룬다.
+         정렬 비교 함수를 데이터 쪽에서 그대로 넘긴다 — 화면이 다시 짜면 둘러보기 탭의
+         기본 순서와 여기 "임박순"이 조용히 어긋난다.
+
+         **아래 `!target` 검사보다 위에 있어야 한다.** 이 화면은 목록이라 대상이 없어서
+         (`#/festivals` 에는 id 가 없다) 그 아래에 두면 항상 null 로 떨어진다. */
+  ) : route.name === "festivals" ? (
+    <FestivalList
+      festivals={FESTIVALS}
+      asOf={FESTIVAL_AS_OF}
+      sortSoon={byFestivalSoon}
+      sortNear={byFestivalNear}
+      onOpen={f => go(`#/festival/${f.id}`)}
+      onBack={back} />
+
+  /* 여기서부터는 전부 대상 하나를 여는 화면이다 — 대상이 없으면 그릴 것이 없다.
+     대상 없이 여는 화면을 새로 붙일 때는 이 줄 **위**에 둔다 (needsTarget 도 함께). */
   ) : !target ? null
     /* ── S07 길찾기 ────────────────────────────────────────────────────
            도착지 상세(S05/S06) 위에 한 칸 더 쌓인다. 뒤로가기를 누르면 그 상세로 돌아온다 —
@@ -430,19 +454,6 @@ export function MainApp({ qr = null, noDistrict = false }) {
         asOf={FESTIVAL_AS_OF}
         onBack={back}
         onReport={() => go("#/report")} />
-
-    /* ── S12 축제 전체보기 ─────────────────────────────────────────────────
-           둘러보기 탭은 진행중·예정만 보여주고, 종료를 포함한 전체는 여기서 다룬다.
-           정렬 비교 함수를 데이터 쪽에서 그대로 넘긴다 — 화면이 다시 짜면 둘러보기 탭의
-           기본 순서와 여기 "임박순"이 조용히 어긋난다. */
-    ) : route.name === "festivals" ? (
-      <FestivalList
-        festivals={FESTIVALS}
-        asOf={FESTIVAL_AS_OF}
-        sortSoon={byFestivalSoon}
-        sortNear={byFestivalNear}
-        onOpen={f => go(`#/festival/${f.id}`)}
-        onBack={back} />
     ) : route.name === "facility" ? (
       <FacilityDetail
         facility={target}
@@ -612,6 +623,15 @@ export function MainApp({ qr = null, noDistrict = false }) {
           closeIcon="map"
           closeLabel="지도"
           topInset={sheetTopInset}
+          /* 조건이 바뀌면 목록 스크롤을 맨 위로 되돌린다 (2026-08-18).
+             [음식]을 보다가 [카페/디저트]를 누르면 목록이 통째로 바뀌는데 스크롤만 남아
+             있으면 카페 1번이 아니라 카페 14번이 열린다 — 위에 무엇이 있는지 모른 채
+             올려봐야 하고, 조건을 좁혔는데 화면은 더 아래로 간 것처럼 느껴진다.
+
+             탭 이름을 앞에 붙인다. 두 탭이 한 시트를 공유해서, 붙이지 않으면 공공시설의
+             [전체]와 상점가의 [전체]가 같은 값이 되어 탭을 옮겨도 스크롤이 남는다.
+             선택 강조(selected)와 시트 스냅은 넣지 않는다 — 목록의 내용이 그대로다. */
+          scrollKey={isFacility ? `facility|${fcType}` : `district|${cat}|${onnuriOnly}|${sort}|${q}`}
           headerExtra={isFacility
             /* U-FC-02 기준 + U-FC-04 안전시설 개수 — 접힘 상태에서도 보여야 하므로 스크롤 영역 밖.
                U-FC-09 원거리 안내도 여기서 난다 — 목록 위 배너가 아니라 해당 유형 아이콘의
@@ -657,7 +677,16 @@ export function MainApp({ qr = null, noDistrict = false }) {
               selectedId={selected ? selected.id : null}
               onPickStore={s => go(`#/store/${s.id}`)}
               onPickFacility={f => go(`#/facility/${f.id}`)}
-              onOpenFestival={() => go(`#/festival/${d.festival.id}`)} />
+              onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
+              /* 닫힌 축제의 id 를 셸이 들고 있다. 시트 안에 두면 탭을 옮길 때 언마운트되어
+                 둘러보기를 갔다 올 때마다 배너가 되살아난다 (U-FC-09 말풍선과 같은 이유).
+                 id 로 비교하는 이유: 축제가 다음 것으로 넘어가면 다시 보여야 한다 —
+                 "한 번 닫았다"가 아니라 "이 축제를 닫았다"가 기억할 값이다. */
+              festivalDismissed={!!d.festival && festivalDismissed === d.festival.id}
+              onDismissFestival={() => {
+                setFestivalDismissed(d.festival.id);
+                say("축제 안내를 닫았습니다. 둘러보기 탭에서 볼 수 있습니다");
+              }} />
           ) : null}
         </Sheet>}
 

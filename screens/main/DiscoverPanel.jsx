@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  SectionHeader, TextButton, Notice, StoreRail, CourseCard, FestivalRow, DistrictRow,
+  SectionHeader, TextButton, Notice, StoreRail, CourseCard, FestivalCard, DistrictRow,
 } from "../../design-systems/index.js";
 import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
 
@@ -28,7 +28,7 @@ import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
  *
  * ── 범위가 섞이는 유일한 탭이다 ────────────────────────────────────────────
  * 축제와 다른 상점가는 상점가 전체, 가운데 두 섹션은 현재 상점가만 다룬다.
- * 그래서 섹션 머리말 오른쪽에 범위를 글자로 적고(`note`), 축제 행에는 상점가명과 거리를
+ * 그래서 섹션 머리말 오른쪽에 범위를 글자로 적고(`note`), 축제 카드에는 상점가명과 거리를
  * 반드시 병기한다 (U-DC-01). 이게 없으면 네 섹션이 모두 둔전 이야기로 읽힌다.
  *
  * U-DC-06 — 현재 상점가가 없으면(임계 거리 초과, U-ST-16) 가운데 두 섹션을 통째로 숨긴다.
@@ -41,6 +41,7 @@ export function DiscoverPanel({
   totalCount = districts.length,
   currentDistrict,               /* 없으면(null) U-DC-06 축소 모드 */
   onOpenFestival, onOpenAllFestivals, onOpenStore, onOpenCourse,
+  base = "../../design-systems/",   /* 축제 카드의 조아용 PNG 경로 기준 */
 }) {
   /* 다른 상점가 목록을 한 번에 그리지 않는다. 목록이 화면 밖으로 한참 이어지면
      탭 최하단이라는 위치 자체가 무의미해진다 (U-DC-04 는 "탭 최하단 배치"를 요구한다) */
@@ -82,12 +83,20 @@ export function DiscoverPanel({
           </Notice>
         ) : (
           <>
-            <div role="list">
-              {shownFestivals.map((f, i) => (
-                /* 축제는 지도 마커가 아니다 — 마커는 상점가 지점이고, 축제는 그 위에 얹힌 정보다.
-                   그래서 여기에는 선택 강조가 없다 (아래 다른 상점가 목록에는 있다) */
-                <FestivalRow key={f.id} festival={f}
-                  divider={i < shownFestivals.length - 1} onClick={() => onOpenFestival(f)} />
+            {/* 홍보 카드로 깐다 (2026-08-18). 전에는 `FestivalRow` 였는데, 축제 섹션이
+                이 탭 맨 위에 있는 이유가 **알리기 위해서**인데 정작 알려지지 않았다 —
+                이름·날짜·거리만 나란한 줄은 이미 그 축제를 아는 사람에게나 쓸모가 있다.
+                카드는 한 건에 화면 한 뼘을 내주고 그 자리에 "가면 무엇을 하나"를 적는다.
+
+                그래서 펼침 기본값이 2건이다 (`FESTIVAL_PREVIEW`). 카드 두 장이면 아래
+                세 섹션이 아직 첫 화면 언저리에 남고, 나머지는 [더 보기]가 그 자리에서 편다.
+                축제는 지도 마커가 아니므로(마커는 상점가 지점이다) 선택 강조가 없다. */}
+            <div role="list" style={{ display: "flex", flexDirection: "column",
+              gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
+              {shownFestivals.map(f => (
+                <FestivalCard key={f.id} festival={f} base={base}
+                  tone={f.tone} icon={f.icon} pose={f.pose} hook={f.hook}
+                  onClick={() => onOpenFestival(f)} />
               ))}
             </div>
             {/* 펼침/접힘 손잡이. 축제는 한 번에 전부 펼치므로 둘 중 하나만 나온다 */}

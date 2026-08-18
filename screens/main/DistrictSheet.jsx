@@ -9,26 +9,32 @@ import { PAGE_SIZE } from "./config.js";
  *
  * 시트는 **결과와 콘텐츠만** 담는다. 검색과 업종 칩은 지도 위 상단 필터 바가 갖고 있다.
  *
- *   [시트 헤더]     상점가명 · 소재지 · 335곳 · 온누리 139곳   ← 항상 보임 (스크롤 영역 밖)
+ *   [시트 헤더]     상점가명 · 소재지                          ← 항상 보임 (스크롤 영역 밖)
  *   ─────────────────────────────────────────────
- *   우리 상점가 축제 배너 (U-FT-03)                           ← 스크롤로 올라간다
+ *   우리 상점가 축제 배너 (U-FT-03) [X]                       ← 닫을 수 있다. 스크롤로 올라간다
  *   ─────────────────────────────────────────────
- *   전체 335곳                    [거리순|인기순]             ← 여기부터 sticky
+ *   전체 335곳                          ⇅ 거리순              ← 여기부터 sticky
  *   🎫 온누리 가맹점만 139곳                    ●—            │  (ListControls)
  *   ─────────────────────────────────────────────
  *   점포 목록 · 무한 스크롤 (20곳씩)
  *   인근 편의시설 / 기준일자·고지
  *
+ * 점포 수와 온누리 수는 헤더에서 뺐다 (2026-08-18) — 이 두 줄이 같은 것을 말하고 있었고,
+ * 이쪽은 조건을 걸면 함께 줄어드는 살아 있는 수다 (DistrictSummary 주석).
+ *
  * 정렬과 온누리가 여기 있는 이유(5-3 #4): 둘 다 "목록에 적용되는 조건"이라
  * 지도가 아니라 목록에 붙어야 성격이 분명해진다. 지도 위도 한 줄 아낀다.
  *
  * 여기서 빠진 것 (기능명세서 v1.0):
- *   신규 및 인기 매장  → 둘러보기 탭 S04 (U-DC-02). 여기서는 정렬 토글이 그 역할을 한다
+ *   신규 및 인기 매장  → 둘러보기 탭 S04 (U-DC-02). 여기서는 정렬 고르기가 그 역할을 한다
  *   다른 상점가 목록   → 둘러보기 탭 S04 최하단 (U-ST-14 → U-DC-04)
  */
 export function DistrictSheet({
   data, rows, cat, onnuriOnly, setOnnuriOnly, sort, setSort, q,
   selectedId, onPickStore, onPickFacility, onOpenFestival,
+  /* 축제 배너 닫기 (2026-08-18). 닫힘 상태는 셸이 들고 있다 — 이 시트는 탭을 옮기면
+     언마운트되므로 여기에 두면 둘러보기를 갔다 올 때마다 배너가 되살아난다 */
+  festivalDismissed = false, onDismissFestival,
 }) {
   const [limit, setLimit] = React.useState(PAGE_SIZE);
   const sentinel = React.useRef(null);
@@ -59,10 +65,15 @@ export function DistrictSheet({
   return (
     <div style={{ paddingBottom: "var(--space-9)" }}>
       {/* ── 우리 상점가 축제 배너 (U-FT-03) — 현재 상점가 1건.
-             둘러보기 탭의 32개소 전체 축제 목록과 범위가 다르므로 중복이 아니다 ── */}
-      <div style={{ padding: "0 var(--gutter-screen) var(--space-3)" }}>
-        <FestivalBanner festival={data.festival} onClick={onOpenFestival} />
-      </div>
+             둘러보기 탭의 상점가 전체 축제 목록과 범위가 다르므로 중복이 아니다.
+             닫으면 자리째 사라진다 — 축제에 관심이 없는 사람에게는 점포 목록 위에
+             늘 얹혀 있는 두 줄이었다. 다시 보려면 둘러보기 탭에 그대로 있다. ── */}
+      {data.festival && !festivalDismissed ? (
+        <div style={{ padding: "0 var(--gutter-screen) var(--space-3)" }}>
+          <FestivalBanner festival={data.festival} onClick={onOpenFestival}
+            onDismiss={onDismissFestival} />
+        </div>
+      ) : null}
 
       {/* ── 목록 제어 (sticky) — 결과 수 · 정렬(U-ST-15) · 온누리(U-ST-11) ── */}
       <ListControls

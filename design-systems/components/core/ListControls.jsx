@@ -1,5 +1,5 @@
 import React from "react";
-import { SegmentedTabs } from "../navigation/SegmentedTabs.jsx";
+import { SortSelect } from "./SortSelect.jsx";
 
 /* 목록 바로 위에 붙는 제어 줄 — 결과 수 + 정렬 토글, 그리고 그 아래 보조 필터 한 줄.
  *
@@ -15,6 +15,11 @@ import { SegmentedTabs } from "../navigation/SegmentedTabs.jsx";
  *
  * sticky 는 시트의 스크롤 컨테이너 기준이다. 335개를 스크롤하는 동안에도
  * 정렬과 온누리 조건은 손에 닿아야 한다.
+ *
+ * ── 정렬은 분절 토글이 아니라 고르기다 (2026-08-18) ──────────────────────────
+ * [거리순|인기순] 두 칸짜리 알약을 쓰다가 `SortSelect`(글자 + ⇅, 눌러서 고르기)로 바꿨다.
+ * 칸 둘이 나란하면 바로 아랫줄의 온누리 토글처럼 **둘 다 켤 수 있는 것**으로 보이는데,
+ * 정렬은 하나만 고르는 축이다. 가로도 짧아져 결과 수가 밀리지 않는다. (SortSelect 주석)
  */
 export function ListControls({ title, sort, sortOptions = [], onSortChange, children, sticky = true, style, ...rest }) {
   return (
@@ -22,13 +27,15 @@ export function ListControls({ title, sort, sortOptions = [], onSortChange, chil
       position: sticky ? "sticky" : "static", top: 0, zIndex: 2,
       background: "var(--surface-card)",
       borderBottom: "var(--stroke-hairline) solid var(--border-default)",
-      padding: "var(--space-2) var(--gutter-screen) var(--space-1)", ...style }} {...rest}>
+      /* 위 여백이 space-2 였다 (2026-08-18 → space-1). 바로 위 시트 헤더도 아래 여백을
+         갖고 있어 둘이 겹치면 소재지 한 줄과 결과 수 사이가 스무 남짓 벌어졌다.
+         제어 줄 자체는 안쪽 행이 44px(--tap-min)이라 여백을 줄여도 손가락 자리가 좁아지지 않는다 */
+      padding: "var(--space-1) var(--gutter-screen) var(--space-1)", ...style }} {...rest}>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-3)", minHeight: "var(--tap-min)" }}>
         <h3 style={{ font: "var(--type-title-3)", letterSpacing: "var(--ls-snug)", minWidth: 0 }}>{title}</h3>
         {sortOptions.length ? (
-          <SegmentedTabs variant="pill" items={sortOptions} value={sort} onChange={onSortChange}
-            style={{ flex: "0 0 auto" }} aria-label="정렬 기준" />
+          <SortSelect options={sortOptions} value={sort} onChange={onSortChange} label="정렬 기준" />
         ) : null}
       </div>
 

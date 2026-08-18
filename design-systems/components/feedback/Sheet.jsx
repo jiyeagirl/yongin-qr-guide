@@ -26,11 +26,28 @@ export const SNAP_HEIGHT = { collapsed: "var(--sheet-collapsed)", half: "var(--s
    (탭바가 들어오며 절반이 55% → 62% 로 바뀌었을 때 이 표가 따라오지 않았다. 2026-08-14 정정) */
 const SNAP_RATIO = { collapsed: 0.18, half: 0.37, full: 1 };
 
+/* scrollKey — 이 값이 바뀌면 목록 스크롤을 맨 위로 되돌린다 (2026-08-18).
+   조건(업종 칩 · 온누리 · 정렬 · 검색어 · 시설 유형)이 바뀌면 목록은 **다른 목록**이 되는데,
+   스크롤 위치만 남아 있으면 새 목록의 한가운데가 열린다. 방금 [카페/디저트]를 누른 사람은
+   카페 1번이 아니라 카페 14번을 보게 되고, 위에 무엇이 있는지 모른 채 스크롤을 올려야 한다.
+
+   호출하는 쪽이 "무엇이 바뀌면 되돌릴지"를 정한다 — 시트는 자기 안에 무슨 목록이 들었는지
+   모른다. 값은 조건들을 이어붙인 문자열이면 충분하다.
+
+   스크롤 위치를 지우는 것은 되돌릴 수 없는 조작이라, **눌러서 목록이 바뀔 때만** 준다.
+   시트 스냅이나 선택 강조처럼 목록의 내용이 그대로인 변화는 여기 넣지 않는다. */
 export function Sheet({ open = true, title, subtitle, headerExtra, children, snap = "half", onSnapChange, onHeightChange,
-  onClose, closeIcon = "x", closeLabel = "닫기", scrim = false, topInset = 0, style, ...rest }) {
+  onClose, closeIcon = "x", closeLabel = "닫기", scrim = false, topInset = 0, scrollKey, style, ...rest }) {
   const el = React.useRef(null);
+  const body = React.useRef(null);
   const drag = React.useRef(null);
   const [dragH, setDragH] = React.useState(null); /* 드래그 중에만 px 높이로 대체된다 */
+
+  /* 부드러운 스크롤을 쓰지 않는다. 목록이 이미 다른 내용으로 바뀐 뒤라, 지나가며 보여줄
+     것이 없는데 화면만 흐른다 — 되레 목록이 바뀐 순간을 놓치게 된다. */
+  React.useEffect(() => {
+    if (body.current) body.current.scrollTop = 0;
+  }, [scrollKey]);
 
   /* 실제 높이를 부모에게 보고한다. 스냅 트랜지션(--dur-slow) 중에도 계속 갱신해야
      지도 패딩이 시트를 뒤늦게 따라가지 않는다.
@@ -130,7 +147,10 @@ export function Sheet({ open = true, title, subtitle, headerExtra, children, sna
           <span style={{ display: "block", width: 44, height: 5, borderRadius: 999, background: "var(--border-strong)", margin: "0 auto" }} />
         </div>
         {title ? (
-          <div style={{ flex: "0 0 auto", padding: "0 var(--gutter-screen) var(--space-3)" }}>
+          /* 아래 여백을 space-3 → space-2 로 줄였다 (2026-08-18). 헤더 바로 밑이 목록
+             제어 줄(ListControls)인데, 둘 다 여백을 넉넉히 잡고 있어 소재지 한 줄과
+             결과 수 사이가 스무 남짓 벌어져 있었다 — 붙어 있어야 할 두 줄이다. */
+          <div style={{ flex: "0 0 auto", padding: "0 var(--gutter-screen) var(--space-2)" }}>
             {/* 제목 줄만 닫기 버튼과 폭을 나눈다 */}
             <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -153,7 +173,7 @@ export function Sheet({ open = true, title, subtitle, headerExtra, children, sna
             {headerExtra}
           </div>
         ) : null}
-        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>{children}</div>
+        <div ref={body} style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}>{children}</div>
       </section>
     </>
   );

@@ -106,6 +106,32 @@ const FESTIVAL_RAW = [
     "보정동 중심상가 일원", "빛거리 점등식 · 카페거리 할인전 · 겨울 마켓"],
 ];
 
+/* 축제 홍보 카드(S12 `FestivalCard`)의 겉모습과 한 줄 홍보 문구.
+   [카드 바탕색, 성격 아이콘, 조아용 포즈, 홍보 문구]
+
+   ── 왜 데이터에 두나 ────────────────────────────────────────────────────
+   여섯 축제가 같은 카드 여섯 장으로 깔리면 목록을 훑는 사람은 하나도 읽지 않는다.
+   축제 목록은 고르는 자리가 아니라 **알리는 자리**라, 카드마다 다르게 보여야 한다.
+   그 "다름"은 화면이 아니라 축제의 성질에서 나오므로 여기 적는다 — 화면이 인덱스로
+   색을 돌리면 축제 하나가 추가될 때 나머지 다섯의 색이 전부 밀린다.
+
+   `hook` 은 아래 PROGRAMS 표를 한 문장으로 줄인 것이다. 프로그램 이름을 나열하지 않고
+   **가면 무엇을 하게 되는지**로 적는다 — "먹거리 장터·경품행사·어르신 한마당"은 목록이지
+   초대가 아니다. 카드에서 이 한 줄만이 "왜 가나"에 답한다.
+
+   포즈는 `MASCOT_FULL`(1:1 전신)에서만 고른다. 상반신 아트워크를 섞으면 카드마다
+   캐릭터 크기가 달라 보인다 (Mascot.jsx 주석).
+
+   바탕색에 초록이 없는 것은 조아용이 초록 용이라서다 (colors.css 의 --fest-* 주석). */
+const LOOK = {
+  "ft-everland":  ["amber", "music",     "excited",   "부스 사이로 버스킹이 흐르고, 아이들 체험부스도 종일 열려요"],
+  "ft-guseong":   ["ink",   "sparkles",  "surprised", "사흘 내내 야시장. 해 지면 골목 전체에 불이 들어옵니다"],
+  "ft-dunjeon":   ["berry", "utensils",  "thumbsup",  "먹거리 부스 20여 곳, 상인회가 직접 차린 시장통 잔치"],
+  "ft-namsa":     ["cream", "wheat",     "front",     "갓 수확한 농산물을 밭값에, 김장 체험은 40명 선착순이에요"],
+  "ft-dongcheon": ["teal",  "ghost",     "shy",       "분장하고 오면 더 재미있는 핼러윈 퍼레이드, 참가는 자유"],
+  "ft-bojeong":   ["blue",  "lightbulb", "curious",   "점등식으로 시작하는 겨울 밤, 카페거리 음료도 할인해요"],
+};
+
 /* S09 축제 상세의 프로그램 (U-FT-02 "프로그램 개요"). 시간대별로 나눈다 —
    축제에 가는 사람이 실제로 묻는 것은 "무엇을 하나"가 아니라 "몇 시에 가면 뭘 보나"다.
    한 줄 요약(FESTIVAL_RAW 의 program)만으로는 그 답이 나오지 않아 따로 둔다.
@@ -185,8 +211,11 @@ function label(start, end) {
 const FESTIVAL_BY_DISTRICT = FESTIVAL_RAW.reduce((o, [did, name, start, end, time, place, program]) => {
   const id = `ft-${did}`;
   const extra = EXTRAS[id] || {};
+  const [tone, icon, pose, hook] = LOOK[id] || [];
   o[did] = {
     id, districtId: did, name, start, end, time, place, program,
+    /* 홍보 카드(S12)가 쓰는 겉모습. 없으면 카드가 기본값으로 그린다 */
+    tone, icon, pose, hook,
     state: stateOf(start, end),
     date: `${label(start, end)} ${time}`,
     /* 기간을 시간과 분리해 둔다 — 상세(S09)의 정보 표는 "기간"과 "시간"을 다른 줄에 적는다 */

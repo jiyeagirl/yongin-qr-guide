@@ -18,4 +18,25 @@
 --border-outline:var(--yong-ink-900);--border-default:var(--yong-ink-100);--border-strong:var(--yong-ink-200);--border-brand:var(--yong-green-700);
 --state-success:var(--yong-green-700);--state-success-soft:var(--yong-green-100);--state-info:var(--yong-teal-500);--state-info-soft:var(--yong-teal-100);--state-warning:var(--yong-amber-500);--state-warning-soft:var(--yong-amber-100);--state-danger:var(--yong-red-500);--state-danger-soft:var(--yong-red-100);
 --focus-ring:var(--yong-teal-500);
+
+/* ── 축제 홍보 카드 6색 (FestivalCard) ────────────────────────────────────────
+   축제 목록(S12)에서 카드마다 다른 바탕을 깔아 여섯 건이 한 덩어리로 읽히지 않게 한다.
+   색은 축제를 **구별**할 뿐 아무 뜻도 담지 않는다 — 상태(진행중·예정·종료)는 카드 안의
+   배지가 글자로 말한다. 색만으로 상태를 읽게 하면 색을 못 보는 사람에게 목록이 무너진다.
+
+   초록 계열이 없다. 카드 위에 조아용(초록 용)이 서는데 초록 바탕에서는 캐릭터가
+   묻힌다 — 검은 외곽선이 있어도 몸통이 배경에 잠긴다.
+
+   `-ink` 는 그 바탕 위 글자색, `-veil` 은 그 위에 얹는 배지·구분선의 반투명 막이다.
+   밝은 바탕(cream·amber)은 검은 막, 어두운 바탕은 흰 막을 쓴다 — 반대로 쓰면 사라진다. */
+--fest-teal-bg:var(--yong-teal-900);--fest-teal-ink:var(--yong-white);--fest-teal-veil:rgba(255,255,255,.18);
+--fest-ink-bg:var(--yong-ink-900);--fest-ink-ink:var(--yong-white);--fest-ink-veil:rgba(255,255,255,.16);
+--fest-berry-bg:var(--yong-red-700);--fest-berry-ink:var(--yong-white);--fest-berry-veil:rgba(255,255,255,.20);
+--fest-blue-bg:var(--yong-blue-500);--fest-blue-ink:var(--yong-white);--fest-blue-veil:rgba(255,255,255,.22);
+--fest-amber-bg:var(--yong-amber-500);--fest-amber-ink:var(--yong-ink-900);--fest-amber-veil:rgba(22,34,28,.13);
+--fest-cream-bg:var(--yong-cream-700);--fest-cream-ink:var(--yong-ink-900);--fest-cream-veil:rgba(22,34,28,.13);
+
+/* 종료된 축제는 색을 거둔다. 지난 일이 진행 중인 축제와 같은 무게로 눈에 들어오면
+   목록 맨 위의 급한 건이 묻힌다. 대신 지우지는 않는다 — "그거 언제였지"를 확인하러 온다 */
+--fest-done-bg:var(--yong-ink-50);--fest-done-ink:var(--yong-ink-500);--fest-done-veil:rgba(22,34,28,.10);
 }
