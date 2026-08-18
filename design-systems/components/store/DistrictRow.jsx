@@ -69,7 +69,7 @@ export function DistrictRow({ district, onClick, selected = false, divider = tru
       ) : "chevron"}
       /* 지도에서 상점가 마커를 탭했을 때 목록의 같은 줄이 함께 켜진다 (점포·시설과 같은 규칙) */
       style={selected
-        ? { background: "var(--brand-primary-soft)", borderRadius: "var(--radius-sm)",
+        ? { background: "var(--surface-selected)", borderRadius: "var(--radius-sm)",
             paddingLeft: "var(--space-2)", paddingRight: "var(--space-2)", ...style }
         : style}
       {...rest} />

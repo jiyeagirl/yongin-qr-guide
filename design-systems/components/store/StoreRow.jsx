@@ -16,7 +16,7 @@ export function StoreRow({ store, onClick, selected = false, divider = true, sty
       title={store.name}
       tag={store.onnuri ? <OnnuriBadge size="sm" /> : null}
       meta={`${store.biz} · 약 ${store.dist}m, 도보 ${walk}분 · ${store.addr}`}
-      style={selected ? { background: "var(--brand-primary-soft)", borderRadius: "var(--radius-sm)", paddingLeft: "var(--space-2)", paddingRight: "var(--space-2)", ...style } : style}
+      style={selected ? { background: "var(--surface-selected)", borderRadius: "var(--radius-sm)", paddingLeft: "var(--space-2)", paddingRight: "var(--space-2)", ...style } : style}
       {...rest} />
   );
 }

@@ -11,6 +11,18 @@
    끊김 없이 도는 막대는 "멈춘 것"과 구분이 안 된다. */
 @keyframes yong-loadbar{0%{left:-40%}50%{left:100%}100%{left:100%}}
 
+/* 선택된 지도 핀 아래에서 번지는 물결 (KakaoMap). 핀이 여럿 몰린 곳에서 목록으로 고른
+   하나를 찾아내는 장치다 — 색만 바꾸면 옆 핀에 파묻힌다.
+   한 번에 그치지 않고 계속 도는 이유: 사용자가 카드를 읽다가 지도로 눈을 옮기는 사이에
+   끝나버리면 못 본다. 다만 아주 느리게(2.4s) 돌아 지도를 읽는 데 방해가 되지 않게 한다.
+   움직임 최소화 요청은 아래 media 가 한 번에 끄는데, 그때는 요소의 **바탕 모습**(은은한
+   원, KakaoMap 의 haloElement)이 그 자리에 남아 강조가 사라지지 않는다. */
+@keyframes yong-pin-pulse{
+  0%{transform:scale(.55);opacity:.85}
+  70%{transform:scale(1);opacity:.12}
+  100%{transform:scale(1);opacity:0}
+}
+
 /* 움직임 최소화 요청 존중 — 컴포넌트마다 matchMedia 를 다시 쓰지 않아도 되도록 여기서 한 번에 끈다.
    0.01ms 로 두는 이유는 0s 로 두면 animationend 를 기다리는 코드가 영영 깨어나지 않기 때문이다. */
 @media (prefers-reduced-motion: reduce){

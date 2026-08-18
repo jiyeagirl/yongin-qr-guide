@@ -17,16 +17,39 @@ import { FACILITY_LABELS, FACILITY_PIN } from "../core/FacilityIcon.jsx";
 
 const PIN_W = 28, PIN_H = 36;
 
-function pinImage(kakao, fill) {
+/* scale 은 고른 핀을 키울 때만 쓴다 (--pin-selected-scale). viewBox 는 그대로 두고
+   상자만 키우므로 실루엣이 달라지지 않는다 — 같은 핀이 앞으로 나온 것처럼 보여야 한다.
+
+   테두리는 **모든 핀이 흰색 하나**다. 고른 핀만 회색·잉크로 바꿔 봤는데(2026-08-18 두 번),
+   테두리 색이 다른 순간 같은 무리의 핀이 아니라 다른 종류의 표시로 읽혔다.
+   고른 것을 알리는 일은 색·물결·크기 셋이 맡고, 테두리는 "이것도 핀이다"를 맡는다. */
+function pinImage(kakao, fill, scale = 1) {
   const stroke = token("--pin-stroke", "#ffffff");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${PIN_W}" height="${PIN_H}" viewBox="0 0 28 36">`
+  const w = Math.round(PIN_W * scale), h = Math.round(PIN_H * scale);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 28 36">`
     + `<path d="M14 34.5S25.5 21 25.5 13.5a11.5 11.5 0 1 0-23 0C2.5 21 14 34.5 14 34.5Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`
     + `<circle cx="14" cy="13.5" r="4.2" fill="${stroke}"/></svg>`;
   return new kakao.maps.MarkerImage(
     "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg),
-    new kakao.maps.Size(PIN_W, PIN_H),
-    { offset: new kakao.maps.Point(PIN_W / 2, PIN_H) }
+    new kakao.maps.Size(w, h),
+    { offset: new kakao.maps.Point(w / 2, h) }
   );
+}
+
+/* 고른 핀 아래에서 번지는 물결. 핀이 몰린 곳에서 "이 중에 어느 것인지"를 알리는 장치다 —
+   색만 바꾸면 옆 핀에 파묻힌다 (tokens/icons.css 의 --pin-selected-* 주석).
+   좌표 위에 중심을 맞추므로 yAnchor 0.5, 핀보다 뒤(zIndex 낮게)에 깐다. */
+function haloElement() {
+  const size = token("--pin-selected-halo-size", "72px");
+  const el = document.createElement("div");
+  /* 바탕 모습(opacity .18)이 **움직임을 껐을 때의 모습**이다. 움직임 최소화를 요청한
+     기기에서는 motion.css 가 반복을 1회로 줄이는데, 애니메이션이 끝나면 요소는 바탕
+     모습으로 돌아온다 — 그래서 물결 대신 은은한 원이 그 자리에 남는다. 여기에
+     opacity 1 을 두면 그 기기에서만 짙은 원판이 핀을 덮는다. */
+  el.style.cssText = `width:${size};height:${size};border-radius:999px;opacity:.18;`
+    + `background:var(--pin-selected-halo);pointer-events:none;`
+    + `animation:yong-pin-pulse 2.4s var(--ease-out) infinite`;
+  return el;
 }
 
 function clusterStyles() {
@@ -180,7 +203,9 @@ export function KakaoMap({
       images.current = {
         store: pinImage(kakao, token("--pin-store", "#5b6a62")),
         onnuri: pinImage(kakao, token("--pin-store-onnuri", "#179496")),
-        selected: pinImage(kakao, token("--pin-selected", "#216e48")),
+        /* 고른 핀만 밝은 민트 + 조금 큰 크기다 — 색 하나로는 옆 핀에 파묻힌다 */
+        selected: pinImage(kakao, token("--pin-selected", "#66ce94"),
+          parseFloat(token("--pin-selected-scale", "1.12")) || 1.12),
         aed: pinImage(kakao, token("--pin-aed", "#e5544b")),
         shelter: pinImage(kakao, token("--pin-shelter", "#b23a33")),
         toilet: pinImage(kakao, token("--pin-toilet", "#0f6e70")),
@@ -487,22 +512,53 @@ export function KakaoMap({
     });
   }, [selectedId, courseDoneIds, course, ready]);
 
-  /* 선택 강조. 이전 선택만 되돌리고 새 선택만 칠한다 —
-     335개를 매번 훑으면 필터를 바꿀 때마다 불필요한 비용이 든다.
-     점포와 시설이 같은 markers 표에 있으므로 두 탭이 같은 코드를 탄다. */
-  const prevSelected = React.useRef(null);
+  /* ── 선택 강조 (2026-08-18 개정) ──────────────────────────────────────────
+     전에는 핀 색만 짙은 초록으로 바꿨다. 그것으로는 **몰려 있는 곳에서 못 찾는다** —
+     점포 335곳이 골목 하나에 있어 화면에 핀 열 개가 겹치는데, 그중 하나가 초록에서
+     짙은 초록이 된 것은 옆에 두고 비교해야 보인다. 목록에서 고른 사람은 애초에 어느
+     핀인지 모르니 비교할 대상이 없다. 셋을 함께 준다:
+
+       1. 크기   --pin-selected-scale (1.34배). 색을 못 봐도 전해진다.
+       2. 색     --pin-selected
+       3. 물결   핀 아래에서 번지는 원 (--pin-selected-halo, yong-pin-pulse)
+
+     **클러스터에서 꺼낸다.** 점포 마커는 클러스터러 안에 있어서, 고른 핀이 뭉침 숫자
+     뒤에 그대로 숨는 경우가 있었다 — 카드는 떴는데 지도에는 아무 변화가 없다. 고른
+     동안만 클러스터에서 빼 지도에 직접 얹고, 놓으면 되돌린다.
+
+     정리(cleanup)로 되돌리는 이유: `stores` 가 바뀌면 위 마커 효과가 clusterer 를
+     통째로 비우는데, React 는 **모든 정리를 먼저 돌린 뒤** 효과 본문을 돌린다.
+     그래서 비우기 전에 이 마커가 제자리로 돌아가고, 이후 새 마커로 다시 칠해진다.
+     (그 순서 때문에 deps 에 stores·facilities·districts 가 함께 들어 있다.) */
   React.useEffect(() => {
-    if (!images.current) return;
-    const paint = (id, on) => {
-      const mk = storeMarkers.current.get(id) || facilityMarkers.current.get(id) || districtMarkers.current.get(id);
-      if (!mk) return;
-      mk.setImage(on ? images.current.selected : baseImage(byId.get(id)));
-      mk.setZIndex(on ? 5 : 1);
+    const k = kakaoRef.current, m = map.current, cl = clusterer.current;
+    if (!k || !m || !images.current || !selectedId) return undefined;
+
+    const inCluster = storeMarkers.current.has(selectedId);
+    const mk = storeMarkers.current.get(selectedId)
+      || facilityMarkers.current.get(selectedId)
+      || districtMarkers.current.get(selectedId);
+    if (!mk) return undefined;
+
+    if (inCluster && cl) { cl.removeMarker(mk); mk.setMap(m); }
+    mk.setImage(images.current.selected);
+    mk.setZIndex(9);
+
+    const halo = new k.maps.CustomOverlay({
+      map: m, position: mk.getPosition(), content: haloElement(),
+      yAnchor: 0.5, xAnchor: 0.5, zIndex: 1,
+    });
+
+    return () => {
+      halo.setMap(null);
+      /* 목록이 걸러지며 그 사이 대상이 사라졌을 수 있다 — 이미지를 못 찾으면 그냥 둔다.
+         어차피 바로 뒤에 마커 효과가 표를 새로 짓는다 */
+      const base = baseImage(byId.get(selectedId));
+      if (base) mk.setImage(base);
+      mk.setZIndex(inCluster ? 1 : 2);
+      if (inCluster && cl) { mk.setMap(null); cl.addMarker(mk); }
     };
-    if (prevSelected.current && prevSelected.current !== selectedId) paint(prevSelected.current, false);
-    if (selectedId) paint(selectedId, true);
-    prevSelected.current = selectedId;
-  }, [selectedId, byId, baseImage, ready]);
+  }, [selectedId, byId, baseImage, ready, stores, facilities, districts]);
 
   if (failed) {
     /* SDK 를 못 띄웠을 때도 화면 검증은 계속되어야 한다 — 레이어 구조가 동일한 목업으로 대체 */

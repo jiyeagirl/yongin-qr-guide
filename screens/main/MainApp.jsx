@@ -260,6 +260,32 @@ export function MainApp({ qr = null, noDistrict = false }) {
     requestAnimationFrame(() => requestAnimationFrame(() => focus(item.lat, item.lng)));
   }, [snap, focus]);
 
+  /* ── 목록 행을 눌러도 마커를 누른 것과 같다 (2026-08-18) ─────────────────────
+     전에는 행을 누르면 곧장 상세(S05/S06)로 갔다. 그런데 목록과 지도는 **같은 배열**을
+     보고 있고(storeMarkers === storeRows), 목록에서 고른 것이 지도의 어디인지가 목록만
+     봐서는 끝내 드러나지 않았다 — 이 서비스가 답하는 질문이 "저기 어디 있나"인데,
+     행을 누르면 지도를 지나쳐 상세로 건너뛰었다.
+
+     이제 행을 누르면 그 마커가 켜지고, 지도가 그리로 움직이고, 카드가 뜬다.
+     거기서 [길찾기]와 [상세 보기]로 갈라진다 — 마커를 눌렀을 때와 글자 하나까지 같다.
+     상세로 가는 길이 한 번 더 눌러야 하는 길이 됐지만, 그 한 번이 **어디인지 보여주는**
+     한 번이다. 시트가 전체 스냅이면 절반으로 내려 지도와 카드가 드러난다 (pickOnMap).
+
+     아래 두 어댑터는 목록과 지도가 함께 쓴다. 한쪽에만 두면 같은 것을 눌렀는데 카드에
+     적히는 말이 눌린 자리에 따라 달라진다. */
+  const pickFacility = React.useCallback(f => pickOnMap({
+    /* 편의시설은 미리보기 카드를 쓰되 아이콘 체계는 시설 4종 쪽을 따른다 (5-2).
+       biz 자리에 유형 이름을, addr 자리에 상세 위치를 넣는다 — 거리는 카드가 따로 표기한다 */
+    ...f, kind: "facility", biz: FACILITY_LABELS[f.type] || "공공시설", addr: f.detail,
+  }), [pickOnMap]);
+
+  /* 상점가 마커도 같은 카드를 쓴다. 다만 "길찾기"가 아니라 "이 상점가 보기"다 —
+     상점가는 점이 아니라 구역이라 도보 경로의 도착지가 될 수 없다 (확정 결정사항 6). */
+  const pickDistrict = React.useCallback(x => pickOnMap({
+    ...x, biz: x.festival ? `${x.gu} · ${x.festival.name}` : x.gu,
+    addr: `${x.area} · 점포 ${x.stores}곳${x.onnuri != null ? `, 온누리 ${x.onnuri}곳` : ""}`,
+  }), [pickOnMap]);
+
   /* 시트 높이가 바뀌면 선택된 마커를 다시 시야로 끌어올린다 (스냅 이동 후에도 안 가려지게) */
   React.useEffect(() => {
     if (!selected || snap === "full") return;
@@ -526,18 +552,10 @@ export function MainApp({ qr = null, noDistrict = false }) {
           topPad={mapPadTop}
           bottomPad={mapPadBottom}
           mapRef={mapApi}
+          /* 목록 행도 같은 셋을 부른다 (위 pickFacility·pickDistrict 주석) */
           onSelectStore={pickOnMap}
-          /* 편의시설도 같은 미리보기 카드를 쓰되 아이콘 체계는 시설 4종 쪽을 따른다 (5-2).
-             biz 자리에 유형 이름을, addr 자리에 상세 위치를 넣는다 — 거리는 카드가 따로 표기한다 */
-          onSelectFacility={f => pickOnMap({
-            ...f, kind: "facility", biz: FACILITY_LABELS[f.type] || "공공시설", addr: f.detail,
-          })}
-          /* 상점가 마커도 같은 미리보기 카드를 쓴다. 다만 "길찾기"가 아니라 "이 상점가 보기"다 —
-             상점가는 점이 아니라 구역이라 도보 경로의 도착지가 될 수 없다 (확정 결정사항 6). */
-          onSelectDistrict={x => pickOnMap({
-            ...x, biz: x.festival ? `${x.gu} · ${x.festival.name}` : x.gu,
-            addr: `${x.area} · 점포 ${x.stores}곳${x.onnuri != null ? `, 온누리 ${x.onnuri}곳` : ""}`,
-          })}
+          onSelectFacility={pickFacility}
+          onSelectDistrict={pickDistrict}
         />
 
         {/* 결정 4 — 상단 필터 바 (z 300). 두 탭 모두 여기에 필터를 둔다. 시트가 어디에 있든
@@ -655,7 +673,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
               cat={fcType}
               selectedId={selected ? selected.id : null}
               asOf={FACILITY_AS_OF}
-              onPick={f => go(`#/facility/${f.id}`)} />
+              /* 상세로 곧장 가지 않는다 — 마커를 누른 것과 같이 지도가 그리로 움직이고
+                 카드가 뜬다. 상세는 그 카드의 [상세 보기]가 맡는다 (pickFacility 주석) */
+              onPick={pickFacility} />
           ) : isDistrict && !hasDistrict ? (
             /* ── S03-E 상점가 없음 안내 (U-ST-16) ─────────────────────────
                    점포 목록 자리를 통째로 대신한다. 탭은 그대로 둔다 —
@@ -675,7 +695,10 @@ export function MainApp({ qr = null, noDistrict = false }) {
               sort={sort} setSort={setSort}
               q={q}
               selectedId={selected ? selected.id : null}
-              onPickStore={s => go(`#/store/${s.id}`)}
+              /* 점포 행도 마커를 누른 것과 같다 (pickFacility 주석) */
+              onPickStore={pickOnMap}
+              /* "인근 편의시설"만 예외로 곧장 상세로 간다. 상점가 탭은 점포 레이어를 갖고
+                 있어 시설 마커가 지도에 없으므로(U-CM-17), 카드를 띄워도 가리킬 핀이 없다 */
               onPickFacility={f => go(`#/facility/${f.id}`)}
               onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
               /* 닫힌 축제의 id 를 셸이 들고 있다. 시트 안에 두면 탭을 옮길 때 언마운트되어

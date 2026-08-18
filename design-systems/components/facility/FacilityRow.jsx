@@ -34,7 +34,7 @@ export function FacilityRow({ facility, onClick, selected = false, divider = tru
         <span style={{ display: "block" }}>{f.detail}{f.hours ? ` · ${f.hours}` : ""}</span>
       </>}
       style={selected
-        ? { background: "var(--brand-primary-soft)", borderRadius: "var(--radius-sm)",
+        ? { background: "var(--surface-selected)", borderRadius: "var(--radius-sm)",
             paddingLeft: "var(--space-2)", paddingRight: "var(--space-2)", ...style }
         : style}
       {...rest} />
