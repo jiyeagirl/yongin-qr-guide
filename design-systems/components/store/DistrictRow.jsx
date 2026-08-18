@@ -46,7 +46,7 @@ export function DistrictRow({ district, onClick, selected = false, divider = tru
          색 신호가 되어 색으로만 뜻을 전하는 꼴이 된다 */
       icon={<Icon name="store" size={22} color={flag ? "var(--yong-cream-900)" : "var(--text-muted)"} />}
       title={d.name}
-      tag={flag ? <Badge tone="accent" dot>축제</Badge> : null}
+      tag={flag ? <Badge size="sm" tone="accent" dot>축제</Badge> : null}
       meta={<>
         {d.gu} {d.area} · {km}
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 6 }}>

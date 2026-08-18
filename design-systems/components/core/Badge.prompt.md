@@ -5,3 +5,5 @@ Status pill for list rows and cards.
 ```
 
 Tones map to the semantic scale; `onnuri` is reserved for the 온누리상품권 가맹 badge and must look identical in lists, details and map callouts. Keep the label to 2–4 Korean characters.
+
+Inside a ListRow `tag` slot always pass `size="sm"` — those pills sit in one scannable column and must share a height. `md` is for badges standing alone in a detail header.

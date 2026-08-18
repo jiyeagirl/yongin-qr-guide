@@ -8,7 +8,9 @@ import { Icon } from "./Icon.jsx";
 export function OnnuriBadge({ size = "md", label = "온누리", style, ...rest }) {
   const compact = size === "sm";
   return (
-    <Badge tone="onnuri" style={compact ? { padding: "2px 7px", ...style } : style} {...rest}>
+    /* 여백은 Badge 의 size 가 정한다. 예전에는 여기서 padding 을 덮어썼는데, 그러면
+       같은 "작은 배지"가 두 곳에 따로 적혀 한쪽만 바뀐다 (2026-08-18). */
+    <Badge tone="onnuri" size={size} style={style} {...rest}>
       <Icon name="ticket" size={compact ? 12 : 14} />
       {label}
     </Badge>

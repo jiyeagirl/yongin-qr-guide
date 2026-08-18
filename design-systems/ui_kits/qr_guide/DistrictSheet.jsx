@@ -4,7 +4,7 @@ function StoreRow({ s, onPick }) {
   return (
     <ListRow onClick={onPick} icon={<CategoryIcon type={s.cat} size={22} />}
       title={s.name}
-      tag={s.onnuri ? <Badge tone="onnuri">온누리</Badge> : null}
+      tag={s.onnuri ? <Badge size="sm" tone="onnuri">온누리</Badge> : null}
       meta={`${s.biz} · 약 ${s.dist}m, 도보 ${Math.max(1, Math.round(s.dist / 67))}분 · ${s.addr}`} />
   );
 }

@@ -26,7 +26,8 @@ export function FacilityRow({ facility, onClick, selected = false, divider = tru
       divider={divider}
       icon={<FacilityIcon type={f.type} size={22} />}
       title={f.name}
-      tag={<Badge tone={urgent ? "danger" : "info"}>{FACILITY_LABELS[f.type] || "공공시설"}</Badge>}
+      /* size="sm" — 점포 목록의 온누리 배지와 같은 자리, 같은 높이다 (Badge 주석 참조) */
+      tag={<Badge size="sm" tone={urgent ? "danger" : "info"}>{FACILITY_LABELS[f.type] || "공공시설"}</Badge>}
       /* 첫 줄은 거리, 둘째 줄은 "가서 실제로 쓸 수 있는가" — 상세 위치와 개방 시간.
          AED 가 잠긴 건물 안에 있으면 거리보다 그게 먼저 필요한 정보다 (U-FC-05 의 개방 여부) */
       meta={<>

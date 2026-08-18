@@ -36,7 +36,7 @@ export function FestivalRow({ festival, onClick, divider = true, style, ...rest 
       divider={divider}
       icon={<Icon name="party-popper" size={22} color={done ? "var(--text-disabled)" : "var(--yong-cream-900)"} />}
       title={f.name}
-      tag={<Badge tone={STATE_TONE[f.state] || "neutral"}>{f.state}</Badge>}
+      tag={<Badge size="sm" tone={STATE_TONE[f.state] || "neutral"}>{f.state}</Badge>}
       meta={<>
         {f.date}
         {/* 상점가명과 거리는 한 줄로 내린다 — 날짜와 같은 줄에 넣으면 넷이 붙어 읽히지 않는다 */}

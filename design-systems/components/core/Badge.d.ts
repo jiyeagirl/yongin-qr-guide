@@ -2,6 +2,8 @@
 export interface BadgeProps {
   children?: React.ReactNode;
   tone?: "neutral" | "brand" | "info" | "success" | "warning" | "danger" | "accent" | "onnuri";
+  /** `sm` is for the `tag` slot of ListRow, where badges must share one pill height. */
+  size?: "md" | "sm";
   dot?: boolean;
   style?: React.CSSProperties;
 }

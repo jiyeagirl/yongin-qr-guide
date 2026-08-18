@@ -51,12 +51,16 @@
         "message": "<AppBar> tone must be one of 'plain' | 'brand'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|tone|dot|style|key|ref|className|style|children)$/]",
-        "message": "<Badge> doesn't accept that prop. Declared props: children, tone, dot, style."
+        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|tone|size|dot|style|key|ref|className|style|children)$/]",
+        "message": "<Badge> doesn't accept that prop. Declared props: children, tone, size, dot, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:neutral|brand|info|success|warning|danger|accent|onnuri)$/]",
         "message": "<Badge> tone must be one of 'neutral' | 'brand' | 'info' | 'success' | 'warning' | 'danger' | 'accent' | 'onnuri'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:md|sm)$/]",
+        "message": "<Badge> size must be one of 'md' | 'sm'."
       },
       {
         "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|variant|size|icon|iconEnd|block|disabled|onClick|style|key|ref|className|style|children)$/]",
