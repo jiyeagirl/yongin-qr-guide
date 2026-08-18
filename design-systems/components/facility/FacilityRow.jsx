@@ -24,6 +24,13 @@ export function FacilityRow({ facility, onClick, selected = false, divider = tru
     <ListRow
       onClick={onClick}
       divider={divider}
+      /* 꺾쇠를 뗀다 (2026-08-18). 꺾쇠는 "이 줄을 누르면 다른 화면으로 간다"는 뜻인데,
+         이제 줄을 누르면 **보고 있던 지도**에서 그 핀이 켜지고 카드가 뜬다 — 화면이
+         바뀌지 않는다. 다른 곳으로 갈 것처럼 말해놓고 제자리에 두면 그 다음에 무엇을
+         눌러야 할지 알 수 없다. 상세로 가는 길은 그 카드의 [상세 보기]가 맡고, 꺾쇠도
+         거기 붙어 있다. (바깥 링크인 DistrictRow 는 그대로 꺾쇠를 단다 — 거기는
+         정말로 나간다.) */
+      trailing={null}
       icon={<FacilityIcon type={f.type} size={22} />}
       title={f.name}
       /* size="sm" — 점포 목록의 온누리 배지와 같은 자리, 같은 높이다 (Badge 주석 참조) */

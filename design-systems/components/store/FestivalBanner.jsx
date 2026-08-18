@@ -36,7 +36,10 @@ export function FestivalBanner({ festival, onClick, onDismiss, dismissLabel = "�
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
             <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-body)", fontWeight: "var(--fw-bold)", color: "var(--text-heading)", lineHeight: 1.35 }}>{festival.name}</span>
-            <Badge tone={STATE_TONE[festival.state] || "neutral"}>{festival.state}</Badge>
+            {/* size="sm" — 축제명 옆에 붙는 알약이라 목록의 tag 자리와 같은 성격이다
+                (Badge 주석). md 로 두면 12px 글자에 알약만 부풀어, 바로 아래 목록의
+                온누리 배지보다 커 보인다 — 같은 시트 안에서 두 알약의 높이가 갈린다 */}
+            <Badge size="sm" tone={STATE_TONE[festival.state] || "neutral"}>{festival.state}</Badge>
           </span>
           <span style={{ display: "block", fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)", color: "var(--text-body)", marginTop: 2, lineHeight: 1.4 }}>{festival.date}</span>
         </span>

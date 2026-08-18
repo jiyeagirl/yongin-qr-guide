@@ -322,8 +322,13 @@ export function MainApp({ qr = null, noDistrict = false }) {
        걸어둔 조건을 말없이 지우는 셈이고, 그대로 두면 켤 마커가 없다 */
     if (fcType !== "all" && fcType !== f.type) setFcType(f.type);
     pickFacility(f);
-    /* 탭이 발밑에서 바뀌는 이동이라 무슨 일이 일어났는지 한 줄로 말한다 */
-    say(`공공시설 탭에서 ${f.name} 위치를 표시합니다`);
+    /* 탭이 발밑에서 바뀌는 이동이라 무슨 일이 일어났는지 한 줄로 말한다.
+       **시설 이름은 넣지 않는다** (2026-08-18). 토스트에 이름까지 넣으면 "에버랜드로
+       버스환승장 AED" 같은 이름에서 문장이 두 줄이 되고, 두 줄짜리 토스트는 아래 탭바까지
+       덮는다 (Toast 주석). 여기서 답해야 할 것은 **어느 탭으로 옮겼는가**이고 —
+       그게 발밑에서 바뀐 것이다 — 무엇이 켜졌는지는 바로 뜨는 미리보기 카드가 이름으로
+       말한다. 같은 사실을 두 곳에서 말하느라 문장을 늘릴 이유가 없다. */
+    say("공공시설 탭으로 이동했습니다");
   };
 
   /* 둘러보기(S04)의 신규·인기 매장 카드 → **상점가 탭으로 옮겨 지도에서 켠다** (2026-08-18).
@@ -345,7 +350,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
     const needle = q.trim();
     if (needle && !(store.name.includes(needle) || store.biz.includes(needle))) setQ("");
     pickOnMap(store);
-    say(`상점가 탭에서 ${store.name} 위치를 표시합니다`);
+    /* 점포명도 넣지 않는다 — 위와 같은 이유다 (showFacilityOnMap 주석) */
+    say("상점가 탭으로 이동했습니다");
   };
 
   /* 탭 전환 (5-3 #6) — 지도는 재로딩하지 않고(U-CM-16) 카메라만 QR 지점 + 탭 기본 줌으로 되돌린다.
@@ -647,13 +653,15 @@ export function MainApp({ qr = null, noDistrict = false }) {
                아니라 탭 전환의 대상이다 (확정 결정사항 6). 다만 축제가 걸려 있으면 S09 로 간다. */
             onDetail={() => selected.kind === "facility" ? go(`#/facility/${selected.id}`)
               : selected.kind === "district"
-                ? (selected.festival ? go(`#/festival/${selected.festival.id}`) : say(`${selected.name} 정보 (S03 상점가 탭)`))
+                /* 상점가명을 문장에 넣지 않는다 — 카드가 바로 위에서 이름을 말하고 있고,
+                   "광교상현역 온누리 골목형상점가" 같은 이름이 들어가면 두 줄이 된다 */
+                ? (selected.festival ? go(`#/festival/${selected.festival.id}`) : say("상점가 정보는 준비 중입니다"))
                 : go(`#/store/${selected.id}`)}
             /* 상점가는 점이 아니라 구역이라 도보 경로의 도착지가 될 수 없다 (확정 결정사항 6).
                나머지 둘(점포·시설)은 미리보기 카드에서 상세를 거치지 않고 바로 길찾기로 간다 —
                지도에서 핀을 찍은 사람이 원하는 것은 대개 "저기까지 어떻게 가나"다. */
             onRoute={() => selected.kind === "district"
-              ? say(`${selected.name}으로 이동 (상점가 탭 전환)`)
+              ? say("상점가는 길찾기 도착지가 아닙니다")
               : goRoute(selected)} />
         ) : null}
 

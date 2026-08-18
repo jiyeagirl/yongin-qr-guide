@@ -12,6 +12,8 @@ export function StoreRow({ store, onClick, selected = false, divider = true, sty
     <ListRow
       onClick={onClick}
       divider={divider}
+      /* 꺾쇠 없음 — 줄을 눌러도 화면이 바뀌지 않고 지도의 핀이 켜진다 (FacilityRow 주석) */
+      trailing={null}
       icon={<CategoryIcon type={store.cat} size={22} />}
       title={store.name}
       tag={store.onnuri ? <OnnuriBadge size="sm" /> : null}
