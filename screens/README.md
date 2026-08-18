@@ -7,19 +7,32 @@
 
 **S02·S03·S04 는 별도 페이지가 아니라 같은 화면의 탭 상태다** (기능명세서 4장).
 페이지를 나누면 탭을 바꿀 때마다 지도가 다시 뜨는데, 그것을 **U-CM-16(지도 상시 노출,
-탭 전환 시 재로딩 금지)** 이 금지한다. 그래서 세 탭은 `main/` 한 폴더 안에 있고,
-상세·길찾기처럼 실제로 페이지가 바뀌는 화면만 자기 폴더를 갖는다.
+탭 전환 시 재로딩 금지)** 이 금지한다. 그래서 세 탭은 `main/` 한 폴더 안에 있다.
+
+**상세 화면도 HTML 페이지를 나누지 않는다** (2026-08-18 결정). 파일은 `detail/` 에 화면별로
+따로 두되, 띄우는 것은 셸 안의 **전체화면 오버레이**다. 해시 라우터가 `#/facility/:id` ·
+`#/store/:id` 를 읽어 `MainApp` 위에 덮는다.
+
+페이지를 나눴을 때의 대가가 지도 재생성만이 아니기 때문이다. **S03 의 필터 상태가 통째로
+날아간다** — 업종 칩, 온누리 토글, 검색어, 정렬, 시트 스냅. 335곳에서 "음식 + 온누리 + 인기순"
+으로 좁혀놓고 한 곳 눌러본 뒤 돌아오면 처음부터 다시 걸어야 한다. 대표 화면의 핵심 동선이
+그렇게 끊기면 안 된다. 오버레이는 셸을 언마운트하지 않으므로 뒤로가기가 즉시이고 상태가
+그대로 남으며, `location.hash` 를 쓰므로 **브라우저 뒤로가기 버튼도 그대로 동작한다**
+(QR 로 들어온 모바일 웹에서는 이쪽이 주된 뒤로가기 수단이다).
 
 | 화면 | 상태 | 경로 |
 | --- | --- | --- |
 | S03 상점가 탭 | **완료 (기준 화면)** | `main/` — `DistrictSheet.jsx` |
 | S02 공공시설 탭 | **완료** | `main/` — `FacilitySheet.jsx` |
 | S04 둘러보기 탭 | **완료** | `main/` — `DiscoverSheet.jsx` |
+| S05 시설 상세 | **완료 (상세 기준 화면)** | `detail/FacilityDetail.jsx` — `#/facility/:id` |
+| S06 점포 상세 | **완료** | `detail/StoreDetail.jsx` — `#/store/:id` |
 | S03-E 상점가 없음 안내 | 미착수 | `main/` (상점가 탭의 한 상태) |
-| S01, S05~S11 | 미착수 | 각자 폴더 예정 |
+| S01, S07~S11 | 미착수 | S07~S10 은 `detail/`, S01·S11 은 셸 상태 |
 
 **셸은 완성됐다.** 탭 3개가 모두 실제 내용을 갖고, 지도는 한 번만 만들어져 탭 전환 때
-마커 레이어만 갈아끼운다 (U-CM-16 / U-CM-17). 남은 화면은 이 셸에서 진입하는 상세·폼 화면들이다.
+마커 레이어만 갈아끼운다 (U-CM-16 / U-CM-17). 상세 화면으로 나가는 길도 뚫렸다 —
+`DetailPage` + 해시 라우터가 서 있으므로 S07~S10 은 같은 틀의 반복이다.
 
 지도·시트·필터 규칙은 S03 에서 확정했고 S02 가 그대로 물려받았다 →
 [`docs/S03_map_overlay_rules.md`](../docs/S03_map_overlay_rules.md)
@@ -27,7 +40,10 @@
 > **하단 탭바(U-CM-03)까지 포함한다.** 이를 위해 5-3 의 **#5 탭바와 바텀시트의 공존**,
 > **#6 탭 전환 시 지도 동작** 을 확정했다 — 탭바는 항상 보이고(시트의 형제 요소),
 > 탭을 바꾸면 카메라가 QR 지점 + 탭별 기본 줌으로 돌아온다.
-> 탭바가 지도 영역에서 64px 을 가져가면서 시트 스냅도 재계산했다 (절반 55% → 62%).
+> 탭바가 지도 영역에서 64px 을 가져가면서 시트 스냅도 재계산했고, 이후 "지도를 더 보고 싶다"는
+> 요청에 따라 한 번 더 낮췄다 → **접힘 18% / 절반 37% / 전체 100%**.
+> 단일 출처는 [`tokens/layers.css`](../design-systems/tokens/layers.css) 다. 화면 코드나 문서에
+> 이 값을 옮겨 적지 말 것 — 옮겨 적은 값이 뒤에 남아 실제와 어긋난다.
 
 ---
 
@@ -36,12 +52,19 @@
 `fetch` 로 디자인 시스템 원본을 읽으므로 **`file://` 이 아니라 HTTP 로 열어야 한다.**
 
 ```bash
-# 저장소 루트에서 (Node 만 있으면 된다. 설치·의존성 없음)
-node tools/serve.mjs          # 기본 8000
-node tools/serve.mjs 8080     # 포트 지정
+npm install        # 처음 한 번 (@babel/core, lucide)
+npm run serve      # 로컬 서버 — 기본 8000
+npm run build      # 번들 생성 — 배포 전 확인용. Vercel 이 배포 때 자동으로 돌린다
 ```
 
 → http://localhost:8000/screens/main/
+
+포트를 지정하려면 `node tools/serve.mjs 8080`.
+
+> **로컬 개발에는 빌드가 필요 없다.** 번들이 없으면 화면이 로더로 돌아 원본을 그대로 읽으므로,
+> `.jsx` 를 고치고 새로고침만 하면 된다. 다만 `npm run build` 를 한 번이라도 돌렸다면
+> **번들이 우선**이라 원본 수정이 반영되지 않는다 — `?dev=1` 을 붙이거나
+> `screens/main/bundle.js` 를 지우면 로더로 돌아온다.
 
 > **Windows 에서 `python -m http.server` 를 쓰지 말 것.**
 > `python` 이 Microsoft Store 앱 실행 별칭(`%LOCALAPPDATA%\Microsoft\WindowsApps\python`)이면
@@ -49,8 +72,6 @@ node tools/serve.mjs 8080     # 포트 지정
 > localhost 연결이 실패한다. `python -c "print(1)"` 이 `1` 을 출력하지 않으면 이 경우다.
 
 ## 배포 (Vercel · GitHub 연동)
-
-빌드가 없다. 정적 파일을 그대로 올린다.
 
 저장소: [`jiyeagirl/yongin-qr-guide`](https://github.com/jiyeagirl/yongin-qr-guide) (비공개)
 
@@ -65,26 +86,37 @@ git push            # main 에 올라가면 Vercel 이 자동으로 운영 배�
 | `main` | **운영** — `https://<프로젝트>.vercel.app` |
 | 그 외 | 미리보기 — 주소가 배포마다 바뀐다 |
 
-`package.json` 이 없으므로 Vercel 이 빌드를 시도하지 않고 정적 호스팅으로 잡는다.
-루트 `index.html` 이 화면 목록 입구이고, 메인 화면은 `/screens/main/` 이다.
+Vercel 이 `npm install` + `npm run build` 를 돌려 `screens/main/bundle.js` 를 만든 뒤
+정적 파일을 서빙한다. 루트 `index.html` 이 화면 목록 입구이고, 메인 화면은 `/screens/main/` 이다.
+
+**번들은 커밋하지 않는다** (`.gitignore`). 두 세션이 화면을 고칠 때마다 낡는데,
+낡은 번들이 커밋되면 그게 그대로 배포된다. Vercel 이 매번 새로 만든다.
 
 ### 처음 한 번 — Vercel 에 저장소 연결
 
 1. [vercel.com/new](https://vercel.com/new) → **Import Git Repository** → `yongin-qr-guide`
-2. Framework Preset **Other** · Build Command 비움 · Root Directory `./`
+2. Framework Preset **Other** · Root Directory `./`
 3. Deploy
+
+첫 배포 후 빌드 로그에 `screens/main/bundle.js  모듈 66개` 가 찍히는지 확인한다.
+안 잡혔으면 Settings > Build & Development Settings 에서
+**Build Command** `npm run build`, **Output Directory** `.` 로 지정한다.
 
 ### 설정 파일 네 개
 
 | 파일 | 역할 |
 | --- | --- |
 | `vercel.json` | 프레임워크 없음 · `trailingSlash` · 보안 헤더 2종 |
-| `.vercelignore` | **배포에 안 올릴 것** — `.claude/` `skills/` `tools/` `docs/` `CLAUDE.md` |
+| `.vercelignore` | **배포에 안 올릴 것** — `.claude/` `skills/` `node_modules/` `docs/` `CLAUDE.md` |
 | `.gitignore` | **버전 관리에 안 넣을 것** — `.vercel/` `.claude/settings.local.json` 등 |
 | `.gitattributes` | 저장소 안 줄바꿈을 LF 로 통일 · 폰트·이미지는 binary 로 고정 |
 
 > **`.vercelignore` 와 `.gitignore` 는 축이 다르다.** 같은 목록이어야 할 이유가 없으니
-> "통일"하지 말 것. `docs/` 와 `tools/` 는 배포에서는 빠지지만 깃에는 반드시 들어간다.
+> "통일"하지 말 것. `docs/` 는 배포에서는 빠지지만 깃에는 반드시 들어가고,
+> `node_modules/` 와 `screens/*/bundle.js` 는 그 반대다.
+
+> **`tools/` 는 `.vercelignore` 에서 뺐다.** 배포 빌드가 `tools/build.mjs` 를 실행하기 때문이다.
+> 로컬 전용이라 여겨 제외해 두었는데, 그대로 두면 배포 빌드가 "모듈을 찾을 수 없습니다"로 실패한다.
 
 > **`.vercelignore` 에 없는 파일은 전부 공개 주소로 그대로 서빙된다.** `docs/` 와 `CLAUDE.md` 는
 > 저장소 안쪽 문서라 기본 제외해 두었다. 공개해도 되면 거기서 두 줄을 지운다.
@@ -107,26 +139,21 @@ https://<프로젝트>.vercel.app        ← 운영 주소를 SDK 도메인에 �
 위의 SDK 도메인 등록이다. 등록된 도메인 밖에서는 그 키로 지도가 뜨지 않는다.
 (REST API 키·Admin 키는 성격이 다르다. 그것들은 절대 소스에 넣지 않는다.)
 
-### 첫 로딩 용량 — 아직 무겁다
-
-빌드가 없어서 브라우저가 Babel 로 JSX 를 실시간 변환한다. 그 대가가 크다.
+### 첫 로딩 용량
 
 | 항목 | 크기 |
 | --- | --- |
-| `@babel/standalone` | **3,064 KB** |
-| `react-dom` (development) | 1,054 KB |
-| `lucide` | 608 KB |
-| `react` (development) | 107 KB |
-| 화면·디자인시스템 원본 (약 60개 파일을 개별 요청) | 315 KB |
-| **합계** | **약 4.7 MB** |
+| `bundle.js` (화면 66모듈 + 아이콘 48개) | 464 KB |
+| 폰트 (Pretendard dynamic subset 16조각) | 428 KB |
+| `react-dom` + `react` (production) | 143 KB |
+| `tokens/*.css` (대부분 `fonts.css` 의 @font-face 92개) | 78 KB |
+| **합계** | **약 1.07 MB** |
 
-검수용으로는 쓸 만하지만, **길에서 QR 을 찍는 실사용자에게 낼 숫자는 아니다.**
-줄이려면 배포 전에 JSX 를 미리 변환하는 단계가 필요하다 (Babel 3MB 와 개별 요청 60건이
-통째로 사라져 약 750KB / 요청 1건이 된다). 지금 구조는 그대로 두고 배포 시점에만
-변환본을 만드는 방식이라 개발 방식은 바뀌지 않는다.
+Vercel 이 gzip/brotli 로 다시 줄이므로 실제 전송량은 이보다 작다.
 
-`react.development.js` 는 일부러 유지 중이다 — 남은 화면 9개를 만드는 동안 브라우저 콘솔의
-경고 메시지가 필요하다. 위 변환 단계를 넣을 때 `production.min.js` 로 함께 바꾼다.
+이전에 이 자리에 적혀 있던 "약 4.7MB" 는 **폰트를 빼고 센 값이라 틀렸다.**
+실제로는 JS 4.7MB + 폰트 6.1MB ≈ 10.8MB 였다. 자세한 내역은
+[`design-systems/CHANGELOG.md`](../design-systems/CHANGELOG.md) 의 2026-08-18 항목 참조.
 
 ## 카카오맵 연동
 
@@ -158,16 +185,27 @@ https://<프로젝트>.vercel.app        ← 운영 주소를 SDK 도메인에 �
 ```
 main/
 ├── index.html            프레임 · CDN 스크립트 · DSLoader 부트스트랩
-├── MainApp.jsx           셸 — 지도 1개 + 탭 3개 + 시트 + 상단 필터 바 (5-3 결정 전부)
+├── MainApp.jsx           셸 — 지도 1개 + 탭 3개 + 시트 + 상단 필터 바 + 상세 오버레이
 ├── FacilitySheet.jsx     S02 공공시설 탭 시트 내용
 ├── DistrictSheet.jsx     S03 상점가 탭 시트 내용
 ├── DiscoverSheet.jsx     S04 둘러보기 탭 시트 내용
+├── router.js             해시 라우터 — #/facility/:id · #/store/:id
 ├── config.js             앱키, 지도 레벨, 페이지 크기, 기준일자, 축제 기준일
 └── data/
     ├── dunjeon.js        둔전 점포 335곳 (온누리 139) · 신규/인기 매장 · 골목 한바퀴 코스
     ├── facilities.js     공공시설 18곳 (AED 5 · 대피소 3 · 화장실 6 · 쉼터 4)
     └── districts.js      골목형 상점가 32개소 · 축제 6건
+
+detail/
+├── FacilityDetail.jsx    S05 시설 상세 (상세 화면의 기준)
+└── StoreDetail.jsx       S06 점포 상세
 ```
+
+`detail/` 의 화면들은 자기 `index.html` 이 없다. `MainApp` 이 해시를 읽어 셸 위에
+전체화면 오버레이(`DetailPage`, z-modal)로 띄운다. 위 "폴더가 화면 번호와 1:1이 아닌 이유" 참조.
+
+**진입점은 `screens/main/` 하나뿐이다.** 상세 화면을 바로 보려면 해시를 붙인다 —
+`http://localhost:8000/screens/main/#/facility/fc-001`
 
 탭별로 지도가 갖는 마커 레이어 (U-CM-17 — 한 번에 하나):
 

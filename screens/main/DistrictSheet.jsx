@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  SectionHeader, Button, ListRow, FacilityIcon, ListControls, OnnuriToggle,
+  Button, NearbyFacilities, ListControls, OnnuriToggle,
   Notice, StoreRow, FestivalBanner, CATEGORY_LABELS,
 } from "../../design-systems/index.js";
 import { PAGE_SIZE } from "./config.js";
@@ -102,16 +102,11 @@ export function DistrictSheet({
         ) : null}
       </div>
 
-      {/* ── 인근 편의시설 (U-ST-07) ───────────────────────────── */}
+      {/* ── 인근 편의시설 (U-ST-07) ─────────────────────────────
+             점포 상세(S06)도 같은 것을 요구하므로 디자인 시스템으로 옮겼다.
+             인라인으로 두 벌 두면 한쪽만 고쳐져 두 화면이 같은 시설을 다르게 말하게 된다. */}
       <div style={{ padding: "var(--space-5) var(--gutter-screen) 0" }}>
-        <SectionHeader title="인근 편의시설" />
-        <div style={{ background: "var(--surface-card)", border: "var(--stroke-hairline) solid var(--border-default)",
-          borderRadius: "var(--radius-card)", padding: "var(--space-2) var(--space-4)" }}>
-          {data.nearby.map((n, i) => (
-            <ListRow key={n.id} icon={<FacilityIcon type={n.type} size={22} />} title={n.name} meta={n.detail}
-              divider={i < data.nearby.length - 1} onClick={() => onPickFacility(n)} />
-          ))}
-        </div>
+        <NearbyFacilities items={data.nearby} onPick={onPickFacility} />
       </div>
 
       {/* ── 고지 ──────────────────────────────────────────────

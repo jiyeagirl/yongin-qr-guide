@@ -10,22 +10,25 @@ import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, HAS_LIVE_FESTIVAL, CURRENT_FESTI
 import { DistrictSheet } from "./DistrictSheet.jsx";
 import { FacilitySheet } from "./FacilitySheet.jsx";
 import { DiscoverSheet } from "./DiscoverSheet.jsx";
+import { FacilityDetail } from "../detail/FacilityDetail.jsx";
+import { StoreDetail } from "../detail/StoreDetail.jsx";
+import { useHashRoute, go, back } from "./router.js";
 import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF } from "./config.js";
 
 /* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.0 확정 결정사항 11).
  *
  *   S02 공공시설 탭   AED · 화장실 · 쉼터 · 대피소   (U-FC-01~04, 06, 08, 09)
  *   S03 상점가 탭     현재 상점가의 점포 목록         (U-ST-02~06, 10~13, 15, U-FT-03)
- *   S04 둘러보기 탭   축제 · 코스 · 다른 상점가        (U-DC-01~06) — 미착수
+ *   S04 둘러보기 탭   축제 · 코스 · 다른 상점가        (U-DC-01~06)
  *
  * 셋은 별도 페이지가 아니라 **같은 화면의 탭 상태**다 (4장). 페이지를 나누면 탭을 바꿀 때마다
  * 지도가 다시 뜨는데, 그것을 U-CM-16 이 금지한다. 그래서 폴더도 S02/S03 이 아니라 `main` 이다.
  *
  * ── 이 화면이 확정한 것 (기능명세서 5-3, 전문은 docs/S03_map_overlay_rules.md) ──
  *
- *  1. 바텀시트 3단 스냅 — 지도 영역 기준 접힘 25% / 절반 62% / 전체 100%
- *     → 지도 노출 75% / 38% / 0%. 값은 tokens/layers.css. **두 탭이 같은 값을 쓴다** —
- *     탭마다 시트 높이가 다르면 탭 전환이 화면이 통째로 바뀌는 것처럼 보인다.
+ *  1. 바텀시트 3단 스냅 — 지도 영역 기준 접힘 18% / 절반 37% / 전체 100%
+ *     → 지도 노출 82% / 63% / 0%. 값은 tokens/layers.css 가 단일 출처다 (여기에 옮겨 적지 않는다).
+ *     **세 탭이 같은 값을 쓴다** — 탭마다 시트 높이가 다르면 탭 전환이 화면이 통째로 바뀌는 것처럼 보인다.
  *
  *  2. 지도 패딩 — 위(상단 필터 바) · 아래(시트 + 미리보기 카드)를 measure 해 px 로 넘긴다.
  *     공공시설 탭은 검색창이 없어 필터 바가 한 줄 낮다. 그래서 상수가 아니라 measure 여야 한다.
@@ -41,6 +44,13 @@ import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF } from "./confi
  *
  *  5. 탭바와 시트의 공존 — 탭바는 시트의 형제 요소이며 항상 보인다 (TabBar 주석 참조).
  *  6. 탭 전환 시 지도 — 재로딩하지 않고(U-CM-16) 카메라만 QR 지점 + 탭 기본 줌으로 되돌린다.
+ *
+ * ── 상세 화면은 이 셸 위에 덮인다 (2026-08-18) ──────────────────────────
+ * S05 시설 상세와 S06 점포 상세는 별도 페이지가 아니라 해시 라우터가 띄우는 전체화면
+ * 오버레이다 (router.js). 페이지를 나누면 지도가 재생성될 뿐 아니라 이 셸이 들고 있는
+ * 필터 상태(cat / onnuriOnly / q / sort / snap)가 통째로 초기화된다 — 335곳에서 조건을
+ * 좁혀놓고 한 곳 눌러본 뒤 돌아오면 처음부터 다시 걸어야 한다.
+ * 오버레이는 이 컴포넌트를 언마운트하지 않으므로 뒤로가기가 즉시이고 상태가 그대로 남는다.
  */
 
 const SNAP_LABEL = { collapsed: "접힘", half: "절반", full: "전체" };
@@ -70,6 +80,10 @@ export function MainApp() {
   const [tab, setTab] = React.useState("facility");   /* QR 스캔 시 공공시설 탭으로 진입 (U-CM-03) */
   const [snap, setSnap] = React.useState("half");
   const [selected, setSelected] = React.useState(null);   /* 지도에서 탭한 대상 */
+
+  /* 상세 오버레이 (S05 / S06). 아래 상태들과 **별개**로 움직인다 — 오버레이가 열리고 닫혀도
+     탭·시트 스냅·필터는 건드리지 않는다. 그게 페이지를 나누지 않은 이유 그 자체다. */
+  const route = useHashRoute();
 
   /* 상점가 탭 필터 (U-ST-10 / 11 / 12 / 15) */
   const [cat, setCat] = React.useState("all");
@@ -238,6 +252,74 @@ export function MainApp() {
   const facilityMarkers = isFacility ? facilityRows : [];
   const districtMarkers = isDiscover ? DISTRICTS : [];
 
+  /* ── 상세 오버레이 (S05 / S06) ────────────────────────────────────────
+     route 는 URL 이 진실이다. 여기서 id 로 대상을 찾고, 없으면 셸로 되돌린다 —
+     딥링크 오타나 데이터 교체로 빈 화면이 뜨는 상태를 만들지 않는다 (S11 의 축소판). */
+  const target = React.useMemo(() => {
+    if (route.name === "facility") return FACILITIES.find(x => x.id === route.id) || null;
+    if (route.name === "store") return d.stores.find(x => x.id === route.id) || null;
+    return null;
+  }, [route, d.stores]);
+
+  React.useEffect(() => {
+    if (route.name !== "main" && !target) {
+      say("정보를 찾을 수 없습니다");
+      back();
+    }
+  }, [route, target, say]);
+
+  /* [지도에서 보기] — 오버레이를 닫고 셸의 지도가 그 대상을 잡게 한다.
+     아래 화면이 살아 있는 오버레이 구조라서 가능한 동작이다. 시트는 내린다 (지도를 보려는 행동이다).
+
+     마커가 실제로 그려져 있어야 focus 가 의미를 갖는다. 탭이 소유한 레이어만 그리므로
+     (U-CM-17) 먼저 해당 탭으로 옮기고, 현재 필터가 그 대상을 걸러내고 있으면 그 필터를 푼다 —
+     "지도에서 보기"를 눌렀는데 빈 지도가 나오는 것이 가장 나쁜 결과다. */
+  const showOnMap = React.useCallback((item, tabId) => {
+    back();
+    if (tab !== tabId) {
+      setTab(tabId);
+      if (mapApi.current) mapApi.current.setView(d.anchor.lat, d.anchor.lng, TAB_MAP_LEVEL[tabId]);
+    }
+    if (tabId === "facility") {
+      /* 공공시설은 유형 칩 하나뿐이라 전체로 되돌리면 반드시 보인다 */
+      if (fcType !== "all" && fcType !== item.type) setFcType("all");
+    } else if (!storeRows.some(x => x.id === item.id)) {
+      /* 상점가는 필터가 넷이다. **걸러내고 있을 때만** 푼다 — 조건이 맞는데도 매번 초기화하면
+         필터를 지켜주려고 오버레이를 쓴 의미가 없어진다. 풀었을 때는 말해준다. */
+      setCat("all"); setOnnuriOnly(false); setQ("");
+      say("지도에 표시하려고 필터를 해제했습니다");
+    }
+    setSnap("collapsed");
+    requestAnimationFrame(() => requestAnimationFrame(() => pickOnMap(item)));
+  }, [tab, fcType, storeRows, d.anchor, pickOnMap, say]);
+
+  const detail = !target ? null
+    : route.name === "facility" ? (
+      <FacilityDetail
+        facility={target}
+        onBack={back}
+        onRoute={() => say(`${target.name}까지 도보 길찾기 (S07 길찾기)`)}
+        onShowOnMap={() => showOnMap({
+          ...target, kind: "facility",
+          biz: FACILITY_LABELS[target.type] || "공공시설", addr: target.detail,
+        }, "facility")}
+        onReport={() => say("정보 오류 신고 (S10 오류신고 및 문의)")}
+        onCopied={ok => say(ok ? "주소를 복사했습니다" : "복사에 실패했습니다. 주소를 길게 눌러 선택해 주세요")} />
+    ) : (
+      <StoreDetail
+        store={target}
+        district={d.district}
+        nearby={d.nearby}
+        onBack={back}
+        onRoute={() => say(`${target.name}까지 도보 길찾기 (S07 길찾기)`)}
+        onShowOnMap={() => showOnMap(target, "district")}
+        onReport={() => say("정보 오류 신고 (S10 오류신고 및 문의)")}
+        /* 인근 편의시설에서 시설 상세로 — 오버레이 위에 오버레이가 아니라 history 를 한 칸 더
+           쌓는다. 뒤로가기를 누르면 점포 상세로 돌아온다 (온 길을 되짚는 것이 자연스럽다) */
+        onPickFacility={f => go(`#/facility/${f.id}`)}
+        onCopied={ok => say(ok ? "주소를 복사했습니다" : "복사에 실패했습니다. 주소를 길게 눌러 선택해 주세요")} />
+    );
+
   /* 시트 제목 — 탭마다 다르다. 상점가는 상점가명이 곧 제목이고(U-ST-03), 공공시설은 대상이 여럿이라
      유형을 고른 상태를 제목에 담는다 ("주변 AED"). 지금 무엇을 보고 있는지가 제목에서 읽혀야 한다. */
   const sheetTitle = isFacility
@@ -307,10 +389,12 @@ export function MainApp() {
             onClose={() => { setSelected(null); setPreviewH(0); }}
             routeLabel={selected.kind === "district" ? "상점가 보기" : "길찾기"}
             detailLabel={selected.kind === "district" && selected.festival ? "축제 보기" : "상세 보기"}
-            onDetail={() => say(selected.kind === "facility" ? `${selected.name} 상세로 (S05 시설 상세)`
+            /* 상점가 마커만 아직 갈 곳이 없다 — 축제 상세(S09)가 미착수이고, 상점가 자체는
+               점이 아니라 구역이라 상세 페이지가 아니라 탭 전환의 대상이다 (확정 결정사항 6) */
+            onDetail={() => selected.kind === "facility" ? go(`#/facility/${selected.id}`)
               : selected.kind === "district"
-                ? (selected.festival ? `${selected.festival.name} 상세로 (S09 축제 상세)` : `${selected.name} 정보 (S03 상점가 탭)`)
-                : `${selected.name} 상세로 (S06 점포 상세)`)}
+                ? say(selected.festival ? `${selected.festival.name} 상세로 (S09 축제 상세)` : `${selected.name} 정보 (S03 상점가 탭)`)
+                : go(`#/store/${selected.id}`)}
             onRoute={() => say(selected.kind === "district"
               ? `${selected.name}으로 이동 (상점가 탭 전환)`
               : `${selected.name}까지 도보 길찾기 (S07 길찾기)`)} />
@@ -344,7 +428,7 @@ export function MainApp() {
               cat={fcType}
               selectedId={selected ? selected.id : null}
               asOf={FACILITY_AS_OF}
-              onPick={f => say(`${f.name} 상세로 (S05 시설 상세)`)} />
+              onPick={f => go(`#/facility/${f.id}`)} />
           ) : isDistrict ? (
             <DistrictSheet
               data={d}
@@ -354,8 +438,8 @@ export function MainApp() {
               sort={sort} setSort={setSort}
               q={q}
               selectedId={selected ? selected.id : null}
-              onPickStore={s => say(`${s.name} 상세로 (S06 점포 상세)`)}
-              onPickFacility={f => say(`${f.name} 상세로 (S05 시설 상세)`)}
+              onPickStore={s => go(`#/store/${s.id}`)}
+              onPickFacility={f => go(`#/facility/${f.id}`)}
               onOpenFestival={() => say(`${d.festival.name} 상세로 (S09 축제 상세)`)} />
           ) : (
             <DiscoverSheet
@@ -367,18 +451,11 @@ export function MainApp() {
               currentDistrict={currentDistrict}
               selectedId={selected ? selected.id : null}
               onOpenFestival={f => say(`${f.name} 상세로 (S09 축제 상세)`)}
-              onOpenStore={s => say(`${s.name} 상세로 (S06 점포 상세)`)}
+              onOpenStore={s => go(`#/store/${s.id}`)}
               onOpenCourse={c => say(`${c.name} 코스 상세로 (S08)`)}
               onOpenDistrict={x => say(`${x.name}으로 이동 (상점가 탭 전환)`)} />
           )}
         </Sheet>
-
-        {toast ? (
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: "var(--space-6)", zIndex: "var(--z-toast)",
-            display: "flex", justifyContent: "center", padding: "0 var(--gutter-screen)", pointerEvents: "none" }}>
-            <Toast icon="info">{toast}</Toast>
-          </div>
-        ) : null}
 
         {/* 스크린리더용 상태 안내 — 탭과 시트 단계는 시각적으로만 전달되면 안 된다 */}
         <span aria-live="polite" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
@@ -396,6 +473,23 @@ export function MainApp() {
         items={TABS.map(t => (t.id === "discover" && HAS_LIVE_FESTIVAL ? { ...t, badge: true } : t))}
         value={tab}
         onChange={changeTab} />
+
+      {/* ── 상세 오버레이 (S05 / S06) — z-modal 600 ──────────────────────────
+             지도 영역이 아니라 **루트의 자식**이다. 지도 영역 안에 두면 탭바(형제, z 450)를
+             덮지 못해 상세 화면 아래에 탭바가 남는다. 상세는 페이지이지 시트가 아니다. */}
+      {detail}
+
+      {/* ── 토스트 — 항상 최상단 (z 700) ────────────────────────────────────
+             오버레이(z 600)보다 위에 있어야 상세 화면의 "주소를 복사했습니다"가 보인다.
+             그래서 지도 영역 안이 아니라 여기, 오버레이 뒤에 둔다 — 지도 영역 안에 있으면
+             그 컨테이너가 통째로 오버레이에 덮여 z 700 이 아무 소용이 없다. */}
+      {toast ? (
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: "calc(var(--tabbar-h) + var(--space-4))",
+          zIndex: "var(--z-toast)", display: "flex", justifyContent: "center",
+          padding: "0 var(--gutter-screen)", pointerEvents: "none" }}>
+          <Toast icon="info">{toast}</Toast>
+        </div>
+      ) : null}
     </div>
   );
 }

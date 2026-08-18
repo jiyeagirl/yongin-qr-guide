@@ -32,11 +32,17 @@ function at(dist, bearingDeg) {
   };
 }
 
-/* detail = 상세 위치 설명, hours = 개방 시간, extra = 유형별 부가정보 (U-FC-05, S05 시설 상세에서 쓴다) */
+/* detail = 상세 위치 설명, hours = 개방 시간, extra = 유형별 부가정보 (U-FC-05, S05 시설 상세에서 쓴다)
+ *
+ * always = 상시 개방 여부 (U-FC-05 의 "개방 여부"). hours 문자열에서 파생하지 않고 명시한다 —
+ * "24시간" 을 찾는 식으로 짜면 포곡읍 민방위 대피시설의 `상시 (경보 시 개방)` 을 놓치거나
+ * 반대로 상시 개방으로 잘못 읽는다. 저기는 평소에 잠겨 있고 경보가 울려야 열리는 곳이라
+ * 24시간 개방과 정반대의 의미인데, 문자열만 보면 "상시"라는 같은 낱말이 들어 있다.
+ * 실데이터 연동 시에도 이 값은 서버가 판단해서 내려주어야 한다. */
 const RAW = [
   /* ── AED — 상한 없음. 최근접을 반드시 제시한다 (U-FC-08) ────────────────── */
   { type: "aed", name: "둔전마을회관 AED", dist: 120, bearing: 335,
-    addr: "처인구 포곡읍 둔전로 42", detail: "1층 로비 자동심장충격기함", hours: "24시간 개방",
+    addr: "처인구 포곡읍 둔전로 42", detail: "1층 로비 자동심장충격기함", hours: "24시간 개방", always: true,
     extra: "설치 1층 · 관리자 마을회관 사무장" },
   { type: "aed", name: "포곡읍행정복지센터 AED", dist: 340, bearing: 58,
     addr: "처인구 포곡읍 둔전로 91", detail: "1층 민원실 입구 벽면", hours: "평일 09:00~18:00",
@@ -53,18 +59,18 @@ const RAW = [
 
   /* ── 대피소 — 상한 없음. 다만 최근접이 1.4km 라 U-FC-09 배너가 뜬다 ───────── */
   { type: "shelter", name: "포곡중학교 운동장", dist: 1400, bearing: 24,
-    addr: "처인구 포곡읍 금어로 216", detail: "지진 옥외대피장소 · 운동장 전체", hours: "24시간 개방",
+    addr: "처인구 포곡읍 금어로 216", detail: "지진 옥외대피장소 · 운동장 전체", hours: "24시간 개방", always: true,
     extra: "수용 약 1,200명 · 지진 옥외대피장소" },
   { type: "shelter", name: "포곡읍 민방위 대피시설", dist: 1760, bearing: 63,
     addr: "처인구 포곡읍 둔전로 91 지하", detail: "행정복지센터 지하 1층", hours: "상시 (경보 시 개방)",
     extra: "수용 약 480명 · 정부지원시설" },
   { type: "shelter", name: "포곡체육공원", dist: 2050, bearing: 189,
-    addr: "처인구 포곡읍 삼계로 77", detail: "지진 옥외대피장소 · 다목적구장", hours: "24시간 개방",
+    addr: "처인구 포곡읍 삼계로 77", detail: "지진 옥외대피장소 · 다목적구장", hours: "24시간 개방", always: true,
     extra: "수용 약 900명 · 지진 옥외대피장소" },
 
   /* ── 화장실 — 1km 상한 (U-FC-08). 마지막 1건이 상한에 걸려 목록에서 빠진다 ─── */
   { type: "toilet", name: "둔전 공영주차장 공중화장실", dist: 210, bearing: 128,
-    addr: "처인구 포곡읍 둔전2로 8", detail: "주차장 북측 단독 건물", hours: "24시간 개방",
+    addr: "처인구 포곡읍 둔전2로 8", detail: "주차장 북측 단독 건물", hours: "24시간 개방", always: true,
     extra: "남 2칸 · 여 3칸 · 장애인 겸용 1칸 · 기저귀교환대 있음" },
   { type: "toilet", name: "포곡읍행정복지센터 화장실", dist: 350, bearing: 60,
     addr: "처인구 포곡읍 둔전로 91", detail: "1층·2층 각 1개소", hours: "평일 09:00~18:00",
@@ -73,7 +79,7 @@ const RAW = [
     addr: "처인구 포곡읍 둔전로 55", detail: "시장 중앙통로 끝", hours: "06:00~22:00",
     extra: "남 2칸 · 여 2칸" },
   { type: "toilet", name: "둔전사거리 간이화장실", dist: 640, bearing: 301,
-    addr: "처인구 포곡읍 포곡로 108", detail: "버스정류장 뒤편", hours: "24시간 개방",
+    addr: "처인구 포곡읍 포곡로 108", detail: "버스정류장 뒤편", hours: "24시간 개방", always: true,
     extra: "남녀공용 1칸" },
   { type: "toilet", name: "둔전근린공원 화장실", dist: 870, bearing: 166,
     addr: "처인구 포곡읍 둔전1로 24", detail: "공원 주차장 옆", hours: "05:00~23:00",
@@ -87,16 +93,16 @@ const RAW = [
         1km 상한은 유지한다 (U-FC-08). 상한 안에 하나도 없으면 U-FC-09 폴백이 최근접을 되살리므로
         "가까운 쉼터가 없다"는 빈 화면은 나오지 않는다. 마지막 1건이 상한에 걸려 빠진다 ───── */
   { type: "rest", name: "둔전 버스정류장 한파쉼터", dist: 90, bearing: 12,
-    addr: "처인구 포곡읍 둔전로 38", detail: "승차대 안 온열의자 2석", hours: "24시간 개방",
+    addr: "처인구 포곡읍 둔전로 38", detail: "승차대 안 온열의자 2석", hours: "24시간 개방", always: true,
     extra: "한파쉼터 · 12~2월 온열 가동 · 지붕과 방풍막 있음" },
   { type: "rest", name: "둔전마을회관 무더위쉼터", dist: 150, bearing: 331,
     addr: "처인구 포곡읍 둔전로 42", detail: "2층 경로당 · 냉방 운영", hours: "평일 09:00~18:00",
     extra: "실내 무더위쉼터 · 수용 40명 · 정수기 있음" },
   { type: "rest", name: "둔전사거리 그늘막쉼터", dist: 260, bearing: 74,
-    addr: "처인구 포곡읍 둔전로 70", detail: "횡단보도 앞 그늘막 · 벤치 4석", hours: "24시간 개방",
+    addr: "처인구 포곡읍 둔전로 70", detail: "횡단보도 앞 그늘막 · 벤치 4석", hours: "24시간 개방", always: true,
     extra: "야외 무더위쉼터 · 그늘막 5~9월 운영" },
   { type: "rest", name: "포곡천 둔치 그늘막쉼터", dist: 1080, bearing: 347,
-    addr: "처인구 포곡읍 금어로 20", detail: "산책로 정자 1동 · 벤치 6석", hours: "24시간 개방",
+    addr: "처인구 포곡읍 금어로 20", detail: "산책로 정자 1동 · 벤치 6석", hours: "24시간 개방", always: true,
     extra: "야외 무더위쉼터 · 정자" },
 ];
 

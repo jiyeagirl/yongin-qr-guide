@@ -22,10 +22,15 @@ export { Switch } from "./components/core/Switch.jsx";
 export { OnnuriBadge } from "./components/core/OnnuriBadge.jsx";
 export { OnnuriToggle } from "./components/core/OnnuriToggle.jsx";
 export { SearchField } from "./components/core/SearchField.jsx";
+export { InfoList } from "./components/core/InfoList.jsx";
+export { CopyField } from "./components/core/CopyField.jsx";
 export { FilterBar } from "./components/core/FilterBar.jsx";
 export { ListControls } from "./components/core/ListControls.jsx";
 export { token, clearTokenCache } from "./components/core/token.js";
 export { josa, hasBatchim, eun, i, eul, ro } from "./components/core/josa.js";
+
+/* layout — 페이지 셸. 상세 화면(S05·S06, 이후 S07~S10)이 공유한다 */
+export { DetailPage, DetailBody, DetailNotice } from "./components/layout/DetailPage.jsx";
 
 /* navigation */
 export { AppBar } from "./components/navigation/AppBar.jsx";
@@ -51,6 +56,7 @@ export { loadKakaoMaps } from "./components/map/kakaoLoader.js";
 /* facility — 공공시설 도메인 (AED · 화장실 · 쉼터 · 대피소) */
 export { FacilityRow } from "./components/facility/FacilityRow.jsx";
 export { FacilitySummary } from "./components/facility/FacilitySummary.jsx";
+export { NearbyFacilities } from "./components/facility/NearbyFacilities.jsx";
 
 /* store — 골목형 상점가 도메인 */
 export { StoreRow } from "./components/store/StoreRow.jsx";
