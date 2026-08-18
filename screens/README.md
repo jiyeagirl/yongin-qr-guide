@@ -48,27 +48,46 @@ node tools/serve.mjs 8080     # 포트 지정
 > 아무 것도 하지 않고 조용히 끝난다. 서버가 뜬 것처럼 보이지만 실제로는 리스닝하지 않아
 > localhost 연결이 실패한다. `python -c "print(1)"` 이 `1` 을 출력하지 않으면 이 경우다.
 
-## Vercel 배포
+## 배포 (Vercel · GitHub 연동)
 
 빌드가 없다. 정적 파일을 그대로 올린다.
 
+저장소: [`jiyeagirl/yongin-qr-guide`](https://github.com/jiyeagirl/yongin-qr-guide) (비공개)
+
 ```bash
-# 저장소 루트에서
-npx vercel          # 첫 실행 — 로그인 후 프로젝트 이름을 정하면 미리보기 주소가 나온다
-npx vercel --prod   # 운영 주소(<프로젝트>.vercel.app)로 올린다
+git add -A
+git commit -m "…"
+git push            # main 에 올라가면 Vercel 이 자동으로 운영 배포한다
 ```
+
+| 브랜치 | 배포 |
+| --- | --- |
+| `main` | **운영** — `https://<프로젝트>.vercel.app` |
+| 그 외 | 미리보기 — 주소가 배포마다 바뀐다 |
 
 `package.json` 이 없으므로 Vercel 이 빌드를 시도하지 않고 정적 호스팅으로 잡는다.
 루트 `index.html` 이 화면 목록 입구이고, 메인 화면은 `/screens/main/` 이다.
 
+### 처음 한 번 — Vercel 에 저장소 연결
+
+1. [vercel.com/new](https://vercel.com/new) → **Import Git Repository** → `yongin-qr-guide`
+2. Framework Preset **Other** · Build Command 비움 · Root Directory `./`
+3. Deploy
+
+### 설정 파일 네 개
+
 | 파일 | 역할 |
 | --- | --- |
 | `vercel.json` | 프레임워크 없음 · `trailingSlash` · 보안 헤더 2종 |
-| `.vercelignore` | `.claude/` `skills/` `tools/` `docs/` `CLAUDE.md` 등 웹에서 안 쓰는 것 제외 |
-| `index.html` | 배포 주소 루트로 들어온 사람을 위한 화면 목록 |
+| `.vercelignore` | **배포에 안 올릴 것** — `.claude/` `skills/` `tools/` `docs/` `CLAUDE.md` |
+| `.gitignore` | **버전 관리에 안 넣을 것** — `.vercel/` `.claude/settings.local.json` 등 |
+| `.gitattributes` | 저장소 안 줄바꿈을 LF 로 통일 · 폰트·이미지는 binary 로 고정 |
 
-> **여기 없는 파일은 전부 공개 주소로 그대로 서빙된다.** `docs/` 와 `CLAUDE.md` 는 저장소
-> 안쪽 문서라 기본 제외해 두었다. 공개해도 되면 `.vercelignore` 에서 두 줄을 지운다.
+> **`.vercelignore` 와 `.gitignore` 는 축이 다르다.** 같은 목록이어야 할 이유가 없으니
+> "통일"하지 말 것. `docs/` 와 `tools/` 는 배포에서는 빠지지만 깃에는 반드시 들어간다.
+
+> **`.vercelignore` 에 없는 파일은 전부 공개 주소로 그대로 서빙된다.** `docs/` 와 `CLAUDE.md` 는
+> 저장소 안쪽 문서라 기본 제외해 두었다. 공개해도 되면 거기서 두 줄을 지운다.
 
 ### 배포 후 반드시 할 것 — 카카오 SDK 도메인 등록
 
@@ -80,7 +99,7 @@ https://<프로젝트>.vercel.app        ← 운영 주소를 SDK 도메인에 �
 ```
 
 > **미리보기(preview) 주소는 배포할 때마다 바뀐다** (`<프로젝트>-<해시>-<팀>.vercel.app`).
-> 매번 등록할 수 없으므로 **지도 확인은 `--prod` 로 올린 운영 주소에서 한다.**
+> 매번 등록할 수 없으므로 **지도 확인은 `main` 에 올린 운영 주소에서 한다.**
 > 미리보기에서 지도 자리에 안내 문구가 뜨는 것은 정상이다 (그 화면이 등록해야 할 주소를 알려준다).
 
 `config.js` 의 JavaScript 키는 소스에 그대로 들어가고 배포본에서 누구나 볼 수 있다.
