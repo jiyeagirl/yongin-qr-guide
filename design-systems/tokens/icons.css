@@ -42,6 +42,27 @@
 /* 지도 위 라벨(앵커 지점명 등) 바탕 — 위성/일반 지도 어느 쪽에서도 읽히도록 잉크 계열 반투명 */
 --map-label-bg:rgba(22,34,28,.86); /* @kind color */
 
+/* 도보 경로선 (S07 길찾기 · U-NV-02).
+   초록이 아니라 **파랑**이다. 초록은 이 지도에서 이미 점포·클러스터·상점가의 색이라
+   그 위에 초록 선을 그으면 "점포들을 이은 선"으로 읽힌다. 파랑은 QR 지점(--pin-anchor)과
+   같은 계열이고, 그 점에서 출발하는 선이라는 것이 색으로 이어진다.
+   S08 코스의 점선(초록)과도 구분된다 — 저쪽은 도는 순서, 이쪽은 실제 걸어갈 길이다.
+
+   흰 밑선(casing)을 한 겹 깐다. 카카오 기본 지도의 도로가 회색·노랑·흰색이라
+   파란 선 하나만 그으면 교차로에서 도로 위에 묻힌다. */
+--route-line:var(--yong-blue-500); /* @kind color */
+--route-line-casing:var(--yong-white); /* @kind color */
+--route-line-w:6px; /* @kind spacing */
+--route-casing-w:10px; /* @kind spacing */
+/* 경로 실패 폴백(U-NV-04)의 직선. 실선으로 그리면 "이 길로 가라"가 되는데
+   그건 방향만 맞는 직선이다 — 회색 점선으로 낮춘다 */
+--route-line-straight:var(--yong-ink-500); /* @kind color */
+/* 꺾이는 지점 표시. 목록의 안내 항목과 1:1 로 대응한다 */
+--route-turn-bg:var(--yong-white); /* @kind color */
+--route-turn-active:var(--yong-blue-500); /* @kind color */
+/* 도착지 핀 — 출발(파란 점)과 형태가 달라야 어느 쪽이 목적지인지 한눈에 읽힌다 */
+--pin-dest:var(--brand-primary-strong); /* @kind color */
+
 /* 클러스터 — 수백 개 마커를 직접 렌더하지 않는다 (U-ST-13). 3단계 크기.
    숫자 구간은 KakaoMap 의 calculator prop 기본값 [10, 100] 과 짝을 이룬다. */
 --cluster-sm-size:40px; /* @kind spacing */

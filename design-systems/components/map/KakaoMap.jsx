@@ -60,6 +60,11 @@ export function KakaoMap({
   facilities = [],            /* [{id, name, type, lat, lng}] — 공공시설 탭. 유형 4종 색 */
   districts = [],             /* [{id, name, lat, lng, festival}] — 상점가 지점 (S03-E 의 근처 상점가) */
   course = [],                /* [{id, name, lat, lng}] — S08 코스 상세. **순서가 있는 배열**이다 */
+  /* S07 길찾기 (U-NV-02). {path:[{lat,lng}], turns:[{lat,lng}], dest:{name,lat,lng}, straight:bool}
+     straight 는 경로 실패 폴백(U-NV-04) 표시다 — 직선을 점선으로 낮춰 긋는다 */
+  route = null,
+  activeTurn = -1,            /* 안내 목록에서 고른 지점. 지도의 꺾임 표시와 목록이 같은 것을 가리킨다 */
+  onSelectTurn,
   selectedId = null,
   topPad = 0,                 /* px. 상단 필터 바에 가려지는 높이 */
   bottomPad = 0,              /* px. 시트에 가려지는 높이 */
@@ -67,6 +72,7 @@ export function KakaoMap({
   onSelectFacility,
   onSelectDistrict,
   onSelectCourseStop,
+  onSelectDest,
   onReady,
   onError,
   mapRef,                     /* {current} — {focus(lat,lng), reset()} 를 받는다 */
@@ -86,6 +92,9 @@ export function KakaoMap({
      마커 이미지는 미리 만든 PNG 라 숫자를 얹을 수 없다 */
   const courseOverlays = React.useRef(new Map());
   const coursePath = React.useRef(null);
+  /* 경로는 선 두 겹(밑선 + 본선) + 꺾임 표시 + 도착 마커로 이루어진다. 하나라도 남으면
+     다른 경로를 그릴 때 옛 선이 겹쳐 남으므로 한 자리에 모아 통째로 지운다. */
+  const routeArt = React.useRef([]);
   const images = React.useRef(null);
   const pad = React.useRef({ top: topPad, bottom: bottomPad });
   const [failed, setFailed] = React.useState(null);
@@ -102,7 +111,7 @@ export function KakaoMap({
 
   /* 콜백은 ref 로 — 부모가 인라인 함수를 넘겨도 지도를 다시 만들지 않는다 */
   const cb = React.useRef({});
-  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onSelectCourseStop, onReady, onError };
+  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onSelectCourseStop, onSelectDest, onSelectTurn, onReady, onError };
 
   /* 실제로 보이는 띠 = 상단 필터 바 아래 ~ 시트 위. 그 한가운데로 마커를 옮긴다.
      지도 중심을 화면 좌표 P 의 좌표로 옮기면 P 는 지도 정중앙으로 간다. 따라서
@@ -176,6 +185,7 @@ export function KakaoMap({
         neutral: pinImage(kakao, token("--pin-neutral", "#0f6e70")),
         district: pinImage(kakao, token("--pin-district", "#2f9260")),
         festival: pinImage(kakao, token("--pin-festival", "#f2a73b")),
+        dest: pinImage(kakao, token("--pin-dest", "#216e48")),
       };
 
       clusterer.current = new kakao.maps.MarkerClusterer({
@@ -357,6 +367,100 @@ export function KakaoMap({
       courseOverlays.current.set(s.id, ov);
     });
   }, [course, center, ready]);
+
+  /* ── 경로 레이어 (S07 길찾기 · U-NV-02) ──────────────────────────────────
+     코스(위)와 가장 비슷해 보이지만 성질이 정반대다.
+
+       코스 점선   들르는 순서를 이은 직선. "이 순서로 돌아라"
+       경로 실선   경로 API 가 돌려준 실제 도보 길. "이 길로 가라"
+
+     그래서 실선이고, 색도 초록(점포 계열)이 아니라 파랑(QR 지점 계열)이다.
+     선을 두 겹으로 긋는다 — 카카오 기본 지도의 도로가 회색·노랑·흰색이라
+     파란 선 하나만 그으면 교차로에서 도로 위에 묻힌다 (밑선이 흰 테두리 역할을 한다).
+
+     경로를 못 받았을 때(U-NV-04)도 이 레이어를 쓴다. 다만 straight 로 들어오면
+     출발-도착을 잇는 회색 점선이 된다. 방향과 거리만 맞는 직선이지 걸어갈 길이 아니므로
+     실선으로 그리면 안내가 거짓말이 된다.
+
+     출발 표시는 따로 그리지 않는다 — 지도 생성 때 만든 QR 지점 앵커(파란 점 + 말풍선)가
+     그대로 출발점이다. 화면의 "내 위치"는 언제나 QR 지점이라는 전제(제안서 3-1)가
+     여기서도 그대로 유지된다. */
+  React.useEffect(() => {
+    const k = kakaoRef.current, m = map.current;
+    if (!k || !m) return;
+
+    routeArt.current.forEach(x => x.setMap(null));
+    routeArt.current = [];
+    if (!route) return;
+
+    const pts = (route.path || []).filter(p => p && p.lat && p.lng).map(p => new k.maps.LatLng(p.lat, p.lng));
+    if (pts.length < 2) return;
+    const keep = x => { routeArt.current.push(x); return x; };
+
+    if (route.straight) {
+      keep(new k.maps.Polyline({
+        map: m, path: pts, strokeWeight: 4,
+        strokeColor: token("--route-line-straight", "#5b6a62"),
+        strokeOpacity: 0.9, strokeStyle: "shortdash", zIndex: 2,
+      }));
+    } else {
+      keep(new k.maps.Polyline({
+        map: m, path: pts, strokeWeight: parseInt(token("--route-casing-w", "10px"), 10) || 10,
+        strokeColor: token("--route-line-casing", "#ffffff"),
+        strokeOpacity: 0.95, strokeStyle: "solid", zIndex: 1,
+      }));
+      keep(new k.maps.Polyline({
+        map: m, path: pts, strokeWeight: parseInt(token("--route-line-w", "6px"), 10) || 6,
+        strokeColor: token("--route-line", "#3d7be5"),
+        strokeOpacity: 0.95, strokeStyle: "solid", zIndex: 2,
+      }));
+    }
+
+    /* 꺾이는 지점 — 안내 목록의 항목과 1:1 이다. 목록에서 누르면 지도가 그리로 가고,
+       지도에서 눌러도 같은 항목이 열린다 (S08 의 순번 이동과 같은 짝짓기).
+       마커가 아니라 CustomOverlay 인 이유도 같다: 선택되면 커져야 하는데 마커 이미지는 PNG 다. */
+    /* dot === false 인 항목(출발·도착)도 배열에 남겨둔다 — 안내 목록과 인덱스가 어긋나면
+       목록에서 세 번째를 눌렀는데 지도는 네 번째 지점을 키우게 된다.
+       출발은 QR 앵커가, 도착은 아래 핀이 이미 그린다. */
+    (route.turns || []).forEach((t, i) => {
+      if (!t || t.dot === false || !t.lat || !t.lng) return;
+      const el = document.createElement("button");
+      el.type = "button";
+      el.setAttribute("aria-label", t.label || `${i + 1}번째 안내 지점`);
+      el.style.cssText =
+        "display:block;width:14px;height:14px;border-radius:999px;padding:0;cursor:pointer;"
+        + "background:var(--route-turn-bg);border:var(--stroke-bold) solid var(--route-line);"
+        + "box-shadow:var(--shadow-raised);transition:transform var(--dur-fast) var(--ease-standard)";
+      el.addEventListener("click", () => cb.current.onSelectTurn && cb.current.onSelectTurn(i));
+      keep(new k.maps.CustomOverlay({
+        map: m, position: new k.maps.LatLng(t.lat, t.lng), content: el, yAnchor: 0.5, zIndex: 5,
+      })).__turn = i;
+    });
+
+    /* 도착지 — 출발(파란 점)과 형태가 다른 핀이라야 어느 쪽이 목적지인지 바로 읽힌다 */
+    const dest = route.dest;
+    if (dest && dest.lat && dest.lng) {
+      const mk = keep(new k.maps.Marker({
+        map: m, position: new k.maps.LatLng(dest.lat, dest.lng),
+        image: images.current && images.current.dest, title: dest.name, zIndex: 6,
+      }));
+      k.maps.event.addListener(mk, "click", () => cb.current.onSelectDest && cb.current.onSelectDest(dest));
+    }
+  }, [route, ready]);
+
+  /* 고른 안내 지점을 키운다 (목록 ↔ 지도). 위 이펙트를 다시 돌리지 않는다 —
+     선을 지웠다 다시 그리면 항목을 누를 때마다 경로가 깜빡인다. */
+  React.useEffect(() => {
+    routeArt.current.forEach(ov => {
+      if (ov.__turn === undefined || !ov.getContent) return;
+      const el = ov.getContent();
+      if (!el || !el.style) return;
+      const on = ov.__turn === activeTurn;
+      el.style.transform = on ? "scale(1.75)" : "none";
+      el.style.background = on ? token("--route-turn-active", "#3d7be5") : token("--route-turn-bg", "#ffffff");
+      ov.setZIndex(on ? 7 : 5);
+    });
+  }, [activeTurn, route, ready]);
 
   /* 코스에서 고른 곳을 키운다. 마커 이미지가 아니라 DOM 이라 스타일만 바꾸면 된다 —
      다른 레이어의 선택 강조(아래)와 방식이 다른 이유다. */

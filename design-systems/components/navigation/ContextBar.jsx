@@ -8,7 +8,29 @@ import { Icon } from "../core/Icon.jsx";
 /* leading: 왼쪽 자리에 들어갈 요소. 기본은 중립적인 QR 아이콘이고,
    화면에서 <Mascot pose="hello" /> 를 넘기면 조아용이 안내하는 모습이 된다.
    캐릭터 에셋 경로는 화면마다 다르므로(Mascot 의 base) 디자인 시스템이 아니라 화면이 알고 있어야 한다. */
+/* ── 얇은 한 줄 (place 없이 부를 때) ──────────────────────────────────────
+   셸(S02·S03)에서 쓰는 모습이다. 지점명은 앱바가 "지금 계신 곳 / 둔전 시장 입구 버스정류장"
+   으로 이미 말하고 있으므로 여기서 반복하지 않고, **전제 한 문장만** 남긴다.
+
+   지점명·캐릭터·버튼까지 얹었던 이전 형태는 세로 60px 을 넘게 먹었다. 그 아래가 지도라
+   화면에서 가장 비싼 자리인데, 거기서 매번 같은 문장을 읽는 사람은 없다.
+   기준점 자체는 앱바가 늘 보여주므로 정보가 사라지는 것이 아니다 (U-CM-04).
+
+   지도를 QR 지점으로 되돌리는 버튼은 지도 위 플로팅 컨트롤로 옮겼다 — 지도를 움직인 뒤에
+   되돌리고 싶어지는 자리가 지도 위이지 화면 맨 위가 아니다. */
 export function ContextBar({ place, label = "QR 스캔 지점", note = "QR 스캔 지점을 기준으로 위치가 안내됩니다.", leading, onReset, style, ...rest }) {
+  if (!place) {
+    return (
+      <div style={{ padding: "5px var(--gutter-screen)", background: "var(--surface-brand-soft)",
+        borderBottom: "var(--stroke-hairline) solid var(--yong-green-100)", ...style }} {...rest}>
+        <p style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", color: "var(--text-muted)",
+          lineHeight: 1.45, textAlign: "center", wordBreak: "keep-all" }}>
+          {note}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)",
       padding: "8px var(--gutter-screen)", background: "var(--surface-brand-soft)",

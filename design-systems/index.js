@@ -15,9 +15,11 @@ export { PictogramTile } from "./components/core/PictogramTile.jsx";
 export { ListRow } from "./components/core/ListRow.jsx";
 export { SectionHeader } from "./components/core/SectionHeader.jsx";
 export { Input } from "./components/core/Input.jsx";
+export { Textarea } from "./components/core/Textarea.jsx";
 export { Select } from "./components/core/Select.jsx";
 export { Checkbox } from "./components/core/Checkbox.jsx";
 export { Radio } from "./components/core/Radio.jsx";
+export { RadioGroup } from "./components/core/RadioGroup.jsx";
 export { Switch } from "./components/core/Switch.jsx";
 export { OnnuriBadge } from "./components/core/OnnuriBadge.jsx";
 export { OnnuriToggle } from "./components/core/OnnuriToggle.jsx";
@@ -39,6 +41,8 @@ export { ContextBar } from "./components/navigation/ContextBar.jsx";
 export { TabBar } from "./components/navigation/TabBar.jsx";
 export { SegmentedTabs } from "./components/navigation/SegmentedTabs.jsx";
 export { ProgressSteps } from "./components/navigation/ProgressSteps.jsx";
+/* 도보 안내 목록 (S07 길찾기 · U-NV-03) */
+export { RouteSteps, RouteStepRow, routeStepText, TURN_ICONS, TURN_LABELS } from "./components/navigation/RouteSteps.jsx";
 
 /* feedback */
 export { Notice } from "./components/feedback/Notice.jsx";
@@ -46,6 +50,7 @@ export { Toast } from "./components/feedback/Toast.jsx";
 export { Sheet, SNAP_ORDER, SNAP_HEIGHT } from "./components/feedback/Sheet.jsx";
 export { FloatingControls } from "./components/feedback/FloatingControls.jsx";
 export { EmptyState } from "./components/feedback/EmptyState.jsx";
+export { LoadingBar } from "./components/feedback/LoadingBar.jsx";
 
 /* map */
 export { MapCanvas } from "./components/map/MapCanvas.jsx";

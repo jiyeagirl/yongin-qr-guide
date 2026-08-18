@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  SectionHeader, Notice, FacilityRow, FACILITY_LABELS, SAFETY, CONVENIENCE, eun,
+  SectionHeader, Notice, FacilityRow, SAFETY, CONVENIENCE,
 } from "../../design-systems/index.js";
 
 /* S02 공공시설 탭 바텀시트 내용 (기능명세서 v1.0 4장 S02 행).
@@ -8,9 +8,8 @@ import {
  *
  * 상점가 탭(DistrictSheet)과 골격이 같다. 시트는 결과만 담고, 유형 칩은 지도 위 필터 바가 갖는다.
  *
- *   [시트 헤더]   주변 공공시설 · 기준 문구 · AED n곳 / 대피소 n곳   ← 접힘 상태에서도 보임
- *   ────────────────────────────────────────────────
- *   원거리 안내 배너 (U-FC-09)                                   ← 있을 때만
+ *   [시트 헤더]   주변 공공시설 · 기준 문구 · AED n곳 / ⚠대피소 n곳   ← 접힘 상태에서도 보임
+ *                 (원거리 안내 U-FC-09 는 저 주의 배지의 말풍선이다 — FacilitySummary)
  *   ────────────────────────────────────────────────
  *   안전시설   AED · 대피소   거리순     (U-FC-04)
  *   편의시설   화장실 · 쉼터  거리순
@@ -40,7 +39,7 @@ const GROUPS = [
   { id: "comfort", title: "편의시설", types: CONVENIENCE },
 ];
 
-export function FacilitySheet({ rows, notices = [], cat, selectedId, onPick, asOf }) {
+export function FacilitySheet({ rows, cat, selectedId, onPick, asOf }) {
   /* 단일 유형을 고른 상태에서는 섹션을 나누지 않는다 — 한 묶음뿐인데 머리말을 달면
      "다른 묶음이 아래 더 있나" 하고 스크롤하게 된다 */
   const grouped = cat === "all";
@@ -52,23 +51,12 @@ export function FacilitySheet({ rows, notices = [], cat, selectedId, onPick, asO
   return (
     <div style={{ paddingBottom: "var(--space-9)" }}>
 
-      {/* ── U-FC-09 원거리 안내 (있을 때만) ────────────────────────────────
-             "빈 결과 화면을 만들지 않는다"가 이 규칙의 핵심이다. 상한을 넘겨서라도 최근접을
-             제시하고, 대신 멀다는 사실을 목록 맨 위에 적는다. 내부 상한 수치는 적지 않는다 ── */}
-      {notices.length ? (
-        <div style={{ padding: "0 var(--gutter-screen) var(--space-3)",
-          display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-          {notices.map(n => (
-            /* 조사는 유형 이름의 받침에 따라 달라진다 — "대피소는" / "화장실은".
-               문장에 박아두면 데이터가 바뀔 때 조용히 어색해진다 */
-            <Notice key={n.type} tone="warning" title="가까운 곳에는 없어요">
-              가장 가까운 {eun(FACILITY_LABELS[n.type])} {n.text} 떨어져 있습니다.
-            </Notice>
-          ))}
-        </div>
-      ) : null}
-
-      {/* ── 시설 목록 ──────────────────────────────────────────────────── */}
+      {/* ── 시설 목록 ────────────────────────────────────────────────────
+             U-FC-09 원거리 안내는 여기 있었으나 시트 헤더(FacilitySummary)로 옮겼다.
+             배너 한 장이 목록 두 줄만큼을 먹으면서 말하는 것은 "대피소가 멀다" 한 가지뿐이었다.
+             이제는 헤더의 유형 아이콘에 주의 배지가 붙고 말풍선이 문장을 갖는다 —
+             경고와 그 대상이 같은 자리에 있어, 무엇이 먼지 문장을 읽기 전에 알 수 있다.
+             "빈 결과 화면을 만들지 않는다"는 규칙 자체는 그대로다 (상한을 넘겨 최근접을 제시). */}
       <div style={{ padding: "var(--space-1) var(--gutter-screen) 0" }}>
         {rows.length === 0 ? (
           /* 유형 칩은 0건이면 아예 숨기므로(FilterBar) 여기까지 오는 경우는 거의 없다.

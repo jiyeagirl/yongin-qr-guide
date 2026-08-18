@@ -103,6 +103,106 @@ function collect(entries) {
   return mods;
 }
 
+/* ── 미해결 import 검사 ──────────────────────────────────────────────────────
+ *
+ * **2026-08-18 사고 대응.** 배포가 초록불인데 화면이 백지였던 적이 있다.
+ * 화면은 `import { LoadingBar } from "design-systems/index.js"` 를 쓰는데 그
+ * export 줄이 커밋에서 빠져 있었다. 위 collect() 는 **require 대상 파일**만 따라가고
+ * 이름이 실제로 export 되는지는 보지 않는다 — index.js 는 멀쩡히 존재하므로
+ * 빌드는 성공하고, 런타임에 그 이름이 undefined 가 되어 React 가 첫 렌더에서 터진다.
+ *
+ * 정적 웹이라 타입 검사도 린터도 없다. 그러면 이 실수를 잡을 곳은 여기뿐이다 —
+ * Vercel 이 매 배포마다 `npm run build` 를 돌리므로, 여기서 멈추면 백지가 나가는 대신
+ * 빨간불이 뜬다. 그게 훨씬 낫다.
+ *
+ * 변환된 코드가 아니라 **원본**을 본다. Babel 이 ESM 을 CommonJS 로 바꾸고 나면
+ * 이름 목록이 흩어져 되짚기 어렵다.
+ */
+
+/* 이 모듈이 밖으로 내주는 이름들. 재수출(`export { X } from "..."`)도 포함한다 —
+   design-systems/index.js 가 전부 그 형태다. */
+function exportsOf(src) {
+  const out = new Set();
+  /* async · 제너레이터까지 받는다. `export async function requestWalkRoute` 를 놓쳐
+     멀쩡한 코드를 미해결로 잡은 적이 있다 — 이 검사는 오탐이 나면 배포가 막히므로
+     빠뜨리는 것보다 오탐이 비싸다. */
+  for (const m of src.matchAll(/export\s+(?:async\s+)?(?:const|function\s*\*?|class|let|var)\s+([A-Za-z0-9_$]+)/g)) out.add(m[1]);
+  for (const m of src.matchAll(/export\s*\{([^}]+)\}/g)) {
+    for (const part of m[1].split(",")) {
+      /* `X as Y` 는 밖에서 Y 로 보인다 */
+      const name = part.trim().split(/\s+as\s+/).pop().trim();
+      if (name) out.add(name);
+    }
+  }
+  if (/export\s+default/.test(src)) out.add("default");
+  return out;
+}
+
+/* `import { A, B as C } from "..."` 만 본다. 기본 import 와 `import * as` 는
+   이름을 하나만 받으므로 여기서 걸릴 일이 없다. */
+function namedImports(src) {
+  const out = [];
+  for (const m of src.matchAll(/import\s*\{([^}]+)\}\s*from\s*["']([^"']+)["']/g)) {
+    const names = m[1].split(",")
+      .map(s => s.trim().split(/\s+as\s+/)[0].trim())
+      .filter(Boolean);
+    if (names.length) out.push({ names, spec: m[2] });
+  }
+  return out;
+}
+
+function verifyImports(mods) {
+  const cache = new Map();
+  const exportsFor = id => {
+    if (!cache.has(id)) {
+      const abs = path.join(ROOT, id);
+      cache.set(id, fs.existsSync(abs) ? exportsOf(fs.readFileSync(abs, "utf8")) : null);
+    }
+    return cache.get(id);
+  };
+
+  const bad = [];
+  const scan = (fromId, raw, resolve) => {
+    for (const { names, spec } of namedImports(raw)) {
+      if (EXTERNAL.has(spec)) continue;
+      const targetId = resolve(spec);
+      const avail = exportsFor(targetId);
+      if (!avail) { bad.push({ fromId, spec, name: "(파일 없음)" }); continue; }
+      for (const n of names) if (!avail.has(n)) bad.push({ fromId, spec, name: n });
+    }
+  };
+
+  for (const [id, { raw }] of mods) {
+    const abs = pathToFileURL(path.join(ROOT, id));
+    scan(id, raw, spec => rel(fileURLToPath(new URL(spec, abs))));
+  }
+
+  /* 재수출도 확인한다. index.js 에 export 줄을 넣었는데 그쪽 파일의 이름이 다르면
+     import 검사는 통과하고(index.js 가 그 이름을 내주긴 하므로) 값만 undefined 가 된다. */
+  for (const [id, { raw }] of mods) {
+    const abs = pathToFileURL(path.join(ROOT, id));
+    for (const m of raw.matchAll(/export\s*\{([^}]+)\}\s*from\s*["']([^"']+)["']/g)) {
+      const targetId = rel(fileURLToPath(new URL(m[2], abs)));
+      const avail = exportsFor(targetId);
+      if (!avail) { bad.push({ fromId: id, spec: m[2], name: "(파일 없음)" }); continue; }
+      for (const part of m[1].split(",")) {
+        const n = part.trim().split(/\s+as\s+/)[0].trim();
+        if (n && !avail.has(n)) bad.push({ fromId: id, spec: m[2], name: n });
+      }
+    }
+  }
+
+  if (!bad.length) return;
+  console.error(`\n미해결 import ${bad.length}건 — 빌드를 중단합니다.\n`);
+  for (const b of bad) console.error(`  ${b.fromId}\n    ${b.name}  ←  ${b.spec}`);
+  console.error(
+    "\n화면이 쓰는 이름이 그 모듈의 export 에 없습니다."
+    + "\ndesign-systems/ 의 컴포넌트라면 design-systems/index.js 에 export 를 추가했는지 확인하세요."
+    + "\n(이 검사가 없던 시절, export 줄만 빠진 커밋이 배포되어 화면이 백지로 나간 적이 있습니다 —"
+    + "\n 번들러는 없는 export 를 오류로 보지 않고 그 모듈을 넣지 않을 뿐이라 빌드는 성공합니다.)\n");
+  process.exit(1);
+}
+
 /* ── Lucide 아이콘 추리기 ─────────────────────────────────────────────────────
  * lucide UMD 는 624KB 인데 아이콘이 2,021개다. 이 화면들이 쓰는 것은 수십 개뿐이라
  * 번들(400KB)보다 아이콘 꾸러미가 더 큰 상태였다. 쓰는 것만 뽑아 번들 안에 넣는다.
@@ -194,6 +294,7 @@ for (const t of TARGETS) {
   const dsAbs = path.join(ROOT, t.ds);
   const entryAbs = path.join(ROOT, t.entry);
   const mods = collect([dsAbs, entryAbs]);
+  verifyImports(mods);                     /* 이름이 실제로 export 되는지 — 통과 못 하면 여기서 멈춘다 */
   const icons = pickIcons(mods);
   const out = emit(mods, rel(dsAbs), rel(entryAbs), icons);
   const dest = path.join(ROOT, t.dir, "bundle.js");

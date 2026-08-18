@@ -7,6 +7,7 @@ import React from "react";
  *   #/store/dj-042     S06 점포 상세
  *   #/course/cs-eat    S08 골목 한바퀴 코스 상세
  *   #/festival/ft-dunjeon  S09 축제 상세
+ *   #/route/facility/fc-001  S07 길찾기 (도착지 종류 + id)
  *
  * 라우팅 라이브러리를 넣지 않는다. 이 저장소에는 빌드가 없고(브라우저가 Babel 로 JSX 를
  * 실시간 변환한다) 첫 로딩이 이미 4.7MB 다. 경로가 세 개뿐인데 여기에 번들을 더할 이유가 없다.
@@ -22,22 +23,35 @@ import React from "react";
  * history 에 항목을 쌓아두면 뒤로가기가 기대대로 상세만 걷어낸다.
  */
 
-export const ROUTE_MAIN = { name: "main", id: null };
+export const ROUTE_MAIN = { name: "main", id: null, parts: [] };
 
 /* 상세 화면의 종류. 여기 없는 이름은 전부 셸로 떨어진다 —
    새 상세 화면을 붙일 때 고칠 곳이 이 배열과 MainApp 의 target/detail 두 군데뿐이도록 둔다. */
-const DETAIL = ["facility", "store", "course", "festival"];
+const DETAIL = ["facility", "store", "course", "festival", "route"];
 
-/* "#/store/dj-042" → { name: "store", id: "dj-042" }
+/* 대상 없이도 열리는 화면. 지금은 S10 오류신고 하나다 —
+   보통은 시설·점포 상세에서 대상을 달고 들어오지만(#/report/facility/fc-001),
+   대상을 특정하지 못한 문의(#/report)도 받아야 하기 때문이다.
+   위 DETAIL 과 나누는 이유는 아래 parseHash 의 "조각이 없으면 셸" 규칙 때문이다 —
+   그 규칙은 오타난 딥링크를 걸러내는 장치라 없애면 안 되고, 여기만 예외로 둔다. */
+const OPTIONAL_ID = ["report"];
+
+/* "#/store/dj-042"           → { name: "store", id: "dj-042", parts: ["dj-042"] }
+   "#/route/facility/fc-001"  → { name: "route", id: "facility", parts: ["facility", "fc-001"] }
+
+   길찾기만 조각이 둘이다. 도착지가 시설일 수도 점포일 수도 있어 id 하나로는 어느 목록에서
+   찾아야 할지 알 수 없기 때문이다 (fc-001 과 dj-042 는 지금은 접두사가 다르지만, 그건
+   더미 데이터의 성질이지 규약이 아니다 — 실데이터의 id 체계에 기대면 안 된다).
+
    모르는 경로는 전부 main 으로 떨어뜨린다 — 오타난 딥링크에 빈 화면을 보여주지 않는다. */
 export function parseHash(hash) {
   const raw = String(hash || "").replace(/^#\/?/, "");
   if (!raw) return ROUTE_MAIN;
 
-  const [name, id] = raw.split("/");
-  if (DETAIL.includes(name) && id) {
-    return { name, id: decodeURIComponent(id) };
-  }
+  const [name, ...rest] = raw.split("/").filter(Boolean);
+  const parts = rest.map(decodeURIComponent);
+  if (DETAIL.includes(name) && parts.length) return { name, id: parts[0], parts };
+  if (OPTIONAL_ID.includes(name)) return { name, id: parts[0] || null, parts };
   return ROUTE_MAIN;
 }
 

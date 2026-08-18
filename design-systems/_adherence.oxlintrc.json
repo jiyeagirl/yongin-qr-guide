@@ -43,8 +43,8 @@
         "message": "Font not provided by the design system. Available: Pretendard."
       },
       {
-        "selector": "JSXOpeningElement[name.name='AppBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|back|onBack|actions|tone|style|key|ref|className|style|children)$/]",
-        "message": "<AppBar> doesn't accept that prop. Declared props: title, back, onBack, actions, tone, style."
+        "selector": "JSXOpeningElement[name.name='AppBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|label|leading|back|onBack|actions|tone|style|key|ref|className|style|children)$/]",
+        "message": "<AppBar> doesn't accept that prop. Declared props: title, label, leading, back, onBack, actions, tone, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='AppBar'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:plain|brand)$/]",
@@ -95,8 +95,8 @@
         "message": "<Chip> doesn't accept that prop. Declared props: children, selected, icon, onClick, style."
       },
       {
-        "selector": "JSXOpeningElement[name.name='ContextBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:place|note|onReset|style|key|ref|className|style|children)$/]",
-        "message": "<ContextBar> doesn't accept that prop. Declared props: place, note, onReset, style."
+        "selector": "JSXOpeningElement[name.name='ContextBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:place|label|note|leading|onReset|style|key|ref|className|style|children)$/]",
+        "message": "<ContextBar> doesn't accept that prop. Declared props: place, label, note, leading, onReset, style. (place 를 넘기지 않으면 안내 문장 한 줄짜리 얇은 띠가 된다)"
       },
       {
         "selector": "JSXOpeningElement[name.name='EmptyState'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|description|action|pose|base|style|key|ref|className|style|children)$/]",
