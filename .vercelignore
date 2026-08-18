@@ -1,0 +1,24 @@
+# 배포에서 뺄 것 — 웹에서 쓰지 않는 파일이다.
+# 여기 없는 것은 전부 공개 주소로 그대로 서빙된다는 뜻이기도 하다.
+
+# 에이전트 · 도구 설정
+.claude/
+skills/
+
+# 로컬 개발 서버 (배포 환경에는 필요 없다)
+tools/
+
+# 저장소 안쪽 문서 — 필요하면 이 두 줄을 지워 공개할 수 있다
+CLAUDE.md
+docs/
+
+# 디자인 시스템 산출물 중 화면이 쓰지 않는 것.
+# 화면은 _ds_loader 로 원본(components/, tokens/)을 읽으므로 번들은 배포 대상이 아니다.
+design-systems/_ds_bundle.js
+design-systems/handoff/
+design-systems/ui_kits/
+
+# OS · 편집기 부산물
+.DS_Store
+Thumbs.db
+desktop.ini

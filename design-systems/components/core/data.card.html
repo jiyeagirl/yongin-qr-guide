@@ -1,0 +1,26 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Core — Tiles, Rows, Badges" subtitle="Entry tiles, facility/store rows, 온누리 badge" -->
+<meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{background:var(--surface-page);padding:16px;font-family:var(--font-sans);font-size:16px}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.col{display:flex;flex-direction:column;gap:12px}.k{font-size:var(--fs-micro);color:var(--text-muted)}</style>
+<div id="root"></div>
+<script type="text/babel">
+const {PictogramTile,ListRow,Badge,Card,SectionHeader,FacilityIcon,CategoryIcon}=window.DesignSystem_5c90e8;
+ReactDOM.createRoot(document.getElementById('root')).render(<div className="col">
+<div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
+<PictogramTile icon={<FacilityIcon type="aed" size={28}/>} label="AED" caption="약 120m" emergency/>
+<PictogramTile icon={<FacilityIcon type="toilet" size={28}/>} label="화장실" caption="약 210m"/>
+<PictogramTile icon={<FacilityIcon type="rest" size={28}/>} label="쉼터"/>
+<PictogramTile icon={<FacilityIcon type="shelter" size={28}/>} label="대피소" caption="약 480m" emergency/>
+</div>
+<Card padding="var(--space-2) var(--space-5)">
+<SectionHeader title="둔전 골목형 상점가 · 335곳"/>
+<ListRow icon={<CategoryIcon type="cafe" size={22}/>} title="카페 온담" tag={<Badge tone="onnuri">온누리</Badge>} meta="커피전문점 · 약 140m, 도보 2분 · 포곡읍 둔전로 18"/>
+<ListRow icon={<CategoryIcon type="food" size={22}/>} title="둔전분식" tag={<Badge tone="onnuri">온누리</Badge>} meta="한식 · 약 90m, 도보 1분 · 포곡읍 둔전로 12"/>
+<ListRow icon={<FacilityIcon type="aed" size={22}/>} title="둔전마을회관 AED" meta="1층 로비 · 약 120m, 도보 2분" divider={false}/>
+</Card>
+</div>);
+</script>

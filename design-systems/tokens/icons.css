@@ -1,0 +1,53 @@
+/* Iconography: Lucide (ISC). Loaded per page from the CDN UMD build:
+   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+   Rendered only through <Icon>/<FacilityIcon>/<CategoryIcon>. Line style only —
+   no fills, no background chips, stroke width never overridden per screen. */
+:root{
+--icon-stroke:2; /* @kind other */
+--icon-sm:16px;--icon-md:20px;--icon-lg:24px;--icon-xl:28px; /* @kind spacing */
+/* 공공시설 4종 핀 (U-FC-04 / 5-2 스타일 규칙).
+   "안전시설 우선 위계는 지도 핀 색상으로 처리한다 — AED와 대피소는 적색 계열, 화장실과 쉼터는 중립 계열."
+   계열 안에서 한 단계씩 나눠 4종이 서로 구분된다. 아이콘 글리프를 핀 안에 채워 넣지 않는다
+   (5-2: 아이콘에 배경 칩이나 채움 처리를 하지 않는다). 유형 구분의 보조 수단은
+   목록의 유형 배지와 안전/편의 섹션 분리다 (색약 대응, 6장 남은 확인사항 #1).
+
+   --pin-rest 와 --pin-store-onnuri 는 같은 teal-500 이다. 시설 마커와 점포 마커는
+   U-CM-17 에 따라 한 화면에 동시에 뜨지 않으므로 충돌하지 않는다. */
+--pin-aed:var(--yong-red-500); /* @kind color */
+--pin-shelter:var(--yong-red-700); /* @kind color */
+--pin-toilet:var(--yong-teal-700); /* @kind color */
+--pin-rest:var(--yong-teal-500); /* @kind color */
+/* 계열 대표값 — 유형을 모르는 자리(폴백)에서 쓴다 */
+--pin-emergency:var(--yong-red-500); /* @kind color */
+--pin-neutral:var(--yong-teal-700); /* @kind color */
+
+/* 지도 마커 — 점포용. 시설 4종(--pin-emergency/--pin-neutral)과 색을 겹치지 않게 둔다.
+   온누리 가맹 마커는 목록·상세의 온누리 배지와 같은 teal 계열로 맞춘다 (U-ST-06). */
+--pin-store:var(--yong-ink-500); /* @kind color */
+--pin-store-onnuri:var(--yong-teal-500); /* @kind color */
+/* QR 스캔 지점("내 위치") — 유일하게 브랜드 초록을 쓰지 않는 마커다.
+   점포 클러스터가 초록이라 앵커까지 초록이면 수백 개 중 하나로 묻힌다.
+   파랑은 지도에서 "현재 위치"를 뜻하는 관습색이고, 초록(점포)·빨강(응급시설)과도 겹치지 않는다.
+   지도 마커 색 체계: 파랑 = QR 지점 / 초록 = 점포 클러스터 / 청록 = 온누리 / 회색 = 일반 점포 / 빨강 = AED·대피소 */
+--pin-anchor:var(--yong-blue-500); /* @kind color */
+--pin-anchor-halo:rgba(61,123,229,.20); /* @kind color */
+/* 둘러보기 탭의 상점가 지점 마커 (32개소 전체). 축제가 걸린 곳은 호박색으로 띄운다 —
+   이 탭에서 축제는 기간 한정이라 최상단 섹션이고, 지도에서도 먼저 눈에 띄어야 한다.
+   --pin-district 의 초록은 점포 클러스터와 같은 계열이지만, U-CM-17 에 따라
+   점포 마커와 상점가 마커는 한 화면에 동시에 뜨지 않는다. */
+--pin-district:var(--brand-primary); /* @kind color */
+--pin-festival:var(--yong-amber-500); /* @kind color */
+--pin-selected:var(--brand-primary-strong); /* @kind color */
+--pin-stroke:var(--yong-white); /* @kind color */
+/* 지도 위 라벨(앵커 지점명 등) 바탕 — 위성/일반 지도 어느 쪽에서도 읽히도록 잉크 계열 반투명 */
+--map-label-bg:rgba(22,34,28,.86); /* @kind color */
+
+/* 클러스터 — 수백 개 마커를 직접 렌더하지 않는다 (U-ST-13). 3단계 크기.
+   숫자 구간은 KakaoMap 의 calculator prop 기본값 [10, 100] 과 짝을 이룬다. */
+--cluster-sm-size:40px; /* @kind spacing */
+--cluster-md-size:48px; /* @kind spacing */
+--cluster-lg-size:58px; /* @kind spacing */
+--cluster-bg:rgba(47,146,96,.92); /* @kind color */
+--cluster-bg-strong:rgba(33,110,72,.94); /* @kind color */
+--cluster-text:var(--yong-white); /* @kind color */
+}

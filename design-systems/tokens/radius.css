@@ -1,0 +1,5 @@
+:root{
+--radius-xs:6px;--radius-sm:10px;--radius-md:14px;--radius-lg:20px;--radius-xl:26px;--radius-2xl:32px;--radius-pill:999px;
+--radius-card:var(--radius-lg);--radius-tile:var(--radius-xl);--radius-control:var(--radius-md);--radius-sheet:28px;
+--stroke-hairline:1px;--stroke-outline:2px;--stroke-bold:3px; /* @kind spacing */
+}

@@ -1,0 +1,24 @@
+# 버전 관리에 넣지 않을 것.
+#
+# .vercelignore 와 축이 다르다. 헷갈리기 쉬우니 여기 적어둔다:
+#
+#   .gitignore    "버전 관리에 안 넣을 것"  — 이 PC 전용 설정, 생성물
+#   .vercelignore "배포에 안 올릴 것"       — docs/, tools/, CLAUDE.md, skills/
+#
+# docs/ 와 tools/ 는 배포에서는 빠지지만 **깃에는 반드시 들어간다.**
+# 둘을 "통일"하지 말 것 — 같은 목록이어야 할 이유가 없다.
+
+node_modules/
+
+# npx vercel 이 만드는 프로젝트 링크. 이 PC 전용이다
+.vercel/
+
+# 이 PC 전용 권한 허용 목록 — 절대경로가 그대로 들어 있어 공유할 것이 못 된다
+.claude/settings.local.json
+
+# OS · 편집기 부산물
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp

@@ -1,0 +1,403 @@
+import React from "react";
+import {
+  AppBar, ContextBar, KakaoMap, MapPreviewCard, MapFilterOverlay, Sheet, Toast, TabBar,
+  DistrictSummary, FacilitySummary, FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, SAFETY,
+  Icon, Mascot, token,
+} from "../../design-systems/index.js";
+import { DUNJEON } from "./data/dunjeon.js";
+import { FACILITIES, NEARBY, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.js";
+import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, HAS_LIVE_FESTIVAL, CURRENT_FESTIVAL, CURRENT_DISTRICT_ID } from "./data/districts.js";
+import { DistrictSheet } from "./DistrictSheet.jsx";
+import { FacilitySheet } from "./FacilitySheet.jsx";
+import { DiscoverSheet } from "./DiscoverSheet.jsx";
+import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF } from "./config.js";
+
+/* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.0 확정 결정사항 11).
+ *
+ *   S02 공공시설 탭   AED · 화장실 · 쉼터 · 대피소   (U-FC-01~04, 06, 08, 09)
+ *   S03 상점가 탭     현재 상점가의 점포 목록         (U-ST-02~06, 10~13, 15, U-FT-03)
+ *   S04 둘러보기 탭   축제 · 코스 · 다른 상점가        (U-DC-01~06) — 미착수
+ *
+ * 셋은 별도 페이지가 아니라 **같은 화면의 탭 상태**다 (4장). 페이지를 나누면 탭을 바꿀 때마다
+ * 지도가 다시 뜨는데, 그것을 U-CM-16 이 금지한다. 그래서 폴더도 S02/S03 이 아니라 `main` 이다.
+ *
+ * ── 이 화면이 확정한 것 (기능명세서 5-3, 전문은 docs/S03_map_overlay_rules.md) ──
+ *
+ *  1. 바텀시트 3단 스냅 — 지도 영역 기준 접힘 25% / 절반 62% / 전체 100%
+ *     → 지도 노출 75% / 38% / 0%. 값은 tokens/layers.css. **두 탭이 같은 값을 쓴다** —
+ *     탭마다 시트 높이가 다르면 탭 전환이 화면이 통째로 바뀌는 것처럼 보인다.
+ *
+ *  2. 지도 패딩 — 위(상단 필터 바) · 아래(시트 + 미리보기 카드)를 measure 해 px 로 넘긴다.
+ *     공공시설 탭은 검색창이 없어 필터 바가 한 줄 낮다. 그래서 상수가 아니라 measure 여야 한다.
+ *
+ *  3. 플로팅 컨트롤 — 앵커링 규칙은 확정했으나 두 탭 모두 대상이 없다 (지도 위에 버튼을 두지 않는다).
+ *     U-FC-03 의 "목록과 지도 토글"은 별도 버튼이 아니라 **시트 스냅 자체**가 맡는다.
+ *     시트를 끌어올리면 목록, 내리면 지도다. 같은 일을 하는 버튼을 하나 더 두면
+ *     시트 상태와 버튼 상태가 어긋나는 경우가 생긴다 (S03 에서 이미 제거한 버튼이다).
+ *
+ *  4. 필터 고정 범위 — 지도 위 z 300 에는 "지도를 보며 범위를 좁히는 것"만 둔다.
+ *       공공시설 탭   시설 유형 칩 5종           (검색·정렬 없음)
+ *       상점가 탭     검색 + 업종 칩 7종         (온누리·정렬은 목록 위 sticky)
+ *
+ *  5. 탭바와 시트의 공존 — 탭바는 시트의 형제 요소이며 항상 보인다 (TabBar 주석 참조).
+ *  6. 탭 전환 시 지도 — 재로딩하지 않고(U-CM-16) 카메라만 QR 지점 + 탭 기본 줌으로 되돌린다.
+ */
+
+const SNAP_LABEL = { collapsed: "접힘", half: "절반", full: "전체" };
+
+/* 하단 탭 3개 (U-CM-03). 아이콘은 기능명세서 5-2 확정값.
+   진행 중 축제가 있으면 둘러보기에 점을 찍는다 (U-CM-18).
+
+   공공시설 탭은 `shield-plus` 와 `life-buoy` 중 택일이 남아 있었다 (6장 남은 확인사항 #6).
+   **`life-buoy` 로 확정한다** — 대피소가 이미 `shield` 를 쓰고 있어, 방패 계열을 탭에도 쓰면
+   탭바의 방패와 지도·목록의 방패가 서로 다른 것을 가리키게 된다.
+   탭 아이콘은 4종을 묶는 상위 개념이어야 하는데 그중 하나와 같은 형태를 쓰면 위계가 무너진다. */
+const TABS = [
+  { id: "facility", label: "공공시설", icon: "life-buoy" },
+  { id: "district", label: "상점가", icon: "store" },
+  { id: "discover", label: "둘러보기", icon: "compass" },
+];
+const tabOf = id => TABS.find(t => t.id === id);
+
+/* 거리 문구 — 1km 를 넘으면 km 로 적는다 ("약 1400m"는 크기 감이 안 온다) */
+const km = m => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`);
+
+export function MainApp() {
+  /* 인근 편의시설(U-ST-07)은 공공시설 탭과 같은 데이터에서 뽑는다 — 두 탭이 같은 시설을
+     다른 거리로 말하지 않게 한다. 합치는 일은 데이터 파일이 아니라 화면이 한다 (순환 참조 방지) */
+  const d = React.useMemo(() => ({ ...DUNJEON, nearby: NEARBY, festival: CURRENT_FESTIVAL }), []);
+
+  const [tab, setTab] = React.useState("facility");   /* QR 스캔 시 공공시설 탭으로 진입 (U-CM-03) */
+  const [snap, setSnap] = React.useState("half");
+  const [selected, setSelected] = React.useState(null);   /* 지도에서 탭한 대상 */
+
+  /* 상점가 탭 필터 (U-ST-10 / 11 / 12 / 15) */
+  const [cat, setCat] = React.useState("all");
+  const [onnuriOnly, setOnnuriOnly] = React.useState(false);
+  const [q, setQ] = React.useState("");
+  const [sort, setSort] = React.useState("distance");
+
+  /* 공공시설 탭 필터 (U-FC-01) — 상점가의 업종 칩과 별개의 상태다.
+     하나로 합치면 탭을 오갈 때 "음식"이 "AED"로 둔갑한다 */
+  const [fcType, setFcType] = React.useState("all");
+
+  const [sheetH, setSheetH] = React.useState(0);          /* 시트 실측 높이(px) */
+  const [previewH, setPreviewH] = React.useState(0);      /* 미리보기 카드 실측 높이(px) */
+  const [filterH, setFilterH] = React.useState(0);        /* 상단 필터 바 실측 높이(px) */
+  const [toast, setToast] = React.useState(null);
+  const mapApi = React.useRef(null);
+  const toastTimer = React.useRef(null);
+
+  const say = React.useCallback(msg => {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2200);
+  }, []);
+  React.useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  const isFacility = tab === "facility";
+  const isDistrict = tab === "district";
+  const isDiscover = tab === "discover";
+
+  /* 현재 상점가 (U-ST-01). null 이면 둘러보기 탭이 축소 모드로 간다 (U-DC-06).
+     지금은 QR 지점이 둔전 구역 안이라 항상 있다 — S03-E 착수 시 여기가 분기점이 된다. */
+  const currentDistrict = React.useMemo(
+    () => DISTRICTS.find(x => x.id === CURRENT_DISTRICT_ID) || null, []);
+
+  /* ── S03 상점가: 필터 + 정렬 ──────────────────────────────────────────
+     목록과 지도 마커가 같은 배열을 본다 (U-ST-10/11/12/15 → U-ST-13).
+     정렬은 칩·온누리·검색과 독립된 축이라 조합이 가능하다 (예: 음식 칩 + 인기순) */
+  const storeRows = React.useMemo(() => {
+    const needle = q.trim();
+    const filtered = d.stores.filter(s =>
+      (cat === "all" || s.cat === cat) &&
+      (!onnuriOnly || s.onnuri) &&
+      (!needle || s.name.includes(needle) || s.biz.includes(needle)));
+    return sort === "popular"
+      ? [...filtered].sort((a, b) => b.views - a.views || a.dist - b.dist)
+      : [...filtered].sort((a, b) => a.dist - b.dist);
+  }, [d.stores, cat, onnuriOnly, q, sort]);
+
+  /* ── S02 공공시설: 유형별 내부 상한 (U-FC-08) ──────────────────────────
+     AED·대피소는 상한이 없다 — 멀어도 최근접을 반드시 제시해야 하는 유형이다.
+     화장실·쉼터는 1km. 상한은 **사용자에게 노출하지 않는다** (화면 어디에도 "1km"라고 적지 않는다).
+
+     상한 안에 하나도 없으면 상한을 무시하고 최근접 2건까지 되살린다 (U-FC-09).
+     빈 결과 화면을 만들지 않는 것이 이 규칙의 핵심이다. */
+  const facilityByType = React.useMemo(() => {
+    const out = {};
+    for (const t of FACILITY_TYPES) {
+      const all = FACILITIES.filter(f => f.type === t);                 /* 이미 거리순 */
+      const within = all.filter(f => f.dist <= (NEAR_LIMIT[t] ?? Infinity));
+      out[t] = within.length ? within : all.slice(0, 2);                /* U-FC-09 폴백 */
+    }
+    return out;
+  }, []);
+
+  /* 칩 개수는 상한을 적용한 뒤의 개수다 — 칩에 6이라 적고 목록에 5줄이 나오면
+     사용자는 한 곳이 사라졌다고 읽는다. 0건인 유형은 FilterBar 가 칩째로 숨긴다 (U-ST-10 과 같은 규칙) */
+  const facilityChips = React.useMemo(() => {
+    const chips = FACILITY_TYPES.map(t => ({ id: t, label: FACILITY_LABELS[t], count: facilityByType[t].length }));
+    return [{ id: "all", label: "전체", count: chips.reduce((n, c) => n + c.count, 0) }, ...chips];
+  }, [facilityByType]);
+
+  const facilityRows = React.useMemo(() => {
+    const pick = fcType === "all" ? FACILITY_TYPES : [fcType];
+    return pick.flatMap(t => facilityByType[t]).sort((a, b) => a.dist - b.dist);
+  }, [facilityByType, fcType]);
+
+  /* U-FC-09 원거리 안내 배너.
+     "가깝다"의 선(NEAR_ENOUGH)을 넘는 최근접만 대상이다. 전체 보기에서는 안전시설(AED·대피소·쉼터)만 본다 —
+     화장실이 멀다는 것은 배너를 쓸 만큼 급하지 않고, 4종마다 배너가 뜨면 목록보다 배너가 길어진다.
+     유형을 하나 고른 상태에서는 그 유형만 본다 (화장실을 골랐으면 화장실이 먼 것도 알려야 한다). */
+  const facilityNotices = React.useMemo(() => {
+    const watch = fcType === "all" ? SAFETY : [fcType];
+    return watch
+      .map(t => facilityByType[t][0])
+      .filter(f => f && f.dist > NEAR_ENOUGH)
+      .map(f => ({ type: f.type, text: km(f.dist) }));
+  }, [facilityByType, fcType]);
+
+  /* ── 결정 2: 지도 가림 높이 ────────────────────────────────────
+     위는 상단 필터 바, 아래는 시트(+미리보기 카드)가 가린다. 마커는 그 사이 띠의 중앙으로 온다 */
+  const gap = React.useMemo(() => parseFloat(token("--map-pad-gap", "24px")) || 24, []);
+  const showPreview = Boolean(selected) && snap !== "full";
+  const mapPadBottom = sheetH + (showPreview ? previewH + gap : 0) + gap;
+
+  /* 둘러보기 탭에는 필터 바가 없다 (고르는 화면이 아니라 훑는 화면이다).
+     그때 마지막으로 잰 높이를 그대로 쓰면 있지도 않은 바만큼 위를 비워두게 되므로 0 으로 되돌린다. */
+  const hasFilterBar = !isDiscover;
+  const barH = hasFilterBar ? filterH : 0;
+  const mapPadTop = barH + gap;
+
+  /* 시트는 상단 필터 바 아래까지만 올라온다. 시트가 z 500 이고 필터 바가 z 300 이라
+     막아두지 않으면 시트를 끌어올릴 때 검색창과 칩이 위에서부터 잘려 나간다.
+     전체 스냅도 "지도 영역 전부"가 아니라 "필터 바 아래 전부"가 된다 —
+     목록만 보는 상태에서도 필터는 늘 같은 자리에 있어야 한다. */
+  const sheetTopInset = barH;
+
+  /* 지도 위에 두는 것은 "지도를 보며 범위를 좁히는 것"뿐이다 (결정 4).
+     두 탭이 같은 MapFilterOverlay 를 쓰고 축만 갈아끼운다 — 필터 바의 위치·z·measure 규칙이
+     탭마다 달라지면 지도 패딩 계산이 탭별로 따로 놀게 된다. */
+  const filterProps = isFacility
+    ? { showSearch: false, chips: facilityChips, cat: fcType, onCatChange: setFcType,
+        filterLabel: "시설 유형 필터",
+        /* 칩에서는 색이 선택 상태를 뜻하므로 안전시설 적색 강조를 끈다 (emphasis={false}).
+           아이콘 표는 FacilityIcon 한 곳에만 있다 (U-CM-05) */
+        renderIcon: c => <FacilityIcon type={c.id} size={15} emphasis={false} /> }
+    : { q, onQueryChange: e => setQ(e.target.value), onQueryClear: () => setQ(""),
+        chips: d.chips, cat, onCatChange: setCat };
+
+  const focus = React.useCallback((lat, lng) => {
+    if (mapApi.current) mapApi.current.focus(lat, lng);
+  }, []);
+
+  /* 마커 탭 — 카드를 띄우고 그 마커를 "보이는 지도 영역"의 중앙으로 올린다.
+     패딩 계산에는 방금 뜬 카드 높이도 들어가야 하므로 다음 프레임에 focus 한다. */
+  const pickOnMap = React.useCallback(item => {
+    setSelected(item);
+    if (snap === "full") setSnap("half");
+    requestAnimationFrame(() => requestAnimationFrame(() => focus(item.lat, item.lng)));
+  }, [snap, focus]);
+
+  /* 시트 높이가 바뀌면 선택된 마커를 다시 시야로 끌어올린다 (스냅 이동 후에도 안 가려지게) */
+  React.useEffect(() => {
+    if (!selected || snap === "full") return;
+    const t = setTimeout(() => focus(selected.lat, selected.lng), 340); /* --dur-slow 이후 */
+    return () => clearTimeout(t);
+  }, [snap, selected, focus]);
+
+  const backToAnchor = () => {
+    setSelected(null);
+    setSnap("collapsed");
+    if (mapApi.current) mapApi.current.reset();
+    say("QR 스캔 지점으로 돌아왔습니다");
+  };
+
+  /* 탭 전환 (5-3 #6) — 지도는 재로딩하지 않고(U-CM-16) 카메라만 QR 지점 + 탭 기본 줌으로 되돌린다.
+     마커 레이어도 함께 갈아끼운다 (U-CM-17: 한 번에 한 레이어만).
+     각 탭의 필터 상태는 지우지 않는다 — 상점가에서 "음식 + 온누리"를 걸어두고 공공시설을 잠깐 본 뒤
+     돌아왔을 때 조건이 풀려 있으면 다시 걸어야 한다. 지우는 것은 선택과 스냅뿐이다. */
+  const changeTab = id => {
+    if (id === tab) return;
+    setTab(id);
+    setSelected(null);
+    setSnap("half");
+    if (!mapApi.current) return;
+    /* 둘러보기만 카메라 규칙이 다르다. 대상이 QR 지점 주변이 아니라 **32개소 전체**(약 25km)라
+       줌 레벨을 상수로 찍으면 기기 폭에 따라 잘리거나 너무 멀어진다. 32개 지점을 담는
+       경계를 계산해 맞춘다. 가려지는 위아래(필터 바 / 시트)를 padding 으로 넘겨
+       마커가 시트 뒤로 들어가지 않게 한다 — 5-3 #2 와 같은 규칙이다. */
+    if (id === "discover") mapApi.current.fitTo(DISTRICTS, { top: gap, bottom: mapPadBottom });
+    else mapApi.current.setView(d.anchor.lat, d.anchor.lng, TAB_MAP_LEVEL[id]);
+  };
+
+  /* U-CM-17 — 시설 마커와 점포 마커를 동시에 노출하지 않는다. 탭이 소유한 레이어만 그린다.
+     상점가 탭의 "인근 편의시설"은 목록으로만 제공하고 지도에는 찍지 않는다. */
+  const storeMarkers = isDistrict ? storeRows : [];
+  const facilityMarkers = isFacility ? facilityRows : [];
+  const districtMarkers = isDiscover ? DISTRICTS : [];
+
+  /* 시트 제목 — 탭마다 다르다. 상점가는 상점가명이 곧 제목이고(U-ST-03), 공공시설은 대상이 여럿이라
+     유형을 고른 상태를 제목에 담는다 ("주변 AED"). 지금 무엇을 보고 있는지가 제목에서 읽혀야 한다. */
+  const sheetTitle = isFacility
+    ? (fcType === "all" ? "주변 공공시설" : `주변 ${FACILITY_LABELS[fcType]}`)
+    : isDistrict ? d.district.name : "둘러보기";
+
+  return (
+    <div style={{ position: "relative", width: "100%", maxWidth: "var(--screen-max)", height: "100%",
+      margin: "0 auto", overflow: "hidden", background: "var(--surface-page)", display: "flex", flexDirection: "column" }}>
+
+      {/* 상단 — z 300. 2차의 언어·음성·글자 크기 버튼 자리는 코드에서만 비워둔다 (화면에 노출하지 않는다).
+          오류 신고는 이 화면에 두지 않는다 — 신고 대상이 특정되는 상세 화면(S05 시설, S06 점포)에서 진입한다 */}
+      <div style={{ position: "relative", zIndex: "var(--z-filter)", flex: "0 0 auto" }}>
+        <AppBar title={isDistrict ? d.district.name : "용인시 위치안내"} />
+        {/* U-CM-04 — 사용자가 이동해도 갱신되지 않는 기준점이므로 항상 보이게 둔다.
+            탭을 바꿔도 이 줄은 그대로다. 세 탭이 모두 같은 QR 지점을 기준으로 삼기 때문이다.
+            조아용은 이 줄에만 등장한다 (기능명세서 5-1 개정). */}
+        <ContextBar place={d.anchor.name} onReset={backToAnchor}
+          leading={<Mascot pose="hello" size={38} base="../../design-systems/" alt="" />} />
+      </div>
+
+      {/* 지도 영역 — 시트·플로팅·미리보기 카드의 좌표 기준이 되는 컨테이너.
+          시트 스냅 %도, 지도 패딩 %도 모두 이 높이 기준이다. 탭이 바뀌어도 이 컨테이너는 그대로다. */}
+      <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+
+        {/* 지도 인스턴스는 하나뿐이고 탭이 바뀌어도 다시 만들지 않는다 (U-CM-16).
+            바뀌는 것은 stores / facilities 배열뿐이다. */}
+        <KakaoMap
+          appKey={KAKAO_APP_KEY}
+          center={d.anchor}
+          anchorLabel={d.anchor.name}
+          level={MAP_LEVEL}
+          stores={storeMarkers}
+          facilities={facilityMarkers}
+          districts={districtMarkers}
+          selectedId={selected ? selected.id : null}
+          topPad={mapPadTop}
+          bottomPad={mapPadBottom}
+          mapRef={mapApi}
+          onSelectStore={pickOnMap}
+          /* 편의시설도 같은 미리보기 카드를 쓰되 아이콘 체계는 시설 4종 쪽을 따른다 (5-2).
+             biz 자리에 유형 이름을, addr 자리에 상세 위치를 넣는다 — 거리는 카드가 따로 표기한다 */
+          onSelectFacility={f => pickOnMap({
+            ...f, kind: "facility", biz: FACILITY_LABELS[f.type] || "공공시설", addr: f.detail,
+          })}
+          /* 상점가 마커도 같은 미리보기 카드를 쓴다. 다만 "길찾기"가 아니라 "이 상점가 보기"다 —
+             상점가는 점이 아니라 구역이라 도보 경로의 도착지가 될 수 없다 (확정 결정사항 6). */
+          onSelectDistrict={x => pickOnMap({
+            ...x, biz: x.festival ? `${x.gu} · ${x.festival.name}` : x.gu,
+            addr: `${x.area} · 점포 ${x.stores}곳, 온누리 ${x.onnuri}곳`,
+          })}
+        />
+
+        {/* 결정 4 — 상단 필터 바 (z 300). 두 탭 모두 여기에 필터를 둔다. 시트가 어디에 있든
+            자리가 바뀌지 않는다 (시트가 여기까지 올라오지 못하게 topInset 으로 막는다).
+            둘러보기 탭은 필터 축이 없다 (섹션 스크롤 화면이라 지도 위에 아무것도 두지 않는다) */}
+        {hasFilterBar ? <MapFilterOverlay onHeightChange={setFilterH} {...filterProps} /> : null}
+
+        {/* 결정 2의 나머지 절반 — 탭한 마커가 무엇이었는지 그 자리에서 읽힌다 */}
+        {showPreview ? (
+          <MapPreviewCard
+            item={selected}
+            icon={selected.kind === "facility" ? <FacilityIcon type={selected.type} size={22} />
+              : selected.kind === "district" ? <Icon name="store" size={22} /> : undefined}
+            bottom={sheetH}
+            onHeightChange={setPreviewH}
+            onClose={() => { setSelected(null); setPreviewH(0); }}
+            routeLabel={selected.kind === "district" ? "상점가 보기" : "길찾기"}
+            detailLabel={selected.kind === "district" && selected.festival ? "축제 보기" : "상세 보기"}
+            onDetail={() => say(selected.kind === "facility" ? `${selected.name} 상세로 (S05 시설 상세)`
+              : selected.kind === "district"
+                ? (selected.festival ? `${selected.festival.name} 상세로 (S09 축제 상세)` : `${selected.name} 정보 (S03 상점가 탭)`)
+                : `${selected.name} 상세로 (S06 점포 상세)`)}
+            onRoute={() => say(selected.kind === "district"
+              ? `${selected.name}으로 이동 (상점가 탭 전환)`
+              : `${selected.name}까지 도보 길찾기 (S07 길찾기)`)} />
+        ) : null}
+
+        {/* 결정 1 — 3단 스냅. 실측 높이를 위로 올려보내 지도 패딩과 미리보기 카드 앵커가 따라온다.
+            U-FC-03 의 "목록과 지도 토글"이 이것이다 — 별도 버튼을 두지 않는다 */}
+        <Sheet
+          title={sheetTitle}
+          snap={snap}
+          onSnapChange={setSnap}
+          onHeightChange={setSheetH}
+          /* 전체 스냅에서는 지도가 완전히 가려지므로 돌아갈 길을 헤더에 명시한다.
+             핸들을 아래로 끄는 방법만 남기면 지도로 못 돌아가는 사용자가 생긴다 */
+          onClose={snap === "full" ? () => setSnap("half") : undefined}
+          closeIcon="map"
+          closeLabel="지도"
+          topInset={sheetTopInset}
+          headerExtra={isFacility
+            /* U-FC-02 기준 + U-FC-04 안전시설 개수 — 접힘 상태에서도 보여야 하므로 스크롤 영역 밖 */
+            ? <FacilitySummary
+                counts={FACILITY_TYPES.reduce((o, t) => ({ ...o, [t]: facilityByType[t].length }), {})}
+                style={{ marginTop: "var(--space-1)" }} />
+            /* U-ST-02 구역 안내 + U-ST-03 헤더 수치 */
+            : isDistrict ? <DistrictSummary district={d.district} style={{ marginTop: "var(--space-1)" }} /> : null}>
+
+          {isFacility ? (
+            <FacilitySheet
+              rows={facilityRows}
+              notices={facilityNotices}
+              cat={fcType}
+              selectedId={selected ? selected.id : null}
+              asOf={FACILITY_AS_OF}
+              onPick={f => say(`${f.name} 상세로 (S05 시설 상세)`)} />
+          ) : isDistrict ? (
+            <DistrictSheet
+              data={d}
+              rows={storeRows}
+              cat={cat}
+              onnuriOnly={onnuriOnly} setOnnuriOnly={setOnnuriOnly}
+              sort={sort} setSort={setSort}
+              q={q}
+              selectedId={selected ? selected.id : null}
+              onPickStore={s => say(`${s.name} 상세로 (S06 점포 상세)`)}
+              onPickFacility={f => say(`${f.name} 상세로 (S05 시설 상세)`)}
+              onOpenFestival={() => say(`${d.festival.name} 상세로 (S09 축제 상세)`)} />
+          ) : (
+            <DiscoverSheet
+              festivals={FESTIVALS}
+              newStores={d.newStores}
+              popular={d.popular}
+              courses={d.courses}
+              districts={OTHER_DISTRICTS}
+              currentDistrict={currentDistrict}
+              selectedId={selected ? selected.id : null}
+              onOpenFestival={f => say(`${f.name} 상세로 (S09 축제 상세)`)}
+              onOpenStore={s => say(`${s.name} 상세로 (S06 점포 상세)`)}
+              onOpenCourse={c => say(`${c.name} 코스 상세로 (S08)`)}
+              onOpenDistrict={x => say(`${x.name}으로 이동 (상점가 탭 전환)`)} />
+          )}
+        </Sheet>
+
+        {toast ? (
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: "var(--space-6)", zIndex: "var(--z-toast)",
+            display: "flex", justifyContent: "center", padding: "0 var(--gutter-screen)", pointerEvents: "none" }}>
+            <Toast icon="info">{toast}</Toast>
+          </div>
+        ) : null}
+
+        {/* 스크린리더용 상태 안내 — 탭과 시트 단계는 시각적으로만 전달되면 안 된다 */}
+        <span aria-live="polite" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
+          {tabOf(tab).label} 탭 · 목록 시트 {SNAP_LABEL[snap]}
+          {isFacility ? ` · ${facilityRows.length}곳`
+            : isDistrict ? ` · ${storeRows.length}곳`
+              : ` · 축제 ${FESTIVALS.length}건, 다른 상점가 ${OTHER_DISTRICTS.length}곳`}
+        </span>
+      </div>
+
+      {/* 하단 탭바 (U-CM-03) — 지도 영역의 **형제**다. 시트 안이나 위가 아니라 밖에 있으므로
+          전체 스냅(100%)에서도 덮이지 않는다. 기능명세서 5-3 #5 의 답.
+          U-CM-18 — 진행 중 축제가 있으면 둘러보기 탭에 점을 찍는다 */}
+      <TabBar
+        items={TABS.map(t => (t.id === "discover" && HAS_LIVE_FESTIVAL ? { ...t, badge: true } : t))}
+        value={tab}
+        onChange={changeTab} />
+    </div>
+  );
+}
+
+export default MainApp;

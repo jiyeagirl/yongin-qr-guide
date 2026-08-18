@@ -1,0 +1,57 @@
+:root{
+--font-sans:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+
+/* 굵기는 "폰트 파일 이름"이 아니라 **강조 단계**다.
+   2026-08-14 검토에서 전반적으로 한 단계씩 낮췄다 — 화면 대부분의 텍스트가 600~700 에 몰려 있어
+   글자가 전체적으로 두껍고 답답하게 읽혔다. 강조 대비는 굵기뿐 아니라 크기와 색으로도 만든다.
+   Pretendard 는 가변 폰트가 아니라 100~900 정적 파일이므로 중간값(550 등)은 쓸 수 없다.
+
+     토큰            이전 → 현재    실제로 불러오는 파일
+     --fw-semibold    600 → 500     Pretendard-Medium
+     --fw-bold        700 → 600     Pretendard-SemiBold
+     --fw-extrabold   800 → 700     Pretendard-Bold
+     --fw-black       900 → 800     Pretendard-ExtraBold
+
+   semibold 와 medium 은 이제 같은 500 이다. 두 단계를 구분하지 않기로 한 것이고,
+   토큰 이름은 화면 코드가 이미 참조하고 있어 그대로 둔다. */
+--fw-light:300; /* @kind font */
+--fw-regular:400; /* @kind font */
+--fw-medium:500; /* @kind font */
+--fw-semibold:500; /* @kind font */
+--fw-bold:600; /* @kind font */
+--fw-extrabold:700; /* @kind font */
+--fw-black:800; /* @kind font */
+
+/* 크기 스케일 — 2026-08-14 압축.
+   이전 스케일은 16~22px 이 화면 곳곳에 흩어져 있어 "전부 크고 아무 것도 튀지 않는" 상태였다.
+   국내 지도 앱(네이버 지도)의 목록을 보면 상호명 하나만 크고 업종·거리·주소는 전부 13px 회색이다.
+   읽기 쉬움은 절대 크기가 아니라 **대비**에서 나온다. 그래서 제목 계열을 3~4px 내리고
+   보조 텍스트를 한 단계 낮춰 본문(16px)과의 간격을 벌렸다.
+
+     --fs-body 16px 는 건드리지 않는다 (확정 결정사항 7).
+     16px 은 확대가 아니라 모바일 웹 기본값이고, 이보다 작은 입력창은
+     iOS 사파리가 포커스 시 화면을 자동 확대한다. Input 은 16px 을 직접 강제한다. */
+--fs-display:28px;--lh-display:1.25; /* @kind other */
+--fs-title-1:22px;--lh-title-1:1.32; /* @kind other */
+--fs-title-2:19px;--lh-title-2:1.35; /* @kind other */
+--fs-title-3:17px;--lh-title-3:1.38; /* @kind other */
+--fs-body-lg:17px;--lh-body-lg:1.55; /* @kind other */
+--fs-body:16px;--lh-body:1.5; /* @kind other */
+--fs-label:14px;--lh-label:1.45; /* @kind other */
+--fs-caption:13px;--lh-caption:1.46; /* @kind other */
+--fs-micro:12px;--lh-micro:1.36; /* @kind other */
+
+--ls-tight:-0.03em;--ls-snug:-0.02em;--ls-normal:-0.01em;--ls-wide:0.02em; /* @kind other */
+
+--type-display:var(--fw-extrabold) var(--fs-display)/var(--lh-display) var(--font-sans);
+--type-title-1:var(--fw-bold) var(--fs-title-1)/var(--lh-title-1) var(--font-sans);
+--type-title-2:var(--fw-bold) var(--fs-title-2)/var(--lh-title-2) var(--font-sans);
+/* 섹션 제목은 크기를 17px 로 줄인 대신 굵기를 semibold(500) → bold(600) 로 올린다.
+   둘 다 낮추면 목록 사이에서 제목이 제목으로 읽히지 않는다 */
+--type-title-3:var(--fw-bold) var(--fs-title-3)/var(--lh-title-3) var(--font-sans);
+--type-body-lg:var(--fw-regular) var(--fs-body-lg)/var(--lh-body-lg) var(--font-sans);
+--type-body:var(--fw-regular) var(--fs-body)/var(--lh-body) var(--font-sans);
+--type-label:var(--fw-semibold) var(--fs-label)/var(--lh-label) var(--font-sans);
+--type-caption:var(--fw-medium) var(--fs-caption)/var(--lh-caption) var(--font-sans);
+--type-micro:var(--fw-semibold) var(--fs-micro)/var(--lh-micro) var(--font-sans);
+}

@@ -1,0 +1,21 @@
+:root{
+/* Brand base — sampled from the 조아용 character artwork */
+--yong-green-50:#f1fbf5;--yong-green-100:#ddf5e8;--yong-green-200:#beebd3;--yong-green-300:#97dfb8;--yong-green-400:#7ad6a5;--yong-green-500:#66ce94;--yong-green-600:#45b579;--yong-green-700:#2f9260;--yong-green-800:#216e48;--yong-green-900:#144a30;
+--yong-teal-50:#e8f6f6;--yong-teal-100:#c9ebeb;--yong-teal-300:#6bc5c6;--yong-teal-500:#179496;--yong-teal-700:#0f6e70;--yong-teal-900:#084244;
+--yong-cream-100:#fffce6;--yong-cream-300:#fef8cc;--yong-cream-500:#fef5aa;--yong-cream-700:#f0dc72;--yong-cream-900:#b99f2c;
+--yong-ink-900:#16221c;--yong-ink-700:#2f3d36;--yong-ink-500:#5b6a62;--yong-ink-300:#8b9a92;--yong-ink-200:#c3cec8;--yong-ink-100:#dce4df;--yong-ink-50:#eef2f0;
+--yong-white:#ffffff;--yong-mist:#f5f8f6;
+--yong-amber-500:#f2a73b;--yong-amber-100:#fdeed6;--yong-red-700:#b23a33;--yong-red-500:#e5544b;--yong-red-100:#fbe2e0;--yong-blue-500:#3d7be5;--yong-blue-100:#e2ecfb;
+
+/* Semantic aliases */
+/* 캐릭터 색은 일러스트·틴트용, UI 액션 색은 한 단계 깊은 톤 */
+--character-green:var(--yong-green-500);--character-teal:var(--yong-teal-500);--character-cream:var(--yong-cream-500);
+--brand-primary:var(--yong-green-700);--brand-primary-strong:var(--yong-green-800);--brand-primary-soft:var(--yong-green-50);
+--brand-secondary:var(--yong-teal-700);--brand-secondary-soft:var(--yong-teal-50);
+--brand-accent:var(--yong-cream-300);--brand-accent-soft:var(--yong-cream-100);
+--text-heading:var(--yong-ink-900);--text-body:var(--yong-ink-700);--text-muted:var(--yong-ink-500);--text-disabled:var(--yong-ink-300);--text-on-brand:var(--yong-white);--text-on-dark:var(--yong-white);--text-link:var(--yong-teal-700);
+--surface-page:var(--yong-mist);--surface-card:var(--yong-white);--surface-sunken:var(--yong-ink-50);--surface-brand:var(--yong-green-700);--surface-brand-soft:var(--yong-green-50);--surface-accent:var(--yong-cream-500);--surface-dark:var(--yong-teal-900);
+--border-outline:var(--yong-ink-900);--border-default:var(--yong-ink-100);--border-strong:var(--yong-ink-200);--border-brand:var(--yong-green-700);
+--state-success:var(--yong-green-700);--state-success-soft:var(--yong-green-100);--state-info:var(--yong-teal-500);--state-info-soft:var(--yong-teal-100);--state-warning:var(--yong-amber-500);--state-warning-soft:var(--yong-amber-100);--state-danger:var(--yong-red-500);--state-danger-soft:var(--yong-red-100);
+--focus-ring:var(--yong-teal-500);
+}

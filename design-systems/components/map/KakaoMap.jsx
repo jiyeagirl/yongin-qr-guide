@@ -1,0 +1,323 @@
+import React from "react";
+import { token } from "../core/token.js";
+import { loadKakaoMaps } from "./kakaoLoader.js";
+import { MapCanvas } from "./MapCanvas.jsx";
+import { FACILITY_LABELS, FACILITY_PIN } from "../core/FacilityIcon.jsx";
+
+/* 카카오맵 SDK 를 실제로 띄우는 지도 레이어. 6개 지도 화면이 공유한다.
+   앱키가 없거나 SDK 로드가 실패하면 MapCanvas(목업)로 떨어져 화면 검증은 계속 가능하다.
+
+   여기서 책임지는 것
+   - z 100 (--z-map) 베이스. 마커·클러스터는 SDK 가 z 200 대역에서 직접 렌더한다.
+   - bottomPad(px): 시트에 가려지는 아래쪽 높이. 마커를 탭했을 때 그만큼 위로 올려 잡는다.
+     (기능명세서 5-3 #2) 값은 Sheet 의 measure 결과라 스냅이 바뀌면 같이 바뀐다.
+   - 클러스터링: 수백 개 마커를 그대로 렌더하지 않는다 (U-ST-13).
+
+   지도의 "내 위치"는 항상 QR 스캔 지점이다. GPS 를 쓰지 않는다 (제안서 3-1). */
+
+const PIN_W = 28, PIN_H = 36;
+
+function pinImage(kakao, fill) {
+  const stroke = token("--pin-stroke", "#ffffff");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${PIN_W}" height="${PIN_H}" viewBox="0 0 28 36">`
+    + `<path d="M14 34.5S25.5 21 25.5 13.5a11.5 11.5 0 1 0-23 0C2.5 21 14 34.5 14 34.5Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`
+    + `<circle cx="14" cy="13.5" r="4.2" fill="${stroke}"/></svg>`;
+  return new kakao.maps.MarkerImage(
+    "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg),
+    new kakao.maps.Size(PIN_W, PIN_H),
+    { offset: new kakao.maps.Point(PIN_W / 2, PIN_H) }
+  );
+}
+
+function clusterStyles() {
+  const base = {
+    color: token("--cluster-text", "#ffffff"),
+    textAlign: "center",
+    fontWeight: token("--fw-bold", "700"),
+    fontFamily: token("--font-sans", "Pretendard, sans-serif"),
+    borderRadius: token("--radius-pill", "999px"),
+    border: `${token("--stroke-outline", "2px")} solid ${token("--pin-stroke", "#ffffff")}`,
+    boxShadow: token("--shadow-raised", "0 6px 18px rgba(22,34,28,.10)"),
+  };
+  const sizes = [
+    ["--cluster-sm-size", "40px", "--cluster-bg", "15px"],
+    ["--cluster-md-size", "48px", "--cluster-bg", "16px"],
+    ["--cluster-lg-size", "58px", "--cluster-bg-strong", "17px"],
+  ];
+  return sizes.map(([sizeVar, sizeFallback, bgVar, font]) => {
+    const s = token(sizeVar, sizeFallback);
+    return { ...base, width: s, height: s, lineHeight: s, fontSize: font, background: token(bgVar, "rgba(47,146,96,.92)") };
+  });
+}
+
+export function KakaoMap({
+  appKey,
+  center,                     /* {lat, lng} — QR 스캔 지점 */
+  anchorLabel = "QR 지점",
+  level = 4,
+  /* 레이어 셋. U-CM-17 에 따라 한 번에 하나만 채운다 — 탭이 소유한 레이어만 그린다 */
+  stores = [],                /* [{id, name, lat, lng, onnuri}] — 상점가 탭. 클러스터링(U-ST-13) */
+  facilities = [],            /* [{id, name, type, lat, lng}] — 공공시설 탭. 유형 4종 색 */
+  districts = [],             /* [{id, name, lat, lng, festival}] — 둘러보기 탭. 32개소 전체 */
+  selectedId = null,
+  topPad = 0,                 /* px. 상단 필터 바에 가려지는 높이 */
+  bottomPad = 0,              /* px. 시트에 가려지는 높이 */
+  onSelectStore,
+  onSelectFacility,
+  onSelectDistrict,
+  onReady,
+  onError,
+  mapRef,                     /* {current} — {focus(lat,lng), reset()} 를 받는다 */
+  style,
+  ...rest
+}) {
+  const host = React.useRef(null);
+  const map = React.useRef(null);
+  const kakaoRef = React.useRef(null);
+  const clusterer = React.useRef(null);
+  /* 마커 조회표는 레이어별로 따로 둔다. 하나로 합치면 점포 필터가 바뀔 때
+     표를 통째로 비우면서 시설 마커까지 조회 불가가 된다 (선택 강조가 조용히 죽는다). */
+  const storeMarkers = React.useRef(new Map());
+  const facilityMarkers = React.useRef(new Map());
+  const districtMarkers = React.useRef(new Map());
+  const images = React.useRef(null);
+  const pad = React.useRef({ top: topPad, bottom: bottomPad });
+  const [failed, setFailed] = React.useState(null);
+
+  /* 지도가 만들어졌다는 신호. **마커 이펙트의 의존성으로 반드시 들어가야 한다.**
+     지도 생성은 SDK 를 네트워크로 받아오는 비동기라, 첫 렌더에서 마커 이펙트가 먼저 돌면
+     kakaoRef 가 아직 null 이라 아무 것도 그리지 않고 끝난다. 그 뒤 지도가 생겨도
+     stores/facilities 배열의 참조는 그대로이므로 이펙트가 다시 돌지 않는다.
+     → 진입 직후에는 핀이 없고, 필터 칩을 눌러 배열이 새로 만들어져야 비로소 나타난다.
+     ref 대신 state 를 쓰는 이유가 이것이다. ref 는 바뀌어도 리렌더를 일으키지 않는다. */
+  const [ready, setReady] = React.useState(false);
+
+  pad.current = { top: topPad, bottom: bottomPad };
+
+  /* 콜백은 ref 로 — 부모가 인라인 함수를 넘겨도 지도를 다시 만들지 않는다 */
+  const cb = React.useRef({});
+  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onReady, onError };
+
+  /* 실제로 보이는 띠 = 상단 필터 바 아래 ~ 시트 위. 그 한가운데로 마커를 옮긴다.
+     지도 중심을 화면 좌표 P 의 좌표로 옮기면 P 는 지도 정중앙으로 간다. 따라서
+       마커의 새 y = 지도높이/2 - (P.y - 마커y)
+     이걸 목표 y = topPad + (지도높이 - topPad - bottomPad)/2 와 같게 두고 풀면
+       P.y = 마커y + (bottomPad - topPad) / 2
+     topPad 가 0 이면 기존 식(+bottomPad/2)과 같다. */
+  const focus = React.useCallback((lat, lng) => {
+    const k = kakaoRef.current, m = map.current;
+    if (!k || !m) return;
+    const target = new k.maps.LatLng(lat, lng);
+    const proj = m.getProjection();
+    const pt = proj.containerPointFromCoords(target);
+    const lifted = new k.maps.Point(pt.x, pt.y + (pad.current.bottom - pad.current.top) / 2);
+    m.panTo(proj.coordsFromContainerPoint(lifted));
+  }, []);
+
+  /* 탭을 바꾸면 카메라를 QR 지점으로 되돌리고 줌을 그 탭의 기본 레벨로 맞춘다 (5-3 #6).
+     지도를 멀리 끌어둔 채 탭을 바꾸면 새 레이어의 마커가 화면 밖에 있어
+     "아무것도 없다"로 보이기 때문이다. 지도 인스턴스는 그대로 두므로 재로딩은 없다 (U-CM-16). */
+  const setView = React.useCallback((lat, lng, lv) => {
+    const k = kakaoRef.current, m = map.current;
+    if (!k || !m) return;
+    if (lv != null) m.setLevel(lv);
+    m.setCenter(new k.maps.LatLng(lat, lng));
+  }, []);
+
+  /* 여러 지점을 한 화면에 담는다 (둘러보기 탭의 32개소처럼 범위를 미리 알 수 없을 때).
+     줌 레벨을 상수로 찍으면 기기 폭과 대상 분포에 따라 잘리거나 너무 멀어진다.
+     가려지는 위아래(필터 바 / 시트)를 padding 으로 넘겨 보이는 띠 안에 들어오게 한다. */
+  const fitTo = React.useCallback((points, padding) => {
+    const k = kakaoRef.current, m = map.current;
+    if (!k || !m || !points || !points.length) return;
+    const b = new k.maps.LatLngBounds();
+    points.forEach(p => p.lat && p.lng && b.extend(new k.maps.LatLng(p.lat, p.lng)));
+    const pad = padding || {};
+    m.setBounds(b, Math.round(pad.top || 0), 16, Math.round(pad.bottom || 0), 16);
+  }, []);
+
+  React.useEffect(() => {
+    if (mapRef) mapRef.current = {
+      focus,
+      setView,
+      fitTo,
+      reset: () => center && focus(center.lat, center.lng),
+    };
+  }, [mapRef, focus, setView, fitTo, center]);
+
+  /* 지도 생성 — 한 번만 */
+  React.useEffect(() => {
+    let dead = false;
+    loadKakaoMaps(appKey).then(kakao => {
+      if (dead || !host.current) return;
+      kakaoRef.current = kakao;
+      const m = new kakao.maps.Map(host.current, { center: new kakao.maps.LatLng(center.lat, center.lng), level });
+      map.current = m;
+      /* 둘러보기 탭은 32개소 전체(약 25km 범위)를 한 화면에 담아야 하므로 7 로는 부족하다.
+         상한을 12 로 두되 실제 레벨은 fitTo 가 대상 분포에서 계산한다. */
+      m.setMaxLevel(12);
+
+      /* 핀 이미지는 한 번만 만들어 재사용한다 — 마커마다 새로 만들면 수백 개에서 비용이 든다.
+         시설은 유형 4종이 각자 색을 갖는다 (U-FC-04 / 5-2, 값은 tokens/icons.css). */
+      images.current = {
+        store: pinImage(kakao, token("--pin-store", "#5b6a62")),
+        onnuri: pinImage(kakao, token("--pin-store-onnuri", "#179496")),
+        selected: pinImage(kakao, token("--pin-selected", "#216e48")),
+        aed: pinImage(kakao, token("--pin-aed", "#e5544b")),
+        shelter: pinImage(kakao, token("--pin-shelter", "#b23a33")),
+        toilet: pinImage(kakao, token("--pin-toilet", "#0f6e70")),
+        rest: pinImage(kakao, token("--pin-rest", "#179496")),
+        neutral: pinImage(kakao, token("--pin-neutral", "#0f6e70")),
+        district: pinImage(kakao, token("--pin-district", "#2f9260")),
+        festival: pinImage(kakao, token("--pin-festival", "#f2a73b")),
+      };
+
+      clusterer.current = new kakao.maps.MarkerClusterer({
+        map: m, averageCenter: true, minLevel: 3, disableClickZoom: false,
+        calculator: [10, 100], styles: clusterStyles(),
+      });
+
+      /* QR 스캔 지점 앵커 — 마커가 아니라 "내 위치" 점이다. 점포 핀과 형태·색이 겹치면 안 된다.
+         점과 말풍선을 두 개의 오버레이로 나눈다. 하나로 묶으면 yAnchor 하나로는
+         점을 좌표에 정확히 앉히면서 말풍선을 그 위에 띄울 수 없다. */
+      const anchorPos = new kakao.maps.LatLng(center.lat, center.lng);
+
+      const dot = document.createElement("div");
+      dot.style.cssText = "width:18px;height:18px;border-radius:999px;background:var(--pin-anchor);"
+        + "border:var(--stroke-bold) solid var(--pin-stroke);box-shadow:0 0 0 6px var(--pin-anchor-halo)";
+      new kakao.maps.CustomOverlay({ map: m, position: anchorPos, content: dot, yAnchor: 0.5, zIndex: 3 });
+
+      /* 말풍선 — 검은 알약은 지도 위에서 너무 무겁게 읽혔다. 흰 바탕에 꼬리를 달아
+         어느 지점을 가리키는지 형태로 드러내고, 글자는 bold 를 빼고 medium 으로 낮춘다.
+         paddingBottom 이 점과의 간격이 된다 (yAnchor 1 이라 콘텐츠 아래끝이 좌표에 닿는다). */
+      const bubble = document.createElement("div");
+      bubble.style.cssText = "position:relative;padding-bottom:15px";
+      bubble.innerHTML =
+        `<span style="display:block;position:relative;padding:5px 10px;border-radius:var(--radius-sm);`
+        + `background:var(--surface-card);color:var(--text-heading);`
+        + `border:var(--stroke-hairline) solid var(--border-default);box-shadow:var(--shadow-raised);`
+        + `font-family:var(--font-sans);font-size:var(--fs-micro);font-weight:var(--fw-medium);`
+        + `line-height:1.35;letter-spacing:var(--ls-normal);white-space:nowrap">${anchorLabel}</span>`
+        /* 꼬리: 45도 돌린 정사각형에 아래·오른쪽 테두리만 남겨 말풍선 테두리와 이어 붙인다 */
+        + `<span style="position:absolute;left:50%;bottom:11px;width:9px;height:9px;`
+        + `margin-left:-4.5px;background:var(--surface-card);`
+        + `border-right:var(--stroke-hairline) solid var(--border-default);`
+        + `border-bottom:var(--stroke-hairline) solid var(--border-default);`
+        + `transform:rotate(45deg)"></span>`;
+      new kakao.maps.CustomOverlay({ map: m, position: anchorPos, content: bubble, yAnchor: 1, zIndex: 4 });
+
+      const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => m.relayout()) : null;
+      if (ro) ro.observe(host.current);
+      /* 마커 이펙트를 깨운다 — 이 줄이 없으면 진입 직후 지도에 핀이 하나도 없다 */
+      setReady(true);
+      cb.current.onReady && cb.current.onReady(m);
+    }).catch(err => {
+      if (dead) return;
+      setFailed(err.message || String(err));
+      cb.current.onError && cb.current.onError(err);
+    });
+    return () => { dead = true; };
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, []);
+
+  /* 선택 강조를 되돌릴 때 원래 색이 무엇이었는지 알아야 한다. 점포·시설을 한 표에 담아둔다 —
+     둘은 U-CM-17 에 따라 동시에 뜨지 않으므로 id 가 겹칠 일이 없다. */
+  const byId = React.useMemo(
+    () => new Map([...stores, ...facilities, ...districts].map(x => [x.id, x])),
+    [stores, facilities, districts]);
+
+  /* 마커의 평상시 이미지 — 상점가는 축제 유무, 시설은 유형 4종, 점포는 온누리 여부.
+     kind 를 명시적으로 보는 이유: 상점가에도 onnuri 수치가 있어 점포와 구별이 안 된다. */
+  const baseImage = React.useCallback(item => {
+    const im = images.current;
+    if (!im || !item) return undefined;
+    if (item.kind === "district") return item.festival ? im.festival : im.district;
+    if (item.type && FACILITY_PIN[item.type]) return im[item.type] || im.neutral;
+    return item.onnuri ? im.onnuri : im.store;
+  }, []);
+
+  /* 점포 마커 — 필터 결과가 바뀔 때마다 클러스터러 내용을 교체한다 */
+  React.useEffect(() => {
+    const k = kakaoRef.current, cl = clusterer.current;
+    if (!k || !cl) return;
+    cl.clear();
+    storeMarkers.current.clear();
+    const list = stores.filter(s => s.lat && s.lng).map(s => {
+      const mk = new k.maps.Marker({
+        position: new k.maps.LatLng(s.lat, s.lng),
+        image: baseImage(s),
+        title: s.name,
+      });
+      k.maps.event.addListener(mk, "click", () => cb.current.onSelectStore && cb.current.onSelectStore(s));
+      storeMarkers.current.set(s.id, mk);
+      return mk;
+    });
+    cl.addMarkers(list);
+  }, [stores, baseImage, ready]);
+
+  /* 공공시설 핀 (S02) — 유형 4종이 각자 색을 갖는다. AED·대피소는 적색 계열, 화장실·쉼터는 중립 계열.
+     클러스터에 넣지 않는다. 개수가 수십 단위라 뭉칠 필요가 없고, 응급 시설이 클러스터 숫자 뒤로
+     숨는 상태를 만들면 안 된다 (U-FC-04 의 취지). */
+  React.useEffect(() => {
+    const k = kakaoRef.current, m = map.current;
+    if (!k || !m) return;
+    facilityMarkers.current.forEach(mk => mk.setMap(null));
+    facilityMarkers.current.clear();
+    facilities.filter(f => f.lat && f.lng).forEach(f => {
+      const mk = new k.maps.Marker({
+        map: m,
+        position: new k.maps.LatLng(f.lat, f.lng),
+        image: baseImage(f),
+        title: `${f.name} · ${FACILITY_LABELS[f.type] || "공공시설"}`,
+        zIndex: 2,
+      });
+      k.maps.event.addListener(mk, "click", () => cb.current.onSelectFacility && cb.current.onSelectFacility(f));
+      facilityMarkers.current.set(f.id, mk);
+    });
+  }, [facilities, baseImage, ready]);
+
+  /* 상점가 지점 핀 (S04 둘러보기) — 32개소 전체. 축제가 걸린 곳은 호박색이다.
+     클러스터에 넣지 않는다. 32개가 시 전역에 흩어져 있어 뭉칠 만큼 겹치지 않고,
+     축제가 있는 곳이 클러스터 숫자 뒤로 숨으면 이 탭의 최상단 섹션과 지도가 어긋난다. */
+  React.useEffect(() => {
+    const k = kakaoRef.current, m = map.current;
+    if (!k || !m) return;
+    districtMarkers.current.forEach(mk => mk.setMap(null));
+    districtMarkers.current.clear();
+    districts.filter(x => x.lat && x.lng).forEach(x => {
+      const mk = new k.maps.Marker({
+        map: m,
+        position: new k.maps.LatLng(x.lat, x.lng),
+        image: baseImage(x),
+        title: x.festival ? `${x.name} · ${x.festival.name}` : x.name,
+        zIndex: x.festival ? 3 : 2,
+      });
+      k.maps.event.addListener(mk, "click", () => cb.current.onSelectDistrict && cb.current.onSelectDistrict(x));
+      districtMarkers.current.set(x.id, mk);
+    });
+  }, [districts, baseImage, ready]);
+
+  /* 선택 강조. 이전 선택만 되돌리고 새 선택만 칠한다 —
+     335개를 매번 훑으면 필터를 바꿀 때마다 불필요한 비용이 든다.
+     점포와 시설이 같은 markers 표에 있으므로 두 탭이 같은 코드를 탄다. */
+  const prevSelected = React.useRef(null);
+  React.useEffect(() => {
+    if (!images.current) return;
+    const paint = (id, on) => {
+      const mk = storeMarkers.current.get(id) || facilityMarkers.current.get(id) || districtMarkers.current.get(id);
+      if (!mk) return;
+      mk.setImage(on ? images.current.selected : baseImage(byId.get(id)));
+      mk.setZIndex(on ? 5 : 1);
+    };
+    if (prevSelected.current && prevSelected.current !== selectedId) paint(prevSelected.current, false);
+    if (selectedId) paint(selectedId, true);
+    prevSelected.current = selectedId;
+  }, [selectedId, byId, baseImage, ready]);
+
+  if (failed) {
+    /* SDK 를 못 띄웠을 때도 화면 검증은 계속되어야 한다 — 레이어 구조가 동일한 목업으로 대체 */
+    return <MapCanvas anchorLabel={anchorLabel} bottomPad={`${bottomPad}px`} note={`지도를 불러오지 못했습니다 · ${failed}`} style={style} />;
+  }
+
+  return <div ref={host} style={{ position: "absolute", inset: 0, zIndex: "var(--z-map)", background: "var(--surface-sunken)", ...style }} {...rest} />;
+}

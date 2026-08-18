@@ -1,0 +1,18 @@
+<!-- @dsCard group="Components" viewport="700x260" name="Core — Icon wrappers" subtitle="FacilityIcon 4종 · CategoryIcon 7종 · Lucide 기본 선 스타일" -->
+<meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{background:var(--surface-page);padding:16px;font-family:var(--font-sans);font-size:16px}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.col{display:flex;flex-direction:column;gap:12px}.k{font-size:var(--fs-micro);color:var(--text-muted)}</style>
+<div id="root"></div>
+<script type="text/babel">
+const {FacilityIcon,CategoryIcon,FACILITY_LABELS,CATEGORY_LABELS,Icon}=window.DesignSystem_5c90e8;
+ReactDOM.createRoot(document.getElementById('root')).render(<div className="col" style={{gap:18}}>
+<div className="row" style={{gap:26}}>{["aed","toilet","rest","shelter"].map(t=><div key={t} style={{textAlign:'center',width:80}}><FacilityIcon type={t} size={28}/><div className="k" style={{marginTop:6}}>{FACILITY_LABELS[t]}</div></div>)}
+<span className="k" style={{maxWidth:220}}>AED · 대피소는 --pin-emergency 적색, 화장실 · 쉼터는 기본색</span></div>
+<div className="row" style={{gap:22}}>{["all","food","cafe","shop","beauty","culture","etc"].map(t=><div key={t} style={{textAlign:'center',width:78}}><CategoryIcon type={t} size={24}/><div className="k" style={{marginTop:6}}>{CATEGORY_LABELS[t]}</div></div>)}</div>
+<div className="row" style={{gap:22}}>{["navigation","qr-code","list","map-pin","ticket","party-popper","flag","copy","chevron-right"].map(n=><div key={n} style={{textAlign:'center',width:74}}><Icon name={n} size={22}/><div className="k" style={{marginTop:4,fontSize:9}}>{n}</div></div>)}</div>
+</div>);
+</script>

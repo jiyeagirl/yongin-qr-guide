@@ -1,0 +1,8 @@
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font:var(--type-body);font-size:16px;letter-spacing:var(--ls-normal);color:var(--text-body);background:var(--surface-page);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;color:var(--text-heading);letter-spacing:var(--ls-snug)}
+p{margin:0}
+button{font-family:inherit}
+a{color:var(--text-link);text-decoration:none;font-weight:var(--fw-semibold)}
+a:hover{color:var(--yong-teal-500);text-decoration:underline}
+svg{display:block}

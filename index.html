@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>용인시 QR 위치안내 · 화면 목록</title>
+<link rel="stylesheet" href="./design-systems/styles.css" />
+<style>
+  /* 이 페이지는 산출물이 아니라 **입구**다. 배포 주소 루트로 들어온 사람이
+     어느 화면이 만들어졌고 무엇이 남았는지 한눈에 보고 들어가게 한다.
+     디자인 시스템의 토큰만 쓰고 컴포넌트는 쓰지 않는다 — 여기서 로더가 돌면
+     화면을 열기도 전에 3MB 를 내려받게 된다. */
+  body { background: var(--surface-page); color: var(--text-body); font-family: var(--font-sans); }
+  .wrap { max-width: 560px; margin: 0 auto; padding: var(--space-7) var(--gutter-screen) var(--space-9); }
+  h1 { font-size: var(--fs-title-1); font-weight: var(--fw-bold); color: var(--text-heading); letter-spacing: var(--ls-snug); }
+  .sub { font-size: var(--fs-caption); color: var(--text-muted); margin-top: var(--space-2); line-height: 1.55; }
+  h2 { font-size: var(--fs-title-3); font-weight: var(--fw-bold); color: var(--text-heading); margin: var(--space-7) 0 var(--space-3); }
+  a.card { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4);
+    background: var(--surface-card); border: var(--stroke-hairline) solid var(--border-default);
+    border-radius: var(--radius-card); box-shadow: var(--shadow-card); text-decoration: none; }
+  a.card strong { display: block; font-size: var(--fs-body); font-weight: var(--fw-bold); color: var(--text-heading); }
+  a.card span { display: block; font-size: var(--fs-caption); color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+  a.card .go { margin-left: auto; font-size: var(--fs-caption); font-weight: var(--fw-bold); color: var(--brand-primary); white-space: nowrap; }
+  ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
+  li.todo { display: flex; gap: var(--space-3); align-items: baseline; padding: var(--space-2) var(--space-1);
+    border-bottom: var(--stroke-hairline) solid var(--border-default); font-size: var(--fs-label); }
+  li.todo code { flex: 0 0 4.2em; font-weight: var(--fw-bold); color: var(--text-heading); }
+  li.todo em { font-style: normal; color: var(--text-muted); }
+  .note { margin-top: var(--space-7); padding: var(--space-4); background: var(--surface-sunken);
+    border-radius: var(--radius-md); font-size: var(--fs-caption); color: var(--text-muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>QR 기반 공공시설 및 골목형 상점가 위치 안내</h1>
+  <p class="sub">용인시 시민용 모바일 웹 · 기능명세서 v1.0 기준<br />앱 설치와 회원가입 없이 QR 하나로 들어오는 화면입니다.</p>
+
+  <h2>지금 볼 수 있는 화면</h2>
+  <a class="card" href="./screens/main/">
+    <div>
+      <strong>메인 (S02 · S03 · S04)</strong>
+      <span>지도가 상시 노출되고 하단 탭 3개가 바텀시트를 교체합니다. 공공시설 · 상점가 · 둘러보기.</span>
+    </div>
+    <div class="go">열기 →</div>
+  </a>
+
+  <h2>남은 화면</h2>
+  <ul>
+    <li class="todo"><code>S01</code><em>QR 진입 및 로딩</em></li>
+    <li class="todo"><code>S03-E</code><em>가까운 상점가가 없을 때</em></li>
+    <li class="todo"><code>S05</code><em>시설 상세</em></li>
+    <li class="todo"><code>S06</code><em>점포 상세</em></li>
+    <li class="todo"><code>S07</code><em>길찾기</em></li>
+    <li class="todo"><code>S08</code><em>골목 한바퀴 코스 상세</em></li>
+    <li class="todo"><code>S09</code><em>축제 상세</em></li>
+    <li class="todo"><code>S10</code><em>오류신고 및 문의</em></li>
+    <li class="todo"><code>S11</code><em>빈 상태 · 오류 · 잘못된 QR</em></li>
+  </ul>
+
+  <p class="note">
+    지도는 목업이 아니라 카카오맵 SDK 실연동입니다. 지도 자리에 안내 문구가 뜬다면
+    카카오 개발자 콘솔의 <strong>SDK 도메인</strong>에 지금 보고 있는 주소가 등록되지 않은 것입니다
+    (화면에 등록해야 할 주소가 그대로 표시됩니다).
+  </p>
+</main>
+</body>
+</html>

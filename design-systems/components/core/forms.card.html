@@ -1,0 +1,23 @@
+<!-- @dsCard group="Components" viewport="700x300" name="Core — Form controls" subtitle="검색, 선택, 동의, 온누리 토글 — 본문 16px, 최소 44px" -->
+<meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{background:var(--surface-page);padding:16px;font-family:var(--font-sans);font-size:16px}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.col{display:flex;flex-direction:column;gap:12px}.k{font-size:var(--fs-micro);color:var(--text-muted)}</style>
+<div id="root"></div>
+<script type="text/babel">
+const {Input,Select,Checkbox,Radio,Switch,Icon}=window.DesignSystem_5c90e8;
+function Demo(){const [v,setV]=React.useState('카페');const [c,setC]=React.useState(true);const [r,setR]=React.useState('near');const [s,setS]=React.useState(true);
+return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px 20px'}}>
+<Input label="업체명 검색" value={v} icon="search" onChange={e=>setV(e.target.value)} hint="상점가 내 335곳에서 검색합니다"/>
+<Select label="상점가 선택" options={["둔전 골목형 상점가","에버랜드마을","BOCA","구성언남"]}/>
+<Input label="회신 연락처" placeholder="010-0000-0000" error="번호 형식을 확인해 주세요"/>
+<div className="col" style={{gap:0}}>
+<div className="row" style={{justifyContent:'space-between'}}><span style={{display:'flex',alignItems:'center',gap:8,fontWeight:600}}><Icon name="ticket" size={20} color="var(--brand-secondary)"/>온누리 가맹점만</span><Switch checked={s} onChange={setS}/></div>
+<div className="row" style={{gap:20}}><Radio name="t" label="거리순" checked={r==='near'} onChange={()=>setR('near')}/><Radio name="t" label="이름순" checked={r==='name'} onChange={()=>setR('name')}/></div>
+<Checkbox label="위치정보 이용에 동의합니다" checked={c} onChange={()=>setC(!c)}/>
+</div></div>;}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>

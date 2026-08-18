@@ -1,0 +1,11 @@
+:root{
+--shadow-none:none;
+--shadow-card:0 2px 8px rgba(22,34,28,.06);
+--shadow-raised:0 6px 18px rgba(22,34,28,.10);
+--shadow-sticker:0 3px 0 var(--yong-ink-900);
+--shadow-sticker-soft:0 3px 0 var(--yong-green-700);
+--shadow-sheet:0 -8px 28px rgba(22,34,28,.14);
+--shadow-focus:0 0 0 3px rgba(23,148,150,.28);
+--overlay-scrim:rgba(22,34,28,.42); /* @kind color */
+--blur-glass:saturate(140%) blur(14px); /* @kind other */
+}

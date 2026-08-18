@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover + 100dvh 로 모바일 브라우저 주소창 높이 변화에 대응한다.
+     user-scalable 을 막지 않는다 — 확대는 접근성 수단이다 (U-CM-13). -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f9260">
+<title>용인시 QR 위치안내 — 공공시설 · 상점가 · 둘러보기</title>
+
+<link rel="stylesheet" href="../../design-systems/styles.css">
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+<script src="../../design-systems/_ds_loader.js"></script>
+
+<style>
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--yong-ink-50);
+    /* 안전영역 — 홈 인디케이터가 있는 기기에서 시트 바닥이 잘리지 않게 */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #root { height: 100dvh; }
+  /* 데스크톱에서 열었을 때만 모바일 폭으로 가운데 세운다 */
+  @media (min-width: 640px) {
+    body { display: flex; align-items: center; justify-content: center; padding: 24px; }
+    #root { height: min(880px, calc(100dvh - 48px)); box-shadow: 0 18px 48px rgba(22,34,28,.18); border-radius: 28px; overflow: hidden; background: var(--surface-page); }
+  }
+  /* 가로 스크롤 영역의 스크롤바를 숨긴다 (칩 줄, 매장 레일) */
+  ::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  /* 디자인 시스템 원본(components/**)을 그대로 읽어 화면을 띄운다.
+     번들(_ds_bundle.js)이 아니라 원본을 보므로, 디자인 시스템 수정이 곧바로 반영된다.
+     fetch 를 쓰므로 file:// 이 아니라 HTTP 로 열어야 한다 (README 참조). */
+  DSLoader.mount({
+    ds: "../../design-systems/index.js",
+    entry: "./MainApp.jsx",
+    el: "#root",
+  });
+</script>
+</body>
+</html>

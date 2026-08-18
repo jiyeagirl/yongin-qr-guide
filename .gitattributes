@@ -1,0 +1,20 @@
+# 줄바꿈을 저장소 안에서 LF 로 통일한다.
+#
+# 지금 소스 131개 중 2개가 CRLF 로 섞여 있다. 이대로 첫 커밋을 하면 그 상태가 그대로 박히고,
+# 이후 다른 환경에서 열 때마다 "파일 전체가 바뀐 것처럼" 보이는 diff 가 난다.
+# 작업 디렉터리에서는 각자 OS 방식대로 두되(text=auto), 저장소에는 LF 로만 들어간다.
+* text=auto eol=lf
+
+# 바이너리는 못박는다 — git 이 줄바꿈 변환이나 텍스트 diff 를 시도하면 파일이 깨진다
+*.otf binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+
+# SVG 는 텍스트다 — diff 가 보이는 편이 낫다
+*.svg text eol=lf

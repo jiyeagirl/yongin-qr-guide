@@ -1,0 +1,19 @@
+<!-- @dsCard group="Components" viewport="700x300" name="Core — Buttons &amp; Chips" subtitle="Flat filled actions, Lucide icons, category chips" -->
+<meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{background:var(--surface-page);padding:16px;font-family:var(--font-sans);font-size:16px}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.col{display:flex;flex-direction:column;gap:12px}.k{font-size:var(--fs-micro);color:var(--text-muted)}</style>
+<div id="root"></div>
+<script type="text/babel">
+const {Button,IconButton,Chip,CategoryIcon}=window.DesignSystem_5c90e8;
+ReactDOM.createRoot(document.getElementById('root')).render(<div className="col">
+<div className="row"><Button icon="navigation">길찾기</Button><Button variant="secondary" icon="map">지도보기</Button><Button variant="soft">자세히</Button><Button variant="outline" icon="copy">주소 복사</Button><Button variant="ghost">닫기</Button><Button variant="danger" icon="flag">신고</Button></div>
+<div className="row"><Button size="sm">Small</Button><Button size="md">Medium (44 최소)</Button><Button size="lg" iconEnd="chevron-right">Large</Button><Button disabled>종료된 축제</Button></div>
+<div className="row"><IconButton name="search" label="검색" variant="soft"/><IconButton name="flag" label="신고" variant="outline"/><IconButton name="qr-code" label="QR 지점" variant="brand"/><IconButton name="ellipsis" label="더보기"/>
+<Chip selected count={335} icon={<CategoryIcon type="all" size={18}/>}>전체</Chip><Chip count={132} icon={<CategoryIcon type="food" size={18}/>}>음식</Chip><Chip count={18} icon={<CategoryIcon type="cafe" size={18}/>}>카페/디저트</Chip></div>
+<Button block size="lg" icon="navigation">도보 길찾기 시작</Button>
+</div>);
+</script>

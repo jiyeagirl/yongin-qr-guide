@@ -1,0 +1,29 @@
+<!-- @dsCard group="Components" viewport="700x380" name="Feedback &amp; Sheet" subtitle="원거리 안내 배너, 토스트, 3단 바텀시트, 플로팅 컨트롤" -->
+<meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{background:var(--surface-page);padding:16px;font-family:var(--font-sans);font-size:16px}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.col{display:flex;flex-direction:column;gap:12px}.k{font-size:var(--fs-micro);color:var(--text-muted)}</style>
+<div id="root"></div>
+<script type="text/babel">
+const {Notice,Toast,Sheet,FloatingControls,EmptyState,Button,Chip,ListRow,CategoryIcon}=window.DesignSystem_5c90e8;
+function Demo(){const [snap,setSnap]=React.useState('half');
+return <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:16,alignItems:'start'}}>
+<div className="col">
+<Notice tone="warning" title="가까운 곳에는 없어요">가장 가까운 대피소는 1.4km 떨어져 있습니다. 목록에서 확인해 주세요.</Notice>
+<Notice tone="info">안내 정보는 참고용입니다. 응급 상황에는 119로 연락해 주세요.</Notice>
+<div className="row"><Toast icon="info">QR 지점으로 이동했습니다</Toast><Toast tone="brand" icon="circle-check">신고가 접수되었습니다</Toast></div>
+<EmptyState base="../../" pose="curious" title="등록된 정보가 없어용" description="잘못된 QR이거나 아직 등록되지 않은 지점입니다." action={<Button size="sm" icon="map">전체 지도 보기</Button>}/>
+</div>
+<div style={{position:'relative',height:340,borderRadius:'var(--radius-lg)',overflow:'hidden',border:'1px solid var(--border-default)',background:'var(--surface-sunken)'}}>
+<FloatingControls hidden={snap==='full'} bottom={{collapsed:'var(--sheet-collapsed)',half:'var(--sheet-half)',full:'var(--sheet-full)'}[snap]} items={[{icon:'list',label:'목록',text:'목록',onClick:()=>setSnap('full')},{icon:'qr-code',label:'QR',onClick:()=>setSnap('collapsed')}]}/>
+<Sheet title="둔전 골목형 상점가" subtitle="점포 335 · 온누리 139" snap={snap} onSnapChange={setSnap}>
+<div style={{padding:'0 20px'}} className="row"><Chip selected count={335} icon={<CategoryIcon type="all" size={18}/>}>전체</Chip><Chip count={18} icon={<CategoryIcon type="cafe" size={18}/>}>카페</Chip></div>
+<div style={{padding:'8px 20px'}}><ListRow icon={<CategoryIcon type="cafe" size={22}/>} title="카페 온담" meta="약 140m, 도보 2분"/></div>
+</Sheet>
+</div>
+</div>;}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>
