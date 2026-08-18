@@ -24,14 +24,21 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
   #root { height: 100dvh; }
-  /* 데스크톱에서 열었을 때만 모바일 폭으로 가운데 세운다.
-     width 를 반드시 적는다 — #root 는 flex 아이템이라 폭을 안 주면 내용물 크기로 정해지는데,
-     탭마다 흐름에 남는 요소가 다르다. 지도 탭(S02·S03)은 지도·시트·필터가 전부 absolute 라
-     폭 기여가 0 이고, 둘러보기(S04)는 정보 패널이 흐름 안에 있어 430px 를 꽉 채운다.
+  /* 데스크톱에서 열었을 때만 기기 틀 안에 세운다. 이 블록은 **검수용 미리보기 틀**이지
+     화면 자체가 아니다 — 실제 휴대폰(<640px)에서는 통째로 걸리지 않는다.
+
+     390px 는 iPhone 15 / 14 / 13 의 폭이다. --screen-max(430px)를 쓰지 않는 이유는,
+     그게 "앱이 최대로 넓어졌을 때"의 값이라 검수 내내 가장 여유로운 조건만 보게 되기
+     때문이다. 흔한 기기 폭에서 줄바꿈과 칩 줄 배치를 보는 편이 낫다.
+     앱의 최대 폭은 그대로 430px 다 (tokens/spacing.css) — 여기서 바꾸는 것은 틀뿐이다.
+
+     width 를 반드시 적는다. #root 는 flex 아이템이라 폭을 안 주면 내용물 크기로 정해지는데,
+     탭마다 흐름에 남는 요소가 다르다 — 지도 탭(S02·S03)은 지도·시트·필터가 전부 absolute 라
+     폭 기여가 0 이고, 둘러보기(S04)는 정보 패널이 흐름 안에 있어 최대 폭을 꽉 채운다.
      그래서 탭을 바꿀 때마다 기기 틀 자체가 넓어졌다 좁아졌다 했다. */
   @media (min-width: 640px) {
     body { display: flex; align-items: center; justify-content: center; padding: 24px; }
-    #root { width: min(var(--screen-max), 100%); height: min(880px, calc(100dvh - 48px));
+    #root { width: min(390px, 100%); height: min(844px, calc(100dvh - 48px));
       box-shadow: 0 18px 48px rgba(22,34,28,.18); border-radius: 28px; overflow: hidden; background: var(--surface-page); }
   }
   /* 가로 스크롤 영역의 스크롤바를 숨긴다 (칩 줄, 매장 레일) */
