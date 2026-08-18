@@ -1,12 +1,12 @@
 import React from "react";
 import {
-  DetailPage, DetailBody, Button, Input, Textarea, RadioGroup, Checkbox,
+  DetailPage, DetailBody, Button, Input, Textarea, RadioGroup,
   Notice, EmptyState, FacilityIcon, CategoryIcon, Icon, InfoList,
 } from "../../design-systems/index.js";
 
 /* S10 오류신고 및 문의 (U-CM-10).
  *
- * 폼 항목은 명세가 정한 넷이다 — **대상 · 유형 · 내용 · 회신처.**
+ * 폼 항목은 셋이다 — **대상 · 유형 · 내용.**
  *
  * ── 대상은 사용자가 고르지 않는다 ──────────────────────────────────────────
  * 이 화면에 들어오는 길은 S05 시설 상세와 S06 점포 상세의 [정보 오류 신고] 하나뿐이다.
@@ -15,11 +15,12 @@ import {
  * (대상 없이 딥링크로 들어온 경우에만 이름을 적는 칸이 열린다. 그때도 선택 항목이다 —
  *  "어디가 틀렸는지는 모르겠지만 뭔가 이상하다"는 신고를 막을 이유가 없다.)
  *
- * ── 회신처가 선택인 이유, 그리고 동의가 조건부인 이유 ──────────────────────
- * 회원가입이 없는 서비스다. 회신처를 필수로 두면 답을 받을 생각이 없는 사람은 신고 자체를
- * 포기한다 — 신고는 많이 받을수록 데이터가 좋아진다. 대신 **회신처를 적은 경우에만**
- * 개인정보 수집 동의를 받는다. 아무것도 안 적은 사람에게 동의를 요구하면 수집하지도 않을
- * 정보에 동의를 받는 셈이다.
+ * ── 회신처를 받지 않는다 (2026-08-18 결정) ───────────────────────────────
+ * 개별 회신을 할 계획이 없다. 계획이 없는데 연락처 칸을 열어두면 적은 사람은 답을 기다리고,
+ * 우리는 쓰지도 않을 개인정보를 받아 보관 책임만 진다. 칸을 없애면 그에 딸린 개인정보
+ * 수집 동의 체크도 함께 사라진다 — 수집하지 않으니 받을 동의가 없다.
+ * 접수 결과 화면의 접수번호는 그대로 둔다. 회신이 없는 만큼 사용자가 나중에 이 신고를
+ * 가리킬 유일한 단서다.
  *
  * ── 검증은 제출할 때 한 번에 한다 ──────────────────────────────────────────
  * 타이핑 중에 붉은 글씨가 붙었다 떨어지면 아직 다 쓰지도 않은 사람을 재촉하게 된다.
@@ -36,9 +37,9 @@ import {
    자유 서술만 받으면 그 분류를 사람이 매번 다시 해야 한다. */
 export const REPORT_KINDS = [
   { value: "location", label: "위치가 실제와 다릅니다" },
-  { value: "hours",    label: "운영시간 · 휴무 정보가 다릅니다" },
-  { value: "closed",   label: "폐업 · 철거되어 지금은 없습니다" },
-  { value: "name",     label: "이름 · 연락처 등 표기가 다릅니다" },
+  { value: "hours",    label: "운영시간, 휴무 정보가 다릅니다" },
+  { value: "closed",   label: "폐업, 철거되어 지금은 없습니다" },
+  { value: "name",     label: "이름, 연락처 등 표기가 다릅니다" },
   { value: "etc",      label: "그 밖의 오류나 문의" },
 ];
 
@@ -49,8 +50,6 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
   const [kind, setKind] = React.useState("");
   const [body, setBody] = React.useState("");
   const [name, setName] = React.useState("");
-  const [reply, setReply] = React.useState("");
-  const [agree, setAgree] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 
@@ -60,9 +59,8 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
     const e = {};
     if (!kind) e.kind = "어떤 오류인지 골라 주세요.";
     if (body.trim().length < MIN_BODY) e.body = `무엇이 어떻게 다른지 ${MIN_BODY}자 이상 적어 주세요.`;
-    if (reply.trim() && !agree) e.agree = "회신을 받으시려면 개인정보 수집에 동의해 주세요.";
     return e;
-  }, [kind, body, reply, agree]);
+  }, [kind, body]);
 
   const shown = submitted ? errors : {};
   const count = Object.keys(errors).length;
@@ -73,7 +71,7 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
     if (count) {
       /* 첫 오류로 포커스를 옮긴다. 순서는 화면에 놓인 순서와 같아야 한다 —
          객체 키 순서에 기대면 검증 조건을 추가할 때 조용히 어긋난다. */
-      const first = ["kind", "body", "agree"].find(k => errors[k]);
+      const first = ["kind", "body"].find(k => errors[k]);
       const box = form.current && form.current.querySelector(`[data-field="${first}"]`);
       if (box) {
         const focusable = box.querySelector("input, textarea, select");
@@ -90,12 +88,11 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
       target: target
         ? { id: target.id, name: target.name, type: targetKind }
         : { id: null, name: name.trim() || null, type: null },
-      reply: reply.trim() || null,
     });
   };
 
   /* ── 제출 완료 ─────────────────────────────────────────────────────────
-        접수번호를 크게 둔다. 회신처를 적지 않은 사람에게는 이 번호가 나중에 문의할 유일한 단서다. */
+        접수번호를 크게 둔다. 회신을 하지 않으므로 이 번호가 나중에 이 신고를 가리킬 유일한 단서다. */
   if (receipt) {
     return (
       <DetailPage title="신고 접수 완료" onBack={onBack}
@@ -118,13 +115,12 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
           <InfoList items={[
             { label: "대상", value: receipt.target && receipt.target.name },
             { label: "유형", value: receipt.kindLabel },
-            { label: "회신처", value: receipt.reply },
           ]} />
 
+          {/* 개별 회신이 없다는 것은 접수 직후에 분명히 해둔다. 적어두지 않으면
+              연락을 기다리다가 "신고해도 아무 답이 없다"로 남는다 */}
           <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-            {receipt.reply
-              ? "회신이 필요한 내용이면 적어주신 곳으로 연락드립니다."
-              : "회신처를 적지 않으셔서 처리 결과는 따로 안내되지 않습니다."}
+            개별 회신은 드리지 않습니다. 확인된 내용은 안내 정보에 바로 반영됩니다.
           </p>
         </DetailBody>
       </DetailPage>
@@ -191,29 +187,8 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
               error={shown.body} />
           </div>
 
-          {/* ── 회신처 ───────────────────────────────────────────────── */}
-          <div>
-            <Input label="회신처" type="text" icon="mail"
-              placeholder="이메일 또는 휴대전화 번호"
-              hint="선택 항목입니다. 처리 결과를 받아보실 때만 적어 주세요."
-              value={reply} onChange={e => setReply(e.target.value)}
-              clearable onClear={() => setReply("")} />
-
-            {/* 적었을 때만 동의를 받는다 — 수집하지 않을 정보에 동의를 구하지 않는다 */}
-            {reply.trim() ? (
-              <div data-field="agree" style={{ marginTop: "var(--space-2)",
-                paddingLeft: shown.agree ? "var(--space-3)" : 0,
-                borderLeft: shown.agree ? "var(--stroke-outline) solid var(--state-danger)" : "none" }}>
-                <Checkbox checked={agree} onChange={e => setAgree(e.target.checked)}
-                  label="신고 처리와 결과 회신을 위해 회신처를 수집하는 데 동의합니다. 처리 완료 후 지체 없이 파기합니다." />
-                {shown.agree ? (
-                  <p style={{ fontSize: "var(--fs-caption)", color: "var(--state-danger)", lineHeight: 1.5 }}>
-                    {shown.agree}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+          {/* 회신처 칸은 없다 — 위 머리 주석 참조. 연락처를 받지 않으므로
+              개인정보 수집 동의도 함께 빠졌다. */}
 
           {/* 제출을 눌렀는데 아무 일도 안 일어난 것처럼 보이지 않게 개수를 알린다.
               화면 아래쪽 오류는 스크롤 밖이라 눈에 들어오지 않는다 */}
@@ -225,7 +200,7 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
             color: "var(--text-muted)", lineHeight: 1.55 }}>
             <Icon name="shield-check" size={16} style={{ marginTop: 2 }} />
             <span>
-              신고 내용은 안내 정보를 고치는 데만 씁니다.
+              신고 내용은 안내 정보를 고치는 데만 씁니다. 개별 회신은 드리지 않습니다.
               응급 상황이나 신고가 필요한 일은 119 등 공식 채널로 연락해 주세요.
             </span>
           </p>
