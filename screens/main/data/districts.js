@@ -176,10 +176,32 @@ const FESTIVAL_BY_DISTRICT = FESTIVAL_RAW.reduce((o, [did, name, start, end, tim
   return o;
 }, {});
 
+/* 용인시 누리집의 상점가 안내 페이지. 축제 상세(S09)의 "주최 상점가" 줄이 여기로 나간다 —
+   상점가 자체의 소개·연혁·연락처는 우리가 가진 자료가 아니고, 시가 이미 관리하는 자료다.
+   우리 화면에 옮겨 적으면 갱신 주체가 둘이 되어 반드시 어긋난다.
+
+   seq 는 상점가마다 다르고 이 배열 순서와 같은 순서로 매겨져 있다 — **seq = 순번 + 2.**
+   앞의 셋을 실제로 열어 확인했다:
+
+     seq=2  둔전골목형상점가          (dunjeon,  0번째)
+     seq=3  에버랜드마을골목형상점가  (everland, 1번째)
+     seq=4  모현청경채골목형상점가    (mohyeon,  2번째)
+
+   ⚠️ 나머지 29곳은 **규칙에서 미뤄 짐작한 값이고 열어보지 않았다.** 시가 우리와 같은
+   순서로 등록했다는 보장이 없다. 실연동 때는 짐작을 쓰지 말고 시에서 받은 표를 넣는다 —
+   그때 이 상수만 바꾸면 되고 화면 코드는 손대지 않는다.
+
+   ⚠️ 이름도 어긋난다. 이 파일의 상점가 이름은 생성값이라(머리말) 시의 실제 명칭과 다르다.
+   예: 여기 "모현 왕산 상점가" → 시 쪽 "모현청경채골목형상점가". 링크는 맞아도 이름이 달라
+   보이므로, 실데이터를 넣을 때 이름과 seq 를 함께 갈아끼워야 한다. */
+const GUIDE_BASE = "https://www.yongin.go.kr/yimr/www/marketGuideDetail.do?key=114&seq=";
+const guideSeq = i => i + 2;
+
 export const DISTRICTS = RAW
-  .map(([id, name, gu, area, stores, onnuri, dist, bearing]) => ({
+  .map(([id, name, gu, area, stores, onnuri, dist, bearing], i) => ({
     id, kind: "district", name, gu, area, stores, onnuri, dist,
     ...at(dist, bearing),
+    homepage: GUIDE_BASE + guideSeq(i),
     festival: FESTIVAL_BY_DISTRICT[id] || null,
   }))
   .sort((a, b) => a.dist - b.dist);
@@ -190,13 +212,37 @@ export const CURRENT_DISTRICT_ID = "dunjeon";
 export const OTHER_DISTRICTS = DISTRICTS.filter(d => d.id !== CURRENT_DISTRICT_ID);
 
 /* U-DC-01 축제 목록 — 32개소 전체가 대상이고 각 항목에 상점가명과 거리를 병기한다.
-   정렬은 상태 먼저, 그 다음 거리다. 명세서는 "가까운 순"만 적었지만 그대로 두면
+   정렬은 상태 먼저, 그 다음 임박순이다. 명세서는 "가까운 순"만 적었지만 그대로 두면
    종료된 축제가 진행 중인 축제 위로 올라온다. 상태는 기간 한정 정보의 1순위다. */
 const STATE_RANK = { 진행중: 0, 예정: 1, 종료: 2 };
+
+/* "임박"은 **다음에 무슨 일이 일어나는가**의 날짜다.
+     예정   시작일 — 곧 열린다
+     진행중 종료일 — 곧 닫힌다
+   진행중을 시작일로 재면 오래 전에 시작해 내일 끝나는 축제가 목록 끝으로 밀리는데,
+   지금 가장 급한 것이 바로 그것이다. 종료된 축제만 반대로 최근에 끝난 것부터 둔다 —
+   "그거 언제였지"를 확인하러 오는 자리라 오래된 것이 위에 있을 이유가 없다. */
+const soonKey = f => (f.state === "예정" ? f.start : f.end);
+export function byFestivalSoon(a, b) {
+  const r = STATE_RANK[a.state] - STATE_RANK[b.state];
+  if (r) return r;
+  if (a.state === "종료") return b.end.localeCompare(a.end);
+  return soonKey(a).localeCompare(soonKey(b));
+}
+export function byFestivalNear(a, b) {
+  return STATE_RANK[a.state] - STATE_RANK[b.state] || a.dist - b.dist;
+}
+
 export const FESTIVALS = DISTRICTS
   .filter(d => d.festival)
-  .map(d => ({ ...d.festival, districtName: d.name, dist: d.dist }))
-  .sort((a, b) => STATE_RANK[a.state] - STATE_RANK[b.state] || a.dist - b.dist);
+  .map(d => ({ ...d.festival, districtName: d.name, dist: d.dist, homepage: d.homepage }))
+  .sort(byFestivalSoon);
+
+/* 둘러보기 탭의 기본 뷰에 나가는 목록 — **진행중과 예정만**이다 (2026-08-18).
+   종료된 축제는 "지금 갈 수 있는 곳"을 훑는 자리에서 자리만 차지한다. 목록에서 아주
+   지우는 것은 아니고, 머리말의 [전체보기]가 여는 전체 목록(S12)에 그대로 있다 —
+   U-FT-01 이 요구하는 세 상태 구분은 거기서 지킨다. */
+export const FESTIVALS_OPEN = FESTIVALS.filter(f => f.state !== "종료");
 
 /* U-CM-18 — 진행 중 축제가 있으면 둘러보기 탭 아이콘에 점을 찍는다.
    "예정"으로는 찍지 않는다. 6건이 모두 예정인 기간에는 점이 상시 켜져 있어 신호가 죽는다. */

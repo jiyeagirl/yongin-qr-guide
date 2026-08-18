@@ -29,12 +29,13 @@ export const ROUTE_MAIN = { name: "main", id: null, parts: [] };
    새 상세 화면을 붙일 때 고칠 곳이 이 배열과 MainApp 의 target/detail 두 군데뿐이도록 둔다. */
 const DETAIL = ["facility", "store", "course", "festival", "route"];
 
-/* 대상 없이도 열리는 화면. 지금은 S10 오류신고 하나다 —
-   보통은 시설·점포 상세에서 대상을 달고 들어오지만(#/report/facility/fc-001),
-   대상을 특정하지 못한 문의(#/report)도 받아야 하기 때문이다.
+/* 대상 없이도 열리는 화면.
+     report     보통은 시설·점포 상세에서 대상을 달고 들어오지만(#/report/facility/fc-001),
+                대상을 특정하지 못한 문의(#/report)도 받아야 한다.
+     festivals  S12 축제 전체보기. 목록 화면이라 애초에 대상이 없다 (#/festivals).
    위 DETAIL 과 나누는 이유는 아래 parseHash 의 "조각이 없으면 셸" 규칙 때문이다 —
    그 규칙은 오타난 딥링크를 걸러내는 장치라 없애면 안 되고, 여기만 예외로 둔다. */
-const OPTIONAL_ID = ["report"];
+const OPTIONAL_ID = ["report", "festivals"];
 
 /* "#/store/dj-042"           → { name: "store", id: "dj-042", parts: ["dj-042"] }
    "#/route/facility/fc-001"  → { name: "route", id: "facility", parts: ["facility", "fc-001"] }

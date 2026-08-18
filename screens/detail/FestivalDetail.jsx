@@ -30,7 +30,7 @@ import {
  * 목록(U-FT-01)이 종료 상태도 노출하므로 상세에도 들어올 수 있다. 이때 프로그램을
  * 그대로 보여주면 아직 열리는 행사로 읽힌다. 맨 위에 끝났다는 사실을 먼저 적는다.
  */
-export function FestivalDetail({ festival, onBack, onOpenDistrict, onReport, asOf }) {
+export function FestivalDetail({ festival, onBack, onReport, asOf }) {
   const f = festival;
   const ended = f.state === "종료";
   const live = f.state === "진행중";
@@ -44,15 +44,14 @@ export function FestivalDetail({ festival, onBack, onOpenDistrict, onReport, asO
   const temps = f.tempFacilities || [];
 
   return (
-    <DetailPage title={f.name} onBack={onBack}
-      /* 축제의 주 행동은 길찾기가 아니라 "그 상점가로 가보기"다. 축제는 점이 아니라
-         구역에서 열리고(확정 결정사항 6), 도착지 좌표 하나로 좁힐 수 없다.
-         종료된 축제에도 이 버튼은 남긴다 — 상점가 자체는 여전히 갈 수 있는 곳이다. */
-      footer={
-        <Button variant="primary" size="lg" icon="store" block onClick={() => onOpenDistrict(f)}>
-          {f.districtName} 보기
-        </Button>
-      }>
+    /* ── 하단 액션바가 없다 (2026-08-18) ──────────────────────────────────────
+       [○○ 상점가 보기]를 뺐다. 이 화면은 **축제 하나를 읽는 자리**다. 그런데 그 버튼이
+       가는 곳은 축제와 상관없는 상점가 화면이었고, 현재 상점가가 아니면 갈 곳조차 없어
+       토스트만 띄웠다 — 화면에서 가장 큰 버튼이 대개 아무 일도 하지 않았다.
+
+       상점가로 가는 길은 아래 정보 표의 "주최 상점가" 줄이 맡는다. 축제를 읽다가 주최가
+       궁금해진 사람이 그 낱말을 보고 있는 바로 그 자리다. */
+    <DetailPage title={f.name} onBack={onBack}>
 
       <DetailBody>
         {/* ── 머리 ─────────────────────────────────────────────────────── */}
@@ -83,12 +82,34 @@ export function FestivalDetail({ festival, onBack, onOpenDistrict, onReport, asO
           </Notice>
         ) : null}
 
-        {/* ── 기본 정보 (U-FT-02) ────────────────────────────────────── */}
+        {/* ── 기본 정보 (U-FT-02) ──────────────────────────────────────
+               "주최 상점가"만 누를 수 있다. 상점가 자체의 소개·연혁·연락처는 우리가 가진
+               자료가 아니라 시가 이미 관리하는 자료다 — 여기에 옮겨 적으면 갱신 주체가
+               둘이 되어 반드시 어긋난다. 그래서 우리 화면에 상점가 소개를 만들지 않고
+               용인시 누리집의 그 상점가 안내로 내보낸다.
+
+               **바깥으로 나가는 링크라는 것을 숨기지 않는다.** 새 창으로 열고, 꺾쇠 옆에
+               "용인시 누리집"이라고 적고, 보조기기에는 aria-label 로 한 번 더 말한다.
+               같은 앱 안의 다른 화면으로 가는 줄 알고 눌렀다가 브라우저가 바뀌면
+               되돌아오는 길을 스스로 찾아야 한다. */}
         <InfoList items={[
           { label: "기간", value: f.period },
           { label: "시간", value: f.time },
           { label: "장소", value: f.place },
-          { label: "주최 상점가", value: f.districtName },
+          { label: "주최 상점가", value: f.homepage ? (
+            <a href={f.homepage} target="_blank" rel="noopener noreferrer"
+              /* 보조기기에는 어디로 가는지 온전히 말한다. 눈으로 보는 "상세 페이지"만으로는
+                 이 앱 안의 화면인지 바깥인지 구분되지 않는데, 화면에서는 꺾쇠와 링크색이
+                 그 역할을 나눠 맡고 있어 글자를 길게 늘일 필요가 없다. */
+              aria-label={`${f.districtName} 상세 페이지 — 용인시 누리집에서 새 창으로 열림`}
+              style={{ display: "inline-flex", alignItems: "center", gap: 4, minHeight: 44,
+                color: "var(--text-link)", fontWeight: "var(--fw-semibold)" }}>
+              {f.districtName}
+              <span style={{ fontSize: "var(--fs-micro)", fontWeight: "var(--fw-regular)",
+                color: "var(--text-muted)" }}>상세 페이지</span>
+              <Icon name="chevron-right" size={16} />
+            </a>
+          ) : f.districtName },
         ]} />
 
         {/* ── 프로그램 (U-FT-02 "프로그램 개요") ───────────────────────── */}

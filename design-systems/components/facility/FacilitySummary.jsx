@@ -27,6 +27,18 @@ import { eun } from "../core/josa.js";
    가장 알아야 할 사람(급히 대피소를 찾는 사람)이 그 배지를 못 보고 지나간다.
    한 번 닫으면 다시 열리지 않는다 — 같은 경고를 계속 들이밀지 않는다.
 
+   ── "닫았다"를 이 컴포넌트가 기억할 수 없다 (2026-08-18) ────────────────────
+   이 줄은 공공시설 탭일 때만 그려진다. 둘러보기 탭을 눌렀다가 돌아오면 **언마운트되었다가
+   다시 마운트**되므로, 닫은 기억이 지역 상태에 있으면 그때마다 말풍선이 다시 열린다.
+   같은 사람이 같은 경고를 탭을 오갈 때마다 다시 닫아야 했다.
+
+   그래서 닫힘을 **밖에서 들고 있게** 한다 (`dismissed` / `onDismissedChange`). 값은 경고
+   묶음을 나타내는 문자열이고, 그것이 지금 경고와 같으면 열지 않는다. 경고가 달라지면
+   (유형 칩을 바꾸는 등) 키도 달라져 다시 열린다 — 새 경고는 새로 알려야 한다.
+
+   두 prop 을 주지 않으면 예전처럼 자기 상태로만 동작한다. 디자인 시스템 컴포넌트가
+   쓰는 쪽에 상태 관리를 강요하지 않기 위해서다.
+
    ── 말풍선은 항목이 아니라 **줄 전체**에 붙는다 (2026-08-18 수정) ──
    처음에는 경고가 걸린 항목의 왼쪽 끝에 붙이고 오른쪽으로 펼쳤다. 그런데 SAFETY 순서가
    AED · 대피소 · 쉼터라 대피소는 줄의 가운데쯤에서 시작한다 — 거기서 280px 을 펼치면
@@ -36,7 +48,8 @@ import { eun } from "../core/josa.js";
    그래서 말풍선을 **줄 컨테이너에 좌우로 붙여**(left:0 right:0) 폭을 화면 안에 묶고,
    대신 **꼬리만 경고가 걸린 항목의 아이콘 아래로 옮긴다.** 어느 유형에 붙은 경고인지는
    꼬리가 가리키고, 폭은 컨테이너가 책임진다. 잘릴 수 있는 자유도를 없앤 것이다. */
-export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔 지점 기준 직선거리 · 가까운 순", style, ...rest }) {
+export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔 지점 기준 직선거리 · 가까운 순",
+  dismissed = null, onDismissedChange, style, ...rest }) {
   const warnOf = t => warnings.find(w => w.type === t);
   /* 경고가 걸린 유형은 개수가 0 이어도 반드시 보여준다 — 경고를 걸어놓고 그 대상을
      줄에서 빼면 어디에 붙은 경고인지 알 수 없게 된다 */
@@ -44,10 +57,22 @@ export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔
 
   /* 경고 묶음이 바뀔 때만 다시 연다. 유형 칩을 바꾸면 경고 대상도 바뀌므로 그때는 새 경고다 */
   const key = warnings.map(w => `${w.type}:${w.text}`).join("|");
+  /* 이미 닫은 경고면 열지 않는다 (머리말 참조). 마운트될 때마다 이 판단을 다시 하므로
+     탭을 오가도 결과가 같다. */
+  const first = () => (warnings.length && dismissed !== key ? warnings[0].type : null);
   /* 첫 값은 effect 가 아니라 초기화에서 정한다. effect 로만 열면 첫 프레임은 닫힌 상태로
      그려졌다가 곧바로 열려, 급히 보는 사람 눈에 한 번 깜빡이는 것으로 남는다. */
-  const [open, setOpen] = React.useState(() => (warnings.length ? warnings[0].type : null));
-  React.useEffect(() => { setOpen(warnings.length ? warnings[0].type : null); }, [key]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const [open, setOpen] = React.useState(first);
+  /* deps 에 dismissed 를 넣지 않는다 — 닫는 순간 dismissed 가 바뀌는데 그때 이 effect 가
+     돌면 방금 닫은 것을 두고 "새 경고인가"를 다시 따지게 된다. 다시 열 이유는 경고가
+     바뀌었을 때(key) 하나뿐이다. */
+  React.useEffect(() => { setOpen(first()); }, [key]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* 닫힘은 밖으로 올려보낸다. 이 컴포넌트는 탭이 바뀌면 언마운트되므로 스스로 기억할 수 없다 */
+  const close = () => { setOpen(null); if (onDismissedChange) onDismissedChange(key); };
+  /* 배지를 눌러 다시 열면 닫은 기록도 지운다 — 열어둔 채 탭을 옮겼다 돌아왔는데
+     닫혀 있으면, 방금 연 사람 입장에서는 화면이 제 말을 듣지 않은 것이 된다 */
+  const reopen = t => { setOpen(t); if (onDismissedChange) onDismissedChange(null); };
 
   /* 문장은 여기 한 곳에서만 만든다 — 화면과 스크린리더가 다른 말을 하면 안 된다.
      조사는 유형 이름의 받침을 따른다 ("대피소는" / "화장실은") */
@@ -129,7 +154,7 @@ export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔
             const on = open === t;
             return (
               <button key={t} type="button" ref={el => { btns.current[t] = el; }}
-                onClick={() => setOpen(on ? null : t)}
+                onClick={() => (on ? close() : reopen(t))}
                 aria-expanded={on} aria-label={text}
                 style={{ ...itemStyle, background: "none", border: "none", padding: 0, cursor: "pointer",
                   textAlign: "left" }}>
@@ -158,7 +183,7 @@ export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔
                 transform: "rotate(45deg)" }} />
               <span style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)",
                 color: "var(--text-body)", lineHeight: 1.5, wordBreak: "keep-all" }}>{textOf(open)}</span>
-              <button type="button" onClick={() => setOpen(null)} aria-label="안내 닫기"
+              <button type="button" onClick={close} aria-label="안내 닫기"
                 style={{ flex: "0 0 auto", display: "inline-flex", background: "none", border: "none",
                   padding: 2, margin: -2, cursor: "pointer", color: "var(--text-muted)" }}>
                 <Icon name="x" size={14} />

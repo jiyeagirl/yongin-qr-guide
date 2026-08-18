@@ -10,18 +10,30 @@ import { OnnuriBadge } from "../core/OnnuriBadge.jsx";
 
    상점가는 점이 아니라 구역이므로(확정 결정사항 6) 거리는 "구역까지"의 근사값이다.
    점포 수와 온누리 가맹 수를 함께 적는 이유: 상점가를 고르는 기준이 이름이 아니라 규모와
-   온누리 사용 가능 여부이기 때문이다. 축제가 걸린 곳은 뱃지로 먼저 눈에 띄게 한다. */
-export function DistrictRow({ district, onClick, selected = false, divider = true, style, ...rest }) {
+   온누리 사용 가능 여부이기 때문이다.
+
+   ── festivalTag ────────────────────────────────────────────────────────────
+   축제가 걸린 곳에 [축제] 배지를 달지 여부다. 기본은 단다 — S03-E 의 "가볼 만한 상점가"
+   처럼 **축제 정보가 그 화면에 따로 없는 자리**에서는 그것이 갈 이유가 되기 때문이다.
+
+   반대로 둘러보기 탭에서는 끈다 (2026-08-18). 그 탭은 맨 위 섹션이 통째로 축제이고
+   [전체보기]까지 붙어 있어서, 맨 아래 목록의 배지는 같은 사실을 세 번째로 말한다.
+   배지가 눌리는 것도 아닌데 알약 모양이라 필터처럼 읽히기까지 했다. */
+export function DistrictRow({ district, onClick, selected = false, divider = true,
+  festivalTag = true, style, ...rest }) {
   const d = district;
   const km = d.dist >= 1000 ? `${(d.dist / 1000).toFixed(1)}km` : `${d.dist}m`;
+  const flag = festivalTag && d.festival;
 
   return (
     <ListRow
       onClick={onClick}
       divider={divider}
-      icon={<Icon name="store" size={22} color={d.festival ? "var(--yong-cream-900)" : "var(--text-muted)"} />}
+      /* 배지를 끄면 아이콘 색도 함께 되돌린다 — 배지 없이 색만 남기면 이름표 없는
+         색 신호가 되어 색으로만 뜻을 전하는 꼴이 된다 */
+      icon={<Icon name="store" size={22} color={flag ? "var(--yong-cream-900)" : "var(--text-muted)"} />}
       title={d.name}
-      tag={d.festival ? <Badge tone="accent" dot>축제</Badge> : null}
+      tag={flag ? <Badge tone="accent" dot>축제</Badge> : null}
       meta={<>
         {d.gu} {d.area} · {km}
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 6 }}>

@@ -6,7 +6,8 @@ import {
 } from "../../design-systems/index.js";
 import { DUNJEON } from "./data/dunjeon.js";
 import { FACILITIES, NEARBY, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.js";
-import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, HAS_LIVE_FESTIVAL, CURRENT_FESTIVAL, CURRENT_DISTRICT_ID } from "./data/districts.js";
+import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalSoon, byFestivalNear,
+  HAS_LIVE_FESTIVAL, CURRENT_FESTIVAL, CURRENT_DISTRICT_ID } from "./data/districts.js";
 import { DistrictSheet } from "./DistrictSheet.jsx";
 import { FacilitySheet } from "./FacilitySheet.jsx";
 import { DiscoverPanel } from "./DiscoverPanel.jsx";
@@ -16,6 +17,7 @@ import { FacilityDetail } from "../detail/FacilityDetail.jsx";
 import { StoreDetail } from "../detail/StoreDetail.jsx";
 import { CourseDetail } from "../detail/CourseDetail.jsx";
 import { FestivalDetail } from "../detail/FestivalDetail.jsx";
+import { FestivalList } from "../detail/FestivalList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, back, closeAll } from "./router.js";
 import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, FESTIVAL_AS_OF } from "./config.js";
@@ -118,6 +120,12 @@ export function MainApp({ qr = null, noDistrict = false }) {
   /* 공공시설 탭 필터 (U-FC-01) — 상점가의 업종 칩과 별개의 상태다.
      하나로 합치면 탭을 오갈 때 "음식"이 "AED"로 둔갑한다 */
   const [fcType, setFcType] = React.useState("all");
+
+  /* U-FC-09 원거리 안내 말풍선을 닫았는지. **셸이 들고 있어야 한다** —
+     그 말풍선을 그리는 FacilitySummary 는 공공시설 탭일 때만 존재해서, 탭을 옮기면
+     언마운트되며 닫은 기억이 사라진다. 값은 경고 묶음을 나타내는 문자열이고, 경고가
+     달라지면 저절로 다시 열린다 (FacilitySummary 머리말). */
+  const [warnDismissed, setWarnDismissed] = React.useState(null);
 
   const [sheetH, setSheetH] = React.useState(0);          /* 시트 실측 높이(px) */
   const [previewH, setPreviewH] = React.useState(0);      /* 미리보기 카드 실측 높이(px) */
@@ -339,7 +347,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
   /* 대상 없는 오류신고(#/report)는 정상이므로 되돌리지 않는다. 대상을 달고 왔는데
      못 찾은 경우(#/report/facility/없는id)는 다른 상세와 똑같이 되돌린다 —
      엉뚱한 곳을 신고하게 두는 것이 빈 화면보다 나쁘다. */
-  const needsTarget = route.name !== "main" && (route.name !== "report" || route.parts.length > 0);
+  /* S12 축제 전체보기(#/festivals)는 목록 화면이라 대상이 없다 — 되돌리지 않는다 */
+  const needsTarget = route.name !== "main" && route.name !== "festivals"
+    && (route.name !== "report" || route.parts.length > 0);
 
   React.useEffect(() => {
     if (needsTarget && !target) {
@@ -419,13 +429,20 @@ export function MainApp({ qr = null, noDistrict = false }) {
         festival={target}
         asOf={FESTIVAL_AS_OF}
         onBack={back}
-        /* 축제는 점이 아니라 구역에서 열린다 (확정 결정사항 6). 도착지 좌표 하나로 좁힐 수
-           없으므로 길찾기가 아니라 그 상점가로 보낸다. 지금 상점가 탭은 현재 상점가 한 곳만
-           다루므로(U-ST-01), 다른 상점가면 아직 갈 곳이 없어 안내만 한다. */
-        onOpenDistrict={x => x.districtId === CURRENT_DISTRICT_ID
-          ? (back(), changeTab("district"))
-          : say(`${x.districtName}으로 이동 (상점가 전환은 후속 과제)`)}
         onReport={() => go("#/report")} />
+
+    /* ── S12 축제 전체보기 ─────────────────────────────────────────────────
+           둘러보기 탭은 진행중·예정만 보여주고, 종료를 포함한 전체는 여기서 다룬다.
+           정렬 비교 함수를 데이터 쪽에서 그대로 넘긴다 — 화면이 다시 짜면 둘러보기 탭의
+           기본 순서와 여기 "임박순"이 조용히 어긋난다. */
+    ) : route.name === "festivals" ? (
+      <FestivalList
+        festivals={FESTIVALS}
+        asOf={FESTIVAL_AS_OF}
+        sortSoon={byFestivalSoon}
+        sortNear={byFestivalNear}
+        onOpen={f => go(`#/festival/${f.id}`)}
+        onBack={back} />
     ) : route.name === "facility" ? (
       <FacilityDetail
         facility={target}
@@ -565,7 +582,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
                섹션 네 개를 읽는 내내 화면의 3분의 1이 안 보이는 지도에 묶인다. */}
         {isDiscover ? (
           <DiscoverPanel
-            festivals={FESTIVALS}
+            /* 기본 뷰는 진행중·예정만이다. 종료를 포함한 전체는 [전체보기] → S12 가 맡는다 */
+            festivals={FESTIVALS_OPEN}
+            onOpenAllFestivals={() => go("#/festivals")}
             newStores={d.newStores}
             popular={d.popular}
             courses={d.courses}
@@ -599,6 +618,11 @@ export function MainApp({ qr = null, noDistrict = false }) {
             ? <FacilitySummary
                 counts={FACILITY_TYPES.reduce((o, t) => ({ ...o, [t]: facilityByType[t].length }), {})}
                 warnings={facilityNotices}
+                /* 닫힘을 셸이 들고 있다. 이 줄은 공공시설 탭일 때만 그려져서 탭을 옮기면
+                   언마운트되는데, 그 안에 두면 둘러보기를 갔다 올 때마다 말풍선이 다시 열려
+                   같은 경고를 몇 번이고 닫아야 했다. 셸은 탭이 바뀌어도 서 있다 (U-CM-16). */
+                dismissed={warnDismissed}
+                onDismissedChange={setWarnDismissed}
                 style={{ marginTop: "var(--space-1)" }} />
             /* U-ST-02 구역 안내 + U-ST-03 헤더 수치 */
             : isDistrict && hasDistrict ? <DistrictSummary district={d.district} style={{ marginTop: "var(--space-1)" }} /> : null}>

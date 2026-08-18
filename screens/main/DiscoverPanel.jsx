@@ -18,10 +18,13 @@ import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
  * 탭을 되돌아올 때 지도가 다시 뜨는데 U-CM-16 이 그것을 금지한다. 여기서 금지되는 것은
  * "재로딩"이지 "안 보이는 것"이 아니다.
  *
- *   축제                    32개소 전체   ← 기간 한정이라 최상단 (U-DC-05)
+ *   상점가 축제 정보         32개소 전체   ← 기간 한정이라 최상단 (U-DC-05). 진행중·예정만
+ *   골목 한바퀴 코스 추천     현재 상점가
  *   신규 매장 / 인기 매장    현재 상점가
- *   골목 한바퀴 코스         현재 상점가
- *   다른 상점가              32개소 전체   ← 최하단 (U-DC-04)
+ *   용인시 골목형 상점가 정보 32개소 전체   ← 최하단 (U-DC-04)
+ *
+ * 위에서부터 **넓은 답 → 좁은 답**이다. 축제와 코스는 "지금 이 동네에서 뭘 하지"에,
+ * 신규·인기 매장은 그보다 한 걸음 좁은 "어느 가게에 가지"에 답한다 (2026-08-18 순서 변경).
  *
  * ── 범위가 섞이는 유일한 탭이다 ────────────────────────────────────────────
  * 축제와 다른 상점가는 32개소 전체, 가운데 두 섹션은 현재 상점가만 다룬다.
@@ -34,7 +37,7 @@ import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
 export function DiscoverPanel({
   festivals = [], newStores = [], popular = [], courses = [], districts = [],
   currentDistrict,               /* 없으면(null) U-DC-06 축소 모드 */
-  onOpenFestival, onOpenStore, onOpenCourse, onOpenDistrict,
+  onOpenFestival, onOpenAllFestivals, onOpenStore, onOpenCourse, onOpenDistrict,
 }) {
   /* 다른 상점가 31곳을 한 번에 그리지 않는다. 목록이 화면 밖으로 한참 이어지면
      탭 최하단이라는 위치 자체가 무의미해진다 (U-DC-04 는 "탭 최하단 배치"를 요구한다) */
@@ -56,19 +59,23 @@ export function DiscoverPanel({
       WebkitOverflowScrolling: "touch", background: "var(--surface-page)" }}>
       <div style={{ padding: "var(--space-5) 0 var(--space-9)" }}>
 
-      {/* ── 1. 축제 (U-DC-01 · U-FT-01) — 32개소 전체, 앞의 몇 건만 펼쳐둔다 ───
-             6건이 한 번에 깔리면 이 탭의 나머지 세 섹션이 통째로 첫 화면 밖으로 밀린다.
-             둘러보기는 축제 목록 화면이 아니라 **네 가지를 훑는 화면**이라, 첫 화면에서
-             네 섹션이 다 보이지 않으면 아래 셋은 없는 것이나 마찬가지다.
+      {/* ── 1. 축제 (U-DC-01 · U-FT-01) — 진행중·예정만, 앞의 몇 건만 펼쳐둔다 ───
+             **종료된 축제는 여기 없다** (2026-08-18). 이 탭은 "지금 갈 수 있는 곳"을 훑는
+             자리라 끝난 행사가 자리를 차지할 이유가 없다. 다만 U-FT-01 이 요구하는 세 상태
+             구분을 버리는 것은 아니고, 머리말 오른쪽 [전체보기]가 여는 S12 가 그것을 맡는다.
 
-             자료를 줄이는 것이 아니라 접는 것이다 — [더 보기]로 그 자리에서 펼친다.
-             목록은 상태(진행중 → 예정 → 종료) 다음 거리 순이므로 접히는 것은 늘
-             덜 급한 쪽이다. 진행 중인 축제가 접혀 들어가는 일은 없다. */}
+             남은 것도 한 번에 깔지 않는다. 둘러보기는 축제 목록 화면이 아니라 **네 가지를
+             훑는 화면**이라, 첫 화면에서 네 섹션이 다 보이지 않으면 아래 셋은 없는 것이나
+             마찬가지다. 자료를 줄이는 것이 아니라 접는 것이다 — [더 보기]로 그 자리에서
+             펼친다. 목록이 상태 다음 임박순이므로 접히는 것은 늘 덜 급한 쪽이다.
+
+             머리말 오른쪽의 "32개소 전체 · n건"을 뺐다. 범위를 적어두던 자리인데, 이제
+             그 자리가 [전체보기]로 가는 길이고 범위는 각 행의 상점가명이 이미 말한다. */}
       <section style={scope}>
-        <SectionHeader title="상점가 축제 정보" note={`32개소 전체 · ${festivals.length}건`} />
+        <SectionHeader title="상점가 축제 정보" action="전체보기" onAction={onOpenAllFestivals} />
         {festivals.length === 0 ? (
-          <Notice tone="info" title="예정된 축제가 없습니다">
-            새 축제가 확정되면 이 자리에 표시됩니다.
+          <Notice tone="info" title="열리고 있거나 예정된 축제가 없습니다">
+            새 축제가 확정되면 이 자리에 표시됩니다. 지난 축제는 [전체보기]에서 볼 수 있습니다.
           </Notice>
         ) : (
           <>
@@ -100,25 +107,16 @@ export function DiscoverPanel({
         )}
       </section>
 
-      {/* ── 2·3. 현재 상점가 대상 섹션 — 없으면 통째로 숨긴다 (U-DC-06) ────── */}
+      {/* ── 2·3. 현재 상점가 대상 섹션 — 없으면 통째로 숨긴다 (U-DC-06) ──────
+             **코스가 매장보다 위다** (2026-08-18 순서 변경). 축제와 코스는 둘 다 "지금 이
+             동네에서 뭘 하지"에 답하는 자리이고, 신규·인기 매장은 그보다 한 걸음 좁은
+             "어느 가게에 가지"다. 같은 결의 둘을 붙여두면 위에서부터 넓은 답 → 좁은 답으로
+             읽히고, 축제가 없는 기간에도 코스가 첫 화면에 남는다. */}
       {currentDistrict ? (
         <>
-          {/* 신규 및 인기 매장 (U-DC-02).
-              "신규"와 "인기"를 한 줄에 섞지 않는다 — 새로 생긴 가게는 아직 조회수가 낮고
-              조회수 상위는 대개 오래된 가게라, 섞으면 어느 근거로 뽑힌 카드인지 알 수 없다 */}
-          <section style={{ ...scope, marginTop: "var(--space-6)" }}>
-            <SectionHeader title="신규 매장" note={currentDistrict.name} />
-            <StoreRail items={newStores} label="신규 매장" onPick={onOpenStore} />
-          </section>
-
-          <section style={{ ...scope, marginTop: "var(--space-5)" }}>
-            <SectionHeader title="인기 매장" note={currentDistrict.name} />
-            <StoreRail items={popular} label="인기 매장" onPick={onOpenStore} />
-          </section>
-
           {/* 골목 한바퀴 추천 코스 (U-DC-03) */}
           {courses.length ? (
-            <section style={{ marginTop: "var(--space-5)" }}>
+            <section style={{ marginTop: "var(--space-6)" }}>
               <div style={scope}>
                 <SectionHeader title="골목 한바퀴 코스 추천" note={currentDistrict.name} />
               </div>
@@ -130,12 +128,25 @@ export function DiscoverPanel({
               </div>
             </section>
           ) : null}
+
+          {/* 신규 및 인기 매장 (U-DC-02).
+              "신규"와 "인기"를 한 줄에 섞지 않는다 — 새로 생긴 가게는 아직 조회수가 낮고
+              조회수 상위는 대개 오래된 가게라, 섞으면 어느 근거로 뽑힌 카드인지 알 수 없다 */}
+          <section style={{ ...scope, marginTop: "var(--space-5)" }}>
+            <SectionHeader title="신규 매장" note={currentDistrict.name} />
+            <StoreRail items={newStores} label="신규 매장" onPick={onOpenStore} />
+          </section>
+
+          <section style={{ ...scope, marginTop: "var(--space-5)" }}>
+            <SectionHeader title="인기 매장" note={currentDistrict.name} />
+            <StoreRail items={popular} label="인기 매장" onPick={onOpenStore} />
+          </section>
         </>
       ) : (
         /* 현재 상점가가 없을 때 (U-DC-06). 빈 카드 자리를 남기는 대신 왜 없는지 한 줄로 적는다 */
         <section style={{ ...scope, marginTop: "var(--space-5)" }}>
           <Notice tone="info" title="가까운 상점가가 없습니다">
-            신규·인기 매장과 골목 한바퀴 코스는 가까운 상점가가 있을 때 보여드립니다.
+            골목 한바퀴 코스와 신규·인기 매장은 가까운 상점가가 있을 때 보여드립니다.
             아래에서 가볼 만한 상점가를 골라보세요.
           </Notice>
         </section>
@@ -151,7 +162,9 @@ export function DiscoverPanel({
         {/* 지도가 없어졌으므로 마커 선택 강조(selected)도 없다 — 강조할 지도가 없다 */}
         <div role="list">
           {districts.slice(0, limit).map((d, i) => (
-            <DistrictRow key={d.id} district={d}
+            /* [축제] 배지를 끈다 — 맨 위 섹션이 통째로 축제이고 [전체보기]까지 있어서,
+               여기 배지는 같은 사실을 세 번째로 말한다 (DistrictRow 의 festivalTag 주석) */
+            <DistrictRow key={d.id} district={d} festivalTag={false}
               divider={i < Math.min(limit, districts.length) - 1} onClick={() => onOpenDistrict(d)} />
           ))}
         </div>
