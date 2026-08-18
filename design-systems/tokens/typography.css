@@ -1,5 +1,9 @@
 :root{
---font-sans:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+/* "Pretendard Variable" 이 먼저다 — 자체 호스팅하는 가변 폰트의 family 이름이다 (fonts.css).
+   그 뒤의 "Pretendard" 는 사용자 기기에 정적 Pretendard 가 깔려 있는 경우를 위한 자리이고,
+   나머지는 폰트가 아직 안 왔거나 실패했을 때의 시스템 대체다.
+   가변 폰트라 45~920 사이 아무 굵기나 쓸 수 있다 — 굵기를 늘려도 파일을 더 넣을 필요가 없다. */
+--font-sans:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
 
 /* 굵기는 "폰트 파일 이름"이 아니라 **강조 단계**다.
    2026-08-14 검토에서 전반적으로 한 단계씩 낮췄다 — 화면 대부분의 텍스트가 600~700 에 몰려 있어

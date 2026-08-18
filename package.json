@@ -1,0 +1,17 @@
+{
+  "name": "yongin-qr-guide",
+  "private": true,
+  "version": "0.1.0",
+  "description": "용인시 QR 기반 공공시설·골목형 상점가 위치 안내 (시민용 모바일 웹)",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "serve": "node tools/serve.mjs"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.0",
+    "@babel/preset-react": "^7.29.0",
+    "lucide": "^1.31.0"
+  }
+}
