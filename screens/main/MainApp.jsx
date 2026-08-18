@@ -311,6 +311,23 @@ export function MainApp({ qr = null, noDistrict = false }) {
     return null;
   }, [route, d.stores, d.courses]);
 
+  /* ── 길찾기의 출발지 (2026-08-18) ────────────────────────────────────────
+     보통은 QR 스캔 지점이다 (제안서 3-1 — 화면의 "내 위치"는 언제나 그 고정 좌표다).
+
+     **코스에서 들어온 길찾기만 다르다.** 골목 한바퀴의 ②로 가는 길은 QR 지점이 아니라
+     ①에서 출발한다 — 코스를 도는 사람은 이미 ①에 서 있고, 거기서 QR 지점으로 되돌아갔다가
+     다시 ②로 가지 않는다. 출발지는 방문 표시와 무관하게 **코스 순서로 정해진다**
+     (직전 순번). 방문을 눌렀는지에 따라 출발지가 달라지면 같은 화면이 사람마다 다른 길을
+     안내하게 되고, 방문 표시는 원래 눌러도 되고 안 눌러도 되는 값이다.
+
+     URL 이 진실이라는 규칙은 여기서도 같다 — 출발지 id 를 해시에 담는다
+     (#/route/store/dj-042/dj-041). 화면 상태에 두면 새로고침이나 딥링크에서 사라진다. */
+  const originStop = React.useMemo(() => {
+    if (route.name !== "route") return null;
+    const id = route.parts[2];
+    return id ? (d.stores.find(x => x.id === id) || null) : null;
+  }, [route, d.stores]);
+
   /* 길찾기로 보내는 길은 여기 하나다 (U-FC-07 / U-ST-05 → U-NV-01).
      시설 상세·점포 상세·지도 미리보기 카드가 모두 이 함수를 부른다 — 세 곳이 각자 해시를
      조립하면 한 곳만 형식이 어긋났을 때 그 진입점만 조용히 셸로 떨어진다. */
@@ -371,12 +388,14 @@ export function MainApp({ qr = null, noDistrict = false }) {
     /* ── S07 길찾기 ────────────────────────────────────────────────────
            도착지 상세(S05/S06) 위에 한 칸 더 쌓인다. 뒤로가기를 누르면 그 상세로 돌아온다 —
            길을 확인하고 "여기가 어디였더라" 하며 되짚는 것이 자연스러운 순서다.
-           출발지는 언제나 QR 지점이므로 여기서 고를 것이 없다 (제안서 3-1). */
+           출발지는 사용자가 고르지 않는다 — QR 지점이거나, 코스에서 들어왔다면 직전 순번의
+           가게다 (위 originStop 주석). 어느 쪽이든 URL 이 정하고 화면에는 입력란이 없다. */
     : route.name === "route" ? (
       <RouteView
         dest={target}
-        origin={d.anchor}
         asOf={d.district.asOf}
+        origin={originStop || d.anchor}
+        fromAnchor={!originStop}
         onBack={back}
         onClose={closeAll}
         onOpenDest={() => go(`#/${route.parts[0]}/${encodeURIComponent(target.id)}`)}
@@ -387,10 +406,13 @@ export function MainApp({ qr = null, noDistrict = false }) {
         anchor={d.anchor}
         asOf={d.district.asOf}
         onBack={back}
-        /* 코스 안의 가게에서 점포 상세로 — history 를 한 칸 더 쌓는다.
-           뒤로가기를 누르면 코스로 돌아오고, 그때 보고 있던 순번도 그대로다
-           (오버레이가 언마운트되지 않으므로 activeId 가 살아 있다) */
+        /* 코스 안의 가게에서 점포 상세·길찾기로 — history 를 한 칸 더 쌓는다.
+           뒤로가기를 누르면 코스로 돌아온다. 다만 그때 고른 순번은 남지 않는다 —
+           이 오버레이는 route 가 갈리면 언마운트되기 때문이다. 지도는 코스 전체로
+           다시 맞춰지고, 방문 기록만 세션에 남는다 (data/courseVisits.js). */
         onPickStore={s => go(`#/store/${s.id}`)}
+        /* 출발지는 코스 순서상 직전 가게다. 첫 곳(from 없음)만 QR 지점에서 출발한다 */
+        onRouteStore={(s, from) => go(`#/route/store/${s.id}${from ? `/${from.id}` : ""}`)}
         onReport={() => go("#/report")} />
     ) : route.name === "festival" ? (
       <FestivalDetail

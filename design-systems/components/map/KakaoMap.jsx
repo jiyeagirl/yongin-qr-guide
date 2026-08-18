@@ -60,6 +60,9 @@ export function KakaoMap({
   facilities = [],            /* [{id, name, type, lat, lng}] — 공공시설 탭. 유형 4종 색 */
   districts = [],             /* [{id, name, lat, lng, festival}] — 상점가 지점 (S03-E 의 근처 상점가) */
   course = [],                /* [{id, name, lat, lng}] — S08 코스 상세. **순서가 있는 배열**이다 */
+  /* 코스에서 이미 들른 곳의 id. 그 핀을 흐리게 둔다 — 목록에서 체크한 것이 지도에도
+     보여야 두 곳이 같은 상태를 말한다. 색을 새로 만들지 않고 투명도만 낮춘다. */
+  courseDoneIds = [],
   /* S07 길찾기 (U-NV-02). {path:[{lat,lng}], turns:[{lat,lng}], dest:{name,lat,lng}, straight:bool}
      straight 는 경로 실패 폴백(U-NV-04) 표시다 — 직선을 점선으로 낮춰 긋는다 */
   route = null,
@@ -462,19 +465,27 @@ export function KakaoMap({
     });
   }, [activeTurn, route, ready]);
 
-  /* 코스에서 고른 곳을 키운다. 마커 이미지가 아니라 DOM 이라 스타일만 바꾸면 된다 —
-     다른 레이어의 선택 강조(아래)와 방식이 다른 이유다. */
+  /* 코스에서 고른 곳을 키우고 색을 바꾼다. 마커 이미지가 아니라 DOM 이라 스타일만 바꾸면
+     된다 — 다른 레이어의 선택 강조(아래)와 방식이 다른 이유다.
+
+     고른 곳은 **호박색**이다. 초록을 한 단계 진하게 하는 것으로는 부족했다: 핀도 점선도
+     전부 초록이라 어두워진 한 칸은 옆에 두고 비교해야 보인다 (--pin-course-active 주석).
+     방문한 곳은 색을 더 만들지 않고 같은 초록을 흐리게 둔다. */
   React.useEffect(() => {
+    const done = new Set(courseDoneIds);
     courseOverlays.current.forEach((ov, id) => {
       const el = ov.getContent();
       if (!el || !el.style) return;
       const on = id === selectedId;
-      el.style.background = on ? token("--brand-primary-strong", "#216e48") : token("--brand-primary", "#2f9260");
+      el.style.background = on ? token("--pin-course-active", "#f0dc72") : token("--brand-primary", "#2f9260");
+      el.style.color = on ? token("--pin-course-active-ink", "#161f1a") : token("--text-on-brand", "#ffffff");
+      /* 고른 곳은 방문했더라도 또렷하게 둔다 — 지금 보고 있는 것이 흐리면 무엇을 골랐는지 모른다 */
+      el.style.opacity = !on && done.has(id) ? token("--pin-course-done-opacity", ".45") : "1";
       el.style.transform = on ? "scale(1.28)" : "none";
-      el.style.transition = "transform var(--dur-fast) var(--ease-standard)";
+      el.style.transition = "transform var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard)";
       ov.setZIndex(on ? 8 : 6);
     });
-  }, [selectedId, course, ready]);
+  }, [selectedId, courseDoneIds, course, ready]);
 
   /* 선택 강조. 이전 선택만 되돌리고 새 선택만 칠한다 —
      335개를 매번 훑으면 필터를 바꿀 때마다 불필요한 비용이 든다.

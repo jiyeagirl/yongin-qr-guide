@@ -29,16 +29,23 @@ import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
  *
  * 하단 액션바가 없다. 되돌아가는 길은 왼쪽 위 뒤로가기 하나뿐이다 (footer 주석 참조).
  *
- * ── 출발지는 고를 수 없다 ───────────────────────────────────────────────
- * 이 화면에는 출발지 입력란이 없다. 화면의 "내 위치"는 언제나 QR 스캔 지점이기 때문이다
- * (제안서 3-1 · U-CM-04). GPS 를 쓰지 않으므로 사용자가 이동해도 이 좌표는 바뀌지 않고,
- * 그래서 컨텍스트 바가 늘 기준점을 보여준다. 출발지를 고르게 만들면 그 전제가 무너진다.
+ * ── 출발지는 고를 수 없다 (다만 언제나 QR 지점인 것은 아니다) ────────────
+ * 이 화면에는 출발지 입력란이 없다. 보통은 QR 스캔 지점이 출발지다 — 화면의 "내 위치"가
+ * 그 고정 좌표이기 때문이다 (제안서 3-1 · U-CM-04). GPS 를 쓰지 않으므로 사용자가
+ * 이동해도 이 좌표는 바뀌지 않고, 그래서 컨텍스트 바가 늘 기준점을 보여준다.
+ *
+ * **예외는 골목 한바퀴(S08)에서 들어온 경우 하나다** (2026-08-18). 코스의 ②로 가는 길은
+ * ①에서 출발한다. 코스를 도는 사람은 이미 ①에 서 있고, 거기서 QR 지점으로 되돌아갔다가
+ * 다시 나오지 않는다. 그래도 **고르는 것이 아니라 코스 순서가 정하는 값**이라 입력란이
+ * 없다는 사실은 그대로다. 어느 쪽인지는 `fromAnchor` 로 들어온다 (MainApp 이 URL 에서 읽는다).
  *
  * ── 목록의 거리와 여기 거리가 다른 이유 ─────────────────────────────────
- * 목록·상세의 "약 320m"는 **직선거리**다 (U-FC-06 이 그렇게 못박았다 — 목록 단계에서
- * 경로 API 를 부르지 않기 위해서다). 이 화면의 거리는 **실제로 걷는 길이**라 20~35% 길다.
- * 두 수치가 다른 것은 오류가 아니지만, 설명 없이 두면 사용자는 둘 중 하나가 틀렸다고 읽는다.
- * 그래서 아래 고지에 한 줄로 적는다.
+ * 목록·상세의 "약 320m"는 **QR 지점에서의 직선거리**다 (U-FC-06 이 그렇게 못박았다 —
+ * 목록 단계에서 경로 API 를 부르지 않기 위해서다). 이 화면의 거리는 **실제로 걷는 길이**라
+ * 20~35% 길다. 두 수치가 다른 것은 오류가 아니지만, 설명 없이 두면 사용자는 둘 중 하나가
+ * 틀렸다고 읽는다. 그래서 아래 고지에 한 줄로 적는다.
+ * **출발지가 QR 지점이 아닐 때는 그 줄을 적지 않는다** — 목록의 수는 QR 지점 기준이라
+ * 여기 거리와 견줄 대상이 아니고, 견주게 두면 없던 오해를 만든다.
  *
  * ── 경로를 못 받았을 때 (U-NV-04) ───────────────────────────────────────
  * 빈 화면을 만들지 않는다. 좌표만 있으면 방향과 직선거리는 언제나 말할 수 있으므로
@@ -50,7 +57,7 @@ import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
 const km = m => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`);
 const mins = sec => Math.max(1, Math.round(sec / 60));
 
-export function RouteView({ dest, origin, asOf, onBack, onClose, onOpenDest, onReport }) {
+export function RouteView({ dest, origin, asOf, fromAnchor = true, onBack, onClose, onOpenDest, onReport }) {
   const [result, setResult] = React.useState(null);
   const [active, setActive] = React.useState(-1);
   const [mapReady, setMapReady] = React.useState(false);
@@ -174,7 +181,7 @@ export function RouteView({ dest, origin, asOf, onBack, onClose, onOpenDest, onR
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
               <div>
                 <div style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                  출발 · QR 스캔 지점
+                  {fromAnchor ? "출발 · QR 스캔 지점" : "출발 · 코스에서 앞선 가게"}
                 </div>
                 <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-body)", fontWeight: "var(--fw-semibold)",
                   color: "var(--text-heading)", lineHeight: 1.45, wordBreak: "keep-all" }}>{origin.name}</div>
@@ -238,7 +245,7 @@ export function RouteView({ dest, origin, asOf, onBack, onClose, onOpenDest, onR
           <Notice tone="warning" title="도보 경로를 불러오지 못했습니다">
             지금은 상세 경로를 안내드릴 수 없어 방향과 직선거리만 알려드립니다.
             <span style={{ display: "block", marginTop: 4 }}>
-              QR 지점에서 <b>{result.compass}쪽으로 약 {km(result.distance)}</b> 거리입니다.
+              {ro(origin.name)}에서 <b>{result.compass}쪽으로 약 {km(result.distance)}</b> 거리입니다.
               지도의 회색 점선은 실제 걷는 길이 아니라 두 지점을 곧게 이은 선입니다.
             </span>
             {result.reason ? (
@@ -274,13 +281,27 @@ export function RouteView({ dest, origin, asOf, onBack, onClose, onOpenDest, onR
         {/* ── 고지 (U-CM-07 · U-CM-08) ────────────────────────────────────
                목록의 직선거리와 여기 도보 거리가 왜 다른지 적는다 (위 머리말 참조).
                "직선거리 · 도보 거리"라는 낱말만 던지면 그 말을 이미 아는 사람에게만 설명이 된다.
-               어느 쪽이 실제로 걷는 값인지 먼저 말하고, 나머지 하나가 왜 짧은지를 잇는다. */}
+               어느 쪽이 실제로 걷는 값인지 먼저 말하고, 나머지 하나가 왜 짧은지를 잇는다.
+
+               **출발지가 QR 지점이 아니면 그 문장을 적지 않는다.** 목록의 수는 QR 지점에서
+               잰 값이라 여기 거리와 견줄 대상이 아니고, 나란히 적으면 없던 오해를 만든다.
+               대신 어디서 잰 거리인지를 밝힌다 — 코스 ②의 "약 95m"가 QR 지점에서의 거리로
+               읽히면 그 수는 완전히 틀린 안내가 된다. */}
         <DetailNotice asOf={isFacility ? `공공시설 정보 ${FACILITY_AS_OF}` : `점포 정보 ${asOf || ""}`}>
           {result && !failed ? (
             <>
               <span style={{ display: "block" }}>
-                위에 적힌 <b>약 {km(result.distance)}</b>가 실제로 걸어가는 길을 따라 잰 거리입니다.
-                목록에서 보신 약 {km(straight)}는 두 지점을 곧게 이은 직선거리라 더 짧게 나옵니다.
+                {fromAnchor ? (
+                  <>
+                    위에 적힌 <b>약 {km(result.distance)}</b>가 실제로 걸어가는 길을 따라 잰 거리입니다.
+                    목록에서 보신 약 {km(straight)}는 두 지점을 곧게 이은 직선거리라 더 짧게 나옵니다.
+                  </>
+                ) : (
+                  <>
+                    위에 적힌 <b>약 {km(result.distance)}</b>는 QR 지점이 아니라 <b>{origin.name}</b>에서
+                    걸어가는 거리입니다. 코스는 순서대로 도는 것이라 앞선 가게에서 이어 걷는 기준으로 안내합니다.
+                  </>
+                )}
               </span>
               <span style={{ display: "block", marginTop: 4 }}>
                 도보 {mins(result.duration)}분은 성인 걸음(분당 {WALK_M_PER_MIN}m) 기준이며,

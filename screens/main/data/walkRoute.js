@@ -33,6 +33,7 @@
  */
 
 import { ANCHOR } from "./dunjeon.js";
+import { safeStore } from "./sessionStore.js";
 import { WALK_M_PER_MIN, WALK_ROUTE_ENDPOINT, WALK_ROUTE_QUOTA, WALK_ROUTE_TIMEOUT, SAMPLE_ROUTE_DELAY } from "../config.js";
 
 const M_PER_DEG_LAT = 111320;
@@ -82,14 +83,9 @@ const mem = new Map();
 const keyOf = (o, d) => `${o.lat.toFixed(5)},${o.lng.toFixed(5)}>${d.lat.toFixed(5)},${d.lng.toFixed(5)}`;
 
 /* 저장소 접근은 통째로 막힐 수 있다 (사파리 비공개 모드, 쿠키 차단). 캐시가 없다고
-   길찾기가 실패하면 안 되므로 실패를 조용히 삼킨다 — 그때는 메모리 캐시만 남는다. */
-function store(name) {
-  try {
-    const s = window[name];
-    s.setItem("__t", "1"); s.removeItem("__t");
-    return s;
-  } catch { return null; }
-}
+   길찾기가 실패하면 안 되므로 실패를 조용히 삼킨다 — 그때는 메모리 캐시만 남는다.
+   같은 처리를 코스 방문 기록도 쓰므로 sessionStore.js 로 옮겼다. */
+const store = safeStore;
 
 function readCache(key) {
   if (mem.has(key)) return mem.get(key);
