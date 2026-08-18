@@ -5,6 +5,8 @@ import React from "react";
  *   #/ 또는 없음       지도 + 탭 3개 (셸 그대로)
  *   #/facility/fc-001  S05 시설 상세
  *   #/store/dj-042     S06 점포 상세
+ *   #/course/cs-eat    S08 골목 한바퀴 코스 상세
+ *   #/festival/ft-dunjeon  S09 축제 상세
  *
  * 라우팅 라이브러리를 넣지 않는다. 이 저장소에는 빌드가 없고(브라우저가 Babel 로 JSX 를
  * 실시간 변환한다) 첫 로딩이 이미 4.7MB 다. 경로가 세 개뿐인데 여기에 번들을 더할 이유가 없다.
@@ -22,6 +24,10 @@ import React from "react";
 
 export const ROUTE_MAIN = { name: "main", id: null };
 
+/* 상세 화면의 종류. 여기 없는 이름은 전부 셸로 떨어진다 —
+   새 상세 화면을 붙일 때 고칠 곳이 이 배열과 MainApp 의 target/detail 두 군데뿐이도록 둔다. */
+const DETAIL = ["facility", "store", "course", "festival"];
+
 /* "#/store/dj-042" → { name: "store", id: "dj-042" }
    모르는 경로는 전부 main 으로 떨어뜨린다 — 오타난 딥링크에 빈 화면을 보여주지 않는다. */
 export function parseHash(hash) {
@@ -29,7 +35,7 @@ export function parseHash(hash) {
   if (!raw) return ROUTE_MAIN;
 
   const [name, id] = raw.split("/");
-  if ((name === "facility" || name === "store") && id) {
+  if (DETAIL.includes(name) && id) {
     return { name, id: decodeURIComponent(id) };
   }
   return ROUTE_MAIN;

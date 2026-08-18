@@ -24,6 +24,7 @@ export { OnnuriToggle } from "./components/core/OnnuriToggle.jsx";
 export { SearchField } from "./components/core/SearchField.jsx";
 export { InfoList } from "./components/core/InfoList.jsx";
 export { CopyField } from "./components/core/CopyField.jsx";
+export { Accordion } from "./components/core/Accordion.jsx";
 export { FilterBar } from "./components/core/FilterBar.jsx";
 export { ListControls } from "./components/core/ListControls.jsx";
 export { token, clearTokenCache } from "./components/core/token.js";

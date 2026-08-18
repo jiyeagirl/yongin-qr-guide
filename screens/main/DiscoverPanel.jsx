@@ -4,11 +4,19 @@ import {
 } from "../../design-systems/index.js";
 import { DISTRICT_PAGE_SIZE } from "./config.js";
 
-/* S04 둘러보기 탭 바텀시트 내용 (기능명세서 v1.0 4장 S04 행).
+/* S04 둘러보기 탭 (기능명세서 v1.0 4장 S04 행).
  * 관련 기능: U-DC-01~06 · U-FT-01 · U-ST-14(→U-DC-04)
  *
- * 앞의 두 탭과 달리 **필터가 없는 섹션 스크롤 화면**이다. 그래서 지도 위에 필터 바를 두지 않고,
- * 시트 안에도 sticky 제어 줄이 없다. 여기서 하는 일은 고르는 것이 아니라 훑는 것이다.
+ * ── 이 탭에는 지도가 없다 (2026-08-18 변경) ─────────────────────────────────
+ * 앞의 두 탭과 달리 **고르는 화면이 아니라 훑는 화면**이다. 필터도, sticky 제어 줄도 없다.
+ * 지도도 마찬가지였다 — 32개소를 한 화면에 담으려면 시 전역(약 25km)까지 줌아웃해야 하는데,
+ * 그 축척에서는 핀이 어디에 있든 "용인시 어딘가"로만 읽혀 아무 것도 알려주지 못했다.
+ * 게다가 이 탭의 주인공인 축제·신규매장·코스는 애초에 지도 위의 점이 아니라 읽을거리다.
+ * 그래서 지도를 걷어내고 앱바 아래 전체를 정보 화면으로 쓴다.
+ *
+ * **지도 인스턴스는 그대로 살아 있고 감춰지기만 한다** (MainApp 참조). 언마운트하면
+ * 탭을 되돌아올 때 지도가 다시 뜨는데 U-CM-16 이 그것을 금지한다. 여기서 금지되는 것은
+ * "재로딩"이지 "안 보이는 것"이 아니다.
  *
  *   축제                    32개소 전체   ← 기간 한정이라 최상단 (U-DC-05)
  *   신규 매장 / 인기 매장    현재 상점가
@@ -23,10 +31,9 @@ import { DISTRICT_PAGE_SIZE } from "./config.js";
  * U-DC-06 — 현재 상점가가 없으면(임계 거리 초과, U-ST-16) 가운데 두 섹션을 통째로 숨긴다.
  * 빈 카드 자리를 남기지 않는다. 축제와 다른 상점가 목록만으로도 화면이 성립한다.
  */
-export function DiscoverSheet({
+export function DiscoverPanel({
   festivals = [], newStores = [], popular = [], courses = [], districts = [],
   currentDistrict,               /* 없으면(null) U-DC-06 축소 모드 */
-  selectedId,
   onOpenFestival, onOpenStore, onOpenCourse, onOpenDistrict,
 }) {
   /* 다른 상점가 31곳을 한 번에 그리지 않는다. 목록이 화면 밖으로 한참 이어지면
@@ -37,7 +44,11 @@ export function DiscoverSheet({
   const scope = { padding: "0 var(--gutter-screen)" };
 
   return (
-    <div style={{ paddingBottom: "var(--space-9)" }}>
+    /* 시트가 아니라 화면 전체를 쓰는 스크롤 패널이다. 위에는 앱바·컨텍스트 바가,
+       아래에는 탭바가 형제로 있으므로 여기서는 세로 스크롤만 맡는다. */
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain",
+      WebkitOverflowScrolling: "touch", background: "var(--surface-page)" }}>
+      <div style={{ padding: "var(--space-5) 0 var(--space-9)" }}>
 
       {/* ── 1. 축제 (U-DC-01 · U-FT-01) — 32개소 전체 ─────────────────────── */}
       <section style={scope}>
@@ -105,9 +116,10 @@ export function DiscoverSheet({
       {/* ── 4. 다른 상점가 목록 (U-DC-04, 옛 U-ST-14) — 32개소 전체, 최하단 ── */}
       <section style={{ ...scope, marginTop: "var(--space-6)" }}>
         <SectionHeader title="다른 상점가" note={`32개소 전체 · ${districts.length}곳`} />
+        {/* 지도가 없어졌으므로 마커 선택 강조(selected)도 없다 — 강조할 지도가 없다 */}
         <div role="list">
           {districts.slice(0, limit).map((d, i) => (
-            <DistrictRow key={d.id} district={d} selected={d.id === selectedId}
+            <DistrictRow key={d.id} district={d}
               divider={i < Math.min(limit, districts.length) - 1} onClick={() => onOpenDistrict(d)} />
           ))}
         </div>
@@ -127,8 +139,9 @@ export function DiscoverSheet({
           안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
         </p>
       </div>
+      </div>
     </div>
   );
 }
 
-export default DiscoverSheet;
+export default DiscoverPanel;

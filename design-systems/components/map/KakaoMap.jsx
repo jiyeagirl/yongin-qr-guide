@@ -58,13 +58,15 @@ export function KakaoMap({
   /* 레이어 셋. U-CM-17 에 따라 한 번에 하나만 채운다 — 탭이 소유한 레이어만 그린다 */
   stores = [],                /* [{id, name, lat, lng, onnuri}] — 상점가 탭. 클러스터링(U-ST-13) */
   facilities = [],            /* [{id, name, type, lat, lng}] — 공공시설 탭. 유형 4종 색 */
-  districts = [],             /* [{id, name, lat, lng, festival}] — 둘러보기 탭. 32개소 전체 */
+  districts = [],             /* [{id, name, lat, lng, festival}] — 상점가 지점 (S03-E 의 근처 상점가) */
+  course = [],                /* [{id, name, lat, lng}] — S08 코스 상세. **순서가 있는 배열**이다 */
   selectedId = null,
   topPad = 0,                 /* px. 상단 필터 바에 가려지는 높이 */
   bottomPad = 0,              /* px. 시트에 가려지는 높이 */
   onSelectStore,
   onSelectFacility,
   onSelectDistrict,
+  onSelectCourseStop,
   onReady,
   onError,
   mapRef,                     /* {current} — {focus(lat,lng), reset()} 를 받는다 */
@@ -80,6 +82,10 @@ export function KakaoMap({
   const storeMarkers = React.useRef(new Map());
   const facilityMarkers = React.useRef(new Map());
   const districtMarkers = React.useRef(new Map());
+  /* 코스는 마커가 아니라 CustomOverlay 다 — 순번 숫자를 넣어야 하는데
+     마커 이미지는 미리 만든 PNG 라 숫자를 얹을 수 없다 */
+  const courseOverlays = React.useRef(new Map());
+  const coursePath = React.useRef(null);
   const images = React.useRef(null);
   const pad = React.useRef({ top: topPad, bottom: bottomPad });
   const [failed, setFailed] = React.useState(null);
@@ -96,7 +102,7 @@ export function KakaoMap({
 
   /* 콜백은 ref 로 — 부모가 인라인 함수를 넘겨도 지도를 다시 만들지 않는다 */
   const cb = React.useRef({});
-  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onReady, onError };
+  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onSelectCourseStop, onReady, onError };
 
   /* 실제로 보이는 띠 = 상단 필터 바 아래 ~ 시트 위. 그 한가운데로 마커를 옮긴다.
      지도 중심을 화면 좌표 P 의 좌표로 옮기면 P 는 지도 정중앙으로 간다. 따라서
@@ -296,6 +302,75 @@ export function KakaoMap({
       districtMarkers.current.set(x.id, mk);
     });
   }, [districts, baseImage, ready]);
+
+  /* ── 코스 레이어 (S08 골목 한바퀴 상세) ─────────────────────────────────
+     다른 레이어와 성격이 다르다. 점포·시설·상점가는 **집합**이지만 코스는 **순서**다.
+     그래서 두 가지가 더 붙는다.
+
+       1. 순번 숫자   1·2·3·4 를 핀 안에 적는다. 숫자가 없으면 어디서 시작해 어디로
+                      가는지 알 수 없고, 그러면 "코스"가 아니라 그냥 네 곳의 목록이다.
+       2. 경로 선     들르는 순서대로 이은 선. QR 지점에서 시작한다 — 코스의 도보 시간이
+                      "QR 지점에서 첫 가게까지"를 포함해 계산되므로(dunjeon.js), 선도
+                      같은 곳에서 출발해야 지도와 숫자가 어긋나지 않는다.
+
+     실제 도보 경로가 아니라 직선이다. 경로 API 는 길찾기(S07)에서만 부른다 —
+     목록·개요 단계에서 부르지 않는 규칙(U-FC-06 / U-NV-05 호출량 제어)을 여기도 따른다.
+     그래서 선을 점선으로 그린다. 실선으로 그리면 "이 길로 가라"는 안내로 읽힌다. */
+  React.useEffect(() => {
+    const k = kakaoRef.current, m = map.current;
+    if (!k || !m) return;
+
+    courseOverlays.current.forEach(ov => ov.setMap(null));
+    courseOverlays.current.clear();
+    if (coursePath.current) { coursePath.current.setMap(null); coursePath.current = null; }
+    if (!course.length) return;
+
+    const stops = course.filter(s => s.lat && s.lng);
+    if (!stops.length) return;
+
+    /* 경로 선 — QR 지점 → 1 → 2 → … */
+    const pts = [];
+    if (center && center.lat && center.lng) pts.push(new k.maps.LatLng(center.lat, center.lng));
+    stops.forEach(s => pts.push(new k.maps.LatLng(s.lat, s.lng)));
+    coursePath.current = new k.maps.Polyline({
+      map: m, path: pts, strokeWeight: 4,
+      strokeColor: token("--brand-primary", "#2f9260"),
+      strokeOpacity: 0.85, strokeStyle: "shortdash",
+    });
+
+    stops.forEach((s, i) => {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.setAttribute("aria-label", `${i + 1}번째 ${s.name}`);
+      el.dataset.stop = s.id;
+      el.style.cssText =
+        "display:flex;align-items:center;justify-content:center;"
+        + "width:30px;height:30px;border-radius:999px;cursor:pointer;"
+        + "font-family:var(--font-sans);font-size:var(--fs-caption);font-weight:var(--fw-bold);"
+        + "border:var(--stroke-bold) solid var(--pin-stroke);box-shadow:var(--shadow-raised);"
+        + "background:var(--brand-primary);color:var(--text-on-brand)";
+      el.textContent = String(i + 1);
+      el.addEventListener("click", () => cb.current.onSelectCourseStop && cb.current.onSelectCourseStop(s));
+      const ov = new k.maps.CustomOverlay({
+        map: m, position: new k.maps.LatLng(s.lat, s.lng), content: el, yAnchor: 0.5, zIndex: 6,
+      });
+      courseOverlays.current.set(s.id, ov);
+    });
+  }, [course, center, ready]);
+
+  /* 코스에서 고른 곳을 키운다. 마커 이미지가 아니라 DOM 이라 스타일만 바꾸면 된다 —
+     다른 레이어의 선택 강조(아래)와 방식이 다른 이유다. */
+  React.useEffect(() => {
+    courseOverlays.current.forEach((ov, id) => {
+      const el = ov.getContent();
+      if (!el || !el.style) return;
+      const on = id === selectedId;
+      el.style.background = on ? token("--brand-primary-strong", "#216e48") : token("--brand-primary", "#2f9260");
+      el.style.transform = on ? "scale(1.28)" : "none";
+      el.style.transition = "transform var(--dur-fast) var(--ease-standard)";
+      ov.setZIndex(on ? 8 : 6);
+    });
+  }, [selectedId, course, ready]);
 
   /* 선택 강조. 이전 선택만 되돌리고 새 선택만 칠한다 —
      335개를 매번 훑으면 필터를 바꿀 때마다 불필요한 비용이 든다.

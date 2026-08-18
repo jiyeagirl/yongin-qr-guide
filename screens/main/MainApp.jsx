@@ -9,17 +9,19 @@ import { FACILITIES, NEARBY, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.j
 import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, HAS_LIVE_FESTIVAL, CURRENT_FESTIVAL, CURRENT_DISTRICT_ID } from "./data/districts.js";
 import { DistrictSheet } from "./DistrictSheet.jsx";
 import { FacilitySheet } from "./FacilitySheet.jsx";
-import { DiscoverSheet } from "./DiscoverSheet.jsx";
+import { DiscoverPanel } from "./DiscoverPanel.jsx";
 import { FacilityDetail } from "../detail/FacilityDetail.jsx";
 import { StoreDetail } from "../detail/StoreDetail.jsx";
+import { CourseDetail } from "../detail/CourseDetail.jsx";
+import { FestivalDetail } from "../detail/FestivalDetail.jsx";
 import { useHashRoute, go, back } from "./router.js";
-import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF } from "./config.js";
+import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, FESTIVAL_AS_OF } from "./config.js";
 
 /* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.0 확정 결정사항 11).
  *
- *   S02 공공시설 탭   AED · 화장실 · 쉼터 · 대피소   (U-FC-01~04, 06, 08, 09)
- *   S03 상점가 탭     현재 상점가의 점포 목록         (U-ST-02~06, 10~13, 15, U-FT-03)
- *   S04 둘러보기 탭   축제 · 코스 · 다른 상점가        (U-DC-01~06)
+ *   S02 공공시설 탭   AED · 화장실 · 쉼터 · 대피소   (U-FC-01~04, 06, 08, 09)   지도 + 시트
+ *   S03 상점가 탭     현재 상점가의 점포 목록         (U-ST-02~06, 10~13, 15, U-FT-03)  지도 + 시트
+ *   S04 둘러보기 탭   축제 · 신규/인기 · 코스 · 상점가 (U-DC-01~06)              **정보 화면만**
  *
  * 셋은 별도 페이지가 아니라 **같은 화면의 탭 상태**다 (4장). 페이지를 나누면 탭을 바꿀 때마다
  * 지도가 다시 뜨는데, 그것을 U-CM-16 이 금지한다. 그래서 폴더도 S02/S03 이 아니라 `main` 이다.
@@ -44,6 +46,16 @@ import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF } from "./confi
  *
  *  5. 탭바와 시트의 공존 — 탭바는 시트의 형제 요소이며 항상 보인다 (TabBar 주석 참조).
  *  6. 탭 전환 시 지도 — 재로딩하지 않고(U-CM-16) 카메라만 QR 지점 + 탭 기본 줌으로 되돌린다.
+ *
+ * ── 둘러보기 탭에는 지도가 없다 (2026-08-18 변경) ────────────────────────
+ * 32개소를 한 화면에 담으려면 시 전역(약 25km)까지 줌아웃해야 하는데, 그 축척에서는
+ * 핀이 어디에 있든 "용인시 어딘가"로만 읽혀 아무 것도 알려주지 못했다. 이 탭의 주인공인
+ * 축제·신규매장·코스도 지도 위의 점이 아니라 읽을거리다. 그래서 앱바 아래 전체를 정보 화면으로 쓴다.
+ *
+ * **지도는 언마운트하지 않고 display:none 으로 감추기만 한다.** 지우면 탭을 되돌아올 때
+ * 지도가 다시 뜨는데 U-CM-16 이 금지하는 것이 바로 그것이다. 금지 대상은 "재로딩"이지
+ * "안 보이는 것"이 아니다. 다시 보일 때는 KakaoMap 안의 ResizeObserver 가 relayout 을
+ * 호출하므로(0 → 실제 크기) 따로 손댈 것이 없다.
  *
  * ── 상세 화면은 이 셸 위에 덮인다 (2026-08-18) ──────────────────────────
  * S05 시설 상세와 S06 점포 상세는 별도 페이지가 아니라 해시 라우터가 띄우는 전체화면
@@ -175,7 +187,8 @@ export function MainApp() {
   /* ── 결정 2: 지도 가림 높이 ────────────────────────────────────
      위는 상단 필터 바, 아래는 시트(+미리보기 카드)가 가린다. 마커는 그 사이 띠의 중앙으로 온다 */
   const gap = React.useMemo(() => parseFloat(token("--map-pad-gap", "24px")) || 24, []);
-  const showPreview = Boolean(selected) && snap !== "full";
+  /* 둘러보기에는 지도가 없으므로 미리보기 카드도 없다 — 가리킬 마커가 없다 */
+  const showPreview = Boolean(selected) && snap !== "full" && !isDiscover;
   const mapPadBottom = sheetH + (showPreview ? previewH + gap : 0) + gap;
 
   /* 둘러보기 탭에는 필터 바가 없다 (고르는 화면이 아니라 훑는 화면이다).
@@ -238,19 +251,19 @@ export function MainApp() {
     setSelected(null);
     setSnap("half");
     if (!mapApi.current) return;
-    /* 둘러보기만 카메라 규칙이 다르다. 대상이 QR 지점 주변이 아니라 **32개소 전체**(약 25km)라
-       줌 레벨을 상수로 찍으면 기기 폭에 따라 잘리거나 너무 멀어진다. 32개 지점을 담는
-       경계를 계산해 맞춘다. 가려지는 위아래(필터 바 / 시트)를 padding 으로 넘겨
-       마커가 시트 뒤로 들어가지 않게 한다 — 5-3 #2 와 같은 규칙이다. */
-    if (id === "discover") mapApi.current.fitTo(DISTRICTS, { top: gap, bottom: mapPadBottom });
-    else mapApi.current.setView(d.anchor.lat, d.anchor.lng, TAB_MAP_LEVEL[id]);
+    /* 둘러보기는 지도를 쓰지 않으므로 카메라를 건드리지 않는다. 지도는 감춰진 채
+       공공시설·상점가가 마지막으로 두고 간 자리를 그대로 유지하고, 그 탭으로 돌아올 때
+       아래 줄이 다시 QR 지점으로 맞춘다. */
+    if (id !== "discover") mapApi.current.setView(d.anchor.lat, d.anchor.lng, TAB_MAP_LEVEL[id]);
   };
 
   /* U-CM-17 — 시설 마커와 점포 마커를 동시에 노출하지 않는다. 탭이 소유한 레이어만 그린다.
-     상점가 탭의 "인근 편의시설"은 목록으로만 제공하고 지도에는 찍지 않는다. */
+     상점가 탭의 "인근 편의시설"은 목록으로만 제공하고 지도에는 찍지 않는다.
+
+     상점가 지점 레이어는 없앴다 — 둘러보기가 지도를 쓰지 않게 되면서 그릴 곳이 사라졌다.
+     KakaoMap 의 districts prop 자체는 남겨둔다 (S03-E 의 "근처 가볼만한 상점가"가 쓸 자리다). */
   const storeMarkers = isDistrict ? storeRows : [];
   const facilityMarkers = isFacility ? facilityRows : [];
-  const districtMarkers = isDiscover ? DISTRICTS : [];
 
   /* ── 상세 오버레이 (S05 / S06) ────────────────────────────────────────
      route 는 URL 이 진실이다. 여기서 id 로 대상을 찾고, 없으면 셸로 되돌린다 —
@@ -258,8 +271,10 @@ export function MainApp() {
   const target = React.useMemo(() => {
     if (route.name === "facility") return FACILITIES.find(x => x.id === route.id) || null;
     if (route.name === "store") return d.stores.find(x => x.id === route.id) || null;
+    if (route.name === "course") return d.courses.find(x => x.id === route.id) || null;
+    if (route.name === "festival") return FESTIVALS.find(x => x.id === route.id) || null;
     return null;
-  }, [route, d.stores]);
+  }, [route, d.stores, d.courses]);
 
   React.useEffect(() => {
     if (route.name !== "main" && !target) {
@@ -273,14 +288,40 @@ export function MainApp() {
      지도로 가는 길이 셋이 됐다. 게다가 그 버튼은 탭을 옮기고 필터까지 풀어야 마커가
      보이는 동작이라, 사용자가 걸어둔 조건을 상세 화면이 조용히 건드리는 셈이었다.
      뒤로가기는 떠날 때 모습 그대로 돌아온다 — 그게 오버레이 구조를 택한 이유다. */
+  const report = () => say("정보 오류 신고 (S10 오류신고 및 문의)");
+  const copied = ok => say(ok ? "주소를 복사했습니다" : "복사에 실패했습니다. 주소를 길게 눌러 선택해 주세요");
+
   const detail = !target ? null
-    : route.name === "facility" ? (
+    : route.name === "course" ? (
+      <CourseDetail
+        course={target}
+        anchor={d.anchor}
+        asOf={d.district.asOf}
+        onBack={back}
+        /* 코스 안의 가게에서 점포 상세로 — history 를 한 칸 더 쌓는다.
+           뒤로가기를 누르면 코스로 돌아오고, 그때 보고 있던 순번도 그대로다
+           (오버레이가 언마운트되지 않으므로 activeId 가 살아 있다) */
+        onPickStore={s => go(`#/store/${s.id}`)}
+        onReport={report} />
+    ) : route.name === "festival" ? (
+      <FestivalDetail
+        festival={target}
+        asOf={FESTIVAL_AS_OF}
+        onBack={back}
+        /* 축제는 점이 아니라 구역에서 열린다 (확정 결정사항 6). 도착지 좌표 하나로 좁힐 수
+           없으므로 길찾기가 아니라 그 상점가로 보낸다. 지금 상점가 탭은 현재 상점가 한 곳만
+           다루므로(U-ST-01), 다른 상점가면 아직 갈 곳이 없어 안내만 한다. */
+        onOpenDistrict={x => x.districtId === CURRENT_DISTRICT_ID
+          ? (back(), changeTab("district"))
+          : say(`${x.districtName}으로 이동 (상점가 전환은 후속 과제)`)}
+        onReport={report} />
+    ) : route.name === "facility" ? (
       <FacilityDetail
         facility={target}
         onBack={back}
         onRoute={() => say(`${target.name}까지 도보 길찾기 (S07 길찾기)`)}
-        onReport={() => say("정보 오류 신고 (S10 오류신고 및 문의)")}
-        onCopied={ok => say(ok ? "주소를 복사했습니다" : "복사에 실패했습니다. 주소를 길게 눌러 선택해 주세요")} />
+        onReport={report}
+        onCopied={copied} />
     ) : (
       <StoreDetail
         store={target}
@@ -288,11 +329,11 @@ export function MainApp() {
         nearby={d.nearby}
         onBack={back}
         onRoute={() => say(`${target.name}까지 도보 길찾기 (S07 길찾기)`)}
-        onReport={() => say("정보 오류 신고 (S10 오류신고 및 문의)")}
+        onReport={report}
         /* 인근 편의시설에서 시설 상세로 — 오버레이 위에 오버레이가 아니라 history 를 한 칸 더
            쌓는다. 뒤로가기를 누르면 점포 상세로 돌아온다 (온 길을 되짚는 것이 자연스럽다) */
         onPickFacility={f => go(`#/facility/${f.id}`)}
-        onCopied={ok => say(ok ? "주소를 복사했습니다" : "복사에 실패했습니다. 주소를 길게 눌러 선택해 주세요")} />
+        onCopied={copied} />
     );
 
   /* 시트 제목 — 탭마다 다르다. 상점가는 상점가명이 곧 제목이고(U-ST-03), 공공시설은 대상이 여럿이라
@@ -308,28 +349,36 @@ export function MainApp() {
       {/* 상단 — z 300. 2차의 언어·음성·글자 크기 버튼 자리는 코드에서만 비워둔다 (화면에 노출하지 않는다).
           오류 신고는 이 화면에 두지 않는다 — 신고 대상이 특정되는 상세 화면(S05 시설, S06 점포)에서 진입한다 */}
       <div style={{ position: "relative", zIndex: "var(--z-filter)", flex: "0 0 auto" }}>
-        <AppBar title={isDistrict ? d.district.name : "용인시 위치안내"} />
+        <AppBar title={isDistrict ? d.district.name : isDiscover ? "둘러보기" : "용인시 위치안내"} />
         {/* U-CM-04 — 사용자가 이동해도 갱신되지 않는 기준점이므로 항상 보이게 둔다.
             탭을 바꿔도 이 줄은 그대로다. 세 탭이 모두 같은 QR 지점을 기준으로 삼기 때문이다.
-            조아용은 이 줄에만 등장한다 (기능명세서 5-1 개정). */}
-        <ContextBar place={d.anchor.name} onReset={backToAnchor}
+            조아용은 이 줄에만 등장한다 (기능명세서 5-1 개정).
+
+            둘러보기 탭에서는 [QR 지점으로] 버튼을 내린다 — 그 버튼이 하는 일은 지도 카메라를
+            되돌리는 것인데 이 탭에는 지도가 없다. 기준점 표기는 그대로 남는다.
+            축제와 상점가의 "12km"가 어디서 잰 거리인지가 여기서만 읽히기 때문이다. */}
+        <ContextBar place={d.anchor.name} onReset={isDiscover ? undefined : backToAnchor}
           leading={<Mascot pose="hello" size={38} base="../../design-systems/" alt="" />} />
       </div>
 
       {/* 지도 영역 — 시트·플로팅·미리보기 카드의 좌표 기준이 되는 컨테이너.
-          시트 스냅 %도, 지도 패딩 %도 모두 이 높이 기준이다. 탭이 바뀌어도 이 컨테이너는 그대로다. */}
-      <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+          시트 스냅 %도, 지도 패딩 %도 모두 이 높이 기준이다. 탭이 바뀌어도 이 컨테이너는 그대로다.
+          둘러보기 탭에서는 이 안에 지도 대신 정보 패널이 들어간다 (display 로 갈아끼운다). */}
+      <div style={{ position: "relative", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
 
         {/* 지도 인스턴스는 하나뿐이고 탭이 바뀌어도 다시 만들지 않는다 (U-CM-16).
-            바뀌는 것은 stores / facilities 배열뿐이다. */}
+            바뀌는 것은 stores / facilities 배열뿐이다.
+            둘러보기에서는 display:none 으로 **감추기만** 한다 — 언마운트하면 되돌아올 때
+            지도가 새로 뜨고, 그것이 U-CM-16 이 금지하는 재로딩이다. */}
         <KakaoMap
+          style={isDiscover ? { display: "none" } : undefined}
           appKey={KAKAO_APP_KEY}
           center={d.anchor}
           anchorLabel={d.anchor.name}
           level={MAP_LEVEL}
           stores={storeMarkers}
           facilities={facilityMarkers}
-          districts={districtMarkers}
+          districts={[]}
           selectedId={selected ? selected.id : null}
           topPad={mapPadTop}
           bottomPad={mapPadBottom}
@@ -364,20 +413,38 @@ export function MainApp() {
             onClose={() => { setSelected(null); setPreviewH(0); }}
             routeLabel={selected.kind === "district" ? "상점가 보기" : "길찾기"}
             detailLabel={selected.kind === "district" && selected.festival ? "축제 보기" : "상세 보기"}
-            /* 상점가 마커만 아직 갈 곳이 없다 — 축제 상세(S09)가 미착수이고, 상점가 자체는
-               점이 아니라 구역이라 상세 페이지가 아니라 탭 전환의 대상이다 (확정 결정사항 6) */
+            /* 상점가 마커 자체는 갈 곳이 없다 — 상점가는 점이 아니라 구역이라 상세 페이지가
+               아니라 탭 전환의 대상이다 (확정 결정사항 6). 다만 축제가 걸려 있으면 S09 로 간다. */
             onDetail={() => selected.kind === "facility" ? go(`#/facility/${selected.id}`)
               : selected.kind === "district"
-                ? say(selected.festival ? `${selected.festival.name} 상세로 (S09 축제 상세)` : `${selected.name} 정보 (S03 상점가 탭)`)
+                ? (selected.festival ? go(`#/festival/${selected.festival.id}`) : say(`${selected.name} 정보 (S03 상점가 탭)`))
                 : go(`#/store/${selected.id}`)}
             onRoute={() => say(selected.kind === "district"
               ? `${selected.name}으로 이동 (상점가 탭 전환)`
               : `${selected.name}까지 도보 길찾기 (S07 길찾기)`)} />
         ) : null}
 
+        {/* ── 둘러보기 탭 (S04) — 시트가 아니라 화면 전체를 쓰는 정보 패널 ────────
+               고르는 화면이 아니라 훑는 화면이라 시트에 담을 이유가 없다. 시트로 두면
+               섹션 네 개를 읽는 내내 화면의 3분의 1이 안 보이는 지도에 묶인다. */}
+        {isDiscover ? (
+          <DiscoverPanel
+            festivals={FESTIVALS}
+            newStores={d.newStores}
+            popular={d.popular}
+            courses={d.courses}
+            districts={OTHER_DISTRICTS}
+            currentDistrict={currentDistrict}
+            onOpenFestival={f => go(`#/festival/${f.id}`)}
+            onOpenStore={s => go(`#/store/${s.id}`)}
+            onOpenCourse={c => go(`#/course/${c.id}`)}
+            onOpenDistrict={x => say(`${x.name}으로 이동 (상점가 탭 전환)`)} />
+        ) : null}
+
         {/* 결정 1 — 3단 스냅. 실측 높이를 위로 올려보내 지도 패딩과 미리보기 카드 앵커가 따라온다.
-            U-FC-03 의 "목록과 지도 토글"이 이것이다 — 별도 버튼을 두지 않는다 */}
-        <Sheet
+            U-FC-03 의 "목록과 지도 토글"이 이것이다 — 별도 버튼을 두지 않는다.
+            둘러보기 탭에는 시트 자체가 없다. */}
+        {isDiscover ? null : <Sheet
           title={sheetTitle}
           snap={snap}
           onSnapChange={setSnap}
@@ -415,28 +482,16 @@ export function MainApp() {
               selectedId={selected ? selected.id : null}
               onPickStore={s => go(`#/store/${s.id}`)}
               onPickFacility={f => go(`#/facility/${f.id}`)}
-              onOpenFestival={() => say(`${d.festival.name} 상세로 (S09 축제 상세)`)} />
-          ) : (
-            <DiscoverSheet
-              festivals={FESTIVALS}
-              newStores={d.newStores}
-              popular={d.popular}
-              courses={d.courses}
-              districts={OTHER_DISTRICTS}
-              currentDistrict={currentDistrict}
-              selectedId={selected ? selected.id : null}
-              onOpenFestival={f => say(`${f.name} 상세로 (S09 축제 상세)`)}
-              onOpenStore={s => go(`#/store/${s.id}`)}
-              onOpenCourse={c => say(`${c.name} 코스 상세로 (S08)`)}
-              onOpenDistrict={x => say(`${x.name}으로 이동 (상점가 탭 전환)`)} />
-          )}
-        </Sheet>
+              onOpenFestival={() => go(`#/festival/${d.festival.id}`)} />
+          ) : null}
+        </Sheet>}
 
-        {/* 스크린리더용 상태 안내 — 탭과 시트 단계는 시각적으로만 전달되면 안 된다 */}
+        {/* 스크린리더용 상태 안내 — 탭과 시트 단계는 시각적으로만 전달되면 안 된다.
+            둘러보기에는 시트가 없으므로 단계를 읽지 않는다 (없는 조작을 안내하게 된다) */}
         <span aria-live="polite" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
-          {tabOf(tab).label} 탭 · 목록 시트 {SNAP_LABEL[snap]}
-          {isFacility ? ` · ${facilityRows.length}곳`
-            : isDistrict ? ` · ${storeRows.length}곳`
+          {tabOf(tab).label} 탭
+          {isFacility ? ` · 목록 시트 ${SNAP_LABEL[snap]} · ${facilityRows.length}곳`
+            : isDistrict ? ` · 목록 시트 ${SNAP_LABEL[snap]} · ${storeRows.length}곳`
               : ` · 축제 ${FESTIVALS.length}건, 다른 상점가 ${OTHER_DISTRICTS.length}곳`}
         </span>
       </div>
