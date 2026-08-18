@@ -39,8 +39,11 @@ export function OnnuriToggle({ checked, onChange, count, label = "온누리 가�
   }
 
   return (
+    /* 위아래 여백(space-1)을 뺐다 (2026-08-18). minHeight 44px(--tap-min)이 이미 손가락
+       자리를 보장하므로 그 바깥의 8px 은 세로만 먹었다 — 바로 위 결과 수 줄과 이 줄이
+       붙어 있어야 한다는 요구가 그 8px 때문에 막혀 있었다. */
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-3)",
-      minHeight: "var(--tap-min)", padding: "var(--space-1) 0", ...style }} {...rest}>
+      minHeight: "var(--tap-min)", ...style }} {...rest}>
       <span style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6,
         fontFamily: "var(--font-sans)", fontSize: "var(--fs-label)", fontWeight: "var(--fw-bold)",
         color: "var(--text-heading)", lineHeight: 1.4 }}>

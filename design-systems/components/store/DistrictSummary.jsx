@@ -13,18 +13,27 @@ import { Icon } from "../core/Icon.jsx";
 
    수치가 사라진 것이 아니라 **한 곳으로 모인 것**이다. 헤더는 "여기가 어디인가"만 맡는다.
 
+   ── 제목 아래가 아니라 제목 오른쪽이다 (2026-08-18) ───────────────────────
+   `Sheet` 의 `titleAside` 자리로 옮겼다. 제목 아래 한 줄로 서 있을 때는 그 한 줄만큼
+   목록이 밀렸는데, 절반 스냅에서는 그게 점포 한 줄을 통째로 먹었다 — 시트를 열었는데
+   가게가 하나밖에 안 보였다. 상점가명은 짧고 제목 줄 오른쪽은 비어 있어서, 거기로
+   옮기면 **세로가 공짜다.**
+
+   그래서 글자도 caption(13px) → micro(12px)로 내리고 오른쪽 정렬한다. 제목과 한 줄을
+   나눠 쓰는 자리라 좁고, 여기서 접혀야 할 것은 상점가명이 아니라 이쪽이다.
+   길면 두 줄로 감기게 두고 자르지 않는다 — 소재지는 끝까지 읽혀야 쓸모가 있다.
+
    주의: 구역도 xlsx 의 "밀집도에 따른 기준 점포수 108개"는 지정 요건 산정용 수치이며
    실제 점포 수가 아니다. 화면에 노출하면 안 된다 (기능명세서 3-5). */
 export function DistrictSummary({ district, style, ...rest }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", ...style }} {...rest}>
-      {/* 소재지 한 줄만 둔다. 주요 업종은 바로 아래 업종 칩이 개수까지 붙여 더 정확하게 보여주므로
-          같은 정보를 문장으로 한 번 더 적으면 헤더만 길어진다 */}
-      <p style={{ display: "flex", alignItems: "center", gap: 6,
-        fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.45 }}>
-        <Icon name="map-pin" size={15} color="var(--text-muted)" />
-        {district.area}
-      </p>
-    </div>
+    /* 소재지 한 줄만 둔다. 주요 업종은 바로 아래 업종 칩이 개수까지 붙여 더 정확하게 보여주므로
+       같은 정보를 문장으로 한 번 더 적으면 헤더만 길어진다 */
+    <p style={{ display: "flex", alignItems: "flex-start", justifyContent: "flex-end", gap: 4,
+      fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", color: "var(--text-muted)",
+      lineHeight: 1.4, textAlign: "right", ...style }} {...rest}>
+      <Icon name="map-pin" size={13} color="var(--text-muted)" style={{ flex: "0 0 auto", marginTop: 2 }} />
+      <span style={{ minWidth: 0 }}>{district.area}</span>
+    </p>
   );
 }

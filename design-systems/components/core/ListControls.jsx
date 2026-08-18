@@ -27,10 +27,11 @@ export function ListControls({ title, sort, sortOptions = [], onSortChange, chil
       position: sticky ? "sticky" : "static", top: 0, zIndex: 2,
       background: "var(--surface-card)",
       borderBottom: "var(--stroke-hairline) solid var(--border-default)",
-      /* 위 여백이 space-2 였다 (2026-08-18 → space-1). 바로 위 시트 헤더도 아래 여백을
-         갖고 있어 둘이 겹치면 소재지 한 줄과 결과 수 사이가 스무 남짓 벌어졌다.
-         제어 줄 자체는 안쪽 행이 44px(--tap-min)이라 여백을 줄여도 손가락 자리가 좁아지지 않는다 */
-      padding: "var(--space-1) var(--gutter-screen) var(--space-1)", ...style }} {...rest}>
+      /* 위아래 여백을 space-2 → space-1 → 0 으로 두 번 줄였다 (2026-08-18).
+         **안쪽 두 행이 각각 44px(--tap-min)을 이미 갖고 있어, 바깥 여백은 손가락 자리에
+         아무것도 보태지 않으면서 세로만 먹는다.** 절반 스냅의 시트에서는 그 세로가
+         곧 목록 한 줄이다. 위로는 시트 헤더가, 아래로는 이 블록의 테두리가 경계를 맡는다. */
+      padding: "0 var(--gutter-screen)", ...style }} {...rest}>
 
       {/* 결과 수도 정렬도 없으면 이 줄 자체를 그리지 않는다 (2026-08-18). 빈 h3 를 남기면
           44px(--tap-min)짜리 빈 띠가 칩 위에 앉는다 — 누를 것이 없는 자리가 손가락 하나

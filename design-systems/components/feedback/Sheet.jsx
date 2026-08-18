@@ -36,7 +36,21 @@ const SNAP_RATIO = { collapsed: 0.18, half: 0.37, full: 1 };
 
    스크롤 위치를 지우는 것은 되돌릴 수 없는 조작이라, **눌러서 목록이 바뀔 때만** 준다.
    시트 스냅이나 선택 강조처럼 목록의 내용이 그대로인 변화는 여기 넣지 않는다. */
-export function Sheet({ open = true, title, subtitle, headerExtra, children, snap = "half", onSnapChange, onHeightChange,
+/* titleAside — 제목 **오른쪽 끝**에 같은 줄로 서는 보조 정보 (2026-08-18).
+   headerExtra 와 자리를 나눈다:
+
+     titleAside   제목과 한 줄을 나눠 쓴다. 짧고 부수적인 것 — 상점가 소재지처럼
+                  "여기가 어디인가"를 거드는 한 조각. **세로를 한 줄도 더 쓰지 않는다.**
+     headerExtra  제목 줄 아래 전체 폭. 가로가 필요한 것 — 시설 유형별 개수 줄처럼
+                  아이콘이 늘어서거나 말풍선이 열리는 블록.
+
+   이 자리가 생긴 이유: 절반 스냅에서 헤더가 목록보다 커지는 일이 있었다. 소재지 한 줄이
+   제목 아래에 서면 그만큼 목록이 밀려, 시트를 열었는데 점포가 한 줄밖에 안 보였다.
+   제목은 짧고(상점가명) 오른쪽은 비어 있어서, 그 빈 자리에 넣으면 세로가 공짜다.
+
+   닫기 단추가 있을 때는 셋이 한 줄을 나눈다. 전체 스냅에서만 나오는 단추라 그때는
+   시트가 화면을 다 쓰고 있어 좁아져도 티가 나지 않는다. */
+export function Sheet({ open = true, title, subtitle, titleAside, headerExtra, children, snap = "half", onSnapChange, onHeightChange,
   onClose, closeIcon = "x", closeLabel = "닫기", scrim = false, topInset = 0, scrollKey, style, ...rest }) {
   const el = React.useRef(null);
   const body = React.useRef(null);
@@ -147,16 +161,22 @@ export function Sheet({ open = true, title, subtitle, headerExtra, children, sna
           <span style={{ display: "block", width: 44, height: 5, borderRadius: 999, background: "var(--border-strong)", margin: "0 auto" }} />
         </div>
         {title ? (
-          /* 아래 여백을 space-3 → space-2 로 줄였다 (2026-08-18). 헤더 바로 밑이 목록
-             제어 줄(ListControls)인데, 둘 다 여백을 넉넉히 잡고 있어 소재지 한 줄과
-             결과 수 사이가 스무 남짓 벌어져 있었다 — 붙어 있어야 할 두 줄이다. */
-          <div style={{ flex: "0 0 auto", padding: "0 var(--gutter-screen) var(--space-2)" }}>
-            {/* 제목 줄만 닫기 버튼과 폭을 나눈다 */}
+          /* 아래 여백을 space-3 → space-2 → space-1 로 두 번 줄였다 (2026-08-18).
+             헤더 바로 밑이 목록 제어 줄(ListControls)인데 둘 다 여백을 넉넉히 잡고 있어
+             그 사이가 스무 남짓 벌어져 있었다 — 붙어 있어야 할 두 줄이다.
+             제어 줄 안쪽이 44px(--tap-min)이라 여백을 덜어도 손가락 자리는 그대로다. */
+          <div style={{ flex: "0 0 auto", padding: "0 var(--gutter-screen) var(--space-1)" }}>
+            {/* 제목 줄을 titleAside · 닫기 버튼과 나눠 쓴다 */}
             <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <h2 style={{ fontSize: "var(--fs-title-2)", fontWeight: "var(--fw-bold)", letterSpacing: "var(--ls-snug)" }}>{title}</h2>
                 {subtitle ? <div style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", marginTop: 4 }}>{subtitle}</div> : null}
               </div>
+              {/* 폭의 절반을 넘기지 않는다 — 넘게 두면 긴 소재지가 제목을 밀어 상점가명이
+                  줄바꿈된다. 여기서 접히는 쪽은 제목이 아니라 보조 정보여야 한다 */}
+              {titleAside ? (
+                <div style={{ flex: "0 1 auto", minWidth: 0, maxWidth: "52%" }}>{titleAside}</div>
+              ) : null}
               {onClose ? (
                 <button onClick={onClose} aria-label={closeLabel} title={closeLabel}
                   style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", gap: 4,

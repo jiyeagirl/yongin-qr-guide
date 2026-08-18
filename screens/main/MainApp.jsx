@@ -729,6 +729,13 @@ export function MainApp({ qr = null, noDistrict = false }) {
              [전체]와 상점가의 [전체]가 같은 값이 되어 탭을 옮겨도 스크롤이 남는다.
              선택 강조(selected)와 시트 스냅은 넣지 않는다 — 목록의 내용이 그대로다. */
           scrollKey={isFacility ? `facility|${fcType}` : `district|${cat}|${onnuriOnly}|${sort}|${q}`}
+          /* U-ST-02 구역 안내 — 제목 줄 **오른쪽**이다 (2026-08-18). 제목 아래 한 줄로
+             두면 절반 스냅에서 그 한 줄이 점포 한 줄을 먹어, 시트를 열었는데 가게가
+             하나밖에 안 보였다. 상점가명은 짧고 그 옆은 비어 있다 (Sheet 의 titleAside).
+             공공시설 탭에는 이 자리에 넣을 것이 없다 — 그쪽 요약은 가로가 필요해서
+             아래 headerExtra 로 간다. */
+          titleAside={isDistrict && hasDistrict
+            ? <DistrictSummary district={d.district} /> : null}
           headerExtra={isFacility
             /* U-FC-02 기준 + U-FC-04 안전시설 개수 — 접힘 상태에서도 보여야 하므로 스크롤 영역 밖.
                U-FC-09 원거리 안내도 여기서 난다 — 목록 위 배너가 아니라 해당 유형 아이콘의
@@ -743,8 +750,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
                 dismissed={warnDismissed}
                 onDismissedChange={setWarnDismissed}
                 style={{ marginTop: "var(--space-1)" }} />
-            /* U-ST-02 구역 안내 + U-ST-03 헤더 수치 */
-            : isDistrict && hasDistrict ? <DistrictSummary district={d.district} style={{ marginTop: "var(--space-1)" }} /> : null}>
+            : null}>
 
           {isFacility ? (
             <FacilitySheet
