@@ -2,7 +2,7 @@ import React from "react";
 import {
   SectionHeader, Button, Notice, StoreRail, CourseCard, FestivalRow, DistrictRow,
 } from "../../design-systems/index.js";
-import { DISTRICT_PAGE_SIZE } from "./config.js";
+import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
 
 /* S04 둘러보기 탭 (기능명세서 v1.0 4장 S04 행).
  * 관련 기능: U-DC-01~06 · U-FT-01 · U-ST-14(→U-DC-04)
@@ -41,6 +41,12 @@ export function DiscoverPanel({
   const [limit, setLimit] = React.useState(DISTRICT_PAGE_SIZE);
   const rest = districts.length - limit;
 
+  /* 축제도 같은 방식으로 접는다 (위 섹션 주석 참조). 다만 [더 보기]를 한 번 누르면
+     전부 펼친다 — 6건짜리 목록을 두 번 나눠 펼치게 하면 누르는 일이 목적이 된다. */
+  const [festivalLimit, setFestivalLimit] = React.useState(FESTIVAL_PREVIEW);
+  const shownFestivals = festivals.slice(0, festivalLimit);
+  const restFestivals = festivals.length - shownFestivals.length;
+
   const scope = { padding: "0 var(--gutter-screen)" };
 
   return (
@@ -50,7 +56,14 @@ export function DiscoverPanel({
       WebkitOverflowScrolling: "touch", background: "var(--surface-page)" }}>
       <div style={{ padding: "var(--space-5) 0 var(--space-9)" }}>
 
-      {/* ── 1. 축제 (U-DC-01 · U-FT-01) — 32개소 전체 ─────────────────────── */}
+      {/* ── 1. 축제 (U-DC-01 · U-FT-01) — 32개소 전체, 앞의 몇 건만 펼쳐둔다 ───
+             6건이 한 번에 깔리면 이 탭의 나머지 세 섹션이 통째로 첫 화면 밖으로 밀린다.
+             둘러보기는 축제 목록 화면이 아니라 **네 가지를 훑는 화면**이라, 첫 화면에서
+             네 섹션이 다 보이지 않으면 아래 셋은 없는 것이나 마찬가지다.
+
+             자료를 줄이는 것이 아니라 접는 것이다 — [더 보기]로 그 자리에서 펼친다.
+             목록은 상태(진행중 → 예정 → 종료) 다음 거리 순이므로 접히는 것은 늘
+             덜 급한 쪽이다. 진행 중인 축제가 접혀 들어가는 일은 없다. */}
       <section style={scope}>
         <SectionHeader title="축제" note={`32개소 전체 · ${festivals.length}건`} />
         {festivals.length === 0 ? (
@@ -58,18 +71,25 @@ export function DiscoverPanel({
             새 축제가 확정되면 이 자리에 표시됩니다.
           </Notice>
         ) : (
-          <div role="list">
-            {festivals.map((f, i) => (
-              /* 축제는 지도 마커가 아니다 — 마커는 상점가 지점이고, 축제는 그 위에 얹힌 정보다.
-                 그래서 여기에는 선택 강조가 없다 (아래 다른 상점가 목록에는 있다) */
-              <FestivalRow key={f.id} festival={f}
-                divider={i < festivals.length - 1} onClick={() => onOpenFestival(f)} />
-            ))}
-          </div>
+          <>
+            <div role="list">
+              {shownFestivals.map((f, i) => (
+                /* 축제는 지도 마커가 아니다 — 마커는 상점가 지점이고, 축제는 그 위에 얹힌 정보다.
+                   그래서 여기에는 선택 강조가 없다 (아래 다른 상점가 목록에는 있다) */
+                <FestivalRow key={f.id} festival={f}
+                  divider={i < shownFestivals.length - 1} onClick={() => onOpenFestival(f)} />
+              ))}
+            </div>
+            {restFestivals > 0 ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-3) 0 0" }}>
+                <Button variant="outline" size="sm" icon="chevron-down"
+                  onClick={() => setFestivalLimit(festivals.length)}>
+                  축제 {restFestivals}건 더 보기
+                </Button>
+              </div>
+            ) : null}
+          </>
         )}
-        <p style={{ marginTop: "var(--space-2)", fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.5 }}>
-          용인시 골목형 상점가 32개소의 축제를 가까운 순으로 보여줍니다.
-        </p>
       </section>
 
       {/* ── 2·3. 현재 상점가 대상 섹션 — 없으면 통째로 숨긴다 (U-DC-06) ────── */}
