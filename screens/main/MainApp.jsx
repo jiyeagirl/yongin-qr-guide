@@ -323,6 +323,28 @@ export function MainApp({ qr = null, noDistrict = false }) {
     say(`공공시설 탭에서 ${f.name} 위치를 표시합니다`);
   };
 
+  /* 둘러보기(S04)의 신규·인기 매장 카드 → **상점가 탭으로 옮겨 지도에서 켠다** (2026-08-18).
+     위 showFacilityOnMap 과 같은 규칙이고 이유도 같다. 둘러보기 탭에는 지도가 없어서
+     (CLAUDE.md) 여기서는 켤 마커가 없다 — 점포 마커가 실제로 그려지는 탭으로 데려간다.
+
+     이 카드는 335곳 목록을 우회하는 지름길이다 (U-ST-09). 지름길로 고른 가게가 필터에
+     걸려 지도에 없으면 지름길이 아니라 막다른 길이 되므로, **걸린 축만 골라 푼다.**
+     업종 칩은 그 가게의 업종으로 좁히고(전체로 되돌리면 걸어둔 조건이 말없이 지워진다),
+     온누리와 검색어는 좁힐 자리가 없어 끄는 수밖에 없다. 아무것도 안 걸렸으면 아무것도
+     건드리지 않는다 — 대개 이 경우다. */
+  const showStoreOnMap = s => {
+    /* 카드가 들고 있는 것은 note("이번 주 조회 1위")가 붙은 사본이다. 지도와 목록이 보는
+       원본을 id 로 되찾는다 — 사본을 그대로 고르면 목록용 문구가 selected 에 딸려 간다 */
+    const store = d.stores.find(x => x.id === s.id) || s;
+    if (tab !== "district") changeTab("district");
+    if (cat !== "all" && cat !== store.cat) setCat(store.cat);
+    if (onnuriOnly && !store.onnuri) setOnnuriOnly(false);
+    const needle = q.trim();
+    if (needle && !(store.name.includes(needle) || store.biz.includes(needle))) setQ("");
+    pickOnMap(store);
+    say(`상점가 탭에서 ${store.name} 위치를 표시합니다`);
+  };
+
   /* 탭 전환 (5-3 #6) — 지도는 재로딩하지 않고(U-CM-16) 카메라만 QR 지점 + 탭 기본 줌으로 되돌린다.
      마커 레이어도 함께 갈아끼운다 (U-CM-17: 한 번에 한 레이어만).
      각 탭의 필터 상태는 지우지 않는다 — 상점가에서 "음식 + 온누리"를 걸어두고 공공시설을 잠깐 본 뒤
@@ -651,7 +673,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
             totalCount={DISTRICT_COUNT}
             currentDistrict={currentDistrict}
             onOpenFestival={f => go(`#/festival/${f.id}`)}
-            onOpenStore={s => go(`#/store/${s.id}`)}
+            /* 카드도 목록 행·지도 마커와 같다 — 상세로 건너뛰지 않고 지도에서 켠다
+               (showStoreOnMap 주석). 상세는 거기 뜨는 카드의 [상세 보기]가 맡는다 */
+            onOpenStore={showStoreOnMap}
             onOpenCourse={c => go(`#/course/${c.id}`)} />
         ) : null}
 
