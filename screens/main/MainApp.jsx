@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  AppBar, ContextBar, KakaoMap, MapPreviewCard, MapFilterOverlay, Sheet, Toast, TabBar, FloatingControls,
+  ContextBar, KakaoMap, MapPreviewCard, MapFilterOverlay, Sheet, Toast, TabBar, FloatingControls,
   DistrictSummary, FacilitySummary, FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, SAFETY,
   Icon, Mascot, token,
 } from "../../design-systems/index.js";
@@ -258,7 +258,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
     setSelected(null);
     setSnap("collapsed");
     if (mapApi.current) mapApi.current.reset();
-    say("QR 스캔 지점으로 돌아왔습니다");
+    say("QR스캔 위치로 이동했습니다");
   };
 
   /* 탭 전환 (5-3 #6) — 지도는 재로딩하지 않고(U-CM-16) 카메라만 QR 지점 + 탭 기본 줌으로 되돌린다.
@@ -434,22 +434,23 @@ export function MainApp({ qr = null, noDistrict = false }) {
     <div style={{ position: "relative", width: "100%", maxWidth: "var(--screen-max)", height: "100%",
       margin: "0 auto", overflow: "hidden", background: "var(--surface-page)", display: "flex", flexDirection: "column" }}>
 
-      {/* 상단 — z 300. 2차의 언어·음성·글자 크기 버튼 자리는 코드에서만 비워둔다 (화면에 노출하지 않는다).
-          오류 신고는 이 화면에 두지 않는다 — 신고 대상이 특정되는 상세 화면(S05 시설, S06 점포)에서 진입한다 */}
-      <div style={{ position: "relative", zIndex: "var(--z-filter)", flex: "0 0 auto" }}>
-        {/* U-CM-04 — 기준점을 앱바가 직접 말한다. 화면 이름("용인시 위치안내" · 상점가명)은
-            바텀시트 제목이 이미 갖고 있어 같은 자리에 두 번 적을 이유가 없는 반면, QR 지점은
-            이 서비스의 모든 거리 표기가 매달린 정보라 늘 보여야 한다.
-            조아용은 이 줄에만 등장한다 (기능명세서 5-1 개정).
-            셋째 탭도 같은 줄을 쓴다 — 축제의 "12km"가 어디서 잰 거리인지는 여기서만 읽힌다. */}
-        <AppBar label="지금 계신 곳" title={qr ? qr.name : d.anchor.name}
-          leading={<Mascot pose="hello" size={40} base="../../design-systems/" alt="" />} />
+      {/* 상단 — z 300. 얇은 띠 한 줄뿐이다 (2026-08-18 개정).
+          앱바("지금 계신 곳 / 둔전 시장 입구 버스정류장")를 없앴다. 앱바 62px + 띠 22px 로
+          상단이 80px 을 넘게 먹고 있었는데, 그 아래가 지도라 화면에서 가장 비싼 자리다.
+          지도를 화면 맨 위까지 끌어올린다.
 
-        {/* 전제 한 문장만 남긴 얇은 띠. 지점명·캐릭터·버튼까지 얹었던 이전 형태는 세로 60px 을
-            넘게 먹었는데, 그 아래가 지도라 화면에서 가장 비싼 자리다.
-            둘러보기 탭에는 두지 않는다 — 지도가 없어 "위치가 안내된다"는 전제를 걸 대상이 없고,
-            기준점은 위 앱바가 이미 말하고 있다. */}
-        {isDiscover ? null : <ContextBar />}
+          **지점명은 이 띠가 그대로 이어받는다** (U-CM-04 상시 노출). 화면의 모든 거리
+          표기가 이 한 점에 매달려 있어, 이름이 사라지면 "320m"가 어디서 잰 값인지 알 수 없다.
+          조아용도 이 줄에 남는다 (기능명세서 5-1).
+
+          **셋째 탭에도 둔다.** 이전에는 앱바가 지점명을 맡아 여기서 뺐지만, 이제 이 줄이
+          유일한 자리다 — 둘러보기의 축제·상점가 "12km"가 어디서 잰 거리인지도 여기서만 읽힌다.
+
+          2차의 언어·음성·글자 크기 버튼 자리는 코드에서만 비워둔다 (화면에 노출하지 않는다).
+          오류 신고는 이 화면에 두지 않는다 — 신고 대상이 특정되는 상세 화면에서 진입한다 */}
+      <div style={{ position: "relative", zIndex: "var(--z-filter)", flex: "0 0 auto" }}>
+        <ContextBar place={qr ? qr.name : d.anchor.name}
+          leading={<Mascot pose="hello" size={22} base="../../design-systems/" alt="" />} />
       </div>
 
       {/* 지도 영역 — 시트·플로팅·미리보기 카드의 좌표 기준이 되는 컨테이너.
