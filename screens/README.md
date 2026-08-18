@@ -98,15 +98,29 @@ Vercel 이 `npm install` + `npm run build` 를 돌려 `screens/main/bundle.js` �
 2. Framework Preset **Other** · Root Directory `./`
 3. Deploy
 
+**빌드 설정은 대시보드가 아니라 `vercel.json` 에 있다** (`buildCommand`, `outputDirectory`).
+`vercel.json` 이 대시보드 설정보다 우선하므로, 저장소만 연결하면 나머지는 손대지 않아도 된다.
+버전 관리되는 쪽에 두는 편이 낫다 — 대시보드 값은 저장소를 봐서는 알 수 없고,
+누가 언제 바꿨는지도 남지 않는다.
+
 첫 배포 후 빌드 로그에 `screens/main/bundle.js  모듈 66개` 가 찍히는지 확인한다.
-안 잡혔으면 Settings > Build & Development Settings 에서
-**Build Command** `npm run build`, **Output Directory** `.` 로 지정한다.
+
+> **`outputDirectory` 를 비워두면 배포가 실패한다.** Vercel 은 빌드 커맨드가 있으면
+> 결과물이 `public/` 에 나온다고 가정하는데, 이 빌드는 `screens/main/bundle.js` 를
+> **제자리에** 만들 뿐 `public/` 을 만들지 않는다. 그래서
+> `No Output Directory named "public" found after the Build completed` 로 죽는다.
+> 이 저장소의 출력 디렉터리는 **루트(`.`)** 다.
+>
+> 더 고약한 것은 **실패한 배포가 조용하다는 점**이다. 프로덕션 주소는 마지막으로
+> 성공한 배포를 계속 서빙하므로, 사이트는 멀쩡히 뜨는데 새 화면만 없다.
+> "배포했는데 안 바뀐다" 싶으면 Vercel 대시보드의 **Deployments 탭에서 최신 배포가
+> Ready 인지 Error 인지** 먼저 본다.
 
 ### 설정 파일 네 개
 
 | 파일 | 역할 |
 | --- | --- |
-| `vercel.json` | 프레임워크 없음 · `trailingSlash` · 보안 헤더 2종 |
+| `vercel.json` | 프레임워크 없음 · **빌드 커맨드와 출력 디렉터리(`.`)** · `trailingSlash` · 보안 헤더 2종 |
 | `.vercelignore` | **배포에 안 올릴 것** — `.claude/` `skills/` `node_modules/` `docs/` `CLAUDE.md` |
 | `.gitignore` | **버전 관리에 안 넣을 것** — `.vercel/` `.claude/settings.local.json` 등 |
 | `.gitattributes` | 저장소 안 줄바꿈을 LF 로 통일 · 폰트·이미지는 binary 로 고정 |
