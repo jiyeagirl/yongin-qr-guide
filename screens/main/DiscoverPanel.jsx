@@ -65,7 +65,7 @@ export function DiscoverPanel({
              목록은 상태(진행중 → 예정 → 종료) 다음 거리 순이므로 접히는 것은 늘
              덜 급한 쪽이다. 진행 중인 축제가 접혀 들어가는 일은 없다. */}
       <section style={scope}>
-        <SectionHeader title="축제" note={`32개소 전체 · ${festivals.length}건`} />
+        <SectionHeader title="상점가 축제 정보" note={`32개소 전체 · ${festivals.length}건`} />
         {festivals.length === 0 ? (
           <Notice tone="info" title="예정된 축제가 없습니다">
             새 축제가 확정되면 이 자리에 표시됩니다.
@@ -120,7 +120,7 @@ export function DiscoverPanel({
           {courses.length ? (
             <section style={{ marginTop: "var(--space-5)" }}>
               <div style={scope}>
-                <SectionHeader title="골목 한바퀴" note={currentDistrict.name} />
+                <SectionHeader title="골목 한바퀴 코스 추천" note={currentDistrict.name} />
               </div>
               <div style={{ display: "flex", alignItems: "stretch", gap: "var(--space-3)",
                 overflowX: "auto", padding: "2px var(--gutter-screen) var(--space-2)", scrollbarWidth: "none" }}>
@@ -141,9 +141,13 @@ export function DiscoverPanel({
         </section>
       )}
 
-      {/* ── 4. 다른 상점가 목록 (U-DC-04, 옛 U-ST-14) — 32개소 전체, 최하단 ── */}
+      {/* ── 4. 용인시 골목형 상점가 목록 (U-DC-04, 옛 U-ST-14) — 최하단 ──────
+             오른쪽의 "총 32개"는 **용인시 전체 골목형 상점가 수**다. 목록에 깔리는 줄은
+             31개다 — 지금 서 있는 둔전은 빼고 보여주기 때문이다(여기서 눌러도 갈 곳이
+             현재 탭이라 아무 일도 일어나지 않는다). 세어보면 하나가 비므로,
+             머리말의 수는 "목록의 길이"가 아니라 "용인시에 몇 곳이 있는가"로 읽혀야 한다. */}
       <section style={{ ...scope, marginTop: "var(--space-6)" }}>
-        <SectionHeader title="다른 상점가" note={`32개소 전체 · ${districts.length}곳`} />
+        <SectionHeader title="용인시 골목형 상점가 정보" note="총 32개" />
         {/* 지도가 없어졌으므로 마커 선택 강조(selected)도 없다 — 강조할 지도가 없다 */}
         <div role="list">
           {districts.slice(0, limit).map((d, i) => (
