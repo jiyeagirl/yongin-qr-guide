@@ -166,7 +166,7 @@ const COURSE_PLAN = [
   /* 설명에 업종을 못박지 않는다 — 들르는 곳은 아래에서 자동으로 뽑히므로 "정육·청과"라고
      적어두면 그 업종이 안 뽑힌 날 설명과 목록이 어긋난다. */
   { id: "cs-eat",  name: "골목 먹거리 한바퀴", cats: ["food", "cafe"],
-    desc: "밥집과 디저트를 걸어서 잇는 기본 코스" },
+    desc: "밥집과 디저트를 걸어서 잇는 코스" },
   { id: "cs-shop", name: "장보기 한바퀴",       cats: ["shop"],
     desc: "장거리와 생활용품을 한 번에 도는 코스" },
   { id: "cs-life", name: "생활 한바퀴",         cats: ["beauty", "culture"],

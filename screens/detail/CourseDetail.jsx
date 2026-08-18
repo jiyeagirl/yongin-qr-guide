@@ -198,15 +198,18 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
           </div>
           <p style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: "var(--lh-body)",
             wordBreak: "keep-all" }}>{c.desc}</p>
+          {/* 한 줄로 줄였다 (2026-08-18). 지도의 점선이 실제 걷는 길이 아니라는 설명을
+              따로 달고 있었는데, "코스를 나타냅니다"가 그 말을 이미 하고 있다 —
+              길을 나타내는 선이라면 "코스"가 아니라 "경로"라고 적었을 것이다.
+              실제로 걷는 길은 순번마다 [길찾기]가 따로 안내한다. */}
           <p style={{ marginTop: 4, fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.5 }}>
-            QR 지점에서 출발해 순서대로 도는 기준입니다. 지도의 점선은 실제 도보 경로가 아니라
-            들르는 순서를 이은 선입니다.
+            QR 지점에서 출발해 순서대로 도는 코스를 나타냅니다.
           </p>
         </div>
 
         {/* ── 진행률 ──────────────────────────────────────────────────────
                카드로 두지 않는다. 흰 상자에 테두리까지 두르면 이 화면에서 가장 큰 덩어리가
-               되는데, 여기서 제일 중요한 것은 들르는 곳 목록이지 진행률이 아니다.
+               되는데, 여기서 제일 중요한 것은 추천 코스 목록이지 진행률이 아니다.
                조아용 + 한 줄 + 얇은 막대, 세 가지로 끝낸다.
 
                조아용의 표정이 진행에 따라 바뀐다 — 이 화면에서 캐릭터가 할 수 있는 유일하게
@@ -214,7 +217,11 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                정보다). 다만 **캐릭터만으로는 말하지 않는다**: 옆의 "2/4 방문"이 같은 것을
                글자로 적는다. 막대도 색 길이로만 말하지 않도록 그 글자에 기댄다. */}
         <section style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-          <Mascot pose={allDone ? "thumbsup" : doneCount ? "hello" : "front"} size={64} base={base} alt=""
+          {/* 세 포즈 모두 **전신(1:1) 그림**이어야 한다. 처음에는 진행 중을 hello 로 두었는데
+              그것만 상반신 컷(1.5:1)이라 방문 개수가 바뀔 때 캐릭터가 커졌다 작아졌다 했다
+              (Mascot 의 MASCOT_FULL / MASCOT_BUST 주석). curious 는 걸어서 둘러보는 모습이라
+              "도는 중"과도 맞는다. */}
+          <Mascot pose={allDone ? "thumbsup" : doneCount ? "curious" : "front"} size={64} base={base} alt=""
             style={{ flex: "0 0 auto" }} />
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)" }}>
@@ -247,7 +254,7 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                **조아용 도장 · 흐린 글자 · [방문함] 칩** 셋으로 말하고, 다음 차례는 배지로
                말한다 — 어느 것도 색 하나에 기대지 않는다. */}
         <section>
-          <SectionHeader title="들르는 곳" note={`${stops.length}곳 · 순서대로`} />
+          <SectionHeader title="추천 코스" note={`${stops.length}곳 · 순서대로`} />
           <div role="list">
             {stops.map((s, i) => {
               const on = s.id === activeId;
