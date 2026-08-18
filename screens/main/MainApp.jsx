@@ -268,41 +268,17 @@ export function MainApp() {
     }
   }, [route, target, say]);
 
-  /* [지도에서 보기] — 오버레이를 닫고 셸의 지도가 그 대상을 잡게 한다.
-     아래 화면이 살아 있는 오버레이 구조라서 가능한 동작이다. 시트는 내린다 (지도를 보려는 행동이다).
-
-     마커가 실제로 그려져 있어야 focus 가 의미를 갖는다. 탭이 소유한 레이어만 그리므로
-     (U-CM-17) 먼저 해당 탭으로 옮기고, 현재 필터가 그 대상을 걸러내고 있으면 그 필터를 푼다 —
-     "지도에서 보기"를 눌렀는데 빈 지도가 나오는 것이 가장 나쁜 결과다. */
-  const showOnMap = React.useCallback((item, tabId) => {
-    back();
-    if (tab !== tabId) {
-      setTab(tabId);
-      if (mapApi.current) mapApi.current.setView(d.anchor.lat, d.anchor.lng, TAB_MAP_LEVEL[tabId]);
-    }
-    if (tabId === "facility") {
-      /* 공공시설은 유형 칩 하나뿐이라 전체로 되돌리면 반드시 보인다 */
-      if (fcType !== "all" && fcType !== item.type) setFcType("all");
-    } else if (!storeRows.some(x => x.id === item.id)) {
-      /* 상점가는 필터가 넷이다. **걸러내고 있을 때만** 푼다 — 조건이 맞는데도 매번 초기화하면
-         필터를 지켜주려고 오버레이를 쓴 의미가 없어진다. 풀었을 때는 말해준다. */
-      setCat("all"); setOnnuriOnly(false); setQ("");
-      say("지도에 표시하려고 필터를 해제했습니다");
-    }
-    setSnap("collapsed");
-    requestAnimationFrame(() => requestAnimationFrame(() => pickOnMap(item)));
-  }, [tab, fcType, storeRows, d.anchor, pickOnMap, say]);
-
+  /* 상세에서 지도로 돌아가는 길은 **뒤로가기 하나로 통일한다.**
+     [지도에서 보기] 버튼을 뒀다가 뺐다 — 상단에 뒤로가기, 하단에 길찾기가 이미 있어
+     지도로 가는 길이 셋이 됐다. 게다가 그 버튼은 탭을 옮기고 필터까지 풀어야 마커가
+     보이는 동작이라, 사용자가 걸어둔 조건을 상세 화면이 조용히 건드리는 셈이었다.
+     뒤로가기는 떠날 때 모습 그대로 돌아온다 — 그게 오버레이 구조를 택한 이유다. */
   const detail = !target ? null
     : route.name === "facility" ? (
       <FacilityDetail
         facility={target}
         onBack={back}
         onRoute={() => say(`${target.name}까지 도보 길찾기 (S07 길찾기)`)}
-        onShowOnMap={() => showOnMap({
-          ...target, kind: "facility",
-          biz: FACILITY_LABELS[target.type] || "공공시설", addr: target.detail,
-        }, "facility")}
         onReport={() => say("정보 오류 신고 (S10 오류신고 및 문의)")}
         onCopied={ok => say(ok ? "주소를 복사했습니다" : "복사에 실패했습니다. 주소를 길게 눌러 선택해 주세요")} />
     ) : (
@@ -312,7 +288,6 @@ export function MainApp() {
         nearby={d.nearby}
         onBack={back}
         onRoute={() => say(`${target.name}까지 도보 길찾기 (S07 길찾기)`)}
-        onShowOnMap={() => showOnMap(target, "district")}
         onReport={() => say("정보 오류 신고 (S10 오류신고 및 문의)")}
         /* 인근 편의시설에서 시설 상세로 — 오버레이 위에 오버레이가 아니라 history 를 한 칸 더
            쌓는다. 뒤로가기를 누르면 점포 상세로 돌아온다 (온 길을 되짚는 것이 자연스럽다) */

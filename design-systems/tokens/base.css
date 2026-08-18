@@ -2,6 +2,10 @@
 body{margin:0;font:var(--type-body);font-size:16px;letter-spacing:var(--ls-normal);color:var(--text-body);background:var(--surface-page);-webkit-font-smoothing:antialiased}
 h1,h2,h3,h4{margin:0;color:var(--text-heading);letter-spacing:var(--ls-snug)}
 p{margin:0}
+/* dd 의 브라우저 기본값은 margin-inline-start:40px 다. 리셋하지 않으면 InfoList 처럼
+   라벨-값을 세로로 쌓는 자리에서 값만 40px 안으로 밀려, 그 왼쪽이 아이콘을 넣다 만
+   빈 자리처럼 보인다. dl 의 세로 여백(1em)도 함께 지운다 — 간격은 컴포넌트가 정한다. */
+dl,dt,dd{margin:0}
 button{font-family:inherit}
 a{color:var(--text-link);text-decoration:none;font-weight:var(--fw-semibold)}
 a:hover{color:var(--yong-teal-500);text-decoration:underline}

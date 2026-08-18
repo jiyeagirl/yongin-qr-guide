@@ -23,7 +23,7 @@ import { WALK_M_PER_MIN } from "../main/config.js";
  * 적은 쪽 가게에는 불리하게 작용한다. 둘러보기 탭의 "이번 주 조회 1위" 처럼 순위로 감싸
  * 노출하는 자리는 따로 있다.
  */
-export function StoreDetail({ store, district, nearby = [], onBack, onRoute, onShowOnMap, onReport, onPickFacility, onCopied }) {
+export function StoreDetail({ store, district, nearby = [], onBack, onRoute, onReport, onPickFacility, onCopied }) {
   const s = store;
   const walk = Math.max(1, Math.round(s.dist / WALK_M_PER_MIN));
 
@@ -32,23 +32,26 @@ export function StoreDetail({ store, district, nearby = [], onBack, onRoute, onS
       footer={<Button variant="primary" size="lg" icon="footprints" block onClick={onRoute}>길찾기</Button>}>
 
       <DetailBody>
-        {/* ── 머리 ─────────────────────────────────────────────────────── */}
-        <header style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
-          <span style={{ flex: "0 0 auto", paddingTop: 2 }}>
-            <CategoryIcon type={s.cat} size={30} />
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "var(--space-2)" }}>
-              <Badge tone="neutral">{CATEGORY_LABELS[s.cat] || "기타"}</Badge>
-              {/* 목록·상세·지도 마커가 같은 기호를 쓴다 (U-ST-06). 배지를 화면마다
-                  새로 조립하지 않고 OnnuriBadge 하나만 쓴다 */}
-              {s.onnuri ? <OnnuriBadge /> : null}
+        {/* ── 머리 ───────────────────────────────────────────────────────
+               S05 와 같은 배치다 — 배지는 제 줄, 아이콘은 **업체명 옆**. */}
+        <header>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "var(--space-2)" }}>
+            <Badge tone="neutral">{CATEGORY_LABELS[s.cat] || "기타"}</Badge>
+            {/* 목록·상세·지도 마커가 같은 기호를 쓴다 (U-ST-06). 배지를 화면마다
+                새로 조립하지 않고 OnnuriBadge 하나만 쓴다 */}
+            {s.onnuri ? <OnnuriBadge /> : null}
+          </div>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-start" }}>
+            <span style={{ flex: "0 0 auto", paddingTop: 3 }}>
+              <CategoryIcon type={s.cat} size={26} />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h2 style={{ font: "var(--type-title-2)", letterSpacing: "var(--ls-snug)",
+                color: "var(--text-heading)", wordBreak: "keep-all" }}>{s.name}</h2>
+              <p style={{ marginTop: 4, fontSize: "var(--fs-body)", color: "var(--text-body)" }}>
+                {s.biz} · 약 {s.dist}m, 도보 {walk}분
+              </p>
             </div>
-            <h2 style={{ font: "var(--type-title-2)", letterSpacing: "var(--ls-snug)",
-              color: "var(--text-heading)", wordBreak: "keep-all" }}>{s.name}</h2>
-            <p style={{ marginTop: 4, fontSize: "var(--fs-body)", color: "var(--text-body)" }}>
-              {s.biz} · 약 {s.dist}m, 도보 {walk}분
-            </p>
           </div>
         </header>
 
@@ -71,16 +74,15 @@ export function StoreDetail({ store, district, nearby = [], onBack, onRoute, onS
                구까지 붙여야 한 번에 찾힌다. 시설 쪽 주소 표기(처인구 포곡읍 …)와도 맞춘다. */}
         <CopyField value={`처인구 ${s.addr}`} onCopied={onCopied} />
 
-        <InfoList items={[
-          { label: "업종", value: `${CATEGORY_LABELS[s.cat] || "기타"} · ${s.biz}` },
-          { label: "상점가", value: district ? district.name : null },
-        ]} />
-
-        <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          <Button variant="outline" size="md" icon="map-pin" style={{ flex: 1 }} onClick={onShowOnMap}>
-            지도에서 보기
-          </Button>
-          <Button variant="ghost" size="md" icon="flag" style={{ flex: 1 }} onClick={onReport}>
+        {/* 오류 신고는 상세 정보 박스에 바짝 붙인다 (U-CM-10) — S05 와 같은 자리, 같은 크기.
+             [지도에서 보기]는 뺐다: 위에 뒤로가기, 아래에 길찾기가 이미 있다. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          <InfoList items={[
+            { label: "업종", value: `${CATEGORY_LABELS[s.cat] || "기타"} · ${s.biz}` },
+            { label: "상점가", value: district ? district.name : null },
+          ]} />
+          <Button variant="ghost" size="sm" icon="flag" onClick={onReport}
+            style={{ alignSelf: "flex-start", color: "var(--text-muted)" }}>
             정보 오류 신고
           </Button>
         </div>
