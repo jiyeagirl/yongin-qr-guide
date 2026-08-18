@@ -3,7 +3,7 @@ import { Icon } from "../core/Icon.jsx";
 
 /* QR 앵커 지점을 항상 보여주는 얇은 띠 (U-CM-04).
  *
- *   [조아용]  QR 스캔 지점 기준 · **둔전 시장 입구 버스정류장**
+ *   [조아용]  QR 스캔 지점 기준 안내 · **둔전 시장 입구 버스정류장**
  *
  * ── "현재 위치"라고 쓰지 않는다 ─────────────────────────────────────────────
  * 이 서비스는 실시간 GPS 를 쓰지 않는다. 사용자가 걸어서 이동해도 기준점은 스캔 지점
@@ -18,7 +18,7 @@ import { Icon } from "../core/Icon.jsx";
  *
  * 그래서 **앱바를 없애고 이 한 줄이 기준점을 직접 말한다.** 지도가 화면 맨 위까지
  * 올라오고, U-CM-04 가 요구하는 상시 노출은 그대로 지켜진다.
- * "QR 스캔 지점 기준"이라는 앞머리가 이전의 전제 문장("이동해도 갱신되지 않는다")을
+ * "QR 스캔 지점 기준 안내"라는 앞머리가 이전의 전제 문장("이동해도 갱신되지 않는다")을
  * 대신한다 — 기준점이 스캔 지점이라는 말 자체가 그 뜻이다.
  *
  * 지도를 QR 지점으로 되돌리는 버튼은 지도 위 플로팅 컨트롤이 맡는다 — 지도를 움직인 뒤에
@@ -30,7 +30,7 @@ import { Icon } from "../core/Icon.jsx";
 /* leading: 왼쪽 자리에 들어갈 요소. 기본은 중립적인 QR 아이콘이고, 화면에서
    <Mascot pose="hello" /> 를 넘기면 조아용이 안내하는 모습이 된다. 캐릭터 에셋 경로는
    화면마다 다르므로(Mascot 의 base) 디자인 시스템이 아니라 화면이 알고 있어야 한다. */
-export function ContextBar({ place, label = "QR 스캔 지점 기준", leading, style, ...rest }) {
+export function ContextBar({ place, label = "QR 스캔 지점 기준 안내", leading, style, ...rest }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
       gap: "var(--space-2)", padding: "4px var(--gutter-screen)",
