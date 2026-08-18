@@ -7,3 +7,15 @@
 }
 @keyframes yong-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes yong-pop{0%{transform:scale(.86);opacity:0}100%{transform:scale(1);opacity:1}}
+/* 불확정 진행 막대 (LoadingBar). 좌우로 흐르지만 양끝에서 잠깐 머문다 —
+   끊김 없이 도는 막대는 "멈춘 것"과 구분이 안 된다. */
+@keyframes yong-loadbar{0%{left:-40%}50%{left:100%}100%{left:100%}}
+
+/* 움직임 최소화 요청 존중 — 컴포넌트마다 matchMedia 를 다시 쓰지 않아도 되도록 여기서 한 번에 끈다.
+   0.01ms 로 두는 이유는 0s 로 두면 animationend 를 기다리는 코드가 영영 깨어나지 않기 때문이다. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;scroll-behavior:auto !important;
+  }
+}

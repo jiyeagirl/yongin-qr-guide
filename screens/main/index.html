@@ -104,7 +104,7 @@
       .then(function () { return script("https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"); })
       .then(function () { return script("../../design-systems/_ds_loader.js"); })
       .then(function () {
-        return DSLoader.mount({ ds: "../../design-systems/index.js", entry: "./MainApp.jsx", el: "#root" });
+        return DSLoader.mount({ ds: "../../design-systems/index.js", entry: "./App.jsx", el: "#root" });
       });
   }
 

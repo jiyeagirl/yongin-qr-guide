@@ -38,7 +38,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 /* 빌드 대상. 화면이 늘면 여기 한 줄씩 더한다.
    ds 와 entry 는 그 화면 index.html 의 DSLoader.mount 인자와 같아야 한다. */
 const TARGETS = [
-  { dir: "screens/main", ds: "design-systems/index.js", entry: "screens/main/MainApp.jsx" },
+  { dir: "screens/main", ds: "design-systems/index.js", entry: "screens/main/App.jsx" },
 ];
 
 let babel;
