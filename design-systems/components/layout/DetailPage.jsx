@@ -1,5 +1,6 @@
 import React from "react";
 import { AppBar } from "../navigation/AppBar.jsx";
+import { Icon } from "../core/Icon.jsx";
 
 /* 상세 화면의 페이지 셸 — S05 시설 상세, S06 점포 상세, 이후 S07~S10 이 모두 이것을 쓴다.
  *
@@ -40,7 +41,17 @@ function useEnter() {
   return entered;
 }
 
-export function DetailPage({ title, onBack, children, footer, actions, style, ...rest }) {
+/* ── 오른쪽 위 [X] — onClose 를 준 화면에만 선다 (2026-08-18) ────────────────
+   뒤로가기는 **한 칸**을 되돌린다. 오버레이가 겹쳐 쌓인 화면(목록 → 상세 → 길찾기)에서는
+   그것이 지도로 나가는 길이 아니라 중간 화면으로 가는 길이라, 지도로 돌아가려면 몇 번을
+   눌러야 하는지 눌러보기 전에는 알 수 없다. [X] 는 쌓인 것을 한 번에 걷어낸다.
+
+   한 칸만 쌓인 화면(목록에서 바로 연 상세)에는 주지 않는다. 뒤로와 X 가 같은 곳으로 가면
+   버튼이 둘인 이유를 사용자가 찾게 되고, 찾을 이유가 없다.
+
+   기본 aria-label 이 "닫기"인 것은 이 버튼이 가는 곳이 화면마다 다르기 때문이다 —
+   나가는 곳을 이름에 박으려면 closeLabel 로 화면이 직접 적는다. */
+export function DetailPage({ title, onBack, onClose, closeLabel = "닫기", children, footer, actions, style, ...rest }) {
   const entered = useEnter();
   const page = React.useRef(null);
 
@@ -74,7 +85,20 @@ export function DetailPage({ title, onBack, children, footer, actions, style, ..
 
       {/* AppBar 는 이미 back/onBack 을 갖고 있다. 제목이 길면 자르지 않고 줄바꿈하며
           헤더가 함께 늘어난다 (U-CM-14) */}
-      <AppBar title={title} back onBack={onBack} actions={actions} style={{ flex: "0 0 auto" }} />
+      <AppBar title={title} back onBack={onBack} style={{ flex: "0 0 auto" }}
+        actions={
+          <>
+            {actions}
+            {onClose ? (
+              <button onClick={onClose} aria-label={closeLabel}
+                style={{ width: 44, height: 44, display: "inline-flex", alignItems: "center",
+                  justifyContent: "center", background: "none", border: "none", color: "inherit",
+                  cursor: "pointer" }}>
+                <Icon name="x" size={22} />
+              </button>
+            ) : null}
+          </>
+        } />
 
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain",
         WebkitOverflowScrolling: "touch" }}>

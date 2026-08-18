@@ -107,3 +107,21 @@ export function back() {
   window.history.replaceState({ shellDepth: 0 }, "", `${location.pathname}${location.search}#/`);
   announce();
 }
+
+/* 쌓인 것을 전부 걷어내고 셸(지도)로 나간다. [X] 가 쓴다.
+   뒤로가기가 한 칸씩 되돌리는 것과 달리 한 번에 되감는다 — 목록 → 상세 → 길찾기로 들어온
+   사용자가 지도로 돌아가려면 뒤로를 두 번 눌러야 하는데, 그 두 번째가 무엇을 걷어낼지는
+   눌러봐야 안다. "여기서 나간다"는 뜻의 버튼은 한 번에 나가야 한다.
+
+   해시를 "#/" 로 덮어쓰지 않고 history.go(-n) 으로 되감는 이유는 back() 과 같다 —
+   덮어쓰면 우리가 쌓은 항목이 앞쪽에 남아 뒤로가기가 방금 닫은 화면을 다시 연다.
+   go() 는 popstate 를 스스로 일으키므로 announce() 가 필요 없다. */
+export function closeAll() {
+  const depth = depthOf();
+  if (depth > 0) {
+    window.history.go(-depth);
+    return;
+  }
+  window.history.replaceState({ shellDepth: 0 }, "", `${location.pathname}${location.search}#/`);
+  announce();
+}

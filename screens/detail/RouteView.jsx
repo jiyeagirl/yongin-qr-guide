@@ -50,7 +50,7 @@ import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
 const km = m => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`);
 const mins = sec => Math.max(1, Math.round(sec / 60));
 
-export function RouteView({ dest, origin, asOf, onBack, onOpenDest, onReport }) {
+export function RouteView({ dest, origin, asOf, onBack, onClose, onOpenDest, onReport }) {
   const [result, setResult] = React.useState(null);
   const [active, setActive] = React.useState(-1);
   const [mapReady, setMapReady] = React.useState(false);
@@ -118,7 +118,10 @@ export function RouteView({ dest, origin, asOf, onBack, onOpenDest, onReport }) 
   const kindLabel = isFacility ? (FACILITY_LABELS[dest.type] || "공공시설") : (CATEGORY_LABELS[dest.cat] || "점포");
 
   return (
-    <DetailPage title="길찾기" onBack={onBack}
+    /* 뒤로는 한 칸(대개 도착지 상세)으로, [X]는 지도로 나간다. 이 화면은 목록 → 상세 →
+       길찾기로 두 칸 쌓여 들어오는 것이 보통이라, 지도로 돌아가려면 뒤로를 두 번 눌러야 한다.
+       두 번째가 무엇을 걷어낼지는 눌러봐야 알기 때문에 나가는 길을 따로 둔다. */
+    <DetailPage title="길찾기" onBack={onBack} onClose={onClose} closeLabel="지도로 나가기"
       /* ── 평소에는 하단 액션바가 없다 (2026-08-18) ──────────────────────────────
          [도착지 정보 보기]를 뺐다. 여기까지 온 사용자에게 남은 일은 걷는 것이고, 화면이
          할 일은 경로를 보여주는 것뿐이다. 되돌아가는 길은 **왼쪽 위 뒤로가기 하나**로 모은다 —

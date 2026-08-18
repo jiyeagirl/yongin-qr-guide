@@ -17,7 +17,7 @@ import { StoreDetail } from "../detail/StoreDetail.jsx";
 import { CourseDetail } from "../detail/CourseDetail.jsx";
 import { FestivalDetail } from "../detail/FestivalDetail.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
-import { useHashRoute, go, back } from "./router.js";
+import { useHashRoute, go, back, closeAll } from "./router.js";
 import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, FESTIVAL_AS_OF } from "./config.js";
 
 /* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.0 확정 결정사항 11).
@@ -378,6 +378,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
         origin={d.anchor}
         asOf={d.district.asOf}
         onBack={back}
+        onClose={closeAll}
         onOpenDest={() => go(`#/${route.parts[0]}/${encodeURIComponent(target.id)}`)}
         onReport={() => goReport(target)} />
     ) : route.name === "course" ? (
