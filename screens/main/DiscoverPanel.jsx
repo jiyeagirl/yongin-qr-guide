@@ -9,7 +9,7 @@ import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
  *
  * ── 이 탭에는 지도가 없다 (2026-08-18 변경) ─────────────────────────────────
  * 앞의 두 탭과 달리 **고르는 화면이 아니라 훑는 화면**이다. 필터도, sticky 제어 줄도 없다.
- * 지도도 마찬가지였다 — 32개소를 한 화면에 담으려면 시 전역(약 25km)까지 줌아웃해야 하는데,
+ * 지도도 마찬가지였다 — 상점가 전체를 한 화면에 담으려면 시 전역(약 25km)까지 줌아웃해야 하는데,
  * 그 축척에서는 핀이 어디에 있든 "용인시 어딘가"로만 읽혀 아무 것도 알려주지 못했다.
  * 게다가 이 탭의 주인공인 축제·신규매장·코스는 애초에 지도 위의 점이 아니라 읽을거리다.
  * 그래서 지도를 걷어내고 앱바 아래 전체를 정보 화면으로 쓴다.
@@ -18,16 +18,16 @@ import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
  * 탭을 되돌아올 때 지도가 다시 뜨는데 U-CM-16 이 그것을 금지한다. 여기서 금지되는 것은
  * "재로딩"이지 "안 보이는 것"이 아니다.
  *
- *   상점가 축제 정보         32개소 전체   ← 기간 한정이라 최상단 (U-DC-05). 진행중·예정만
+ *   상점가 축제 정보         상점가 전체   ← 기간 한정이라 최상단 (U-DC-05). 진행중·예정만
  *   골목 한바퀴 코스 추천     현재 상점가
  *   신규 매장 / 인기 매장    현재 상점가
- *   용인시 골목형 상점가 정보 32개소 전체   ← 최하단 (U-DC-04)
+ *   용인시 골목형 상점가 정보 상점가 전체   ← 최하단 (U-DC-04). 줄마다 용인시 누리집으로 나간다
  *
  * 위에서부터 **넓은 답 → 좁은 답**이다. 축제와 코스는 "지금 이 동네에서 뭘 하지"에,
  * 신규·인기 매장은 그보다 한 걸음 좁은 "어느 가게에 가지"에 답한다 (2026-08-18 순서 변경).
  *
  * ── 범위가 섞이는 유일한 탭이다 ────────────────────────────────────────────
- * 축제와 다른 상점가는 32개소 전체, 가운데 두 섹션은 현재 상점가만 다룬다.
+ * 축제와 다른 상점가는 상점가 전체, 가운데 두 섹션은 현재 상점가만 다룬다.
  * 그래서 섹션 머리말 오른쪽에 범위를 글자로 적고(`note`), 축제 행에는 상점가명과 거리를
  * 반드시 병기한다 (U-DC-01). 이게 없으면 네 섹션이 모두 둔전 이야기로 읽힌다.
  *
@@ -36,10 +36,13 @@ import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
  */
 export function DiscoverPanel({
   festivals = [], newStores = [], popular = [], courses = [], districts = [],
+  /* 머리말의 "총 n개"는 용인시 전체 수다. `districts` 는 현재 상점가를 뺀 목록이라
+     길이가 하나 적다 — 둘을 같은 값으로 두면 화면의 수가 목록의 수를 따라 흔들린다 */
+  totalCount = districts.length,
   currentDistrict,               /* 없으면(null) U-DC-06 축소 모드 */
-  onOpenFestival, onOpenAllFestivals, onOpenStore, onOpenCourse, onOpenDistrict,
+  onOpenFestival, onOpenAllFestivals, onOpenStore, onOpenCourse,
 }) {
-  /* 다른 상점가 31곳을 한 번에 그리지 않는다. 목록이 화면 밖으로 한참 이어지면
+  /* 다른 상점가 목록을 한 번에 그리지 않는다. 목록이 화면 밖으로 한참 이어지면
      탭 최하단이라는 위치 자체가 무의미해진다 (U-DC-04 는 "탭 최하단 배치"를 요구한다) */
   const [limit, setLimit] = React.useState(DISTRICT_PAGE_SIZE);
   const rest = districts.length - limit;
@@ -69,7 +72,7 @@ export function DiscoverPanel({
              마찬가지다. 자료를 줄이는 것이 아니라 접는 것이다 — [더 보기]로 그 자리에서
              펼친다. 목록이 상태 다음 임박순이므로 접히는 것은 늘 덜 급한 쪽이다.
 
-             머리말 오른쪽의 "32개소 전체 · n건"을 뺐다. 범위를 적어두던 자리인데, 이제
+             머리말 오른쪽의 "상점가 전체 · n건"을 뺐다. 범위를 적어두던 자리인데, 이제
              그 자리가 [전체보기]로 가는 길이고 범위는 각 행의 상점가명이 이미 말한다. */}
       <section style={scope}>
         <SectionHeader title="상점가 축제 정보" action="전체보기" onAction={onOpenAllFestivals} />
@@ -153,22 +156,25 @@ export function DiscoverPanel({
       )}
 
       {/* ── 4. 용인시 골목형 상점가 목록 (U-DC-04, 옛 U-ST-14) — 최하단 ──────
-             오른쪽의 "총 32개"는 **용인시 전체 골목형 상점가 수**다. 목록에 깔리는 줄은
-             31개다 — 지금 서 있는 둔전은 빼고 보여주기 때문이다(여기서 눌러도 갈 곳이
-             현재 탭이라 아무 일도 일어나지 않는다). 세어보면 하나가 비므로,
-             머리말의 수는 "목록의 길이"가 아니라 "용인시에 몇 곳이 있는가"로 읽혀야 한다. */}
+             오른쪽의 "총 n개"는 **용인시 전체 골목형 상점가 수**다. 목록에 깔리는 줄은
+             하나 적다 — 지금 서 있는 둔전은 빼고 보여주기 때문이다. 세어보면 하나가
+             비므로, 머리말의 수는 "목록의 길이"가 아니라 "용인시에 몇 곳이 있는가"다.
+
+             줄을 누르면 용인시 누리집의 그 상점가 안내 페이지로 나간다 (2026-08-18).
+             우리에게는 다른 상점가의 점포도 지도도 없어서, 앱 안에서 열면 이 줄에 이미
+             적힌 이름·규모·거리를 한 번 더 보게 된다 (DistrictRow 의 external 주석). */}
       <section style={{ ...scope, marginTop: "var(--space-6)" }}>
-        <SectionHeader title="용인시 골목형 상점가 정보" note="총 32개" />
+        <SectionHeader title="용인시 골목형 상점가 정보" note={`총 ${totalCount}개`} />
         {/* 지도가 없어졌으므로 마커 선택 강조(selected)도 없다 — 강조할 지도가 없다 */}
         <div role="list">
           {districts.slice(0, limit).map((d, i) => (
             /* [축제] 배지를 끈다 — 맨 위 섹션이 통째로 축제이고 [전체보기]까지 있어서,
                여기 배지는 같은 사실을 세 번째로 말한다 (DistrictRow 의 festivalTag 주석) */
-            <DistrictRow key={d.id} district={d} festivalTag={false}
-              divider={i < Math.min(limit, districts.length) - 1} onClick={() => onOpenDistrict(d)} />
+            <DistrictRow key={d.id} district={d} festivalTag={false} external
+              divider={i < Math.min(limit, districts.length) - 1} />
           ))}
         </div>
-        {/* 이쪽은 축제와 달리 8곳씩 끊어 붙인다 (31곳을 한 번에 펼치면 탭 최하단이라는
+        {/* 이쪽은 축제와 달리 8곳씩 끊어 붙인다 (32곳을 한 번에 펼치면 탭 최하단이라는
             배치가 무의미해진다). 그래서 펼치는 중에는 [더 보기]와 [접기]가 함께 나온다 —
             여덟 곳을 더 봤는데 되돌릴 길이 없으면 처음 상태로 가려고 탭을 나갔다 와야 한다. */}
         {rest > 0 || limit > DISTRICT_PAGE_SIZE ? (

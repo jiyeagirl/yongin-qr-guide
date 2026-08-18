@@ -19,7 +19,7 @@ import {
  * 여기는 고장이 아니라 정상 상태의 하나다 — 그 온도 차를 문장보다 캐릭터가 먼저 전한다.
  *
  * ── 카드가 2~3개인 이유 ────────────────────────────────────────────────────
- * 명세가 정한 수다. 32곳을 다 늘어놓으면 둘러보기 탭의 "다른 상점가"와 같은 목록이 되어
+ * 명세가 정한 수다. 서른 곳을 다 늘어놓으면 둘러보기 탭의 "다른 상점가"와 같은 목록이 되어
  * 두 탭이 구분되지 않는다. 여기서는 "그럼 어디로 갈까"에 대한 답 몇 개면 된다.
  * 전체 목록이 필요하면 둘러보기 탭으로 보낸다.
  */
@@ -27,7 +27,7 @@ import {
 export const NEARBY_DISTRICT_COUNT = 3;
 
 export function DistrictEmpty({
-  districts = [], anchorName, onPickDistrict, onGoDiscover, onGoFacility,
+  districts = [], totalCount, anchorName, onPickDistrict, onGoDiscover, onGoFacility,
   base = "../../design-systems/",
 }) {
   const picks = React.useMemo(
@@ -60,9 +60,13 @@ export function DistrictEmpty({
       {picks.length ? (
         <section style={{ marginTop: "var(--space-6)" }}>
           <SectionHeader title="가볼 만한 상점가" note="가까운 순" />
+          {/* 줄을 누르면 용인시 누리집의 그 상점가 안내로 나간다 (2026-08-18, 둘러보기 탭과 같다).
+              앱 안에는 다른 상점가의 점포도 지도도 없어서, 여기서 열 수 있는 것이 없다.
+              여기서는 [축제] 배지를 남긴다 — 이 화면에는 축제 섹션이 따로 없어서
+              그 배지가 "왜 저기로 가나"에 대한 유일한 답이다 (DistrictRow 의 festivalTag 주석) */}
           <div role="list">
             {picks.map((d, i) => (
-              <DistrictRow key={d.id} district={d}
+              <DistrictRow key={d.id} district={d} external
                 divider={i < picks.length - 1}
                 onClick={() => onPickDistrict && onPickDistrict(d)} />
             ))}
@@ -71,7 +75,7 @@ export function DistrictEmpty({
           {onGoDiscover ? (
             <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-4) 0" }}>
               <Button variant="outline" icon="compass" onClick={onGoDiscover}>
-                상점가 32곳 전체 보기
+                상점가 {totalCount || districts.length}곳 전체 보기
               </Button>
             </div>
           ) : null}

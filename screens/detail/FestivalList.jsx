@@ -34,7 +34,7 @@ import {
  *              같은 무게로 읽혀 어느 쪽이 주된 축인지 흐려진다.
  *   정렬  ListControls 의 SegmentedTabs — S03 상점가 탭과 같은 자리, 같은 어법이다.
  *
- * **지역 후보에 32개소를 다 넣지 않는다.** 고를 수 있는 값이 결과를 0 건으로 만드는
+ * **지역 후보에 상점가를 다 넣지 않는다.** 고를 수 있는 값이 결과를 0 건으로 만드는
  * 선택지로 가득하면 필터가 아니라 함정이 된다.
  */
 export function FestivalList({ festivals = [], asOf, sortSoon, sortNear, onOpen, onBack,

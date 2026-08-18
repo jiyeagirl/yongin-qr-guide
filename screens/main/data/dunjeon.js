@@ -123,8 +123,10 @@ export const CHIPS = [
 ];
 
 export const DISTRICT = {
-  name: "둔전 골목형 상점가",
-  area: "처인구 포곡읍 둔전리 일원",
+  /* 이름과 소재지는 용인시 누리집 표기 그대로다 (districts.js 머리말 참조) —
+     축제 상세의 "주최 상점가" 줄과 상점가 탭 앱바가 같은 이름이어야 한다 */
+  name: "둔전골목형상점가",
+  area: "처인구 포곡읍 포곡로124번길 2 일원",
   stores: STORES.length,                                  /* 335 */
   onnuri: STORES.filter(s => s.onnuri).length,            /* 139 */
   asOf: "2026.06 기준",

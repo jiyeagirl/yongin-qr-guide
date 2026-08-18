@@ -7,7 +7,7 @@ import {
 import { DUNJEON } from "./data/dunjeon.js";
 import { FACILITIES, NEARBY, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.js";
 import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalSoon, byFestivalNear,
-  HAS_LIVE_FESTIVAL, CURRENT_FESTIVAL, CURRENT_DISTRICT_ID } from "./data/districts.js";
+  HAS_LIVE_FESTIVAL, CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT } from "./data/districts.js";
 import { DistrictSheet } from "./DistrictSheet.jsx";
 import { FacilitySheet } from "./FacilitySheet.jsx";
 import { DiscoverPanel } from "./DiscoverPanel.jsx";
@@ -525,7 +525,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
              상점가는 점이 아니라 구역이라 도보 경로의 도착지가 될 수 없다 (확정 결정사항 6). */
           onSelectDistrict={x => pickOnMap({
             ...x, biz: x.festival ? `${x.gu} · ${x.festival.name}` : x.gu,
-            addr: `${x.area} · 점포 ${x.stores}곳, 온누리 ${x.onnuri}곳`,
+            addr: `${x.area} · 점포 ${x.stores}곳${x.onnuri != null ? `, 온누리 ${x.onnuri}곳` : ""}`,
           })}
         />
 
@@ -588,12 +588,14 @@ export function MainApp({ qr = null, noDistrict = false }) {
             newStores={d.newStores}
             popular={d.popular}
             courses={d.courses}
+            /* 목록에서는 현재 상점가를 빼지만(지금 서 있는 곳이다) 머리말의 "총 n개"는
+               용인시 전체 수다 — 세어보면 하나가 비는 것이 맞다 (DiscoverPanel 주석) */
             districts={OTHER_DISTRICTS}
+            totalCount={DISTRICT_COUNT}
             currentDistrict={currentDistrict}
             onOpenFestival={f => go(`#/festival/${f.id}`)}
             onOpenStore={s => go(`#/store/${s.id}`)}
-            onOpenCourse={c => go(`#/course/${c.id}`)}
-            onOpenDistrict={x => say(`${x.name}으로 이동 (상점가 탭 전환)`)} />
+            onOpenCourse={c => go(`#/course/${c.id}`)} />
         ) : null}
 
         {/* 결정 1 — 3단 스냅. 실측 높이를 위로 올려보내 지도 패딩과 미리보기 카드 앵커가 따라온다.
@@ -640,8 +642,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
                    탭이 사라졌다 나타나면 QR 지점마다 서비스가 다른 물건으로 보인다. */
             <DistrictEmpty
               districts={OTHER_DISTRICTS}
+              totalCount={DISTRICT_COUNT}
               anchorName={d.anchor.name}
-              onPickDistrict={x => say(`${x.name}으로 이동 (상점가 전환은 후속 과제)`)}
               onGoDiscover={() => changeTab("discover")}
               onGoFacility={() => changeTab("facility")} />
           ) : isDistrict ? (

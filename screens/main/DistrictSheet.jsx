@@ -77,7 +77,7 @@ export function DistrictSheet({
       <div style={{ padding: "var(--space-2) var(--gutter-screen) 0" }}>
         {rows.length === 0 ? (
           <Notice tone="info" title="조건에 맞는 매장이 없습니다">
-            업종 칩을 전체로 바꾸거나 온누리 조건을 꺼보세요. 둔전 상점가에는 모두 {data.district.stores}곳이 있습니다.
+            업종 칩을 전체로 바꾸거나 온누리 조건을 꺼보세요. {data.district.name}에는 모두 {data.district.stores}곳이 있습니다.
           </Notice>
         ) : (
           <div role="list">

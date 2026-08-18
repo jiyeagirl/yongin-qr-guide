@@ -110,12 +110,12 @@ export function EntryFallback({
           ) : null}
 
           {/* 고른 곳의 요약. 목록 위에 고정해 둔다 — 목록 안에 끼워 넣으면
-              32줄 중 어디가 펼쳐졌는지 찾느라 다시 스크롤하게 된다 */}
+              서른 줄 중 어디가 펼쳐졌는지 찾느라 다시 스크롤하게 된다 */}
           {picked ? (
             <Notice tone="success" title={picked.name}>
               {picked.gu} {picked.area}
               <span style={{ display: "block", marginTop: 4 }}>
-                점포 {picked.stores}곳 · 온누리 가맹 {picked.onnuri}곳
+                점포 {picked.stores}곳{picked.onnuri != null ? ` · 온누리 가맹 ${picked.onnuri}곳` : ""}
                 {picked.festival ? <> · {picked.festival.name}</> : null}
               </span>
               <span style={{ display: "block", marginTop: "var(--space-2)", color: "var(--text-muted)" }}>
@@ -158,8 +158,11 @@ export function EntryFallback({
                         {d.area}
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 6 }}>
                           점포 {d.stores}곳
-                          <OnnuriBadge size="sm" />
-                          {d.onnuri}곳
+                          {/* 온누리 가맹수가 없는 곳은 배지째 내린다 (DistrictRow 와 같은 규칙) */}
+                          {d.onnuri != null ? <>
+                            <OnnuriBadge size="sm" />
+                            {d.onnuri}곳
+                          </> : null}
                         </span>
                       </>} />
                   ))}
