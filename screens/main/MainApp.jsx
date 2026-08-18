@@ -7,7 +7,8 @@ import {
 import { DUNJEON } from "./data/dunjeon.js";
 import { FACILITIES, NEARBY, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.js";
 import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalSoon, byFestivalNear,
-  HAS_LIVE_FESTIVAL, CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT } from "./data/districts.js";
+  HAS_LIVE_FESTIVAL, CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT,
+  byDistrictNear, byDistrictName, GU_ORDER } from "./data/districts.js";
 import { DistrictSheet } from "./DistrictSheet.jsx";
 import { FacilitySheet } from "./FacilitySheet.jsx";
 import { DiscoverPanel } from "./DiscoverPanel.jsx";
@@ -18,9 +19,11 @@ import { StoreDetail } from "../detail/StoreDetail.jsx";
 import { CourseDetail } from "../detail/CourseDetail.jsx";
 import { FestivalDetail } from "../detail/FestivalDetail.jsx";
 import { FestivalList } from "../detail/FestivalList.jsx";
+import { DistrictList } from "../detail/DistrictList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, back, closeAll } from "./router.js";
-import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, FESTIVAL_AS_OF } from "./config.js";
+import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, FESTIVAL_AS_OF,
+  DISTRICT_AS_OF } from "./config.js";
 
 /* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.0 확정 결정사항 11).
  *
@@ -423,8 +426,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
   /* 대상 없는 오류신고(#/report)는 정상이므로 되돌리지 않는다. 대상을 달고 왔는데
      못 찾은 경우(#/report/facility/없는id)는 다른 상세와 똑같이 되돌린다 —
      엉뚱한 곳을 신고하게 두는 것이 빈 화면보다 나쁘다. */
-  /* S12 축제 전체보기(#/festivals)는 목록 화면이라 대상이 없다 — 되돌리지 않는다 */
-  const needsTarget = route.name !== "main" && route.name !== "festivals"
+  /* S12 축제 · S13 상점가 전체보기는 목록 화면이라 대상이 없다 — 되돌리지 않는다 */
+  const needsTarget = route.name !== "main" && route.name !== "festivals" && route.name !== "districts"
     && (route.name !== "report" || route.parts.length > 0);
 
   React.useEffect(() => {
@@ -485,6 +488,24 @@ export function MainApp({ qr = null, noDistrict = false }) {
       sortSoon={byFestivalSoon}
       sortNear={byFestivalNear}
       onOpen={f => go(`#/festival/${f.id}`)}
+      onBack={back} />
+
+  /* ── S13 상점가 전체보기 ───────────────────────────────────────────────
+         둘러보기 탭 최하단의 같은 목록은 8곳씩 끊어 붙이는데, 32곳을 훑으려면 그 접기가
+         오히려 방해가 된다. 여기서는 전부 깔고 구(區) 칩으로 좁힌다.
+
+         **현재 상점가를 포함한 32곳 전부**를 넘긴다. 둘러보기 탭에는 `OTHER_DISTRICTS`(32곳)를
+         주지만 — 지금 서 있는 곳은 "다른 상점가"가 아니다 — 이 화면의 제목은 "용인시 골목형
+         상점가 정보"이고 구 칩이 개수를 적는다. 한 곳을 빼면 세는 사람에게 수가 맞지 않는다.
+
+         S12 와 같은 이유로 아래 `!target` 검사보다 위에 있어야 한다. */
+  ) : route.name === "districts" ? (
+    <DistrictList
+      districts={DISTRICTS}
+      guOrder={GU_ORDER}
+      asOf={DISTRICT_AS_OF}
+      sortNear={byDistrictNear}
+      sortName={byDistrictName}
       onBack={back} />
 
   /* 여기서부터는 전부 대상 하나를 여는 화면이다 — 대상이 없으면 그릴 것이 없다.
@@ -676,7 +697,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
             /* 카드도 목록 행·지도 마커와 같다 — 상세로 건너뛰지 않고 지도에서 켠다
                (showStoreOnMap 주석). 상세는 거기 뜨는 카드의 [상세 보기]가 맡는다 */
             onOpenStore={showStoreOnMap}
-            onOpenCourse={c => go(`#/course/${c.id}`)} />
+            onOpenCourse={c => go(`#/course/${c.id}`)}
+            onOpenAllDistricts={() => go("#/districts")} />
         ) : null}
 
         {/* 결정 1 — 3단 스냅. 실측 높이를 위로 올려보내 지도 패딩과 미리보기 카드 앵커가 따라온다.
@@ -758,10 +780,11 @@ export function MainApp({ qr = null, noDistrict = false }) {
                  id 로 비교하는 이유: 축제가 다음 것으로 넘어가면 다시 보여야 한다 —
                  "한 번 닫았다"가 아니라 "이 축제를 닫았다"가 기억할 값이다. */
               festivalDismissed={!!d.festival && festivalDismissed === d.festival.id}
-              onDismissFestival={() => {
-                setFestivalDismissed(d.festival.id);
-                say("축제 안내를 닫았습니다. 둘러보기 탭에서 볼 수 있습니다");
-              }} />
+              /* 토스트를 띄우지 않는다 (2026-08-18). 닫기는 사용자가 직접 시킨 일이고
+                 배너가 사라지는 것으로 이미 답이 됐다 — 그 위에 토스트를 얹으면 지운 것을
+                 다시 덮는 꼴이다. 토스트는 **사용자가 시키지 않은 변화**(탭이 발밑에서
+                 바뀌는 이동 같은 것)를 알리는 자리로 남긴다. */
+              onDismissFestival={() => setFestivalDismissed(d.festival.id)} />
           ) : null}
         </Sheet>}
 

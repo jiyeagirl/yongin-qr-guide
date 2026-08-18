@@ -32,7 +32,10 @@ import { OnnuriBadge } from "../core/OnnuriBadge.jsx";
 export function DistrictRow({ district, onClick, selected = false, divider = true,
   festivalTag = true, external = false, style, ...rest }) {
   const d = district;
-  const km = d.dist >= 1000 ? `${(d.dist / 1000).toFixed(1)}km` : `${d.dist}m`;
+  /* 거리 0 은 "0m"가 아니라 지금 서 있는 곳이다 (S13 전체 목록에는 현재 상점가도 들어간다).
+     축제 목록의 같은 자리와 문구를 맞춘다 — 두 목록이 같은 사실을 다르게 말할 이유가 없다 */
+  const km = d.dist === 0 ? "지금 계신 곳"
+    : d.dist >= 1000 ? `${(d.dist / 1000).toFixed(1)}km` : `${d.dist}m`;
   const flag = festivalTag && d.festival;
   const href = external && d.homepage ? d.homepage : null;
 

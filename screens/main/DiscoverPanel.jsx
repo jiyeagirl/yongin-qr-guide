@@ -40,7 +40,7 @@ export function DiscoverPanel({
      길이가 하나 적다 — 둘을 같은 값으로 두면 화면의 수가 목록의 수를 따라 흔들린다 */
   totalCount = districts.length,
   currentDistrict,               /* 없으면(null) U-DC-06 축소 모드 */
-  onOpenFestival, onOpenAllFestivals, onOpenStore, onOpenCourse,
+  onOpenFestival, onOpenAllFestivals, onOpenStore, onOpenCourse, onOpenAllDistricts,
   base = "../../design-systems/",   /* 축제 카드의 조아용 PNG 경로 기준 */
 }) {
   /* 다른 상점가 목록을 한 번에 그리지 않는다. 목록이 화면 밖으로 한참 이어지면
@@ -165,15 +165,24 @@ export function DiscoverPanel({
       )}
 
       {/* ── 4. 용인시 골목형 상점가 목록 (U-DC-04, 옛 U-ST-14) — 최하단 ──────
-             오른쪽의 "총 n개"는 **용인시 전체 골목형 상점가 수**다. 목록에 깔리는 줄은
+             오른쪽 [전체 n개]의 수는 **용인시 전체 골목형 상점가 수**다. 목록에 깔리는 줄은
              하나 적다 — 지금 서 있는 둔전은 빼고 보여주기 때문이다. 세어보면 하나가
              비므로, 머리말의 수는 "목록의 길이"가 아니라 "용인시에 몇 곳이 있는가"다.
+             (누르면 열리는 S13 은 32곳을 다 깔고, 거기서는 둔전 줄에 "지금 계신 곳"이라 적는다.)
 
              줄을 누르면 용인시 누리집의 그 상점가 안내 페이지로 나간다 (2026-08-18).
              우리에게는 다른 상점가의 점포도 지도도 없어서, 앱 안에서 열면 이 줄에 이미
              적힌 이름·규모·거리를 한 번 더 보게 된다 (DistrictRow 의 external 주석). */}
       <section style={{ ...scope, marginTop: "var(--space-6)" }}>
-        <SectionHeader title="용인시 골목형 상점가 정보" note={`총 ${totalCount}개`} />
+        {/* 오른쪽의 "총 n개"가 [전체 n개 ›]로 바뀌었다 (2026-08-18). 축제 섹션과 같은 이유다 —
+            수만 적혀 있으면 32곳을 다 보려면 [더 보기]를 세 번 눌러야 하고, 눌러도 거리순
+            32줄이라 아는 이름 하나를 찾을 방법이 없다. S13 이 구 칩과 가나다순을 맡는다.
+
+            수를 action 라벨 안에 넣는다. SectionHeader 는 action 과 note 중 하나만 그리는데,
+            여기서 수는 버릴 수 없는 값이다 — 아래 목록은 현재 상점가를 뺀 32줄이라 세어보면
+            하나가 빈다. "용인시에 몇 곳이 있는가"를 말하는 것이 이 수의 일이다. */}
+        <SectionHeader title="용인시 골목형 상점가 정보"
+          action={`전체 ${totalCount}개`} onAction={onOpenAllDistricts} />
         {/* 지도가 없어졌으므로 마커 선택 강조(selected)도 없다 — 강조할 지도가 없다 */}
         <div role="list">
           {districts.slice(0, limit).map((d, i) => (

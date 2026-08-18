@@ -33,9 +33,10 @@ const DETAIL = ["facility", "store", "course", "festival", "route"];
      report     보통은 시설·점포 상세에서 대상을 달고 들어오지만(#/report/facility/fc-001),
                 대상을 특정하지 못한 문의(#/report)도 받아야 한다.
      festivals  S12 축제 전체보기. 목록 화면이라 애초에 대상이 없다 (#/festivals).
+     districts  S13 상점가 전체보기. 같은 성격이다 (#/districts).
    위 DETAIL 과 나누는 이유는 아래 parseHash 의 "조각이 없으면 셸" 규칙 때문이다 —
    그 규칙은 오타난 딥링크를 걸러내는 장치라 없애면 안 되고, 여기만 예외로 둔다. */
-const OPTIONAL_ID = ["report", "festivals"];
+const OPTIONAL_ID = ["report", "festivals", "districts"];
 
 /* "#/store/dj-042"           → { name: "store", id: "dj-042", parts: ["dj-042"] }
    "#/route/facility/fc-001"  → { name: "route", id: "facility", parts: ["facility", "fc-001"] }
