@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  DetailPage, DetailNotice, ListControls, Chip, DistrictRow, EmptyState, Notice,
+  DetailPage, DetailNotice, ListControls, Chip, DistrictRow, EmptyState, Notice, Pagination,
 } from "../../design-systems/index.js";
 
 /* S13 용인시 골목형 상점가 전체보기 (2026-08-18 신설).
@@ -56,9 +56,13 @@ import {
  * 열어봐야 이 줄에 이미 적힌 것을 한 번 더 보게 된다. 소개·연혁·연락처는 시가 이미
  * 관리하므로 그리로 보낸다 (`DistrictRow` 의 external 주석).
  */
-export function DistrictList({ districts = [], guOrder = [], asOf, sortNear,
+export function DistrictList({ districts = [], guOrder = [], asOf, sortNear, pageSize = 10,
   onBack, base = "../../design-systems/" }) {
   const [gu, setGu] = React.useState("전체");
+  const [page, setPage] = React.useState(1);
+
+  /* 구를 바꾸면 1쪽으로. 7곳뿐인 처인구에서 3쪽을 보고 있으면 빈 화면이 열린다 */
+  React.useEffect(() => { setPage(1); }, [gu]);
 
   /* 칩에 개수를 함께 적는다. 누르기 전에 몇 곳인지 알아야 누를지를 정한다
      (S03 업종 칩 · S12 상태 칩과 같은 규칙) */
@@ -74,10 +78,18 @@ export function DistrictList({ districts = [], guOrder = [], asOf, sortNear,
     return [...out].sort(sortNear);
   }, [districts, gu, sortNear]);
 
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const start = (safePage - 1) * pageSize;
+  const shown = rows.slice(start, start + pageSize);
+
   const gutter = { padding: "0 var(--gutter-screen)" };
 
   return (
-    <DetailPage title="용인시 골목형 상점가 정보" onBack={onBack}>
+    /* 구를 바꾸거나 쪽을 넘기면 본문을 맨 위로 되돌린다. 쪽 단추는 목록 **끝**에 있어서
+       [다음]을 누르면 새 쪽의 끝줄 근처가 열리고, 칩을 바꾸면 다른 목록의 한가운데가 열린다.
+       두 경우 다 "위에 무엇이 있는지 모른 채 올려봐야 하는" 상태다 (S03 시트와 같은 장치). */
+    <DetailPage title="용인시 골목형 상점가 정보" onBack={onBack} scrollKey={`${gu}|${safePage}`}>
       {/* sticky 를 켠다. S12 축제(6건)와 달리 여기는 32줄이라 스크롤이 길고, 구를 바꾸려고
           맨 위까지 되돌아가야 하면 칩이 있으나 마나가 된다 (S03 상점가 탭과 같은 판단).
           결과 수와 정렬은 넘기지 않으므로 칩 줄만 그려진다 (ListControls 주석). */}
@@ -107,7 +119,7 @@ export function DistrictList({ districts = [], guOrder = [], asOf, sortNear,
 
         {rows.length ? (
           <div role="list" style={{ marginTop: "var(--space-2)" }}>
-            {rows.map((d, i) => (
+            {shown.map((d, i) => (
               /* [축제] 배지를 끈다 (2026-08-18). 한때 켜뒀다 — "이 화면에는 축제 정보가
                  따로 없으니 배지가 갈 이유를 말한다"는 이유였는데, 이 화면에 오는 사람은
                  축제를 찾으러 온 것이 아니다. 축제는 바로 위 섹션의 [전체보기] → S12 가
@@ -115,7 +127,7 @@ export function DistrictList({ districts = [], guOrder = [], asOf, sortNear,
                  여섯에만 붙어 그 여섯 줄이 다른 종류처럼 보이게 할 뿐이고, 눌리지도 않는데
                  알약 모양이라 칩(구 선택)과 같은 것으로 읽히기까지 했다. */
               <DistrictRow key={d.id} district={d} festivalTag={false} external
-                divider={i < rows.length - 1} />
+                divider={i < shown.length - 1} />
             ))}
           </div>
         ) : (
@@ -124,6 +136,18 @@ export function DistrictList({ districts = [], guOrder = [], asOf, sortNear,
             description="다른 구를 선택해 보세요."
             style={{ padding: "var(--space-8) 0" }} />
         )}
+
+        {/* 지금 쪽이 목록의 어디인지 한 줄로 적는다 — 칩이 말하는 수는 조건에 걸린 전부이고,
+            이 줄은 그중 지금 화면에 있는 구간이다 (S03 시트와 같은 어법) */}
+        {rows.length ? (
+          <div style={{ padding: "var(--space-4) 0 var(--space-2)" }}>
+            <p style={{ textAlign: "center", fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
+              {rows.length}곳 중 {start + 1}–{start + shown.length}
+            </p>
+            <Pagination page={safePage} pageCount={pageCount} onChange={setPage}
+              label="상점가 목록 쪽 넘기기" style={{ marginTop: "var(--space-2)" }} />
+          </div>
+        ) : null}
 
         <DetailNotice asOf={`상점가 지정 현황 ${asOf}`} style={{ marginTop: "var(--space-6)" }}>
           <span style={{ display: "block" }}>

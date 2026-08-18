@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  Button, NearbyFacilities, ListControls, OnnuriToggle,
+  NearbyFacilities, ListControls, OnnuriToggle, Pagination,
   Notice, StoreRow, FestivalBanner, CATEGORY_LABELS,
 } from "../../design-systems/index.js";
 import { PAGE_SIZE } from "./config.js";
@@ -9,20 +9,21 @@ import { PAGE_SIZE } from "./config.js";
  *
  * 시트는 **결과와 콘텐츠만** 담는다. 검색과 업종 칩은 지도 위 상단 필터 바가 갖고 있다.
  *
- *   [시트 헤더]  상점가명            📍 처인구 포곡읍 …      ← 항상 보임 (스크롤 영역 밖)
+ *   [시트 헤더]  둔전골목형상점가   포곡읍 포곡로124번길 2 일원  ← 항상 보임 (스크롤 밖)
  *   ─────────────────────────────────────────────
  *   우리 상점가 축제 배너 (U-FT-03) [X]                       ← 닫을 수 있다. 스크롤로 올라간다
  *   ─────────────────────────────────────────────
  *   전체 335곳                          ⇅ 거리순              ← 여기부터 sticky
  *   🎫 온누리 가맹점만 139곳                    ●—            │  (ListControls)
  *   ─────────────────────────────────────────────
+ *   점포 목록 20곳
+ *   335곳 중 1–20   ‹  1  …  17  ›                           ← 쪽 나누기
+ *   주변 공공시설 / 기준일자·고지
  *
  * **소재지는 상점가명 옆이다** (2026-08-18). 제목 아래 한 줄로 두면 절반 스냅에서 그 한 줄이
  * 점포 한 줄을 통째로 먹어, 시트를 열었는데 가게가 하나밖에 안 보였다. 같은 이유로 헤더 아래
  * 여백과 제어 줄 안팎의 여백도 걷어냈다 — 제어 줄의 두 행은 각각 44px(--tap-min)을 이미
  * 갖고 있어서, 그 바깥 여백은 손가락 자리에 아무것도 보태지 않으면서 세로만 먹고 있었다.
- *   점포 목록 · 무한 스크롤 (20곳씩)
- *   주변 공공시설 / 기준일자·고지
  *
  * 점포 수와 온누리 수는 헤더에서 뺐다 (2026-08-18) — 이 두 줄이 같은 것을 말하고 있었고,
  * 이쪽은 조건을 걸면 함께 줄어드는 살아 있는 수다 (DistrictSummary 주석).
@@ -36,33 +37,31 @@ import { PAGE_SIZE } from "./config.js";
  */
 export function DistrictSheet({
   data, rows, cat, onnuriOnly, setOnnuriOnly, sort, setSort, q,
+  /* 쪽 번호는 셸이 들고 있다 (2026-08-18). 쪽을 넘기면 목록을 맨 위로 되돌려야 하는데,
+     그 스크롤 컨테이너는 이 시트가 아니라 Sheet 이고 Sheet 는 scrollKey 로만 되돌린다 —
+     셸이 두 값을 다 쥐고 있어야 한 문자열로 묶을 수 있다. 필터가 바뀔 때 1쪽으로
+     되돌리는 것도 같은 이유로 셸이 한다 (필터도 셸의 상태다). */
+  page = 1, setPage,
   selectedId, onPickStore, onPickFacility, onOpenFestival,
   /* 축제 배너 닫기 (2026-08-18). 닫힘 상태는 셸이 들고 있다 — 이 시트는 탭을 옮기면
      언마운트되므로 여기에 두면 둘러보기를 갔다 올 때마다 배너가 되살아난다 */
   festivalDismissed = false, onDismissFestival,
 }) {
-  const [limit, setLimit] = React.useState(PAGE_SIZE);
-  const sentinel = React.useRef(null);
-
   /* rows(필터 결과)는 App 이 계산해 내려준다 — 목록과 지도 마커가 같은 배열을 봐야
      "12곳"이라 적힌 목록과 지도에 찍힌 마커 수가 어긋나지 않는다. */
 
-  /* 필터나 정렬이 바뀌면 목록을 처음부터 다시 쌓는다 */
-  React.useEffect(() => { setLimit(PAGE_SIZE); }, [cat, onnuriOnly, q, sort]);
+  /* ── 무한 스크롤 → 쪽 나누기 (2026-08-18) ──────────────────────────────
+     U-ST-04 는 "한 번에 다 그리지 않는다"를 요구하고, 그 방법으로 무한 스크롤을 썼다.
+     요구는 지켜졌지만 **끝이 없는 목록**이 됐다 — 335곳을 내려가는 동안 어디쯤 왔는지도
+     얼마나 남았는지도 알 수 없고, 처음으로 돌아가려면 내려온 만큼을 되감아야 했다.
+     쪽으로 끊으면 목록에 끝이 생기고, [1]이 늘 손 닿는 곳에 있다.
 
-  /* 무한 스크롤 (U-ST-04). 시트 스크롤 컨테이너 안의 sentinel 이 보이면 다음 장을 붙인다. */
-  React.useEffect(() => {
-    const node = sentinel.current;
-    if (!node || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(entries => {
-      if (entries.some(e => e.isIntersecting)) setLimit(n => Math.min(n + PAGE_SIZE, rows.length));
-    }, { rootMargin: "240px" });
-    io.observe(node);
-    return () => io.disconnect();
-  }, [rows.length]);
-
-  const shown = rows.slice(0, limit);
-  const rest = rows.length - shown.length;
+     지도 마커는 쪽을 따르지 않는다 — 필터에 걸린 335곳이 전부 그대로 찍힌다. 쪽은 읽는
+     단위이지 범위가 아니고, 2쪽으로 넘겼다고 지도의 핀이 사라지면 지도가 목록의 부속이 된다. */
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const start = (safePage - 1) * PAGE_SIZE;
+  const shown = rows.slice(start, start + PAGE_SIZE);
 
   /* "적용 중" 필터 pill 은 없앴다 — 검색·온누리가 스크롤로 사라질 때만 필요했는데
      이제 상단 필터 바에 항상 떠 있어 켜진 상태가 그 자리에서 그대로 보인다 */
@@ -104,17 +103,17 @@ export function DistrictSheet({
           </div>
         )}
 
-        {rest > 0 ? (
-          <div ref={sentinel} style={{ display: "flex", justifyContent: "center", padding: "var(--space-4) 0" }}>
-            {/* IntersectionObserver 가 없는 환경을 위한 수동 진행 수단도 남긴다 */}
-            <Button variant="outline" icon="chevron-down" onClick={() => setLimit(n => n + PAGE_SIZE)}>
-              {rest}곳 더 보기
-            </Button>
+        {/* 지금 쪽이 목록의 어디인지 한 줄로 적는다. 위의 "전체 335곳"은 조건에 걸린
+            전부이고, 이 줄은 그중 지금 화면에 있는 구간이다 — 쪽 단추만 있으면
+            "20곳씩인가 25곳씩인가"를 세어봐야 안다 */}
+        {rows.length > 0 ? (
+          <div style={{ padding: "var(--space-4) 0 var(--space-2)" }}>
+            <p style={{ textAlign: "center", fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
+              {rows.length}곳 중 {start + 1}–{start + shown.length}
+            </p>
+            <Pagination page={safePage} pageCount={pageCount} onChange={setPage}
+              label="점포 목록 쪽 넘기기" style={{ marginTop: "var(--space-2)" }} />
           </div>
-        ) : rows.length > 0 ? (
-          <p style={{ padding: "var(--space-4) 0", textAlign: "center", fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
-            {rows.length}곳을 모두 불러왔습니다
-          </p>
         ) : null}
       </div>
 

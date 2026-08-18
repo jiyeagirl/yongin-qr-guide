@@ -23,7 +23,7 @@ import { DistrictList } from "../detail/DistrictList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, back, closeAll } from "./router.js";
 import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, FESTIVAL_AS_OF,
-  DISTRICT_AS_OF } from "./config.js";
+  DISTRICT_AS_OF, DISTRICT_LIST_PAGE_SIZE } from "./config.js";
 
 /* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.0 확정 결정사항 11).
  *
@@ -119,6 +119,13 @@ export function MainApp({ qr = null, noDistrict = false }) {
   const [onnuriOnly, setOnnuriOnly] = React.useState(false);
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState("distance");
+
+  /* 점포 목록의 쪽 번호 (U-ST-04). **시트가 아니라 셸이 들고 있다** — 쪽을 넘기면 목록을
+     맨 위로 되돌려야 하는데 그 스크롤 컨테이너는 Sheet 이고, Sheet 는 scrollKey 로만
+     되돌린다. 필터와 쪽을 한 문자열로 묶으려면 둘 다 여기 있어야 한다. */
+  const [page, setPage] = React.useState(1);
+  /* 조건이 바뀌면 1쪽으로. 12곳짜리 결과에서 3쪽을 보고 있으면 빈 화면이 열린다 */
+  React.useEffect(() => { setPage(1); }, [cat, onnuriOnly, q, sort]);
 
   /* 공공시설 탭 필터 (U-FC-01) — 상점가의 업종 칩과 별개의 상태다.
      하나로 합치면 탭을 오갈 때 "음식"이 "AED"로 둔갑한다 */
@@ -510,6 +517,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
       guOrder={GU_ORDER}
       asOf={DISTRICT_AS_OF}
       sortNear={byDistrictNear}
+      pageSize={DISTRICT_LIST_PAGE_SIZE}
       onBack={back} />
 
   /* 여기서부터는 전부 대상 하나를 여는 화면이다 — 대상이 없으면 그릴 것이 없다.
@@ -728,7 +736,10 @@ export function MainApp({ qr = null, noDistrict = false }) {
              탭 이름을 앞에 붙인다. 두 탭이 한 시트를 공유해서, 붙이지 않으면 공공시설의
              [전체]와 상점가의 [전체]가 같은 값이 되어 탭을 옮겨도 스크롤이 남는다.
              선택 강조(selected)와 시트 스냅은 넣지 않는다 — 목록의 내용이 그대로다. */
-          scrollKey={isFacility ? `facility|${fcType}` : `district|${cat}|${onnuriOnly}|${sort}|${q}`}
+          /* 쪽 번호도 함께 넣는다 (2026-08-18). 쪽 단추는 목록 **끝**에 있어서, 거기서
+             [다음]을 누르면 새 쪽의 끝줄 근처가 열린다 — 방금 넘긴 쪽의 위쪽을 보지 못한
+             채 다시 올려야 한다. 조건이 바뀔 때와 같은 이유이고 같은 장치로 푼다. */
+          scrollKey={isFacility ? `facility|${fcType}` : `district|${cat}|${onnuriOnly}|${sort}|${q}|${page}`}
           /* U-ST-02 구역 안내 — 제목 줄 **오른쪽**이다 (2026-08-18). 제목 아래 한 줄로
              두면 절반 스냅에서 그 한 줄이 점포 한 줄을 먹어, 시트를 열었는데 가게가
              하나밖에 안 보였다. 상점가명은 짧고 그 옆은 비어 있다 (Sheet 의 titleAside).
@@ -778,6 +789,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
               cat={cat}
               onnuriOnly={onnuriOnly} setOnnuriOnly={setOnnuriOnly}
               sort={sort} setSort={setSort}
+              page={page} setPage={setPage}
               q={q}
               selectedId={selected ? selected.id : null}
               /* 점포 행도 마커를 누른 것과 같다 (pickFacility 주석) */

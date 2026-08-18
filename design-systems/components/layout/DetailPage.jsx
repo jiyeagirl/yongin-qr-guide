@@ -51,9 +51,20 @@ function useEnter() {
 
    기본 aria-label 이 "닫기"인 것은 이 버튼이 가는 곳이 화면마다 다르기 때문이다 —
    나가는 곳을 이름에 박으려면 closeLabel 로 화면이 직접 적는다. */
-export function DetailPage({ title, onBack, onClose, closeLabel = "닫기", children, footer, actions, style, ...rest }) {
+/* scrollKey — 이 값이 바뀌면 본문 스크롤을 맨 위로 되돌린다 (2026-08-18).
+   Sheet 의 같은 이름과 같은 일을 한다. 목록을 담는 상세 화면(S13)이 쪽 나누기와 칩 필터를
+   갖게 되면서 필요해졌다 — 쪽 단추는 목록 끝에 있어서 [다음]을 누르면 새 쪽의 끝줄 근처가
+   열리고, 칩을 바꾸면 다른 목록의 한가운데가 열린다.
+   되돌리는 일을 Pagination 이 스스로 하지 않는 이유: 어느 조상이 스크롤되는지 DOM 을
+   뒤져야 하고 화면마다 답이 다르다. 스크롤 컨테이너를 가진 쪽이 맡는다. */
+export function DetailPage({ title, onBack, onClose, closeLabel = "닫기", children, footer, actions, scrollKey, style, ...rest }) {
   const entered = useEnter();
   const page = React.useRef(null);
+  const body = React.useRef(null);
+
+  React.useEffect(() => {
+    if (body.current) body.current.scrollTop = 0;
+  }, [scrollKey]);
 
   /* 열리자마자 포커스를 뒤로가기 버튼에 둔다. 그러지 않으면 포커스가 아래 화면(목록)에
      남아 있어 스크린리더 사용자는 새 화면이 열린 것을 모른 채 가려진 목록을 계속 읽는다.
@@ -100,7 +111,7 @@ export function DetailPage({ title, onBack, onClose, closeLabel = "닫기", chil
           </>
         } />
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain",
+      <div ref={body} style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain",
         WebkitOverflowScrolling: "touch" }}>
         {children}
       </div>
