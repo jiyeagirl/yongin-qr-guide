@@ -6,9 +6,9 @@ import {
 } from "../../design-systems/index.js";
 import { DUNJEON } from "./data/dunjeon.js";
 import { FACILITIES, NEARBY, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.js";
-import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalSoon, byFestivalNear,
+import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalNear,
   HAS_LIVE_FESTIVAL, CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT,
-  byDistrictNear, byDistrictName, GU_ORDER } from "./data/districts.js";
+  byDistrictNear, GU_ORDER } from "./data/districts.js";
 import { DistrictSheet } from "./DistrictSheet.jsx";
 import { FacilitySheet } from "./FacilitySheet.jsx";
 import { DiscoverPanel } from "./DiscoverPanel.jsx";
@@ -485,7 +485,6 @@ export function MainApp({ qr = null, noDistrict = false }) {
     <FestivalList
       festivals={FESTIVALS}
       asOf={FESTIVAL_AS_OF}
-      sortSoon={byFestivalSoon}
       sortNear={byFestivalNear}
       onOpen={f => go(`#/festival/${f.id}`)}
       onBack={back} />
@@ -505,7 +504,6 @@ export function MainApp({ qr = null, noDistrict = false }) {
       guOrder={GU_ORDER}
       asOf={DISTRICT_AS_OF}
       sortNear={byDistrictNear}
-      sortName={byDistrictName}
       onBack={back} />
 
   /* 여기서부터는 전부 대상 하나를 여는 화면이다 — 대상이 없으면 그릴 것이 없다.
@@ -688,10 +686,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
             newStores={d.newStores}
             popular={d.popular}
             courses={d.courses}
-            /* 목록에서는 현재 상점가를 빼지만(지금 서 있는 곳이다) 머리말의 "총 n개"는
-               용인시 전체 수다 — 세어보면 하나가 비는 것이 맞다 (DiscoverPanel 주석) */
+            /* 여기서는 현재 상점가를 뺀다 — 지금 서 있는 곳이라 "다른 상점가"가 아니다.
+               앞의 5곳만 깔리고 나머지는 [전체보기] → S13 이 32곳 전부를 맡는다 */
             districts={OTHER_DISTRICTS}
-            totalCount={DISTRICT_COUNT}
             currentDistrict={currentDistrict}
             onOpenFestival={f => go(`#/festival/${f.id}`)}
             /* 카드도 목록 행·지도 마커와 같다 — 상세로 건너뛰지 않고 지도에서 켠다

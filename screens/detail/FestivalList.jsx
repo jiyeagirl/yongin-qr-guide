@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  DetailPage, DetailNotice, ListControls, Chip, Select, FestivalCard, EmptyState,
+  DetailPage, DetailNotice, ListControls, Chip, FestivalCard, EmptyState,
 } from "../../design-systems/index.js";
 
 /* S12 축제 전체보기 (2026-08-18 신설 · 08-18 카드형으로 개편).
@@ -8,9 +8,7 @@ import {
  *
  *   [AppBar]  ← 뒤로 · 상점가 축제 정보
  *   ─────────────────────────────────
- *   n건                    [임박순|가까운 순]
  *   [전체][진행중][예정][종료]
- *   [상점가 ▾]
  *   ─────────────────────────────────
  *   ┌─ 홍보 카드 ─────────────────┐   ← 한 열, 한 건이 한 뼘
  *   │ [진행중] 날짜        조아용   │
@@ -43,21 +41,26 @@ import {
  *
  * 카드 색은 **구별일 뿐 상태가 아니다.** 진행중·예정·종료는 카드 안 배지가 글자로 말한다.
  *
- * ── 필터 셋을 고른 이유 ─────────────────────────────────────────────────
- *   상태  칩 — 이 목록에 오는 이유의 대부분이 "끝난 것도 보고 싶다"라서 1순위 축이다.
- *              칩은 한 번에 보이고 한 번에 눌린다.
- *   상점가 Select — 후보가 축제가 있는 곳뿐이라 여섯이다. 칩으로 늘어놓으면 상태 칩과
- *              같은 무게로 읽혀 어느 쪽이 주된 축인지 흐려진다.
- *   정렬  ListControls 의 SortSelect — S03 상점가 탭과 같은 자리, 같은 어법이다.
+ * ── 제어는 상태 칩 하나뿐이다 (2026-08-18 정리) ──────────────────────────
+ * 처음에는 결과 수 · 정렬(임박순|가까운 순) · 상점가 Select 까지 넉 줄이 있었다.
+ * **6건짜리 목록에 필터가 셋이면 필터가 목록보다 크다.** 전부 걷어냈다:
  *
- * **지역 후보에 상점가를 다 넣지 않는다.** 고를 수 있는 값이 결과를 0 건으로 만드는
- * 선택지로 가득하면 필터가 아니라 함정이 된다.
+ *   결과 수 "n건"   칩이 이미 개수를 달고 있어 같은 수를 두 번 적는다.
+ *   정렬 고르기      6건에서는 어느 차례든 한 화면에 다 들어온다. 고를 값이 결과를
+ *                   바꾸지 못하는 컨트롤은 손이 갈 자리만 차지한다.
+ *   상점가 Select    후보가 축제를 여는 여섯 곳뿐이라, 고르면 대개 1건만 남는다.
+ *                   목록을 좁히는 것이 아니라 목록을 없애는 축이었다.
+ *
+ * 남긴 것은 상태 칩이다. 이 화면에 오는 이유의 대부분이 "끝난 것도 보고 싶다"라서
+ * 1순위 축이고, 칩은 한 번에 보이고 한 번에 눌린다.
+ *
+ * 차례는 `sortNear` 하나로 고정한다 — 상태 먼저, 그 다음 가까운 순이다. 순수 거리순으로
+ * 두지 않는 이유: [전체] 칩에서 종료된 축제가 진행 중인 축제 위로 올라온다. 갈 수 있는
+ * 것이 위에 있어야 한다. 상태 칩을 누르면 그 안은 어차피 거리순뿐이다.
  */
-export function FestivalList({ festivals = [], asOf, sortSoon, sortNear, onOpen, onBack,
+export function FestivalList({ festivals = [], asOf, sortNear, onOpen, onBack,
   base = "../../design-systems/" }) {
   const [state, setState] = React.useState("전체");
-  const [district, setDistrict] = React.useState("전체");
-  const [sort, setSort] = React.useState("soon");
 
   /* 상태 칩에 개수를 함께 적는다. "종료"를 눌러보기 전에 몇 건인지 알 수 있어야
      누를지 말지를 정한다 (S03 업종 칩과 같은 규칙). */
@@ -67,46 +70,30 @@ export function FestivalList({ festivals = [], asOf, sortSoon, sortNear, onOpen,
     return o;
   }, [festivals]);
 
-  const districtOptions = React.useMemo(() => {
-    const names = [];
-    festivals.forEach(f => { if (!names.includes(f.districtName)) names.push(f.districtName); });
-    return [{ value: "전체", label: "상점가 전체" }].concat(names.map(n => ({ value: n, label: n })));
-  }, [festivals]);
-
   const rows = React.useMemo(() => {
-    const out = festivals.filter(f =>
-      (state === "전체" || f.state === state)
-      && (district === "전체" || f.districtName === district));
-    return out.sort(sort === "near" ? sortNear : sortSoon);
-  }, [festivals, state, district, sort, sortNear, sortSoon]);
+    const out = festivals.filter(f => state === "전체" || f.state === state);
+    return [...out].sort(sortNear);
+  }, [festivals, state, sortNear]);
 
   const gutter = { padding: "0 var(--gutter-screen)" };
 
   return (
     <DetailPage title="상점가 축제 정보" onBack={onBack}>
       {/* sticky 를 끈다. S03 상점가 탭에서는 335곳을 스크롤하는 내내 정렬이 손에 닿아야 해서
-          붙여두지만, 여기는 축제 6건이라 스크롤이 길지 않다. 필터 세 줄이 화면 위에 눌러앉으면
-          정작 카드가 설 자리가 사라진다. */}
-      <ListControls
-        sticky={false}
-        title={`${rows.length}건`}
-        sort={sort}
-        sortOptions={[{ id: "soon", label: "임박순" }, { id: "near", label: "가까운 순" }]}
-        onSortChange={setSort}>
+          붙여두지만, 여기는 축제 6건이라 스크롤이 길지 않다. 칩이 화면 위에 눌러앉으면
+          정작 카드가 설 자리가 사라진다.
 
-        <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto",
-          scrollbarWidth: "none", paddingBottom: 2 }}>
+          결과 수와 정렬을 넘기지 않으므로 ListControls 는 칩 줄만 그린다 (그쪽 주석). */}
+      <ListControls sticky={false}>
+        <div role="tablist" aria-label="축제 상태"
+          style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto",
+            scrollbarWidth: "none", padding: "var(--space-1) 0 var(--space-2)" }}>
           {["전체", "진행중", "예정", "종료"].map(s => (
             <Chip key={s} selected={state === s} count={counts[s] || 0}
+              role="tab" aria-selected={state === s}
               onClick={() => setState(s)}>{s}</Chip>
           ))}
         </div>
-
-        {/* 라벨을 숨기지 않는다 — "상점가 전체"라는 기본값만 보이면 그것이 고를 수 있는
-            것인지 그냥 적힌 글자인지 알 수 없다 */}
-        <Select label="상점가" options={districtOptions} value={district}
-          onChange={e => setDistrict(e.target.value)}
-          style={{ paddingBottom: "var(--space-2)" }} />
       </ListControls>
 
       <div style={{ ...gutter, paddingTop: "var(--space-4)", paddingBottom: "var(--space-6)" }}>
@@ -122,10 +109,11 @@ export function FestivalList({ festivals = [], asOf, sortSoon, sortNear, onOpen,
           </div>
         ) : (
           /* 조건을 좁히다 0 건이 되는 것은 고장이 아니라 정상 상태다. 무엇을 풀면 되는지
-             함께 적는다 — 빈 화면만 두면 사용자는 자료가 없다고 읽는다 */
+             함께 적는다 — 빈 화면만 두면 사용자는 자료가 없다고 읽는다. 이제 축이 하나뿐이라
+             풀 것도 하나다: 어느 칩을 누르라고 이름으로 적는다 */
           <EmptyState pose="curious" base={base}
-            title="해당하는 축제가 없습니다"
-            description="상태나 상점가 조건을 넓혀보세요."
+            title={`${state}인 축제가 없습니다`}
+            description="[전체]를 누르면 다른 상태의 축제도 함께 볼 수 있습니다."
             style={{ padding: "var(--space-8) 0" }} />
         )}
 

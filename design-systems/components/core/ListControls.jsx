@@ -32,12 +32,18 @@ export function ListControls({ title, sort, sortOptions = [], onSortChange, chil
          제어 줄 자체는 안쪽 행이 44px(--tap-min)이라 여백을 줄여도 손가락 자리가 좁아지지 않는다 */
       padding: "var(--space-1) var(--gutter-screen) var(--space-1)", ...style }} {...rest}>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-3)", minHeight: "var(--tap-min)" }}>
-        <h3 style={{ font: "var(--type-title-3)", letterSpacing: "var(--ls-snug)", minWidth: 0 }}>{title}</h3>
-        {sortOptions.length ? (
-          <SortSelect options={sortOptions} value={sort} onChange={onSortChange} label="정렬 기준" />
-        ) : null}
-      </div>
+      {/* 결과 수도 정렬도 없으면 이 줄 자체를 그리지 않는다 (2026-08-18). 빈 h3 를 남기면
+          44px(--tap-min)짜리 빈 띠가 칩 위에 앉는다 — 누를 것이 없는 자리가 손가락 하나
+          높이를 차지한다. 칩만 쓰는 화면(S12)에도 이 컴포넌트를 쓸 수 있게 하려는 것이지,
+          결과 수를 없애도 된다는 뜻은 아니다: 목록이 길고 필터가 여럿이면 여전히 필요하다. */}
+      {title || sortOptions.length ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-3)", minHeight: "var(--tap-min)" }}>
+          <h3 style={{ font: "var(--type-title-3)", letterSpacing: "var(--ls-snug)", minWidth: 0 }}>{title}</h3>
+          {sortOptions.length ? (
+            <SortSelect options={sortOptions} value={sort} onChange={onSortChange} label="정렬 기준" />
+          ) : null}
+        </div>
+      ) : null}
 
       {/* 두 줄 사이에 구분선을 두지 않는다 — 같은 제어 묶음이라 선이 있으면 남남처럼 갈라져 보인다.
           바깥쪽 아래 테두리만으로 목록과 분리된다 */}

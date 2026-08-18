@@ -2,7 +2,7 @@ import React from "react";
 import {
   SectionHeader, TextButton, Notice, StoreRail, CourseCard, FestivalCard, DistrictRow,
 } from "../../design-systems/index.js";
-import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
+import { DISTRICT_PREVIEW, FESTIVAL_PREVIEW } from "./config.js";
 
 /* S04 둘러보기 탭 (기능명세서 v1.0 4장 S04 행).
  * 관련 기능: U-DC-01~06 · U-FT-01 · U-ST-14(→U-DC-04)
@@ -36,17 +36,15 @@ import { DISTRICT_PAGE_SIZE, FESTIVAL_PREVIEW } from "./config.js";
  */
 export function DiscoverPanel({
   festivals = [], newStores = [], popular = [], courses = [], districts = [],
-  /* 머리말의 "총 n개"는 용인시 전체 수다. `districts` 는 현재 상점가를 뺀 목록이라
-     길이가 하나 적다 — 둘을 같은 값으로 두면 화면의 수가 목록의 수를 따라 흔들린다 */
-  totalCount = districts.length,
   currentDistrict,               /* 없으면(null) U-DC-06 축소 모드 */
   onOpenFestival, onOpenAllFestivals, onOpenStore, onOpenCourse, onOpenAllDistricts,
   base = "../../design-systems/",   /* 축제 카드의 조아용 PNG 경로 기준 */
 }) {
-  /* 다른 상점가 목록을 한 번에 그리지 않는다. 목록이 화면 밖으로 한참 이어지면
-     탭 최하단이라는 위치 자체가 무의미해진다 (U-DC-04 는 "탭 최하단 배치"를 요구한다) */
-  const [limit, setLimit] = React.useState(DISTRICT_PAGE_SIZE);
-  const rest = districts.length - limit;
+  /* 다른 상점가는 가까운 몇 곳만 깐다. 목록이 화면 밖으로 한참 이어지면 탭 최하단이라는
+     위치 자체가 무의미해진다 (U-DC-04 는 "탭 최하단 배치"를 요구한다).
+     `districts` 는 이미 거리순이므로 앞에서 자르면 그것이 가까운 순이다.
+     펼치는 상태가 없다 — 나머지는 [전체보기]가 여는 S13 이 맡는다 (아래 섹션 주석). */
+  const preview = districts.slice(0, DISTRICT_PREVIEW);
 
   /* 축제도 같은 방식으로 접는다 (위 섹션 주석 참조). 다만 [더 보기]를 한 번 누르면
      전부 펼친다 — 6건짜리 목록을 두 번 나눠 펼치게 하면 누르는 일이 목적이 된다. */
@@ -165,51 +163,35 @@ export function DiscoverPanel({
       )}
 
       {/* ── 4. 용인시 골목형 상점가 목록 (U-DC-04, 옛 U-ST-14) — 최하단 ──────
-             오른쪽 [전체 n개]의 수는 **용인시 전체 골목형 상점가 수**다. 목록에 깔리는 줄은
-             하나 적다 — 지금 서 있는 둔전은 빼고 보여주기 때문이다. 세어보면 하나가
-             비므로, 머리말의 수는 "목록의 길이"가 아니라 "용인시에 몇 곳이 있는가"다.
-             (누르면 열리는 S13 은 32곳을 다 깔고, 거기서는 둔전 줄에 "지금 계신 곳"이라 적는다.)
+             **가까운 5곳만 깔고 [더 보기]를 없앴다** (2026-08-18). 전에는 8곳씩 붙여 나갔는데,
+             누를 때마다 목록이 길어져 탭 최하단이 화면 서너 개 분량이 됐다 — 게다가 그렇게
+             다 펼쳐도 거리순 32줄이라 아는 이름 하나를 찾을 방법이 없었다. 접었다 폈다 하는
+             손잡이는 목록을 정리해 주는 것처럼 보이지만, 실제로 하는 일은 **같은 화면에
+             두 가지 길이를 만드는 것**이다.
+
+             그래서 축제 섹션과 같은 구조로 갈랐다: 여기는 맛보기 5곳, 전체는 [전체보기]가
+             여는 S13 이 맡고 거기서 구(區) 칩으로 좁힌다. 이 탭은 네 가지를 훑는 자리이지
+             상점가 목록 화면이 아니다.
 
              줄을 누르면 용인시 누리집의 그 상점가 안내 페이지로 나간다 (2026-08-18).
              우리에게는 다른 상점가의 점포도 지도도 없어서, 앱 안에서 열면 이 줄에 이미
              적힌 이름·규모·거리를 한 번 더 보게 된다 (DistrictRow 의 external 주석). */}
       <section style={{ ...scope, marginTop: "var(--space-6)" }}>
-        {/* 오른쪽의 "총 n개"가 [전체 n개 ›]로 바뀌었다 (2026-08-18). 축제 섹션과 같은 이유다 —
-            수만 적혀 있으면 32곳을 다 보려면 [더 보기]를 세 번 눌러야 하고, 눌러도 거리순
-            32줄이라 아는 이름 하나를 찾을 방법이 없다. S13 이 구 칩과 가나다순을 맡는다.
-
-            수를 action 라벨 안에 넣는다. SectionHeader 는 action 과 note 중 하나만 그리는데,
-            여기서 수는 버릴 수 없는 값이다 — 아래 목록은 현재 상점가를 뺀 32줄이라 세어보면
-            하나가 빈다. "용인시에 몇 곳이 있는가"를 말하는 것이 이 수의 일이다. */}
+        {/* 라벨은 그냥 "전체보기"다 (2026-08-18). 한때 [전체 32개]로 수를 실었는데, 그
+            수는 목록의 길이도 아니고(여기는 5줄) 이 자리에서 할 일도 없다 — 필요하면
+            S13 의 [전체] 칩이 적는다. 위 축제 섹션과 같은 낱말이라 두 [전체보기]가
+            같은 성격의 길이라는 것도 함께 읽힌다. */}
         <SectionHeader title="용인시 골목형 상점가 정보"
-          action={`전체 ${totalCount}개`} onAction={onOpenAllDistricts} />
+          action="전체보기" onAction={onOpenAllDistricts} />
         {/* 지도가 없어졌으므로 마커 선택 강조(selected)도 없다 — 강조할 지도가 없다 */}
         <div role="list">
-          {districts.slice(0, limit).map((d, i) => (
+          {preview.map((d, i) => (
             /* [축제] 배지를 끈다 — 맨 위 섹션이 통째로 축제이고 [전체보기]까지 있어서,
                여기 배지는 같은 사실을 세 번째로 말한다 (DistrictRow 의 festivalTag 주석) */
             <DistrictRow key={d.id} district={d} festivalTag={false} external
-              divider={i < Math.min(limit, districts.length) - 1} />
+              divider={i < preview.length - 1} />
           ))}
         </div>
-        {/* 이쪽은 축제와 달리 8곳씩 끊어 붙인다 (32곳을 한 번에 펼치면 탭 최하단이라는
-            배치가 무의미해진다). 그래서 펼치는 중에는 [더 보기]와 [접기]가 함께 나온다 —
-            여덟 곳을 더 봤는데 되돌릴 길이 없으면 처음 상태로 가려고 탭을 나갔다 와야 한다. */}
-        {rest > 0 || limit > DISTRICT_PAGE_SIZE ? (
-          <div style={{ display: "flex", justifyContent: "center", gap: "var(--space-4)" }}>
-            {rest > 0 ? (
-              <TextButton iconEnd="chevron-down" aria-expanded={limit > DISTRICT_PAGE_SIZE}
-                onClick={() => setLimit(n => n + DISTRICT_PAGE_SIZE)}>
-                {rest}곳 더 보기
-              </TextButton>
-            ) : null}
-            {limit > DISTRICT_PAGE_SIZE ? (
-              <TextButton tone="muted" iconEnd="chevron-up" onClick={() => setLimit(DISTRICT_PAGE_SIZE)}>
-                접기
-              </TextButton>
-            ) : null}
-          </div>
-        ) : null}
       </section>
 
       {/* ── 고지 (U-CM-07 · U-CM-08) ───────────────────────────────────── */}

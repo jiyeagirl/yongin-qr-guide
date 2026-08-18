@@ -267,17 +267,15 @@ export const DISTRICT_COUNT = DISTRICTS.length;
 export const CURRENT_DISTRICT_ID = "dunjeon";
 export const OTHER_DISTRICTS = DISTRICTS.filter(d => d.id !== CURRENT_DISTRICT_ID);
 
-/* ── S13 상점가 전체보기가 쓰는 축들 ────────────────────────────────────────
+/* ── S13 상점가 전체보기의 차례 ─────────────────────────────────────────────
    정렬 비교 함수를 화면이 아니라 여기서 정한다. 화면이 다시 짜면 둘러보기 탭의 기본
-   순서(거리)와 저기 "가까운 순"이 조용히 어긋난다 (축제 쪽 byFestivalSoon 과 같은 이유).
+   순서(거리)와 저기 목록의 차례가 조용히 어긋난다 (축제 쪽 byFestivalSoon 과 같은 이유).
 
-   가나다순을 두는 이유: 32곳에서 **아는 이름 하나를 찾으러** 오는 경우가 있는데,
-   거리순은 그 이름이 어디쯤 있는지 짐작할 근거를 주지 못한다. */
+   가나다순도 한때 뒀다가 걷어냈다 (2026-08-18). 이름을 이미 아는 사람을 위한 축인데,
+   이름을 안다면 시 누리집에서 바로 찾는 편이 빠르다. 이 목록에 오는 사람은 가까운 곳을
+   찾으러 온다 — 거리가 같으면 이름으로 갈라 차례가 실행마다 흔들리지 않게만 한다. */
 export function byDistrictNear(a, b) {
   return a.dist - b.dist || a.name.localeCompare(b.name, "ko");
-}
-export function byDistrictName(a, b) {
-  return a.name.localeCompare(b.name, "ko");
 }
 
 /* 구 칩의 차례. 가나다순도 거리순도 아닌 **행정 구 번호순**이다 — 시가 안내판·누리집에서
