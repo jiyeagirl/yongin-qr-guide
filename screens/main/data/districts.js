@@ -122,14 +122,15 @@ const FESTIVAL_RAW = [
    포즈는 `MASCOT_FULL`(1:1 전신)에서만 고른다. 상반신 아트워크를 섞으면 카드마다
    캐릭터 크기가 달라 보인다 (Mascot.jsx 주석).
 
-   바탕색에 초록이 없는 것은 조아용이 초록 용이라서다 (colors.css 의 --fest-* 주석). */
+   바탕색은 여섯 다 램프의 가장 옅은 칸이다 — 앱 전체가 흰 바탕에 초록 한 점인데
+   원색 카드가 끼면 광고 배너처럼 보였다 (colors.css 의 --fest-* 주석). */
 const LOOK = {
-  "ft-everland":  ["amber", "music",     "excited",   "부스 사이로 버스킹이 흐르고, 아이들 체험부스도 종일 열려요"],
-  "ft-guseong":   ["ink",   "sparkles",  "surprised", "사흘 내내 야시장. 해 지면 골목 전체에 불이 들어옵니다"],
-  "ft-dunjeon":   ["berry", "utensils",  "thumbsup",  "먹거리 부스 20여 곳, 상인회가 직접 차린 시장통 잔치"],
-  "ft-namsa":     ["cream", "wheat",     "front",     "갓 수확한 농산물을 밭값에, 김장 체험은 40명 선착순이에요"],
-  "ft-dongcheon": ["teal",  "ghost",     "shy",       "분장하고 오면 더 재미있는 핼러윈 퍼레이드, 참가는 자유"],
-  "ft-bojeong":   ["blue",  "lightbulb", "curious",   "점등식으로 시작하는 겨울 밤, 카페거리 음료도 할인해요"],
+  "ft-everland":  ["peach", "music",     "excited",   "부스 사이로 버스킹이 흐르고, 아이들 체험부스도 종일 열려요"],
+  "ft-guseong":   ["lilac", "sparkles",  "surprised", "사흘 내내 야시장. 해 지면 골목 전체에 불이 들어옵니다"],
+  "ft-dunjeon":   ["rose",  "utensils",  "thumbsup",  "먹거리 부스 20여 곳, 상인회가 직접 차린 시장통 잔치"],
+  "ft-namsa":     ["sand",  "wheat",     "front",     "갓 수확한 농산물을 밭값에, 김장 체험은 40명 선착순이에요"],
+  "ft-dongcheon": ["stone", "ghost",     "shy",       "분장하고 오면 더 재미있는 핼러윈 퍼레이드, 참가는 자유"],
+  "ft-bojeong":   ["sky",   "lightbulb", "curious",   "점등식으로 시작하는 겨울 밤, 카페거리 음료도 할인해요"],
 };
 
 /* S09 축제 상세의 프로그램 (U-FT-02 "프로그램 개요"). 시간대별로 나눈다 —

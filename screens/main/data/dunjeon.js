@@ -234,7 +234,7 @@ export const COURSES = COURSE_PLAN.map(c => {
     minutes: stops.reduce((sum, s) => sum + s.legMin, 0) };
 }).filter(c => c.stops.length >= 3);
 
-/* 인근 편의시설(U-ST-07)은 여기 있지 않다. 공공시설 탭(S02)과 같은 데이터를 봐야 하므로
+/* 주변 공공시설(U-ST-07)은 여기 있지 않다. 공공시설 탭(S02)과 같은 데이터를 봐야 하므로
    `data/facilities.js` 의 NEARBY 를 쓴다 — 두 탭이 같은 시설을 다른 거리로 말하면 안 된다.
    이 파일이 facilities.js 를 import 하지 않는 것은 순환 참조를 만들지 않기 위해서다
    (facilities.js 가 여기서 ANCHOR 를 가져간다). 둘을 합치는 일은 화면(MainApp)이 한다. */

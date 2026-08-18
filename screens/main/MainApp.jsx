@@ -99,7 +99,7 @@ function receiptNo(now = new Date()) {
 }
 
 export function MainApp({ qr = null, noDistrict = false }) {
-  /* 인근 편의시설(U-ST-07)은 공공시설 탭과 같은 데이터에서 뽑는다 — 두 탭이 같은 시설을
+  /* 주변 공공시설(U-ST-07)은 공공시설 탭과 같은 데이터에서 뽑는다 — 두 탭이 같은 시설을
      다른 거리로 말하지 않게 한다. 합치는 일은 데이터 파일이 아니라 화면이 한다 (순환 참조 방지) */
   const d = React.useMemo(() => ({ ...DUNJEON, nearby: NEARBY, festival: CURRENT_FESTIVAL }), []);
 
@@ -300,6 +300,29 @@ export function MainApp({ qr = null, noDistrict = false }) {
     say("QR스캔 위치로 이동했습니다");
   };
 
+  /* 상점가 탭 하단 "주변 공공시설"의 한 줄 → **공공시설 탭으로 옮겨 지도에서 켠다**
+     (2026-08-18). 상점가 탭은 점포 레이어를 갖고 있어 여기서는 시설 마커를 그릴 수 없다
+     (U-CM-17: 한 번에 한 레이어). 그래서 상세로 보내는 대신 그 시설이 실제로 그려지는
+     탭으로 데려간다 — 목록에서 고른 것을 지도에서 보여준다는 규칙은 그대로 지키면서,
+     레이어 규칙도 깨지 않는 유일한 길이다.
+
+     changeTab 이 선택을 비우고 카메라를 QR 지점으로 되돌린 **뒤에** pickFacility 가 다시
+     고른다. 상태 갱신은 한 번에 묶여 마지막 값이 남고, 카메라는 pickOnMap 이 두 프레임
+     뒤에 옮기므로 순서가 어긋나지 않는다. */
+  const showFacilityOnMap = (f, { fromOverlay = false } = {}) => {
+    /* 상세 오버레이 안에서 불렸다면 쌓인 것을 전부 걷어내고 셸로 내려온다.
+       history.go 는 다음 틱에 처리되지만 셸은 언마운트되지 않으므로, 아래 상태 갱신이
+       그대로 살아남아 지도가 열릴 때 이미 그 시설이 켜져 있다 (U-CM-16). */
+    if (fromOverlay) closeAll();
+    if (tab !== "facility") changeTab("facility");
+    /* 유형 필터가 그 시설을 걸러내고 있으면 그 유형으로 좁힌다. "전체"로 풀면 사용자가
+       걸어둔 조건을 말없이 지우는 셈이고, 그대로 두면 켤 마커가 없다 */
+    if (fcType !== "all" && fcType !== f.type) setFcType(f.type);
+    pickFacility(f);
+    /* 탭이 발밑에서 바뀌는 이동이라 무슨 일이 일어났는지 한 줄로 말한다 */
+    say(`공공시설 탭에서 ${f.name} 위치를 표시합니다`);
+  };
+
   /* 탭 전환 (5-3 #6) — 지도는 재로딩하지 않고(U-CM-16) 카메라만 QR 지점 + 탭 기본 줌으로 되돌린다.
      마커 레이어도 함께 갈아끼운다 (U-CM-17: 한 번에 한 레이어만).
      각 탭의 필터 상태는 지우지 않는다 — 상점가에서 "음식 + 온누리"를 걸어두고 공공시설을 잠깐 본 뒤
@@ -317,7 +340,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
   };
 
   /* U-CM-17 — 시설 마커와 점포 마커를 동시에 노출하지 않는다. 탭이 소유한 레이어만 그린다.
-     상점가 탭의 "인근 편의시설"은 목록으로만 제공하고 지도에는 찍지 않는다.
+     상점가 탭의 "주변 공공시설"은 목록으로만 제공하고 지도에는 찍지 않는다.
 
      상점가 지점 레이어는 없앴다 — 둘러보기가 지도를 쓰지 않게 되면서 그릴 곳이 사라졌다.
      KakaoMap 의 districts prop 자체는 남겨둔다 (S03-E 의 "근처 가볼만한 상점가"가 쓸 자리다). */
@@ -495,9 +518,14 @@ export function MainApp({ qr = null, noDistrict = false }) {
         onBack={back}
         onRoute={() => goRoute(target)}
         onReport={() => goReport(target)}
-        /* 인근 편의시설에서 시설 상세로 — 오버레이 위에 오버레이가 아니라 history 를 한 칸 더
-           쌓는다. 뒤로가기를 누르면 점포 상세로 돌아온다 (온 길을 되짚는 것이 자연스럽다) */
-        onPickFacility={f => go(`#/facility/${f.id}`)}
+        /* 주변 공공시설도 지도로 보낸다 (2026-08-18). 한때 여기만 시설 상세로 보냈는데 —
+           오버레이를 닫고 탭까지 옮기는 것이 과하다고 봤다 — 같은 목록을 어디서 눌렀느냐에
+           따라 다른 곳으로 가는 것이 더 나빴다. 목록에서 고른 것은 지도에서 보여준다는
+           규칙에 예외를 두지 않는다.
+
+           상세가 필요하면 지도에 뜨는 카드의 [상세 보기]가 한 번에 데려간다.
+           그 카드에는 [길찾기]도 함께 있어, 여기서 상세로 곧장 갔을 때보다 갈 곳이 많다. */
+        onPickFacility={f => showFacilityOnMap(f, { fromOverlay: true })}
         onCopied={copied} />
     );
 
@@ -697,9 +725,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
               selectedId={selected ? selected.id : null}
               /* 점포 행도 마커를 누른 것과 같다 (pickFacility 주석) */
               onPickStore={pickOnMap}
-              /* "인근 편의시설"만 예외로 곧장 상세로 간다. 상점가 탭은 점포 레이어를 갖고
-                 있어 시설 마커가 지도에 없으므로(U-CM-17), 카드를 띄워도 가리킬 핀이 없다 */
-              onPickFacility={f => go(`#/facility/${f.id}`)}
+              /* "주변 공공시설"은 공공시설 탭으로 옮겨 그 자리에서 켠다 —
+                 이 탭에는 시설 마커가 없다 (showFacilityOnMap 주석) */
+              onPickFacility={showFacilityOnMap}
               onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
               /* 닫힌 축제의 id 를 셸이 들고 있다. 시트 안에 두면 탭을 옮길 때 언마운트되어
                  둘러보기를 갔다 올 때마다 배너가 되살아난다 (U-FC-09 말풍선과 같은 이유).

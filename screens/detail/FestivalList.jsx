@@ -113,7 +113,7 @@ export function FestivalList({ festivals = [], asOf, sortSoon, sortNear, onOpen,
         {rows.length ? (
           /* 한 열이다. 두 열로 깔면 카드 폭이 절반이 되어 홍보 문구가 들어갈 자리가 없고,
              축제명조차 세 줄로 접힌다 — 카드로 바꾼 이유가 사라진다. */
-          <div role="list" style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+          <div role="list" style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
             {rows.map(f => (
               <FestivalCard key={f.id} festival={f} base={base}
                 tone={f.tone} icon={f.icon} pose={f.pose} hook={f.hook}

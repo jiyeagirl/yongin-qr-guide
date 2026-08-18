@@ -52,7 +52,7 @@ No component library was supplied, so the inventory is derived from the 13-scree
 - **Status words** fixed: 진행중 / 예정 / 종료 (축제), 개방 / 이용가능 (시설), 온누리 (가맹).
 - **Safety copy** is always present on information screens: "안내 정보는 참고용입니다. 응급 상황에는 119로 연락해 주세요." plus the 기준일자 (예: "점포 정보 2026.06 기준").
 - **Emoji: never.** The mascot carries warmth; icons carry meaning.
-- **Labels:** noun phrases (인근 편의시설, 신규 · 인기 매장); buttons are verb phrases (길찾기, 주소 복사, 더 보기, 다른 상점가 둘러보기). 중간점 `·` separates metadata.
+- **Labels:** noun phrases (주변 공공시설, 신규 · 인기 매장); buttons are verb phrases (길찾기, 주소 복사, 더 보기, 다른 상점가 둘러보기). 중간점 `·` separates metadata.
 
 ## Visual foundations
 **Colour.** Sampled from the character, then split. `--character-green #66ce94`, `--character-teal #179496`, `--character-cream #fef5aa` are for illustration and the mascot only. UI colour sits one step deeper for AA contrast: `--brand-primary` green-700 `#2f9260` (actions, active tab, anchor marker), `--brand-secondary` teal-700 `#0f6e70` (links, secondary), `--brand-accent` cream-300 (축제 배너). Emergency red `--pin-emergency` is reserved for AED and 대피소 — never used decoratively. Two background colours per screen: `--surface-page` mist and white cards; the map base is the neutral grid.

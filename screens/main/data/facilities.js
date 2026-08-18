@@ -119,9 +119,15 @@ export const NEAR_LIMIT = { aed: Infinity, shelter: Infinity, toilet: 1000, rest
    대피소처럼 상한이 없는 유형도 이 선을 넘으면 배너가 필요하다. */
 export const NEAR_ENOUGH = 1000;
 
-/* U-ST-07 인근 편의시설 — 상점가 탭 하단에 붙는 4줄.
+/* U-ST-07 주변 공공시설 — 상점가 탭 하단에 붙는 4줄.
    같은 FACILITIES 에서 유형별 최근접 1건씩 뽑는다. 별도 목록을 두면 두 탭이
-   같은 시설을 다른 거리로 말하게 된다. */
+   같은 시설을 다른 거리로 말하게 된다.
+
+   **가까운 순으로 늘어놓는다** (2026-08-18). 전에는 위 배열의 유형 순서(aed→toilet→
+   rest→shelter)로 나갔는데, 그것은 뽑는 순서지 읽는 순서가 아니다. 화장실이 40m 인데
+   AED 가 380m 라면 위에 와야 하는 것은 화장실이다 — 이 목록은 "곁에 뭐가 있나"에
+   답하는 자리이고, 곁이라는 말의 뜻이 곧 거리다. 공공시설 탭의 목록도 같은 순서다. */
 export const NEARBY = ["aed", "toilet", "rest", "shelter"]
   .map(t => FACILITIES.find(f => f.type === t))
-  .filter(Boolean);
+  .filter(Boolean)
+  .sort((a, b) => a.dist - b.dist);

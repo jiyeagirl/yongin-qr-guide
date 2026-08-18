@@ -46,23 +46,36 @@
 --surface-selected:var(--yong-green-100);
 
 /* ── 축제 홍보 카드 6색 (FestivalCard) ────────────────────────────────────────
-   축제 목록(S12)에서 카드마다 다른 바탕을 깔아 여섯 건이 한 덩어리로 읽히지 않게 한다.
+   축제 목록(S12·S04)에서 카드마다 다른 바탕을 깔아 여섯 건이 한 덩어리로 읽히지 않게 한다.
    색은 축제를 **구별**할 뿐 아무 뜻도 담지 않는다 — 상태(진행중·예정·종료)는 카드 안의
    배지가 글자로 말한다. 색만으로 상태를 읽게 하면 색을 못 보는 사람에게 목록이 무너진다.
 
-   초록 계열이 없다. 카드 위에 조아용(초록 용)이 서는데 초록 바탕에서는 캐릭터가
-   묻힌다 — 검은 외곽선이 있어도 몸통이 배경에 잠긴다.
+   ── 전부 옅은 파스텔이다 (2026-08-18 재조정) ────────────────────────────────
+   처음에는 짙은 청록·검정·팥·파랑·주황·노랑이었다. 카드끼리는 확실히 갈렸지만 **앱과
+   갈렸다** — 이 서비스의 나머지 화면은 흰 바탕에 초록 한 점이 전부인데, 그 사이에 원색
+   여섯 장이 끼면 광고 배너를 붙여놓은 것처럼 보였다.
 
-   `-ink` 는 그 바탕 위 글자색, `-veil` 은 그 위에 얹는 배지·구분선의 반투명 막이다.
-   밝은 바탕(cream·amber)은 검은 막, 어두운 바탕은 흰 막을 쓴다 — 반대로 쓰면 사라진다. */
---fest-teal-bg:var(--yong-teal-900);--fest-teal-ink:var(--yong-white);--fest-teal-veil:rgba(255,255,255,.18);
---fest-ink-bg:var(--yong-ink-900);--fest-ink-ink:var(--yong-white);--fest-ink-veil:rgba(255,255,255,.16);
---fest-berry-bg:var(--yong-red-700);--fest-berry-ink:var(--yong-white);--fest-berry-veil:rgba(255,255,255,.20);
---fest-blue-bg:var(--yong-blue-500);--fest-blue-ink:var(--yong-white);--fest-blue-veil:rgba(255,255,255,.22);
---fest-amber-bg:var(--yong-amber-500);--fest-amber-ink:var(--yong-ink-900);--fest-amber-veil:rgba(22,34,28,.13);
---fest-cream-bg:var(--yong-cream-700);--fest-cream-ink:var(--yong-ink-900);--fest-cream-veil:rgba(22,34,28,.13);
+   그래서 여섯 색을 전부 램프의 **가장 옅은 칸**에서 뽑고, 글자는 모두 잉크색 하나로
+   통일한다. 카드끼리 갈리는 일은 여전히 여섯 색이 하고, 앱 전체와의 결은 "밝은 바탕 +
+   어두운 글자"라는 같은 규칙으로 이어진다. 톤이 하나면 새 축제가 늘어도 흔들리지 않는다.
+
+   `-bg` 는 바탕, `-deep` 은 그 색의 짙은 짝이다. 파스텔만으로는 카드에 초점이 없어
+   아이콘 스티커 한 점에만 짙은 짝을 쓴다 — 색을 진하게 쓰는 자리를 카드당 하나로 묶으면
+   여섯 장이 나란히 놓여도 소란스럽지 않다.
+
+   글자색(--fest-ink)과 막(--fest-veil)은 여섯이 공유한다. 바탕이 전부 밝으므로
+   막은 검은 쪽이다 — 흰 막은 밝은 바탕에서 사라진다. */
+--fest-ink:var(--yong-ink-900);
+--fest-veil:rgba(22,34,28,.10);
+--fest-sky-bg:var(--yong-teal-100);--fest-sky-deep:var(--yong-teal-700);
+--fest-lilac-bg:var(--yong-blue-100);--fest-lilac-deep:var(--yong-blue-500);
+--fest-sand-bg:var(--yong-cream-300);--fest-sand-deep:var(--yong-cream-900);
+--fest-peach-bg:var(--yong-amber-100);--fest-peach-deep:var(--yong-amber-500);
+--fest-rose-bg:var(--yong-red-100);--fest-rose-deep:var(--yong-red-700);
+--fest-stone-bg:var(--yong-ink-100);--fest-stone-deep:var(--yong-ink-500);
 
 /* 종료된 축제는 색을 거둔다. 지난 일이 진행 중인 축제와 같은 무게로 눈에 들어오면
    목록 맨 위의 급한 건이 묻힌다. 대신 지우지는 않는다 — "그거 언제였지"를 확인하러 온다 */
---fest-done-bg:var(--yong-ink-50);--fest-done-ink:var(--yong-ink-500);--fest-done-veil:rgba(22,34,28,.10);
+--fest-done-bg:var(--yong-ink-50);--fest-done-deep:var(--yong-ink-300);
+--fest-done-ink:var(--yong-ink-500);--fest-done-veil:rgba(22,34,28,.08);
 }
