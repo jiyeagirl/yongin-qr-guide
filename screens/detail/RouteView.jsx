@@ -26,8 +26,8 @@ import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
  *   ⚑ 30m 앞 도착             둔전마을회관 AED
  *   ─────────────────────────────────
  *   기준일자 · 참고용 고지 · 119
- *   ─────────────────────────────────
- *   [도착지 정보 보기]                              ← sticky 하단
+ *
+ * 하단 액션바가 없다. 되돌아가는 길은 왼쪽 위 뒤로가기 하나뿐이다 (footer 주석 참조).
  *
  * ── 출발지는 고를 수 없다 ───────────────────────────────────────────────
  * 이 화면에는 출발지 입력란이 없다. 화면의 "내 위치"는 언제나 QR 스캔 지점이기 때문이다
@@ -107,27 +107,32 @@ export function RouteView({ dest, origin, asOf, onBack, onOpenDest, onReport }) 
     };
   }, [result, dest]);
 
-  /* 목록·상세가 쓰는 직선거리 (U-FC-06). 아래 고지에서 도보 거리와 나란히 적는다 */
-  const straight = Math.round(distanceM(origin, dest));
+  /* 목록·상세가 쓰는 직선거리 (U-FC-06). 아래 고지에서 도보 거리와 나란히 적는다.
+     **목록이 실제로 보여준 값(dest.dist)을 그대로 인용한다.** 좌표에서 다시 재면 점포에서
+     어긋난다 — dunjeon.js 의 좌표 생성이 반지름에 이방성 배율을 먹여서 좌표상 거리가
+     dist 의 0.6~1.25 배다. 고지가 "목록에서 보신 약 nnn m" 라고 못박는 문장이라,
+     목록에 없던 숫자를 적으면 사용자가 본 적 없는 값을 인용하는 셈이 된다.
+     dist 를 갖지 않는 목적지(딥링크 등)에서만 좌표로 잰다. */
+  const straight = dest.dist != null ? dest.dist : Math.round(distanceM(origin, dest));
   const isFacility = Boolean(dest.type && FACILITY_LABELS[dest.type]);
   const kindLabel = isFacility ? (FACILITY_LABELS[dest.type] || "공공시설") : (CATEGORY_LABELS[dest.cat] || "점포");
 
   return (
     <DetailPage title="길찾기" onBack={onBack}
-      /* 주 행동은 "도착지가 무엇인지 다시 보는 것"이다. 길찾기 화면에서 또 길찾기를 걸 수는 없고,
-         여기까지 온 사용자에게 남은 일은 걷는 것뿐이다. 실패했을 때만 [다시 시도]가 붙는다 —
-         평소에도 보이면 경로가 미덥지 않다는 인상을 준다. */
-      footer={
-        <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          {failed ? (
-            <Button variant="outline" size="lg" icon="rotate-cw" onClick={() => setAttempt(n => n + 1)}
-              style={{ flex: "0 0 auto" }}>다시 시도</Button>
-          ) : null}
-          <Button variant="primary" size="lg" block onClick={onOpenDest} style={{ flex: 1, minWidth: 0 }}>
-            {kindLabel} 정보 보기
-          </Button>
-        </div>
-      }>
+      /* ── 평소에는 하단 액션바가 없다 (2026-08-18) ──────────────────────────────
+         [도착지 정보 보기]를 뺐다. 여기까지 온 사용자에게 남은 일은 걷는 것이고, 화면이
+         할 일은 경로를 보여주는 것뿐이다. 되돌아가는 길은 **왼쪽 위 뒤로가기 하나**로 모은다 —
+         화면 아래에 또 하나를 두면 "뒤로"와 "정보 보기"가 대개 같은 곳으로 가면서 둘 중
+         무엇이 되돌아가는 버튼인지 흐려진다. 지도의 도착 핀을 눌러도 상세로 갈 수 있다
+         (KakaoMap 의 onSelectDest).
+
+         실패했을 때만 [다시 시도]가 선다. 그때는 화면에 경로가 없어 사용자가 할 수 있는
+         일이 실제로 하나 생기기 때문이다. 평소에도 보이면 경로가 미덥지 않다는 인상을 준다. */
+      footer={failed ? (
+        <Button variant="primary" size="lg" icon="rotate-cw" block onClick={() => setAttempt(n => n + 1)}>
+          다시 시도
+        </Button>
+      ) : null}>
 
       <DetailBody style={{ paddingTop: 0 }}>
         {/* ── 경로 지도 (U-NV-02) ────────────────────────────────────────
