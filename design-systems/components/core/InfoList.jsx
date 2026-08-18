@@ -22,7 +22,10 @@ export function InfoList({ items = [], style, ...rest }) {
         <div key={it.label} style={{ display: "flex", flexDirection: "column", gap: 2,
           minHeight: "var(--tap-comfortable)", justifyContent: "center", padding: "var(--space-3) 0",
           borderBottom: i < rows.length - 1 ? "var(--stroke-hairline) solid var(--border-default)" : "none" }}>
-          <dt style={{ fontSize: "var(--fs-caption)", fontWeight: "var(--fw-semibold)", color: "var(--text-muted)",
+          {/* 라벨은 bold(600). semibold 는 2026-08-14 조정으로 medium 과 같은 500 이 되어
+              본문(400)과 한 단계밖에 차이가 나지 않는데, 13px 회색에서 그 차이는 보이지 않는다.
+              라벨과 값이 같은 굵기로 읽히면 어디까지가 항목명인지 훑어서 알 수 없다. */}
+          <dt style={{ fontSize: "var(--fs-caption)", fontWeight: "var(--fw-bold)", color: "var(--text-muted)",
             lineHeight: "var(--lh-caption)" }}>{it.label}</dt>
           <dd style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: "var(--lh-body)" }}>
             {it.value}

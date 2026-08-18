@@ -54,7 +54,9 @@ export function CopyField({ label = "주소", value, onCopied, style, ...rest })
       borderRadius: "var(--radius-card)", padding: "var(--space-3) var(--space-4)", ...style }} {...rest}>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: "var(--fs-caption)", fontWeight: "var(--fw-semibold)", color: "var(--text-muted)",
+        {/* 굵기는 InfoList 의 라벨(dt)과 같은 bold(600)다 — 같은 카드 묶음 안에서
+            "주소"만 가늘면 항목명 줄이 들쭉날쭉해 보인다 */}
+        <div style={{ fontSize: "var(--fs-caption)", fontWeight: "var(--fw-bold)", color: "var(--text-muted)",
           lineHeight: "var(--lh-caption)" }}>{label}</div>
         {/* 주소는 자르지 않는다. 말줄임하면 복사 전에 무엇을 복사하는지 확인할 수 없다 */}
         <div style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: "var(--lh-body)",
