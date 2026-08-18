@@ -167,19 +167,26 @@ export function Sheet({ open = true, title, subtitle, titleAside, headerExtra, c
              제어 줄 안쪽이 44px(--tap-min)이라 여백을 덜어도 손가락 자리는 그대로다. */
           <div style={{ flex: "0 0 auto", padding: "0 var(--gutter-screen) var(--space-1)" }}>
             {/* 제목 줄을 titleAside · 닫기 버튼과 나눠 쓴다 */}
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <h2 style={{ fontSize: "var(--fs-title-2)", fontWeight: "var(--fw-bold)", letterSpacing: "var(--ls-snug)" }}>{title}</h2>
                 {subtitle ? <div style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", marginTop: 4 }}>{subtitle}</div> : null}
               </div>
-              {/* 폭의 절반을 넘기지 않는다 — 넘게 두면 긴 소재지가 제목을 밀어 상점가명이
-                  줄바꿈된다. 여기서 접히는 쪽은 제목이 아니라 보조 정보여야 한다 */}
+              {/* 줄지 않는다 (`0 0 auto`). 이 자리에 오는 것은 **한 줄로 다 보여야 하는**
+                  짧은 조각이고, 줄어들 수 있게 두면 폭이 모자랄 때 조용히 두 줄로 감겨
+                  제목 줄이 두꺼워진다 — 그러면 아래로 한 줄 내려놓은 것과 높이가 같아져
+                  이 자리를 만든 이유가 사라진다. 모자라면 접히는 쪽은 제목(flex:1)이다.
+
+                  baseline 정렬이라 제목의 밑선과 나란히 앉는다. 위 정렬로 두면 19px 제목의
+                  윗선에 12px 글자가 붙어 공중에 뜬 것처럼 보인다. */}
               {titleAside ? (
-                <div style={{ flex: "0 1 auto", minWidth: 0, maxWidth: "52%" }}>{titleAside}</div>
+                <div style={{ flex: "0 0 auto" }}>{titleAside}</div>
               ) : null}
               {onClose ? (
+                /* 줄이 baseline 정렬이라 단추만 위로 되돌린다 — 44px 짜리 상자를 글자
+                   밑선에 맞추면 제목보다 한참 아래로 내려간다 */
                 <button onClick={onClose} aria-label={closeLabel} title={closeLabel}
-                  style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", gap: 4,
+                  style={{ flex: "0 0 auto", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 4,
                     minWidth: "var(--tap-min)", minHeight: "var(--tap-min)", padding: "0 var(--space-2)",
                     justifyContent: "center", background: "none", border: "none", cursor: "pointer",
                     fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)", fontWeight: "var(--fw-bold)",

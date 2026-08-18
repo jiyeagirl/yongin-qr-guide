@@ -1,5 +1,4 @@
 import React from "react";
-import { Icon } from "../core/Icon.jsx";
 
 /* 상점가 구역 안내 (U-ST-02). 상점가 탭 시트 헤더가 쓴다.
    구역 경계는 폴리곤이 아니라 도로명주소 목록으로 판정하므로 (기능명세서 3-2)
@@ -19,9 +18,23 @@ import { Icon } from "../core/Icon.jsx";
    가게가 하나밖에 안 보였다. 상점가명은 짧고 제목 줄 오른쪽은 비어 있어서, 거기로
    옮기면 **세로가 공짜다.**
 
-   그래서 글자도 caption(13px) → micro(12px)로 내리고 오른쪽 정렬한다. 제목과 한 줄을
-   나눠 쓰는 자리라 좁고, 여기서 접혀야 할 것은 상점가명이 아니라 이쪽이다.
-   길면 두 줄로 감기게 두고 자르지 않는다 — 소재지는 끝까지 읽혀야 쓸모가 있다.
+   그래서 글자도 caption(13px) → micro(12px)로 내린다.
+
+   ── 반드시 한 줄이다 ──────────────────────────────────────────────────────
+   두 줄로 감기면 이 자리에 둔 이유가 사라진다 — 제목 줄이 그만큼 두꺼워져, 아래로 한 줄
+   내려놓은 것과 높이가 같아진다. 그래서 `whiteSpace: nowrap` 으로 못박았다.
+
+   한 줄에 넣으려고 **핀 아이콘을 뺐다** (2026-08-18). 360px 화면의 셈은 이렇다:
+
+     제목 152px + 소재지 153px + 여백 8px = 313px   (쓸 수 있는 폭 320px)
+     여기에 핀(13) + 그 여백(4)을 더하면 330px 로 넘친다
+
+   아이콘이 하던 일("이건 위치다")은 자리와 생김새가 대신한다 — 제목 오른쪽에 붙은 옅은
+   회색 한 줄이고, 보조기기에는 aria-label 로 적어준다. 소재지 문자열에서 구를 뺀 것도
+   같은 셈에서 나왔다 (data/dunjeon.js 주석).
+
+   좁은 화면(320px)에서는 접히는 쪽이 **상점가명**이다 — 소재지가 nowrap 이고 이쪽이
+   flex 로 늘고 줄기 때문이다. 잘려서 못 읽는 것보다 이름이 두 줄로 감기는 편이 낫다.
 
    주의: 구역도 xlsx 의 "밀집도에 따른 기준 점포수 108개"는 지정 요건 산정용 수치이며
    실제 점포 수가 아니다. 화면에 노출하면 안 된다 (기능명세서 3-5). */
@@ -29,11 +42,10 @@ export function DistrictSummary({ district, style, ...rest }) {
   return (
     /* 소재지 한 줄만 둔다. 주요 업종은 바로 아래 업종 칩이 개수까지 붙여 더 정확하게 보여주므로
        같은 정보를 문장으로 한 번 더 적으면 헤더만 길어진다 */
-    <p style={{ display: "flex", alignItems: "flex-start", justifyContent: "flex-end", gap: 4,
-      fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", color: "var(--text-muted)",
-      lineHeight: 1.4, textAlign: "right", ...style }} {...rest}>
-      <Icon name="map-pin" size={13} color="var(--text-muted)" style={{ flex: "0 0 auto", marginTop: 2 }} />
-      <span style={{ minWidth: 0 }}>{district.area}</span>
+    <p aria-label={`소재지 ${district.area}`}
+      style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", color: "var(--text-muted)",
+        lineHeight: 1.4, textAlign: "right", whiteSpace: "nowrap", ...style }} {...rest}>
+      {district.area}
     </p>
   );
 }
