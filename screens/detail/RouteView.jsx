@@ -193,17 +193,18 @@ export function RouteView({ dest, origin, asOf, onBack, onOpenDest, onReport }) 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: "var(--space-4)" }}>
               {failed ? (
                 <>
-                  <Badge tone="warning" dot>구간 안내 없음</Badge>
+                  <Badge tone="warning" dot>경로 안내 없음</Badge>
                   <Badge tone="neutral">직선 약 {km(result.distance)}</Badge>
                   <Badge tone="neutral">{result.compass}쪽 방향</Badge>
                 </>
               ) : (
+                /* 여기 적는 것은 **걷기 전에 판단할 값** 둘뿐이다 — 얼마나 걸리고 얼마나 먼가.
+                   "안내 n단계"도 있었는데 뺐다. 걸을지 말지를 정하는 데 쓰이지 않는 수이고,
+                   바로 아래 목록을 보면 몇 줄인지 그냥 보인다. 칩이 셋이 되면 앞의 둘도
+                   같은 무게로 읽혀 정작 중요한 두 값이 묻힌다. */
                 <>
                   <Badge tone="brand" dot>도보 {mins(result.duration)}분</Badge>
                   <Badge tone="neutral">약 {km(result.distance)}</Badge>
-                  {/* 출발 줄은 안내가 아니라 기준점이므로 세지 않는다 — 목록은 n+1 줄이지만
-                      "몇 번 안내하는가"는 n 번이다 */}
-                  <Badge tone="neutral">안내 {Math.max(1, result.steps.length - 1)}단계</Badge>
                 </>
               )}
             </div>
@@ -224,7 +225,7 @@ export function RouteView({ dest, origin, asOf, onBack, onOpenDest, onReport }) 
         {/* ── 경로 실패 폴백 (U-NV-04) ───────────────────────────────────── */}
         {failed ? (
           <Notice tone="warning" title="도보 경로를 불러오지 못했습니다">
-            지금은 구간별 안내를 드릴 수 없어 방향과 직선거리만 알려드립니다.
+            지금은 상세 경로를 안내드릴 수 없어 방향과 직선거리만 알려드립니다.
             <span style={{ display: "block", marginTop: 4 }}>
               QR 지점에서 <b>{result.compass}쪽으로 약 {km(result.distance)}</b> 거리입니다.
               지도의 회색 점선은 실제 걷는 길이 아니라 두 지점을 곧게 이은 선입니다.
@@ -237,16 +238,20 @@ export function RouteView({ dest, origin, asOf, onBack, onOpenDest, onReport }) 
           </Notice>
         ) : null}
 
-        {/* ── 구간별 안내 (U-NV-03) ───────────────────────────────────────
-               항목을 누르면 지도가 그 지점으로 간다. 걸으면서 "지금 어디쯤인가"를 짚는 동작이다. */}
+        {/* ── 상세 경로 안내 (U-NV-03) ────────────────────────────────────
+               항목을 누르면 지도가 그 지점으로 간다. 걸으면서 "지금 어디쯤인가"를 짚는 동작이다.
+
+               머리말 오른쪽의 "n개 · 순서대로"는 뺐다. 번호가 매겨진 목록이 바로 아래에
+               있어 개수도 순서도 눈으로 보이는데, 그것을 다시 글자로 적으면 머리말이
+               목록을 설명하는 줄이 된다.
+
+               [전체 경로 보기]도 뺐다. 지도가 처음부터 경로 전체에 맞춰져 있고, 항목을 눌러
+               한 지점으로 들어간 뒤에도 지도를 직접 축소하면 그만이다 — 지도가 이미 할 줄
+               아는 일에 버튼을 하나 더 얹고 있었다. */}
         {result && !failed ? (
           <section>
-            <SectionHeader title="구간 안내" note={`${result.steps.length}개 · 순서대로`} />
+            <SectionHeader title="상세 경로 안내" />
             <RouteSteps steps={result.steps} activeIndex={active} onPick={pickStep} />
-            <Button variant="ghost" size="sm" icon="maximize" onClick={() => { setActive(-1); fitAll(); }}
-              style={{ alignSelf: "flex-start", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
-              전체 경로 보기
-            </Button>
           </section>
         ) : null}
 
