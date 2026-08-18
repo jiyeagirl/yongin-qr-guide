@@ -91,7 +91,10 @@ export function RouteView({ dest, origin, asOf, onBack, onOpenDest, onReport }) 
 
   const loading = !result;
   const failed = result && result.source === "fallback";
-  const sample = result && result.source === "sample";
+  /* source 가 "sample" 인지는 화면이 구분하지 않는다 (2026-08-18). 예전에는 그때
+     "연동 전 예시" 라는 붉은 고지를 달았는데, 그것은 실제로 쓰는 사람이 아니라 검수하는
+     우리를 향한 문장이었다. 경로 출처는 walkRoute.js 가 감추기로 한 것이고(머리말),
+     화면은 받은 경로를 그냥 안내한다. */
 
   /* 지도에 넘길 것 — 선, 꺾임 표시, 도착 핀. steps 를 그대로 넘겨 인덱스를 맞춘다 */
   const mapRoute = React.useMemo(() => {
@@ -261,23 +264,21 @@ export function RouteView({ dest, origin, asOf, onBack, onOpenDest, onReport }) 
         </Button>
 
         {/* ── 고지 (U-CM-07 · U-CM-08) ────────────────────────────────────
-               두 가지를 더 적는다.
-                 1. 목록의 직선거리와 여기 도보 거리가 왜 다른지 (위 머리말 참조)
-                 2. 예시 경로일 때는 그 사실. 지도 위의 파란 실선은 "이 길로 가라"로 읽히므로
-                    실제 경로가 아니라면 반드시 밝혀야 한다. 실 API 를 붙이면 이 줄은
-                    source 가 "api" 로 바뀌면서 저절로 사라진다 — 지우는 것을 잊을 자리가 없다. */}
+               목록의 직선거리와 여기 도보 거리가 왜 다른지 적는다 (위 머리말 참조).
+               "직선거리 · 도보 거리"라는 낱말만 던지면 그 말을 이미 아는 사람에게만 설명이 된다.
+               어느 쪽이 실제로 걷는 값인지 먼저 말하고, 나머지 하나가 왜 짧은지를 잇는다. */}
         <DetailNotice asOf={isFacility ? `공공시설 정보 ${FACILITY_AS_OF}` : `점포 정보 ${asOf || ""}`}>
           {result && !failed ? (
-            <span style={{ display: "block" }}>
-              목록에 적힌 약 {km(straight)}는 직선거리이고, 위 {km(result.distance)}는 실제로 걷는 길 기준이라 더 깁니다.
-              도보 시간은 성인 걸음(분당 {WALK_M_PER_MIN}m) 기준입니다.
-            </span>
-          ) : null}
-          {sample ? (
-            <span style={{ display: "block", marginTop: 4, color: "var(--yong-red-500)" }}>
-              지도의 경로선은 <b>연동 전 예시</b>입니다. 실제 도보 길찾기 응답이 아니므로
-              현장에서는 도로 표지와 지도를 함께 확인해 주세요.
-            </span>
+            <>
+              <span style={{ display: "block" }}>
+                위에 적힌 <b>약 {km(result.distance)}</b>가 실제로 걸어가는 길을 따라 잰 거리입니다.
+                목록에서 보신 약 {km(straight)}는 두 지점을 곧게 이은 직선거리라 더 짧게 나옵니다.
+              </span>
+              <span style={{ display: "block", marginTop: 4 }}>
+                도보 {mins(result.duration)}분은 성인 걸음(분당 {WALK_M_PER_MIN}m) 기준이며,
+                신호 대기나 경사에 따라 달라질 수 있습니다.
+              </span>
+            </>
           ) : null}
         </DetailNotice>
       </DetailBody>
