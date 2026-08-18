@@ -25,7 +25,17 @@ import { eun } from "../core/josa.js";
 
    말풍선은 경고가 **새로 생겼을 때 저절로 열린다.** 배지만 두고 눌러야 열리게 하면,
    가장 알아야 할 사람(급히 대피소를 찾는 사람)이 그 배지를 못 보고 지나간다.
-   한 번 닫으면 다시 열리지 않는다 — 같은 경고를 계속 들이밀지 않는다. */
+   한 번 닫으면 다시 열리지 않는다 — 같은 경고를 계속 들이밀지 않는다.
+
+   ── 말풍선은 항목이 아니라 **줄 전체**에 붙는다 (2026-08-18 수정) ──
+   처음에는 경고가 걸린 항목의 왼쪽 끝에 붙이고 오른쪽으로 펼쳤다. 그런데 SAFETY 순서가
+   AED · 대피소 · 쉼터라 대피소는 줄의 가운데쯤에서 시작한다 — 거기서 280px 을 펼치면
+   화면 오른쪽으로 잘려 나갔다. 항목마다 어디서 시작하는지가 다르므로, 시작점을 항목에
+   맞추는 한 어느 유형에서든 잘릴 수 있다.
+
+   그래서 말풍선을 **줄 컨테이너에 좌우로 붙여**(left:0 right:0) 폭을 화면 안에 묶고,
+   대신 **꼬리만 경고가 걸린 항목의 아이콘 아래로 옮긴다.** 어느 유형에 붙은 경고인지는
+   꼬리가 가리키고, 폭은 컨테이너가 책임진다. 잘릴 수 있는 자유도를 없앤 것이다. */
 export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔 지점 기준 직선거리 · 가까운 순", style, ...rest }) {
   const warnOf = t => warnings.find(w => w.type === t);
   /* 경고가 걸린 유형은 개수가 0 이어도 반드시 보여준다 — 경고를 걸어놓고 그 대상을
@@ -34,8 +44,46 @@ export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔
 
   /* 경고 묶음이 바뀔 때만 다시 연다. 유형 칩을 바꾸면 경고 대상도 바뀌므로 그때는 새 경고다 */
   const key = warnings.map(w => `${w.type}:${w.text}`).join("|");
-  const [open, setOpen] = React.useState(null);
+  /* 첫 값은 effect 가 아니라 초기화에서 정한다. effect 로만 열면 첫 프레임은 닫힌 상태로
+     그려졌다가 곧바로 열려, 급히 보는 사람 눈에 한 번 깜빡이는 것으로 남는다. */
+  const [open, setOpen] = React.useState(() => (warnings.length ? warnings[0].type : null));
   React.useEffect(() => { setOpen(warnings.length ? warnings[0].type : null); }, [key]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* 문장은 여기 한 곳에서만 만든다 — 화면과 스크린리더가 다른 말을 하면 안 된다.
+     조사는 유형 이름의 받침을 따른다 ("대피소는" / "화장실은") */
+  const textOf = t => {
+    const w = warnOf(t);
+    if (!w) return null;
+    const label = FACILITY_LABELS[t];
+    return `가까운 곳에 ${label}가 없습니다. 가장 가까운 ${eun(label)} ${w.text} 떨어져 있습니다.`;
+  };
+
+  /* 꼬리 위치 — 열린 항목의 아이콘 중심을 줄 컨테이너 기준으로 잰다.
+     상수로 둘 수 없다. 앞에 오는 항목의 폭이 개수 자릿수와 글자 크기(2차 확대)에 따라
+     달라지므로, 재지 않으면 꼬리가 엉뚱한 유형을 가리킨다. */
+  const rowRef = React.useRef(null);
+  const btns = React.useRef({});
+  const [tailX, setTailX] = React.useState(null);
+
+  /* 브라우저에서는 그리기 전에 재야 꼬리가 한 번 튀지 않는다. 서버 렌더(검수 스크립트)에는
+     useLayoutEffect 가 없다시피 하므로 경고를 피해 useEffect 로 떨어뜨린다. */
+  const useMeasure = typeof document === "undefined" ? React.useEffect : React.useLayoutEffect;
+  useMeasure(() => {
+    const place = () => {
+      const row = rowRef.current, btn = open && btns.current[open];
+      if (!row || !btn) { setTailX(null); return; }
+      const r = row.getBoundingClientRect(), b = btn.getBoundingClientRect();
+      const ICON_MID = 9;                                  /* FacilityIcon size 18 의 절반 */
+      const TAIL_HALF = 4;                                 /* 꼬리 정사각형 8px 의 절반 */
+      const x = b.left - r.left + ICON_MID - TAIL_HALF;
+      /* 말풍선 모서리(radius-sm)를 넘어가면 꼬리가 테두리 밖으로 떨어져 나온다 */
+      setTailX(Math.max(10, Math.min(x, r.width - 18)));
+    };
+    place();
+    /* 글자 크기 변경·회전·시트 스냅으로 줄 폭이 바뀌면 다시 잰다 */
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [open, key, safety.length]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", ...style }} {...rest}>
@@ -45,15 +93,13 @@ export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔
         {basis}
       </p>
       {safety.length ? (
-        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "var(--space-2) var(--space-4)" }}>
+        /* position:relative — 말풍선이 이 줄에 좌우로 매달린다 (머리말 참조) */
+        <div ref={rowRef} style={{ position: "relative", display: "flex", alignItems: "center",
+          flexWrap: "wrap", gap: "var(--space-2) var(--space-4)" }}>
           {safety.map(t => {
             const warn = warnOf(t);
             const label = FACILITY_LABELS[t];
-            /* 문장은 여기 한 곳에서만 만든다 — 화면과 스크린리더가 다른 말을 하면 안 된다.
-               조사는 유형 이름의 받침을 따른다 ("대피소는" / "화장실은") */
-            const text = warn
-              ? `가까운 곳에 ${label}가 없습니다. 가장 가까운 ${eun(label)} ${warn.text} 떨어져 있습니다.`
-              : null;
+            const text = textOf(t);
 
             const body = (
               <>
@@ -82,43 +128,43 @@ export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔
 
             const on = open === t;
             return (
-              <span key={t} style={{ position: "relative", display: "inline-flex" }}>
-                <button type="button" onClick={() => setOpen(on ? null : t)}
-                  aria-expanded={on} aria-label={text}
-                  style={{ ...itemStyle, background: "none", border: "none", padding: 0, cursor: "pointer",
-                    textAlign: "left" }}>
-                  {body}
-                </button>
-
-                {/* 말풍선 — 아이콘 아래로 뜬다. 시트 헤더는 스크롤 영역 밖이라 목록 위로 겹쳐도
-                    목록과 함께 밀려 올라가지 않는다. 닫기는 배지를 다시 누르거나 X 로 한다.
-                    폭은 화면을 넘지 않게 묶고, 줄 수는 내용에 맡긴다 (U-CM-14 고정 높이 금지) */}
-                {on ? (
-                  <span role="status" style={{ position: "absolute", left: -4, top: "calc(100% + 8px)",
-                    zIndex: 2, width: "max-content", maxWidth: "min(280px, 78vw)",
-                    display: "flex", alignItems: "flex-start", gap: "var(--space-2)",
-                    padding: "9px 10px", background: "var(--state-warning-soft)",
-                    border: "var(--stroke-hairline) solid var(--yong-amber-500)",
-                    borderRadius: "var(--radius-sm)", boxShadow: "var(--shadow-raised)" }}>
-                    {/* 꼬리 — 45도 돌린 정사각형에 위·왼쪽 테두리만 남겨 말풍선 테두리와 잇는다
-                        (KakaoMap 의 앵커 말풍선과 같은 방식이다) */}
-                    <span aria-hidden="true" style={{ position: "absolute", left: 12, top: -5,
-                      width: 8, height: 8, background: "var(--state-warning-soft)",
-                      borderTop: "var(--stroke-hairline) solid var(--yong-amber-500)",
-                      borderLeft: "var(--stroke-hairline) solid var(--yong-amber-500)",
-                      transform: "rotate(45deg)" }} />
-                    <span style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)",
-                      color: "var(--text-body)", lineHeight: 1.5, wordBreak: "keep-all" }}>{text}</span>
-                    <button type="button" onClick={() => setOpen(null)} aria-label="안내 닫기"
-                      style={{ flex: "0 0 auto", display: "inline-flex", background: "none", border: "none",
-                        padding: 2, margin: -2, cursor: "pointer", color: "var(--text-muted)" }}>
-                      <Icon name="x" size={14} />
-                    </button>
-                  </span>
-                ) : null}
-              </span>
+              <button key={t} type="button" ref={el => { btns.current[t] = el; }}
+                onClick={() => setOpen(on ? null : t)}
+                aria-expanded={on} aria-label={text}
+                style={{ ...itemStyle, background: "none", border: "none", padding: 0, cursor: "pointer",
+                  textAlign: "left" }}>
+                {body}
+              </button>
             );
           })}
+
+          {/* 말풍선 — 줄 컨테이너에 좌우로 붙는다. 폭이 컨테이너와 같으므로 어느 유형에 걸려도
+              화면 밖으로 나갈 수 없다 (머리말 참조). 꼬리만 해당 아이콘 아래로 옮긴다.
+              시트 헤더는 스크롤 영역 밖이라 목록 위로 겹쳐도 목록과 함께 밀려 올라가지 않는다.
+              줄 수는 내용에 맡긴다 (U-CM-14 고정 높이 금지) */}
+          {open && textOf(open) ? (
+            <span role="status" style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 8px)",
+              zIndex: 2, display: "flex", alignItems: "flex-start", gap: "var(--space-2)",
+              padding: "9px 10px", background: "var(--state-warning-soft)",
+              border: "var(--stroke-hairline) solid var(--yong-amber-500)",
+              borderRadius: "var(--radius-sm)", boxShadow: "var(--shadow-raised)" }}>
+              {/* 꼬리 — 45도 돌린 정사각형에 위·왼쪽 테두리만 남겨 말풍선 테두리와 잇는다
+                  (KakaoMap 의 앵커 말풍선과 같은 방식이다). left 는 위에서 실측한 값이다 —
+                  아직 못 쟀으면(첫 프레임·SSR) 왼쪽 기본 자리에 둔다. */}
+              <span aria-hidden="true" style={{ position: "absolute", left: tailX == null ? 12 : tailX, top: -5,
+                width: 8, height: 8, background: "var(--state-warning-soft)",
+                borderTop: "var(--stroke-hairline) solid var(--yong-amber-500)",
+                borderLeft: "var(--stroke-hairline) solid var(--yong-amber-500)",
+                transform: "rotate(45deg)" }} />
+              <span style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)",
+                color: "var(--text-body)", lineHeight: 1.5, wordBreak: "keep-all" }}>{textOf(open)}</span>
+              <button type="button" onClick={() => setOpen(null)} aria-label="안내 닫기"
+                style={{ flex: "0 0 auto", display: "inline-flex", background: "none", border: "none",
+                  padding: 2, margin: -2, cursor: "pointer", color: "var(--text-muted)" }}>
+                <Icon name="x" size={14} />
+              </button>
+            </span>
+          ) : null}
         </div>
       ) : null}
     </div>
