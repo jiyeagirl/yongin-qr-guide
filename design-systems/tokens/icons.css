@@ -39,6 +39,20 @@
 --pin-festival:var(--yong-amber-500); /* @kind color */
 --pin-selected:var(--brand-primary-strong); /* @kind color */
 --pin-stroke:var(--yong-white); /* @kind color */
+/* S08 코스에서 지금 고른 순번. 초록을 진하게 하는 것으로는 부족했다 —
+   코스 핀이 전부 초록이고 점선도 초록이라, 한 칸만 어두워진 것은 옆에 두고 비교해야 보인다.
+
+   **크림 계열의 노랑**이다 (2026-08-18. 처음에는 amber-500 을 썼는데 주황으로 읽혔다).
+   cream 은 조아용 아트워크에서 뽑은 브랜드 색이라 새 색을 들이지 않으면서도 초록과
+   확실히 갈린다. 경고(amber = --state-warning)와 겹치지 않는 것도 이유다 — 지금 고른
+   순번이 경고색이면 무언가 잘못된 것처럼 읽힌다.
+   글자는 잉크색이어야 대비가 선다 — 노랑 위의 흰 글자는 4.5:1 을 넘지 못한다.
+
+   방문한 곳은 색을 하나 더 만들지 않고 같은 초록을 흐리게 둔다. 색을 셋으로 늘리면
+   "무슨 색이 무슨 뜻인지"를 외워야 하고, 방문 여부는 지도가 아니라 목록이 말하는 값이다. */
+--pin-course-active:var(--yong-cream-700); /* @kind color */
+--pin-course-active-ink:var(--yong-ink-900); /* @kind color */
+--pin-course-done-opacity:.45; /* @kind other */
 /* 지도 위 라벨(앵커 지점명 등) 바탕 — 위성/일반 지도 어느 쪽에서도 읽히도록 잉크 계열 반투명 */
 --map-label-bg:rgba(22,34,28,.86); /* @kind color */
 

@@ -52,6 +52,7 @@ export { Sheet, SNAP_ORDER, SNAP_HEIGHT } from "./components/feedback/Sheet.jsx"
 export { FloatingControls } from "./components/feedback/FloatingControls.jsx";
 export { EmptyState } from "./components/feedback/EmptyState.jsx";
 export { LoadingBar } from "./components/feedback/LoadingBar.jsx";
+export { ProgressBar } from "./components/feedback/ProgressBar.jsx";
 
 /* map */
 export { MapCanvas } from "./components/map/MapCanvas.jsx";
