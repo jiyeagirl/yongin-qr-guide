@@ -157,12 +157,18 @@ function roadPart(addr = "") {
 
 const NAMED = { aed: "AED", shelter: "대피소" };
 
+/* 규칙 하나를 두 곳이 쓴다 (2026-08-19). 관리자 웹(admin/)에서 AED 의 주소를 고치면
+   이름도 따라 바뀌어야 하는데, 그 계산을 저쪽에 다시 적으면 두 이름 규칙이 생긴다.
+   화장실·쉼터는 명칭이 필수 항목이라 데이터의 값을 그대로 쓴다. */
+export function facilityName(f) {
+  return f.name || `${roadPart(f.addr)} ${NAMED[f.type] || ""}`.trim();
+}
+
 export const FACILITIES = RAW
   .map((f, i) => ({
     id: `fc-${String(i + 1).padStart(3, "0")}`,
     ...f,
-    /* 화장실·쉼터는 명칭이 필수 항목이라 데이터의 값을 그대로 쓴다 */
-    name: f.name || `${roadPart(f.addr)} ${NAMED[f.type] || ""}`.trim(),
+    name: facilityName(f),
     ...at(f.dist, f.bearing),
   }))
   .sort((a, b) => a.dist - b.dist);

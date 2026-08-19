@@ -16,6 +16,7 @@
         "patterns": [
           {
             "group": [
+              "components/admin/**",
               "components/brand/**",
               "components/core/**",
               "components/feedback/**",
@@ -215,8 +216,8 @@
         "message": "<Sheet> snap must be one of 'collapsed' | 'half' | 'full'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='StatTile'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|value|unit|icon|tone|delta|style|key|ref|className|style|children)$/]",
-        "message": "<StatTile> doesn't accept that prop. Declared props: label, value, unit, icon, tone, delta, style."
+        "selector": "JSXOpeningElement[name.name='StatTile'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|value|unit|icon|tone|delta|deltaTone|style|key|ref|className|style|children)$/]",
+        "message": "<StatTile> doesn't accept that prop. Declared props: label, value, unit, icon, tone, delta, deltaTone, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='StatTile'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:plain|brand|dark)$/]",
@@ -243,7 +244,8 @@
   "overrides": [
     {
       "files": [
-        "**/index.js"
+        "**/index.js",
+        "**/admin.js"
       ],
       "rules": {
         "no-restricted-imports": "off"

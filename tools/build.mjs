@@ -39,6 +39,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
    ds 와 entry 는 그 화면 index.html 의 DSLoader.mount 인자와 같아야 한다. */
 const TARGETS = [
   { dir: "screens/main", ds: "design-systems/index.js", entry: "screens/main/App.jsx" },
+  /* 관리자 웹은 **다른 진입점**을 쓴다 (design-systems/admin.js). index.js 에 관리자
+     컴포넌트를 합치면 재수출을 타고 시민용 번들에 데이터 표와 다이얼로그가 들어간다. */
+  { dir: "admin", ds: "design-systems/admin.js", entry: "admin/AdminApp.jsx" },
 ];
 
 let babel;

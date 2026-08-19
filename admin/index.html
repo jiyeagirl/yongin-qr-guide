@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#2f9260">
+<!-- 관리자 화면이 검색에 잡힐 이유가 없다. 로그인이 붙어 있어도 목록에 뜨는 것 자체가
+     "여기 관리자 화면이 있다"는 안내가 된다. -->
+<meta name="robots" content="noindex, nofollow">
+<title>용인시 QR 위치안내 관리자</title>
+
+<link rel="stylesheet" href="../design-systems/styles.css">
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+
+<style>
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--surface-page);
+  }
+  #root { min-height: 100dvh; }
+  /* 시민용 index.html 에 있는 390x844 기기 틀 미디어쿼리를 **가져오지 않았다.**
+     저것은 모바일 화면을 데스크톱에서 검수하기 위한 미리보기 틀인데,
+     관리자는 데스크톱이 실제 환경이다. 여기서 틀을 씌우면 그게 곧 버그다.
+     좁은 화면 안내는 AdminShell 이 직접 그린다 (--admin-min 1024px). */
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/* 부트스트랩 — screens/main/index.html 과 **같은 규칙**이다.
+ *
+ *   번들 있음  bundle.js 하나만 받는다                  ← 배포
+ *   번들 없음  Babel 을 받아 .jsx 원본을 그 자리에서 변환  ← 로컬 개발
+ *
+ * 두 화면이 다른 방식으로 뜨면 한쪽에서만 깨지는 버그가 생긴다. 다른 것은 세 가지뿐:
+ *   - 경로가 한 단계 얕다 (../design-systems/)
+ *   - 디자인 시스템 진입점이 admin.js 다 (index.js 가 아니다)
+ *   - 엔트리가 ./AdminApp.jsx 다
+ */
+(function () {
+  var host = document.querySelector("#root");
+  var devForced = /[?&]dev=1\b/.test(location.search);
+
+  function fail(err) {
+    console.error(err);
+    host.innerHTML =
+      '<div style="padding:24px;font:16px/1.6 system-ui;color:#a5322b">'
+      + "<b>화면을 불러오지 못했습니다.</b>"
+      + '<pre style="white-space:pre-wrap;font-size:13px;color:#2f3d36">'
+      + String(err && err.message ? err.message : err).replace(/[<>&]/g, "") + "</pre>"
+      + '<p style="font-size:14px;color:#5b6a62">file:// 로 연 경우 HTTP 서버로 열어야 합니다. '
+      + "저장소 루트에서 <code>node tools/serve.mjs</code> 실행 후 "
+      + "<code>http://localhost:8000/admin/</code> 로 접속하세요.</p></div>";
+  }
+
+  function script(src) {
+    return new Promise(function (ok, no) {
+      var s = document.createElement("script");
+      s.src = src; s.crossOrigin = "anonymous";
+      s.onload = ok;
+      s.onerror = function () { no(new Error(src + " 를 불러오지 못했습니다.")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function react(dev) {
+    var f = dev ? "development" : "production.min";
+    return script("https://unpkg.com/react@18.3.1/umd/react." + f + ".js")
+      .then(function () { return script("https://unpkg.com/react-dom@18.3.1/umd/react-dom." + f + ".js"); });
+  }
+
+  function useLoader() {
+    return react(true)
+      .then(function () { return script("https://unpkg.com/lucide@latest/dist/umd/lucide.js"); })
+      .then(function () { return script("https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"); })
+      .then(function () { return script("../design-systems/_ds_loader.js"); })
+      .then(function () {
+        return DSLoader.mount({ ds: "../design-systems/admin.js", entry: "./AdminApp.jsx", el: "#root" });
+      });
+  }
+
+  function useBundle() {
+    return react(false)
+      .then(function () { return script("./bundle.js"); })
+      .then(function () {
+        if (typeof window.__APP__ !== "function") throw new Error("bundle.js 에 화면 컴포넌트가 없습니다.");
+        ReactDOM.createRoot(host).render(React.createElement(window.__APP__));
+      });
+  }
+
+  if (devForced) { useLoader().catch(fail); return; }
+
+  fetch("./bundle.js", { method: "HEAD" })
+    .then(function (r) { return r.ok ? useBundle() : useLoader(); })
+    .catch(function () { return useLoader(); })
+    .catch(fail);
+})();
+</script>
+</body>
+</html>

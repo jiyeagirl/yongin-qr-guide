@@ -78,6 +78,7 @@ http.createServer((req, res) => {
     const origin = `http://localhost:${PORT}`;
     console.log(`\n  yongin 정적 서버 → ${origin}`);
     console.log(`    본 화면(3탭)      ${origin}/screens/main/`);
+    console.log(`    관리자 웹         ${origin}/admin/   (데스크톱 전용 · 1024px 이상)`);
     console.log(`\n  지도가 회색으로만 보인다면 카카오 개발자 콘솔에서`);
     console.log(`  [앱 설정 > 앱 > 플랫폼 키 > JavaScript 키 > SDK 도메인] 에`);
     console.log(`  ${origin} 을 등록했는지 확인하세요. (127.0.0.1 은 별도 도메인으로 취급됩니다)`);
