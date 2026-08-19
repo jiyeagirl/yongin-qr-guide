@@ -22,7 +22,7 @@ import { FestivalList } from "../detail/FestivalList.jsx";
 import { DistrictList } from "../detail/DistrictList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, back, closeAll } from "./router.js";
-import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF,
+import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
   DISTRICT_LIST_PAGE_SIZE } from "./config.js";
 
 /* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.0 확정 결정사항 11).
@@ -549,6 +549,10 @@ export function MainApp({ qr = null, noDistrict = false }) {
       <CourseDetail
         course={target}
         anchor={d.anchor}
+        /* 기준일자를 넘기지 않고 있었다 (2026-08-19 고침) — 코스 화면 맨 아래가
+           "점포 정보 undefined 기준"으로 나갔다. 코스는 점포 데이터로 만들어지므로
+           시트·점포 상세와 같은 값을 본다 */
+        asOf={STORE_AS_OF}
         onBack={back}
         /* 코스 안의 가게에서 점포 상세·길찾기로 — history 를 한 칸 더 쌓는다.
            뒤로가기를 누르면 코스로 돌아온다. 다만 그때 고른 순번은 남지 않는다 —

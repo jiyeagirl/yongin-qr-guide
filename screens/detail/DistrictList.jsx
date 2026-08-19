@@ -149,11 +149,15 @@ export function DistrictList({ districts = [], guOrder = [], sortNear, pageSize 
           </div>
         ) : null}
 
-        {/* 기준일자를 적지 않는다 (정의서 3-2: 상점가 정보는 미표기 대상) */}
-        <DetailNotice style={{ marginTop: "var(--space-6)" }}>
-          <span style={{ display: "block" }}>
-            점포 수와 온누리 가맹 수는 시 안내 기준이며 실제와 다를 수 있습니다.
-          </span>
+        {/* 기준일자를 적지 않는다 (정의서 3-2: 상점가 정보는 미표기 대상)
+
+             119 안내를 끄고 "참고용"을 위 문장에 이었다 (2026-08-19). 전에는 두 줄이었는데,
+             앞줄이 이미 "실제와 다를 수 있다"고 말한 뒤 뒷줄이 "참고용입니다"로 같은 말을
+             되풀이했다. 119 는 이 화면에 안전시설이 한 줄도 없어서 끈다 — S08·S09·S12 와
+             같은 이유다 (DetailNotice 의 emergency 주석). */}
+        <DetailNotice emergency={false} style={{ marginTop: "var(--space-6)" }}>
+          안내 정보는 참고용이며, 점포 수와 온누리 가맹 수는 시 안내 기준이라
+          실제와 다를 수 있습니다.
         </DetailNotice>
       </div>
     </DetailPage>
