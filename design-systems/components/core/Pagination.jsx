@@ -41,11 +41,22 @@ function pagesFor(page, count) {
   return out;
 }
 
+/* ── 누르는 자리와 칠하는 자리를 나눈다 (2026-08-18) ─────────────────────────
+   단추는 44px(--tap-min) 그대로 두고, 색은 그 안의 30px 원에만 칠한다.
+   전에는 단추 전체를 칠했는데 두 글자짜리 숫자에 44×44 짜리 색면이 붙어 **글자보다 칠이
+   훨씬 컸다** — 목록 끝의 작은 컨트롤인데 화면에서 가장 큰 덩어리가 됐다.
+
+   손가락 자리를 줄인 것이 아니다. 44px 는 그대로이고 눈에 보이는 것만 작아졌다 (U-CM-13).
+   세 자리 쪽수(100쪽 이상)에서는 원이 알약으로 늘어난다 — radius 999 라 저절로 그렇다. */
 const cell = {
   minWidth: "var(--tap-min)", minHeight: "var(--tap-min)",
   display: "inline-flex", alignItems: "center", justifyContent: "center",
-  background: "none", border: "none", borderRadius: "var(--radius-sm)",
+  padding: 0, background: "none", border: "none",
   fontFamily: "var(--font-sans)", fontSize: "var(--fs-label)", fontWeight: "var(--fw-semibold)",
+};
+const disc = {
+  minWidth: 30, height: 30, padding: "0 6px", borderRadius: 999,
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
 };
 
 export function Pagination({ page = 1, pageCount = 1, onChange, label = "쪽 넘기기", style, ...rest }) {
@@ -82,10 +93,10 @@ export function Pagination({ page = 1, pageCount = 1, onChange, label = "쪽 넘
           aria-current={n === page ? "page" : undefined}
           aria-label={`${n}쪽${n === pageCount ? `, 마지막` : ""}`}
           style={{ ...cell, cursor: n === page ? "default" : "pointer",
-            background: n === page ? "var(--brand-primary-soft)" : "none",
             color: n === page ? "var(--brand-primary-strong)" : "var(--text-body)",
             fontWeight: n === page ? "var(--fw-bold)" : "var(--fw-medium)" }}>
-          {n}
+          {/* 칠은 이 원에만. 단추는 44px 그대로다 (위 disc 주석) */}
+          <span style={{ ...disc, background: n === page ? "var(--brand-primary-soft)" : "none" }}>{n}</span>
         </button>
       )))}
 
