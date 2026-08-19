@@ -4,7 +4,7 @@
 
 /* core */
 export { Icon } from "./components/core/Icon.jsx";
-export { FacilityIcon, FACILITY_ICONS, FACILITY_LABELS, FACILITY_TYPES, FACILITY_PIN, SAFETY, EMERGENCY, CONVENIENCE } from "./components/core/FacilityIcon.jsx";
+export { FacilityIcon, FACILITY_ICONS, FACILITY_LABELS, FACILITY_TYPES, FACILITY_PIN, FACILITY_BADGE, facilityBadgeTone, SAFETY, EMERGENCY, CONVENIENCE } from "./components/core/FacilityIcon.jsx";
 export { CategoryIcon, CATEGORY_ICONS, CATEGORY_LABELS } from "./components/core/CategoryIcon.jsx";
 export { Button } from "./components/core/Button.jsx";
 export { TextButton } from "./components/core/TextButton.jsx";

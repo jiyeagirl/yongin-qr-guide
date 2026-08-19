@@ -38,6 +38,21 @@ export const FACILITY_TYPES = ["aed", "shelter", "rest", "toilet"];
    지도에서 본 색과 목록에서 본 색이 어긋나면 둘을 같은 것으로 읽지 못한다. */
 export const FACILITY_PIN = { aed: "--pin-aed", shelter: "--pin-shelter", toilet: "--pin-toilet", rest: "--pin-rest" };
 
+/* 목록·상세의 유형 배지 톤 (2026-08-19 신설). 위 핀 색과 **같은 계열**을 본다 —
+   지도에서 본 색과 목록에서 본 색이 어긋나면 둘을 같은 것으로 읽지 못한다.
+
+   전에는 부르는 쪽마다 `tone={urgent ? "danger" : "info"}` 를 적었다. 그 삼항은 4종을
+   2색으로 뭉개서, **화장실과 쉼터의 배지가 완전히 같은 색**이었다 (AED·대피소도 마찬가지).
+   지도 핀은 teal-700 / teal-500 으로 갈려 있는데 목록은 갈리지 않아, 색이 유형을
+   말하다 마는 상태였다. 화장실을 파랑으로 옮겨(icons.css 의 --pin-toilet 주석) 표로 세운다.
+
+   **AED 와 대피소는 여전히 같은 빨강이다.** 기능명세서 5-2 가 "AED와 대피소는 적색 계열"
+   이라고 못박아 색으로는 가를 자리가 아니다 — 그 둘을 가르는 것은 배지의 **글자**이고,
+   애초에 배지를 단 이유가 그것이다 (FacilityRow 머리말 · 6장 남은 확인사항 #1).
+   화장실·쉼터는 그런 제약이 없다. 5-2 는 "중립 계열"만 요구하고 파랑도 중립 계열이다. */
+export const FACILITY_BADGE = { aed: "danger", shelter: "danger", toilet: "blue", rest: "info" };
+export function facilityBadgeTone(type) { return FACILITY_BADGE[type] || "info"; }
+
 export function FacilityIcon({ type, size = 24, emphasis = true, style, ...rest }) {
   /* emphasis: 안전시설을 적색으로 물들인다. 칩처럼 색이 선택 상태를 뜻하는 자리에서는 꺼야 한다 */
   const color = emphasis && EMERGENCY.includes(type) ? "var(--pin-emergency)" : undefined;

@@ -1,7 +1,7 @@
 import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice, InfoList, yesNoMark, CopyField, Button, Badge,
-  FacilityIcon, FACILITY_LABELS, EMERGENCY, Icon,
+  FacilityIcon, FACILITY_LABELS, EMERGENCY, facilityBadgeTone, Icon,
 } from "../../design-systems/index.js";
 import { WALK_M_PER_MIN, FACILITY_AS_OF } from "../main/config.js";
 
@@ -113,7 +113,9 @@ export function FacilityDetail({ facility, onBack, onRoute, onReport, onCopied }
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "var(--space-2)" }}>
             {/* 유형을 글자로 한 번 더 적는다 — 지도 핀은 색으로만 4종을 가르는데
                 색약 사용자에게는 그것이 구분이 되지 않는다 (6장 남은 확인사항 #1) */}
-            <Badge tone={urgent ? "danger" : "info"}>{label}</Badge>
+            {/* 색은 디자인 시스템의 유형별 표가 정한다 — 목록(FacilityRow)과 같은 표라
+                같은 시설이 목록과 상세에서 다른 색으로 나올 일이 없다 */}
+            <Badge tone={facilityBadgeTone(f.type)}>{label}</Badge>
           </div>
           <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-start" }}>
             <span style={{ flex: "0 0 auto", paddingTop: 3 }}>

@@ -1,7 +1,7 @@
 import React from "react";
 import { ListRow } from "../core/ListRow.jsx";
 import { Badge } from "../core/Badge.jsx";
-import { FacilityIcon, FACILITY_LABELS, EMERGENCY } from "../core/FacilityIcon.jsx";
+import { FacilityIcon, FACILITY_LABELS, facilityBadgeTone } from "../core/FacilityIcon.jsx";
 
 /* 공공시설 목록의 한 행 (U-FC-02 / U-FC-04 / U-FC-06). 점포 쪽 StoreRow 와 짝을 이룬다.
    같은 ListRow 위에 올라가므로 두 탭의 목록이 서로 다른 물건처럼 보이지 않는다.
@@ -15,7 +15,6 @@ import { FacilityIcon, FACILITY_LABELS, EMERGENCY } from "../core/FacilityIcon.j
 export function FacilityRow({ facility, onClick, selected = false, divider = true, walkMPerMin = 67, style, ...rest }) {
   const f = facility;
   const walk = Math.max(1, Math.round(f.dist / walkMPerMin));
-  const urgent = EMERGENCY.includes(f.type);
 
   /* 1,000m 를 넘으면 m 대신 km 로 적는다. "약 1400m"는 읽는 순간 크기 감이 오지 않는다 */
   const distance = f.dist >= 1000 ? `약 ${(f.dist / 1000).toFixed(1)}km` : `약 ${f.dist}m`;
@@ -33,8 +32,10 @@ export function FacilityRow({ facility, onClick, selected = false, divider = tru
       trailing={null}
       icon={<FacilityIcon type={f.type} size={22} />}
       title={f.name}
-      /* size="sm" — 점포 목록의 온누리 배지와 같은 자리, 같은 높이다 (Badge 주석 참조) */
-      tag={<Badge size="sm" tone={urgent ? "danger" : "info"}>{FACILITY_LABELS[f.type] || "공공시설"}</Badge>}
+      /* size="sm" — 점포 목록의 온누리 배지와 같은 자리, 같은 높이다 (Badge 주석 참조).
+         색은 유형별 표가 정한다 — 여기서 삼항으로 적었더니 4종이 2색으로 뭉개졌다
+         (FacilityIcon 의 FACILITY_BADGE 주석) */
+      tag={<Badge size="sm" tone={facilityBadgeTone(f.type)}>{FACILITY_LABELS[f.type] || "공공시설"}</Badge>}
       /* 첫 줄은 거리, 둘째 줄은 "어디로 가면 되는가".
          둘째 줄의 출처가 유형마다 다르다 (입력 항목 정의서 2-1~2-4). AED 는 설치 위치,
          대피소는 실제 위치(시설명)가 필수 항목이라 그것을 쓰고, 화장실·쉼터는 그런 항목이

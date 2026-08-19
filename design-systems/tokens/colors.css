@@ -26,7 +26,10 @@
    붙는다. 그 사이의 코코아색이다. */
 --yong-amber-50:#fef7ed;--yong-amber-100:#fdeed6;--yong-amber-300:#f8cb8e;--yong-amber-500:#f2a73b;--yong-amber-700:#7a4f0d;--yong-amber-800:#9c5c0a;
 --yong-red-50:#fdf1f0;--yong-red-100:#fbe2e0;--yong-red-300:#f2a9a3;--yong-red-500:#e5544b;--yong-red-700:#b23a33;--yong-red-800:#a5322b;
---yong-blue-50:#f0f5fd;--yong-blue-100:#e2ecfb;--yong-blue-300:#a8c4f0;--yong-blue-500:#3d7be5;--yong-blue-700:#26509c;
+/* blue-600 은 화장실 핀 전용으로 들인 단이다 (2026-08-19). blue-500 은 지도에서 이미
+   QR 지점("내 위치")의 색이라, 같은 지도에 그 색으로 핀을 꽂으면 두 가지가 같은 것을
+   가리키는 것처럼 읽힌다. 한 단 어둡게 내려 갈랐다 — icons.css 의 --pin-toilet 주석 참조. */
+--yong-blue-50:#f0f5fd;--yong-blue-100:#e2ecfb;--yong-blue-300:#a8c4f0;--yong-blue-500:#3d7be5;--yong-blue-600:#2f66c9;--yong-blue-700:#26509c;
 --yong-violet-50:#f5f2fb;--yong-violet-100:#eae3f6;--yong-violet-300:#c4b0e4;--yong-violet-500:#8163c0;--yong-violet-700:#573f87;
 --yong-sand-50:#faf7f2;--yong-sand-100:#f2ebdf;--yong-sand-300:#dfcfb2;--yong-sand-500:#b99a63;--yong-sand-600:#6f5844;--yong-sand-700:#6b5530;
 --yong-rose-50:#fdf2f5;--yong-rose-100:#f9e3ea;--yong-rose-300:#eeaec3;--yong-rose-500:#d75f8b;--yong-rose-700:#9c3a5d;
