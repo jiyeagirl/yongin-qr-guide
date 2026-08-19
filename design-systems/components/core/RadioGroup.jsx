@@ -1,4 +1,5 @@
 import React from "react";
+import { VisuallyHidden } from "./VisuallyHidden.jsx";
 import { Radio } from "./Radio.jsx";
 
 /* 라디오 묶음 — S10 오류신고의 "신고 유형"이 첫 사용처다.
@@ -22,7 +23,7 @@ export function RadioGroup({ label, name, options = [], value, onChange, hint, e
           color: "var(--text-heading)", marginBottom: 2 }}>
           {label}
           {required ? <span aria-hidden="true" style={{ color: "var(--state-danger)", marginLeft: 3 }}>*</span> : null}
-          {required ? <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>필수</span> : null}
+          {required ? <VisuallyHidden>필수</VisuallyHidden> : null}
         </legend>
       ) : null}
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { VisuallyHidden } from "./VisuallyHidden.jsx";
 
 /* 여러 줄 입력 — S10 오류신고의 "내용" 칸이 첫 사용처다.
  *
@@ -34,7 +35,7 @@ export function Textarea({
           color: "var(--text-heading)", marginBottom: 6 }}>
           {label}
           {required ? <span aria-hidden="true" style={{ color: "var(--state-danger)", marginLeft: 3 }}>*</span> : null}
-          {required ? <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>필수</span> : null}
+          {required ? <VisuallyHidden>필수</VisuallyHidden> : null}
         </span>
       ) : null}
 

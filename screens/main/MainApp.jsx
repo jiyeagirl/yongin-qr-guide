@@ -2,7 +2,7 @@ import React from "react";
 import {
   ContextBar, KakaoMap, MapPreviewCard, MapFilterOverlay, Sheet, Toast, TabBar, FloatingControls,
   DistrictSummary, FacilitySummary, FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, SAFETY,
-  Icon, Mascot, token,
+  Icon, Mascot, token, VisuallyHidden,
 } from "../../design-systems/index.js";
 import { DUNJEON } from "./data/dunjeon.js";
 import { FACILITIES, NEARBY, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.js";
@@ -813,14 +813,14 @@ export function MainApp({ qr = null, noDistrict = false }) {
 
         {/* 스크린리더용 상태 안내 — 탭과 시트 단계는 시각적으로만 전달되면 안 된다.
             둘러보기에는 시트가 없으므로 단계를 읽지 않는다 (없는 조작을 안내하게 된다) */}
-        <span aria-live="polite" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
+        <VisuallyHidden aria-live="polite">
           {tabOf(tab).label} 탭
           {isFacility ? ` · 목록 시트 ${SNAP_LABEL[snap]} · ${facilityRows.length}곳`
             : isDistrict ? (hasDistrict
               ? ` · 목록 시트 ${SNAP_LABEL[snap]} · ${storeRows.length}곳`
               : ` · 가까운 상점가 없음, 가볼 만한 상점가 ${districtMarkers.length}곳`)
               : ` · 축제 ${FESTIVALS.length}건, 다른 상점가 ${OTHER_DISTRICTS.length}곳`}
-        </span>
+        </VisuallyHidden>
       </div>
 
       {/* 하단 탭바 (U-CM-03) — 지도 영역의 **형제**다. 시트 안이나 위가 아니라 밖에 있으므로

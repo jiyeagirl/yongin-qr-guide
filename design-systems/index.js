@@ -32,6 +32,7 @@ export { FilterBar } from "./components/core/FilterBar.jsx";
 export { ListControls } from "./components/core/ListControls.jsx";
 export { Pagination } from "./components/core/Pagination.jsx";
 export { SortSelect } from "./components/core/SortSelect.jsx";
+export { VisuallyHidden } from "./components/core/VisuallyHidden.jsx";
 export { token, clearTokenCache } from "./components/core/token.js";
 export { josa, hasBatchim, eun, i, eul, ro } from "./components/core/josa.js";
 

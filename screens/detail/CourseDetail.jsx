@@ -2,7 +2,7 @@ import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice, KakaoMap, MapPreviewCard, Button, Badge, Icon,
   CategoryIcon, CATEGORY_LABELS, OnnuriBadge, SectionHeader, ProgressBar,
-  TextButton, Chip, Mascot, Notice,
+  TextButton, Chip, Mascot, Notice, VisuallyHidden,
 } from "../../design-systems/index.js";
 /* WALK_M_PER_MIN 을 여기서 쓰지 않는다 — 구간 시간(legMin)은 data/coursePlan.js 가 잰다.
    화면에서 따로 환산하면 같은 구간이 두 값으로 갈린다. */
@@ -22,16 +22,16 @@ import { planCourse, nearestChain } from "../main/data/coursePlan.js";
  *   (조아용) 2/4 방문  ▓▓▓░░░░    [처음부터]   ← 방문 완료 (선택 기능)
  *   ─────────────────────────────────
  *    ⌗
- *    ┊  QR 지점에서 도보 2분                 ← 점선 기둥이 순번과 순번을 잇는다
- *    ↓
+ *    ┊                                     ← 점선 기둥이 순번과 순번을 잇는다
+ *   2분                                    ← 구간 시간은 번호 칸 안, 점선과 번호 사이
  *   ①  가게  업종                          ← 누르면 지도가 그 순번으로 가고 카드가 뜬다
  *       [✓ 방문 완료]                         (U-DC-03 "순번 이동")
- *    ┊  도보 3분
- *    ↓
+ *    ┊
+ *   3분
  *   ②  가게 (흐림)              (조아용)   ← 방문 도장
  *       [✓ 방문함]
- *    ┊  도보 2분
- *    ↓
+ *    ┊
+ *   2분
  *   ③  가게  [다음 차례]
  *   ...
  *   ─────────────────────────────────
@@ -322,40 +322,57 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                 <React.Fragment key={s.id}>
                   {/* ── 구간 ────────────────────────────────────────────
                          첫 곳 위에는 QR 지점에서의 시간이 온다. 나머지는 직전 곳에서다.
-                         값은 데이터가 미리 갖고 있다 (dunjeon.js) — 화면에서 다시 재면
-                         코스 카드의 총 시간과 여기 구간의 합이 어긋난다.
+                         값은 데이터가 미리 갖고 있다 (coursePlan.js) — 화면에서 다시 재면
+                         머리말의 총 시간과 여기 구간의 합이 어긋난다.
 
-                         ── 점선 기둥으로 잇는다 (2026-08-18) ──────────────
-                         전에는 글자 옆에 14px 짜리 ↓ 하나였다. 그 부호는 "아래로"라고만
-                         말할 뿐 **1번에서 2번까지**를 잇지 못해서, 옆의 "도보 1분"이 어느
-                         구간의 값인지 와닿지 않았다. 순번 동그라미에서 다음 동그라미까지
-                         점선을 내리면 구간이 눈에 보이고, 그 옆 글자가 그 선을 읽는 말이 된다.
+                         ── 시간을 번호 칸 안으로 옮겼다 (2026-08-19) ──────
+                         전에는 점선 오른쪽에 "도보 1분"이 있었고, 기둥은 점선(22) + 화살촉(16)
+                         = 38px 였다. 순번 동그라미가 26px 인데 **사이가 번호보다 커서** 목록이
+                         번호 사이의 빈 띠로 읽혔다.
+
+                         시간을 점선과 동그라미 사이에 끼우면 그 띠가 26px 로 줄고, 값이
+                         "이 선을 걸으면 아래 번호에 닿는다"는 자리에 놓여 어느 구간의 값인지도
+                         분명해진다. 화살촉은 뺐다 — 바로 아래에 번호가 오므로 방향은 번호가
+                         말한다. 폭은 26px 그대로라 **이름 칸을 한 픽셀도 내주지 않는다**
+                         (왼쪽 여백으로 빼는 안은 61px 이 필요해 320px 화면에서 상호명과 배지가
+                         한 줄에 못 들어갔다).
+
+                         글자는 "도보"를 떼고 "1분"만 적는다 — 26px 안에 들어가야 하고,
+                         걷는 시간이라는 것은 점선과 머리말의 [도보 10분]이 이미 말한다.
+                         소리에는 그 맥락이 없으므로 읽어줄 때는 온전한 문장을 들려준다.
 
                          기둥 폭 26px 은 순번 동그라미와 같은 값이고, 좌우 여백도 아래 행과
                          맞춰 두 원의 중심을 정확히 잇는다 (행에는 1px 테두리가 있어 그만큼
                          더한다). 지도의 코스 경로도 같은 색 점선이다 — 같은 길이다. */}
-                  <div style={{ display: "flex", alignItems: "stretch", gap: "var(--space-3)",
-                    padding: "0 calc(var(--space-3) + var(--stroke-hairline))",
-                    fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                    <span aria-hidden="true" style={{ flex: "0 0 auto", width: 26,
+                  <div style={{ display: "flex",
+                    padding: "0 calc(var(--space-3) + var(--stroke-hairline))" }}>
+                    {/* width 가 아니라 minWidth 다 (U-CM-14). 실제 값은 한 자리(1~5분)라
+                        26px 에 넉넉히 들어가지만, 2차 글자 확대에서 폭을 못 넘게 막으면
+                        "12분"이 잘리거나 두 줄로 깨진다. 아래 순번 동그라미도 같은 minWidth 라
+                        둘이 함께 늘어난다. */}
+                    <span style={{ flex: "0 0 auto", minWidth: 26,
                       display: "flex", flexDirection: "column", alignItems: "center" }}>
                       {/* 첫 구간의 출발점은 QR 지점이다. 순번이 없는 자리라 아이콘이 대신 선다 */}
                       {i === 0 ? <Icon name="qr-code" size={14} color="var(--text-muted)" /> : null}
-                      <span style={{ flex: 1, minHeight: "var(--course-leg-min)", width: 0,
+                      <span aria-hidden="true" style={{ minHeight: "var(--course-leg-min)", width: 0,
                         borderLeft: "2px dotted var(--course-leg-line)" }} />
-                      {/* 화살촉은 선 끝에 물린다 — 사이가 뜨면 선과 화살표가 남남이 된다 */}
-                      <Icon name="chevron-down" size={16} color="var(--course-leg-line)"
-                        style={{ marginTop: -5 }} />
-                    </span>
-                    <span style={{ alignSelf: "center" }}>
-                      {i === 0 ? `QR 지점에서 도보 ${s.legMin}분` : `도보 ${s.legMin}분`}
+                      <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)",
+                        fontWeight: "var(--fw-semibold)", color: "var(--text-muted)",
+                        lineHeight: 1.2, whiteSpace: "nowrap" }}>
+                        <VisuallyHidden>
+                          {i === 0 ? "QR 지점에서 도보 " : "직전 지점에서 도보 "}
+                        </VisuallyHidden>
+                        {s.legMin}분
+                      </span>
                     </span>
                   </div>
 
                   <div role="listitem" onClick={() => goTo(s.id)}
                     style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)",
                       minHeight: "var(--tap-comfortable)", padding: "var(--space-3)",
-                      marginBottom: "var(--space-1)", cursor: "pointer",
+                      /* 행 사이 여백은 0 이다 — 행과 행 사이에는 언제나 구간 띠가 있어서
+                         둘이 맞붙는 일이 없고, 4px 를 더하면 그만큼 번호 사이가 벌어진다 */
+                      cursor: "pointer",
                       borderRadius: "var(--radius-sm)",
                       background: on ? "var(--brand-primary-soft)" : "transparent",
                       border: "var(--stroke-hairline) solid " + (on ? "var(--border-brand)" : "transparent") }}>

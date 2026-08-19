@@ -1,4 +1,5 @@
 import React from "react";
+import { VisuallyHidden } from "./VisuallyHidden.jsx";
 import { Icon } from "./Icon.jsx";
 
 export function Input({ label, hint, error, required, icon, value, onChange, placeholder, type = "text", disabled, clearable = false, onClear, elevated = false, style, ...rest }) {
@@ -12,7 +13,7 @@ export function Input({ label, hint, error, required, icon, value, onChange, pla
       {label ? <span style={{ display: "block", fontSize: "var(--fs-label)", fontWeight: "var(--fw-semibold)", color: "var(--text-heading)", marginBottom: 6 }}>
           {label}
           {required ? <span aria-hidden="true" style={{ color: "var(--state-danger)", marginLeft: 3 }}>*</span> : null}
-          {required ? <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>필수</span> : null}
+          {required ? <VisuallyHidden>필수</VisuallyHidden> : null}
         </span> : null}
       {/* 높이는 tap-min(44px) 까지만 줄인다. 입력창은 그 자체가 터치 타겟이라
           여기서 더 낮추면 접근성 규칙(U-CM-13)을 깨는 것이지 디자인이 아니다.
