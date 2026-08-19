@@ -185,17 +185,18 @@ export function MainApp({ qr = null, noDistrict = false }) {
       : [...filtered].sort((a, b) => a.dist - b.dist);
   }, [d.stores, cat, onnuriOnly, q, sort]);
 
-  /* ── S02 공공시설: 유형별 내부 상한 (U-FC-08) ──────────────────────────
-     AED·대피소는 상한이 없다 — 멀어도 최근접을 반드시 제시해야 하는 유형이다.
-     화장실·쉼터는 1km. 상한은 **사용자에게 노출하지 않는다** (화면 어디에도 "1km"라고 적지 않는다).
+  /* ── S02 공공시설: 안내 반경 (U-FC-08) ─────────────────────────────────
+     4종이 같은 선을 쓴다 (2026-08-19 통일. 근거는 facilities.js 의 NEAR_LIMIT 머리말).
+     반경은 **사용자에게 노출하지 않는다** (화면 어디에도 "2km"라고 적지 않는다).
 
-     상한 안에 하나도 없으면 상한을 무시하고 최근접 2건까지 되살린다 (U-FC-09).
-     빈 결과 화면을 만들지 않는 것이 이 규칙의 핵심이다. */
+     반경 안에 하나도 없으면 반경을 무시하고 최근접 2건까지 되살린다 (U-FC-09).
+     빈 결과 화면을 만들지 않는 것이 이 규칙의 핵심이고, AED·대피소에 상한을 두지 않던
+     이유도 그것이었다 — 보장이 이 한 줄에 있으므로 무제한까지는 필요하지 않다. */
   const facilityByType = React.useMemo(() => {
     const out = {};
     for (const t of FACILITY_TYPES) {
       const all = FACILITIES.filter(f => f.type === t);                 /* 이미 거리순 */
-      const within = all.filter(f => f.dist <= (NEAR_LIMIT[t] ?? Infinity));
+      const within = all.filter(f => f.dist <= NEAR_LIMIT);
       out[t] = within.length ? within : all.slice(0, 2);                /* U-FC-09 폴백 */
     }
     return out;
