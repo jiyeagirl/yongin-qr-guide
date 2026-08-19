@@ -40,7 +40,9 @@ export function NearbyFacilities({ items = [], title = "주변 공공시설", no
         borderRadius: "var(--radius-card)", padding: "var(--space-2) var(--space-4)" }}>
         {items.map((n, i) => (
           <ListRow key={n.id} icon={<FacilityIcon type={n.type} size={22} />} title={n.name}
-            meta={n.dist != null ? `${n.detail} · ${km(n.dist)}` : n.detail}
+            /* 위치 문구의 출처는 유형마다 다르다 — FacilityRow 와 같은 규칙이다
+               (AED·대피소는 정의서의 위치 항목, 화장실·쉼터는 도로명주소) */
+            meta={n.dist != null ? `${n.place || n.addr} · ${km(n.dist)}` : (n.place || n.addr)}
             divider={i < items.length - 1} onClick={onPick ? () => onPick(n) : undefined} />
         ))}
       </div>

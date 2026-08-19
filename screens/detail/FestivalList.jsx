@@ -58,7 +58,7 @@ import {
  * 두지 않는 이유: [전체] 칩에서 종료된 축제가 진행 중인 축제 위로 올라온다. 갈 수 있는
  * 것이 위에 있어야 한다. 상태 칩을 누르면 그 안은 어차피 거리순뿐이다.
  */
-export function FestivalList({ festivals = [], asOf, sortNear, onOpen, onBack,
+export function FestivalList({ festivals = [], sortNear, onOpen, onBack,
   base = "../../design-systems/" }) {
   const [state, setState] = React.useState("전체");
 
@@ -117,7 +117,8 @@ export function FestivalList({ festivals = [], asOf, sortNear, onOpen, onBack,
             style={{ padding: "var(--space-8) 0" }} />
         )}
 
-        <DetailNotice asOf={`축제 정보 ${asOf}`} style={{ marginTop: "var(--space-6)" }}>
+        {/* 기준일자를 적지 않는다 (입력 항목 정의서 3-2: 축제 정보는 미표기 대상) */}
+        <DetailNotice style={{ marginTop: "var(--space-6)" }}>
           <span style={{ display: "block" }}>
             일정과 프로그램은 주최 상점가 사정으로 변경될 수 있습니다.
           </span>

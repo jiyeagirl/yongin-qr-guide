@@ -153,9 +153,9 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
                   color: "var(--text-heading)", lineHeight: 1.4 }}>
                   {target.name}
                 </p>
-                {target.addr || target.detail ? (
+                {target.addr || target.place ? (
                   <p style={{ marginTop: 2, fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.5 }}>
-                    {target.addr || target.detail}
+                    {target.addr || target.place}
                   </p>
                 ) : null}
               </div>

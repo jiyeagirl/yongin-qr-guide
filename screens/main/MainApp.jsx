@@ -22,8 +22,8 @@ import { FestivalList } from "../detail/FestivalList.jsx";
 import { DistrictList } from "../detail/DistrictList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, back, closeAll } from "./router.js";
-import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, FESTIVAL_AS_OF,
-  DISTRICT_AS_OF, DISTRICT_LIST_PAGE_SIZE } from "./config.js";
+import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF,
+  DISTRICT_LIST_PAGE_SIZE } from "./config.js";
 
 /* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.0 확정 결정사항 11).
  *
@@ -285,8 +285,11 @@ export function MainApp({ qr = null, noDistrict = false }) {
      적히는 말이 눌린 자리에 따라 달라진다. */
   const pickFacility = React.useCallback(f => pickOnMap({
     /* 편의시설은 미리보기 카드를 쓰되 아이콘 체계는 시설 4종 쪽을 따른다 (5-2).
-       biz 자리에 유형 이름을, addr 자리에 상세 위치를 넣는다 — 거리는 카드가 따로 표기한다 */
-    ...f, kind: "facility", biz: FACILITY_LABELS[f.type] || "공공시설", addr: f.detail,
+       biz 자리에 유형 이름을, addr 자리에 위치 문구를 넣는다 — 거리는 카드가 따로 표기한다.
+       위치 문구의 출처는 유형마다 다르다 (입력 항목 정의서 2-1~2-4): AED 는 설치 위치,
+       대피소는 실제 위치(시설명)가 필수 항목이고, 화장실·쉼터는 그런 항목이 없어 주소다.
+       FacilityRow · NearbyFacilities 와 같은 규칙이라 목록·카드·상세가 같은 말을 한다. */
+    ...f, kind: "facility", biz: FACILITY_LABELS[f.type] || "공공시설", addr: f.place || f.addr,
   }), [pickOnMap]);
 
   /* 상점가 마커도 같은 카드를 쓴다. 다만 "길찾기"가 아니라 "이 상점가 보기"다 —
@@ -497,7 +500,6 @@ export function MainApp({ qr = null, noDistrict = false }) {
   ) : route.name === "festivals" ? (
     <FestivalList
       festivals={FESTIVALS}
-      asOf={FESTIVAL_AS_OF}
       sortNear={byFestivalNear}
       onOpen={f => go(`#/festival/${f.id}`)}
       onBack={back} />
@@ -515,7 +517,6 @@ export function MainApp({ qr = null, noDistrict = false }) {
     <DistrictList
       districts={DISTRICTS}
       guOrder={GU_ORDER}
-      asOf={DISTRICT_AS_OF}
       sortNear={byDistrictNear}
       pageSize={DISTRICT_LIST_PAGE_SIZE}
       onBack={back} />
@@ -531,7 +532,6 @@ export function MainApp({ qr = null, noDistrict = false }) {
     : route.name === "route" ? (
       <RouteView
         dest={target}
-        asOf={d.district.asOf}
         origin={originStop || d.anchor}
         fromAnchor={!originStop}
         onBack={back}
@@ -542,7 +542,6 @@ export function MainApp({ qr = null, noDistrict = false }) {
       <CourseDetail
         course={target}
         anchor={d.anchor}
-        asOf={d.district.asOf}
         onBack={back}
         /* 코스 안의 가게에서 점포 상세·길찾기로 — history 를 한 칸 더 쌓는다.
            뒤로가기를 누르면 코스로 돌아온다. 다만 그때 고른 순번은 남지 않는다 —
@@ -555,7 +554,6 @@ export function MainApp({ qr = null, noDistrict = false }) {
     ) : route.name === "festival" ? (
       <FestivalDetail
         festival={target}
-        asOf={FESTIVAL_AS_OF}
         onBack={back}
         onReport={() => go("#/report")} />
     ) : route.name === "facility" ? (

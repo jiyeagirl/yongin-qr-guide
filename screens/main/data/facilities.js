@@ -32,82 +32,139 @@ function at(dist, bearingDeg) {
   };
 }
 
-/* detail = 상세 위치 설명, hours = 개방 시간, extra = 유형별 부가정보 (U-FC-05, S05 시설 상세에서 쓴다)
+/* ── 필드는 입력 항목 정의서(2-1 ~ 2-4)를 그대로 따른다 (2026-08-19) ─────────────
  *
- * always = 상시 개방 여부 (U-FC-05 의 "개방 여부"). hours 문자열에서 파생하지 않고 명시한다 —
- * "24시간" 을 찾는 식으로 짜면 포곡읍 민방위 대피시설의 `상시 (경보 시 개방)` 을 놓치거나
- * 반대로 상시 개방으로 잘못 읽는다. 저기는 평소에 잠겨 있고 경보가 울려야 열리는 곳이라
- * 24시간 개방과 정반대의 의미인데, 문자열만 보면 "상시"라는 같은 낱말이 들어 있다.
- * 실데이터 연동 시에도 이 값은 서버가 판단해서 내려주어야 한다. */
+ * 이 서비스의 시설 정보는 전부 공공데이터에서 온다. 그래서 화면이 보여줄 수 있는 항목은
+ * **원천에 있는 항목뿐**이고, 유형마다 그 목록이 다르다. 예전에는 네 유형이 같은 스키마
+ * (detail·hours·always·extra)를 썼는데, 그것은 우리가 지어낸 틀이라 원천에 없는 값을
+ * 채워 넣게 되고(AED 의 "관리자 마을회관 사무장"), 반대로 원천에 있는 값은 한 줄 문자열
+ * 안에 뭉개졌다(화장실의 "남 2칸 · 여 3칸 · … · 기저귀교환대 있음").
+ *
+ *   aed      addr · place                                    (둘 다 필수)
+ *   toilet   name · addr | hours menToilet menUrinal womenToilet womenUrinal
+ *                          emergencyBell diaperTable entranceCctv  (뒤 8개 선택)
+ *   rest     name · addr | hours capacity extra               (뒤 3개 선택)
+ *   shelter  addr · place | capacity                          (capacity 선택)
+ *
+ * **선택 항목은 비어 있는 것이 정상이다.** null 로 둔 자리는 원천에 값이 없다는 뜻이고,
+ * 상세 화면은 그 줄을 지우지 않고 "-" 로 남긴다 (InfoList 머리말). 그래야 "확인되지
+ * 않았다"와 "우리가 빠뜨렸다"가 구분된다. 아래 더미에 null 을 섞어 둔 것은 그 화면을
+ * 실제로 볼 수 있게 하려는 것이다 — 전부 채우면 만들어놓고 확인할 방법이 없다.
+ *
+ * **AED 와 대피소에는 명칭 항목이 없다** (정의서 2-1 · 2-4). 그래서 이름을 데이터에 적지
+ * 않고 **도로명주소에서 만든다** (아래 `named`). 목록 한 줄과 화면 제목에는 부를 것이
+ * 있어야 하는데, 없는 이름을 지어 적어 두면 그 뒤로는 그것이 원천 값인지 우리가 만든
+ * 것인지 구분되지 않는다. 만드는 규칙을 코드에 두면 실데이터가 와도 같은 규칙이 돈다.
+ *
+ * 빠진 것들: `always`(개방 여부)와 AED·대피소의 `hours`. 정의서에 없다.
+ * U-FC-05 는 "개방 여부"를 적고 있으나 그것은 원천 항목을 확정하기 전의 문구다 —
+ * 명세서 쪽을 정의서에 맞춰야 한다. */
 const RAW = [
-  /* ── AED — 상한 없음. 최근접을 반드시 제시한다 (U-FC-08) ────────────────── */
-  { type: "aed", name: "둔전마을회관 AED", dist: 120, bearing: 335,
-    addr: "처인구 포곡읍 둔전로 42", detail: "1층 로비 자동심장충격기함", hours: "24시간 개방", always: true,
-    extra: "설치 1층 · 관리자 마을회관 사무장" },
-  { type: "aed", name: "포곡읍행정복지센터 AED", dist: 340, bearing: 58,
-    addr: "처인구 포곡읍 둔전로 91", detail: "1층 민원실 입구 벽면", hours: "평일 09:00~18:00",
-    extra: "설치 1층 · 주말·공휴일 휴관" },
-  { type: "aed", name: "둔전 공영주차장 관리동 AED", dist: 520, bearing: 148,
-    addr: "처인구 포곡읍 둔전2로 8", detail: "관리동 출입구 옆 외부함", hours: "06:00~22:00",
-    extra: "설치 지상 · 야외 보관함" },
-  { type: "aed", name: "둔전보건진료소 AED", dist: 690, bearing: 272,
-    addr: "처인구 포곡읍 포곡로 133", detail: "1층 대기실 안내데스크", hours: "평일 09:00~18:00",
-    extra: "설치 1층 · 점심시간 12:00~13:00 제외" },
-  { type: "aed", name: "에버랜드로 버스환승장 AED", dist: 1150, bearing: 96,
-    addr: "처인구 포곡읍 에버랜드로 305", detail: "대합실 매표소 옆", hours: "05:30~23:00",
-    extra: "설치 1층 · 환승장 운영시간과 동일" },
+  /* ── AED — 상한 없음. 최근접을 반드시 제시한다 (U-FC-08) ──────────────────
+        place = 설치 위치 (2-1 필수). 예) 관리사무소 건물 1층 출입구 */
+  { type: "aed", dist: 120, bearing: 335,
+    addr: "처인구 포곡읍 둔전로 42", place: "1층 로비 자동심장충격기함" },
+  { type: "aed", dist: 340, bearing: 58,
+    addr: "처인구 포곡읍 둔전로 91", place: "1층 민원실 입구 벽면" },
+  { type: "aed", dist: 520, bearing: 148,
+    addr: "처인구 포곡읍 둔전2로 8", place: "관리동 출입구 옆 외부 보관함" },
+  { type: "aed", dist: 690, bearing: 272,
+    addr: "처인구 포곡읍 포곡로 133", place: "1층 대기실 안내데스크" },
+  { type: "aed", dist: 1150, bearing: 96,
+    addr: "처인구 포곡읍 에버랜드로 305", place: "대합실 매표소 옆" },
 
-  /* ── 대피소 — 상한 없음. 다만 최근접이 1.4km 라 U-FC-09 배너가 뜬다 ───────── */
-  { type: "shelter", name: "포곡중학교 운동장", dist: 1400, bearing: 24,
-    addr: "처인구 포곡읍 금어로 216", detail: "지진 옥외대피장소 · 운동장 전체", hours: "24시간 개방", always: true,
-    extra: "수용 약 1,200명 · 지진 옥외대피장소" },
-  { type: "shelter", name: "포곡읍 민방위 대피시설", dist: 1760, bearing: 63,
-    addr: "처인구 포곡읍 둔전로 91 지하", detail: "행정복지센터 지하 1층", hours: "상시 (경보 시 개방)",
-    extra: "수용 약 480명 · 정부지원시설" },
-  { type: "shelter", name: "포곡체육공원", dist: 2050, bearing: 189,
-    addr: "처인구 포곡읍 삼계로 77", detail: "지진 옥외대피장소 · 다목적구장", hours: "24시간 개방", always: true,
-    extra: "수용 약 900명 · 지진 옥외대피장소" },
+  /* ── 대피소 — 상한 없음. 다만 최근접이 1.4km 라 U-FC-09 배너가 뜬다 ─────────
+        place = 실제 위치(시설명) (2-4 필수) · capacity = 최대 수용 인원 (선택) */
+  { type: "shelter", dist: 1400, bearing: 24,
+    addr: "처인구 포곡읍 금어로 216", place: "포곡중학교 운동장 전체 (지진 옥외대피장소)",
+    capacity: 1200 },
+  { type: "shelter", dist: 1760, bearing: 63,
+    addr: "처인구 포곡읍 둔전로 91 지하", place: "포곡읍행정복지센터 지하 1층 주차장",
+    capacity: 480 },
+  { type: "shelter", dist: 2050, bearing: 189,
+    addr: "처인구 포곡읍 삼계로 77", place: "포곡체육공원 다목적구장 (지진 옥외대피장소)",
+    capacity: null },
 
-  /* ── 화장실 — 1km 상한 (U-FC-08). 마지막 1건이 상한에 걸려 목록에서 빠진다 ─── */
+  /* ── 화장실 — 1km 상한 (U-FC-08). 마지막 1건이 상한에 걸려 목록에서 빠진다 ───
+        칸수 4종 · 비상벨 · 기저귀 교환대 · 입구 CCTV 는 전부 **선택**이다 (2-2).
+        한 줄 문자열이 아니라 항목으로 나눈 이유: 비상벨이나 기저귀 교환대는 있고 없고가
+        갈 곳을 바꾸는 값이라, 문장 안에 섞여 있으면 훑어서 찾을 수 없다. */
   { type: "toilet", name: "둔전 공영주차장 공중화장실", dist: 210, bearing: 128,
-    addr: "처인구 포곡읍 둔전2로 8", detail: "주차장 북측 단독 건물", hours: "24시간 개방", always: true,
-    extra: "남 2칸 · 여 3칸 · 장애인 겸용 1칸 · 기저귀교환대 있음" },
+    addr: "처인구 포곡읍 둔전2로 8", hours: "상시 개방",
+    menToilet: 2, menUrinal: 3, womenToilet: 3, womenUrinal: null,
+    emergencyBell: true, diaperTable: true, entranceCctv: true },
   { type: "toilet", name: "포곡읍행정복지센터 화장실", dist: 350, bearing: 60,
-    addr: "처인구 포곡읍 둔전로 91", detail: "1층·2층 각 1개소", hours: "평일 09:00~18:00",
-    extra: "남 2칸 · 여 2칸 · 장애인 겸용 1칸" },
+    addr: "처인구 포곡읍 둔전로 91", hours: "평일 09:00~18:00",
+    menToilet: 2, menUrinal: 2, womenToilet: 2, womenUrinal: null,
+    emergencyBell: true, diaperTable: false, entranceCctv: null },
   { type: "toilet", name: "둔전시장 공중화장실", dist: 380, bearing: 213,
-    addr: "처인구 포곡읍 둔전로 55", detail: "시장 중앙통로 끝", hours: "06:00~22:00",
-    extra: "남 2칸 · 여 2칸" },
+    addr: "처인구 포곡읍 둔전로 55", hours: "06:00~22:00",
+    menToilet: 2, menUrinal: 2, womenToilet: 2, womenUrinal: null,
+    emergencyBell: null, diaperTable: null, entranceCctv: null },
+  /* 간이화장실이라 남녀 구분 칸수 자체가 원천에 없다 — 네 줄이 모두 "-" 로 남는다 */
   { type: "toilet", name: "둔전사거리 간이화장실", dist: 640, bearing: 301,
-    addr: "처인구 포곡읍 포곡로 108", detail: "버스정류장 뒤편", hours: "24시간 개방", always: true,
-    extra: "남녀공용 1칸" },
+    addr: "처인구 포곡읍 포곡로 108", hours: "상시 개방",
+    menToilet: null, menUrinal: null, womenToilet: null, womenUrinal: null,
+    emergencyBell: false, diaperTable: false, entranceCctv: null },
   { type: "toilet", name: "둔전근린공원 화장실", dist: 870, bearing: 166,
-    addr: "처인구 포곡읍 둔전1로 24", detail: "공원 주차장 옆", hours: "05:00~23:00",
-    extra: "남 3칸 · 여 4칸 · 장애인 겸용 1칸" },
+    addr: "처인구 포곡읍 둔전1로 24", hours: "05:00~23:00",
+    menToilet: 3, menUrinal: 4, womenToilet: 4, womenUrinal: null,
+    emergencyBell: true, diaperTable: true, entranceCctv: false },
   { type: "toilet", name: "포곡천 산책로 화장실", dist: 1240, bearing: 341,
-    addr: "처인구 포곡읍 금어로 12", detail: "산책로 2번 출입구", hours: "05:00~22:00",
-    extra: "남 2칸 · 여 2칸" },
+    addr: "처인구 포곡읍 금어로 12", hours: null,
+    menToilet: 2, menUrinal: 2, womenToilet: 2, womenUrinal: null,
+    emergencyBell: null, diaperTable: null, entranceCctv: null },
 
   /* ── 쉼터 — 무더위쉼터·한파쉼터다. 그래서 편의시설이 아니라 **안전시설**로 분류된다.
         폭염과 한파는 실제 인명 피해가 나는 재난이고, 지정 쉼터는 그 대응 시설이다.
         1km 상한은 유지한다 (U-FC-08). 상한 안에 하나도 없으면 U-FC-09 폴백이 최근접을 되살리므로
-        "가까운 쉼터가 없다"는 빈 화면은 나오지 않는다. 마지막 1건이 상한에 걸려 빠진다 ───── */
+        "가까운 쉼터가 없다"는 빈 화면은 나오지 않는다. 마지막 1건이 상한에 걸려 빠진다.
+        hours = 운영시간 · capacity = 이용가능 인원 · extra = 부가정보 (셋 다 선택, 2-3) ───── */
   { type: "rest", name: "둔전 버스정류장 한파쉼터", dist: 90, bearing: 12,
-    addr: "처인구 포곡읍 둔전로 38", detail: "승차대 안 온열의자 2석", hours: "24시간 개방", always: true,
-    extra: "한파쉼터 · 12~2월 온열 가동 · 지붕과 방풍막 있음" },
+    addr: "처인구 포곡읍 둔전로 38", hours: "24시간 개방", capacity: null,
+    extra: "한파쉼터 · 12~2월 온열의자 가동 · 지붕과 방풍막 있음" },
   { type: "rest", name: "둔전마을회관 무더위쉼터", dist: 150, bearing: 331,
-    addr: "처인구 포곡읍 둔전로 42", detail: "2층 경로당 · 냉방 운영", hours: "평일 09:00~18:00",
-    extra: "실내 무더위쉼터 · 수용 40명 · 정수기 있음" },
+    addr: "처인구 포곡읍 둔전로 42", hours: "평일 09:00~18:00", capacity: 40,
+    extra: "실내 무더위쉼터 · 냉방기 있음 · 정수기 있음" },
   { type: "rest", name: "둔전사거리 그늘막쉼터", dist: 260, bearing: 74,
-    addr: "처인구 포곡읍 둔전로 70", detail: "횡단보도 앞 그늘막 · 벤치 4석", hours: "24시간 개방", always: true,
-    extra: "야외 무더위쉼터 · 그늘막 5~9월 운영" },
+    addr: "처인구 포곡읍 둔전로 70", hours: "5~9월 상시", capacity: null,
+    extra: "야외 무더위쉼터 · 그늘막 · 벤치 4석" },
   { type: "rest", name: "포곡천 둔치 그늘막쉼터", dist: 1080, bearing: 347,
-    addr: "처인구 포곡읍 금어로 20", detail: "산책로 정자 1동 · 벤치 6석", hours: "24시간 개방", always: true,
-    extra: "야외 무더위쉼터 · 정자" },
+    addr: "처인구 포곡읍 금어로 20", hours: null, capacity: null, extra: null },
 ];
 
+/* ── AED · 대피소의 이름을 도로명주소에서 만든다 (2026-08-19) ───────────────────
+ *
+ * 두 유형에는 명칭 항목이 자체가 없다 (정의서 2-1 · 2-4). 그런데 목록 한 줄과 화면 제목,
+ * 지도 카드, 길찾기 도착지에는 부를 것이 있어야 한다. 없는 이름을 지어 데이터에 적어 두면
+ * 그 뒤로는 원천 값인지 우리가 만든 것인지 구분되지 않으므로, **규칙을 코드에 둔다.**
+ *
+ * 도로명 + 건물번호 + 유형 → "둔전로 42 AED" · "금어로 216 대피소".
+ * 도로명만 떼면 짧지만 유일하지 않다 — 이 더미만 해도 둔전로에 AED 가 둘이다. 두 줄이
+ * "둔전로 AED" 로 똑같이 보이면 목록에서 어느 쪽을 눌렀는지 알 수 없다. 번호까지 붙이면
+ * 언제나 유일하고, 무엇보다 **이름이 곧 위치**라 지어낸 이름보다 실제로 쓸모가 있다.
+ *
+ * 시·구·읍면동은 뗀다. 이 서비스는 QR 지점 반경 안만 다뤄서 앞부분이 전부 같고,
+ * 목록에서 같은 글자가 줄마다 반복되면 다른 부분을 찾아 읽어야 한다.
+ * 건물번호 뒤의 군더더기("… 91 지하")도 뗀다 — 그 정보는 실제 위치(place) 줄이 말한다. */
+function roadPart(addr = "") {
+  const parts = String(addr).trim().split(/\s+/);
+  const i = parts.findIndex(p => /[로길]\d*$/.test(p));
+  if (i < 0) return addr;                       /* 도로명이 아니면 주소를 그대로 쓴다 */
+  const no = parts[i + 1];
+  return /^\d/.test(no || "") ? `${parts[i]} ${no}` : parts[i];
+}
+
+const NAMED = { aed: "AED", shelter: "대피소" };
+
 export const FACILITIES = RAW
-  .map((f, i) => ({ id: `fc-${String(i + 1).padStart(3, "0")}`, ...f, ...at(f.dist, f.bearing) }))
+  .map((f, i) => ({
+    id: `fc-${String(i + 1).padStart(3, "0")}`,
+    ...f,
+    /* 화장실·쉼터는 명칭이 필수 항목이라 데이터의 값을 그대로 쓴다 */
+    name: f.name || `${roadPart(f.addr)} ${NAMED[f.type] || ""}`.trim(),
+    ...at(f.dist, f.bearing),
+  }))
   .sort((a, b) => a.dist - b.dist);
 
 /* U-FC-08 유형별 내부 상한. **사용자에게 노출하지 않는다** — 화면 어디에도 "1km"라고 적지 않는다.

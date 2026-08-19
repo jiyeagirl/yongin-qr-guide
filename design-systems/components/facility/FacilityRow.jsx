@@ -35,11 +35,17 @@ export function FacilityRow({ facility, onClick, selected = false, divider = tru
       title={f.name}
       /* size="sm" — 점포 목록의 온누리 배지와 같은 자리, 같은 높이다 (Badge 주석 참조) */
       tag={<Badge size="sm" tone={urgent ? "danger" : "info"}>{FACILITY_LABELS[f.type] || "공공시설"}</Badge>}
-      /* 첫 줄은 거리, 둘째 줄은 "가서 실제로 쓸 수 있는가" — 상세 위치와 개방 시간.
-         AED 가 잠긴 건물 안에 있으면 거리보다 그게 먼저 필요한 정보다 (U-FC-05 의 개방 여부) */
+      /* 첫 줄은 거리, 둘째 줄은 "어디로 가면 되는가".
+         둘째 줄의 출처가 유형마다 다르다 (입력 항목 정의서 2-1~2-4). AED 는 설치 위치,
+         대피소는 실제 위치(시설명)가 필수 항목이라 그것을 쓰고, 화장실·쉼터는 그런 항목이
+         없어 도로명주소로 내려간다. 예전에는 네 유형 모두 `detail`(상세 위치)이라는 한
+         필드를 썼는데 그것은 원천에 없는 항목이었다.
+         운영시간은 쉼터에만 있다 — 있을 때만 뒤에 붙인다. */
       meta={<>
         {distance}, 도보 {walk}분
-        <span style={{ display: "block" }}>{f.detail}{f.hours ? ` · ${f.hours}` : ""}</span>
+        <span style={{ display: "block" }}>
+          {f.place || f.addr}{f.hours ? ` · ${f.hours}` : ""}
+        </span>
       </>}
       style={selected
         ? { background: "var(--surface-selected)", borderRadius: "var(--radius-sm)",

@@ -4,7 +4,7 @@ import {
   Button, Badge, Notice, SectionHeader, Icon, EmptyState, FacilityIcon, CategoryIcon,
   FACILITY_LABELS, CATEGORY_LABELS, OnnuriBadge, ro,
 } from "../../design-systems/index.js";
-import { KAKAO_APP_KEY, WALK_M_PER_MIN, FACILITY_AS_OF } from "../main/config.js";
+import { KAKAO_APP_KEY, WALK_M_PER_MIN, FACILITY_AS_OF, STORE_AS_OF } from "../main/config.js";
 import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
 
 /* S07 길찾기 (기능명세서 v1.0 4장 S07 행).
@@ -57,7 +57,7 @@ import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
 const km = m => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`);
 const mins = sec => Math.max(1, Math.round(sec / 60));
 
-export function RouteView({ dest, origin, asOf, fromAnchor = true, onBack, onClose, onOpenDest, onReport }) {
+export function RouteView({ dest, origin, fromAnchor = true, onBack, onClose, onOpenDest, onReport }) {
   const [result, setResult] = React.useState(null);
   const [active, setActive] = React.useState(-1);
   const [mapReady, setMapReady] = React.useState(false);
@@ -287,7 +287,8 @@ export function RouteView({ dest, origin, asOf, fromAnchor = true, onBack, onClo
                잰 값이라 여기 거리와 견줄 대상이 아니고, 나란히 적으면 없던 오해를 만든다.
                대신 어디서 잰 거리인지를 밝힌다 — 코스 ②의 "약 95m"가 QR 지점에서의 거리로
                읽히면 그 수는 완전히 틀린 안내가 된다. */}
-        <DetailNotice asOf={isFacility ? `공공시설 정보 ${FACILITY_AS_OF}` : `점포 정보 ${asOf || ""}`}>
+        {/* 기준일은 카테고리 단위다 (정의서 3-2). 시설은 유형마다 값이 다르다 */}
+        <DetailNotice asOf={isFacility ? `공공시설 정보 ${FACILITY_AS_OF[dest.type] || ""} 기준` : `점포 정보 ${STORE_AS_OF} 기준`}>
           {result && !failed ? (
             <>
               <span style={{ display: "block" }}>

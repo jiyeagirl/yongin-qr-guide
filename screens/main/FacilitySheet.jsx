@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  SectionHeader, Notice, FacilityRow, SAFETY, CONVENIENCE,
+  SectionHeader, Notice, FacilityRow, FACILITY_LABELS, SAFETY, CONVENIENCE,
 } from "../../design-systems/index.js";
 
 /* S02 공공시설 탭 바텀시트 내용 (기능명세서 v1.0 4장 S02 행).
@@ -38,6 +38,15 @@ const GROUPS = [
   { id: "safety",  title: "안전시설", types: SAFETY },
   { id: "comfort", title: "편의시설", types: CONVENIENCE },
 ];
+
+/* 기준일 문구 (입력 항목 정의서 3-2). **시설 4종이 각각 다른 값을 갖는다** — 표준데이터
+   갱신 주기가 유형마다 달라서다. 한 유형만 보고 있으면 그 값 하나를, [전체]에서는 화면에
+   깔린 유형을 전부 적는다. 대표값 하나로 뭉치면 나머지 세 종에는 틀린 날짜가 붙는다. */
+function asOfLine(asOf, cat, labels) {
+  if (cat !== "all") return `공공시설 정보 ${asOf[cat] || ""} 기준`;
+  const parts = Object.keys(asOf).map(t => `${labels[t] || t} ${asOf[t]}`);
+  return `공공시설 정보 ${parts.join(" · ")} 기준`;
+}
 
 export function FacilitySheet({ rows, cat, selectedId, onPick, asOf }) {
   /* 단일 유형을 고른 상태에서는 섹션을 나누지 않는다 — 한 묶음뿐인데 머리말을 달면
@@ -82,7 +91,7 @@ export function FacilitySheet({ rows, cat, selectedId, onPick, asOf }) {
       {/* ── 고지 (U-CM-07 · U-CM-08) ───────────────────────────────────── */}
       <div style={{ padding: "var(--space-5) var(--gutter-screen) 0" }}>
         <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-          공공시설 정보 {asOf}<br />
+          {asOfLine(asOf, cat, FACILITY_LABELS)}<br />
           안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
         </p>
       </div>

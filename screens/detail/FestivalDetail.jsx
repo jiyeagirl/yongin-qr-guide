@@ -10,27 +10,41 @@ import {
  *
  *   [AppBar]  ← 뒤로 · 축제명
  *   ─────────────────────────────────
- *   [진행중] 배지 · 축제명 · 주최 상점가, 거리
+ *   [진행중] 배지 · 축제명 · 상권명, 거리
  *   ─────────────────────────────────
- *   기간 / 시간 / 장소 / 주최 상점가
+ *   기간 / 상권명 / 시간 / 주요 프로그램
  *   ─────────────────────────────────
- *   프로그램 (아코디언)                    ← U-FT-02
+ *   주요 프로그램 일정 (아코디언)          ← 협의 필요. 자료가 있을 때만
  *   ─────────────────────────────────
- *   부스 위치 / 당일 임시시설               ← 자료가 있을 때만 (U-FT-04·05, 우선순위 C)
+ *   부스 위치                              ← 협의 필요. 자료가 있을 때만
  *   ─────────────────────────────────
- *   기준일자 · 참고용 고지 · 119
+ *   참고용 고지 · 119                      ← 기준일자는 적지 않는다
  *
- * ── 조건부 섹션을 "있을 때만" 그리는 이유 ────────────────────────────────
- * U-FT-04·05 는 우선순위가 `C` 다. 상인회나 센터에서 자료가 오는 축제에만 존재하고,
- * 6장 남은 확인사항 #5 에 따르면 제공 여부가 아직 미정이다. 전부에 빈 섹션을 만들어
- * "정보 없음"을 적으면, 자료가 없다는 사실이 축제마다 여섯 번 반복되면서 조건부라는
- * 성격이 사라진다. 없는 섹션은 그리지 않는다.
+ * ── 항목은 우리가 정하지 않는다 (2026-08-19) ────────────────────────────
+ * 입력 항목 정의서 1-3 에 적힌 것만 보여준다:
+ *
+ *   축제명 · 기간(시작일·종료일) · 상권명                     (필수)
+ *   시간 · 주요 프로그램                                      (선택)
+ *   └ 주요 프로그램 일정 · 부스 위치                          (선택, **협의 필요**)
+ *   노출 상태                                                 (시스템 자동)
+ *
+ * 축제 자료는 공공데이터가 아니라 용인시가 **금년도 이미지 파일**로 전달하는 것이라
+ * (정의서 3-1 의 5번) 관리자가 수기로 옮겨 적는다. 그래서 항목이 적고, 늘릴 수도 없다.
+ *
+ * **뺀 것**: "장소"(정의서에 없다 — 상권명이 그 자리를 대신한다), "당일 임시시설"
+ * (U-FT-05 는 우선순위 C 인데 정의서 1-3 에 항목 자체가 없다), 기준일자(3-2 미표기 대상).
+ *
+ * ── 협의 필요 항목은 "-" 로 남기지 않는다 ───────────────────────────────
+ * 다른 선택 항목은 비어도 "-" 로 자리를 남기지만(InfoList 머리말), 주요 프로그램 일정과
+ * 부스 위치는 다르다. 정의서 3-1 의 4번이 **"자료 제공 범위 확정 후 반영 여부를 결정한다"**
+ * 고 적고 있어, 아직 이 항목을 화면이 약속한 상태가 아니다. 약속하지 않은 자리를 "-" 로
+ * 여섯 축제마다 반복해 두면 빠뜨린 것처럼 읽힌다. 자료가 온 축제에만 그린다.
  *
  * ── 종료된 축제 ─────────────────────────────────────────────────────────
  * 목록(U-FT-01)이 종료 상태도 노출하므로 상세에도 들어올 수 있다. 이때 프로그램을
  * 그대로 보여주면 아직 열리는 행사로 읽힌다. 맨 위에 끝났다는 사실을 먼저 적는다.
  */
-export function FestivalDetail({ festival, onBack, onReport, asOf }) {
+export function FestivalDetail({ festival, onBack, onReport }) {
   const f = festival;
   const ended = f.state === "종료";
   const live = f.state === "진행중";
@@ -41,7 +55,6 @@ export function FestivalDetail({ festival, onBack, onReport, asOf }) {
 
   const programs = (f.programs || []).map(p => ({ meta: p.at, title: p.title, body: p.desc }));
   const booths = f.booths || [];
-  const temps = f.tempFacilities || [];
 
   return (
     /* ── 하단 액션바가 없다 (2026-08-18) ──────────────────────────────────────
@@ -92,11 +105,13 @@ export function FestivalDetail({ festival, onBack, onReport, asOf }) {
                "용인시 누리집"이라고 적고, 보조기기에는 aria-label 로 한 번 더 말한다.
                같은 앱 안의 다른 화면으로 가는 줄 알고 눌렀다가 브라우저가 바뀌면
                되돌아오는 길을 스스로 찾아야 한다. */}
+        {/* 항목과 순서는 정의서 1-3 그대로다. 라벨 "상권명"은 정의서의 항목명이고,
+             시민에게는 "주최 상점가"가 더 자연스럽지만 원천 항목명을 그대로 쓴다 —
+             관리자 화면과 시민 화면이 다른 이름으로 같은 칸을 부르면 오류 신고가 들어왔을 때
+             어느 칸 이야기인지 맞춰봐야 한다. */}
         <InfoList items={[
           { label: "기간", value: f.period },
-          { label: "시간", value: f.time },
-          { label: "장소", value: f.place },
-          { label: "주최 상점가", value: f.homepage ? (
+          { label: "상권명", value: f.homepage ? (
             <a href={f.homepage} target="_blank" rel="noopener noreferrer"
               /* 보조기기에는 어디로 가는지 온전히 말한다. 눈으로 보는 "상세 페이지"만으로는
                  이 앱 안의 화면인지 바깥인지 구분되지 않는데, 화면에서는 꺾쇠와 링크색이
@@ -110,26 +125,22 @@ export function FestivalDetail({ festival, onBack, onReport, asOf }) {
               <Icon name="chevron-right" size={16} />
             </a>
           ) : f.districtName },
+          { label: "시간", value: f.time },
+          { label: "주요 프로그램", value: f.program },
         ]} />
 
-        {/* ── 프로그램 (U-FT-02 "프로그램 개요") ───────────────────────── */}
+        {/* ── 주요 프로그램 일정 (정의서 1-3, 협의 필요) — 자료가 있을 때만 ──
+               위 표의 "주요 프로그램"이 한 줄 요약이고, 이것은 그 아래 딸린 시간대별
+               일정이다. 아직 제공 범위가 확정되지 않은 항목이라 없는 축제에는 그리지 않는다
+               (머리말 "협의 필요 항목은 -로 남기지 않는다"). */}
         {programs.length ? (
           <section>
-            <SectionHeader title="프로그램" note={`${programs.length}개 · 시간대별`} />
+            <SectionHeader title="주요 프로그램 일정" note={`${programs.length}개 · 시간대별`} />
             <Accordion items={programs} defaultOpen={0} />
           </section>
-        ) : (
-          /* 프로그램이 아직 안 나온 축제도 있다. 한 줄 요약은 목록과 배너가 이미 쓰고 있으므로
-             여기서는 그 요약이라도 보여준다 — 빈 화면보다 낫다 */
-          <section>
-            <SectionHeader title="프로그램" />
-            <Notice tone="info" title="세부 일정이 아직 나오지 않았습니다">
-              {f.program}
-            </Notice>
-          </section>
-        )}
+        ) : null}
 
-        {/* ── 부스 위치 안내 (U-FT-04, 우선순위 C) — 자료가 있을 때만 ──── */}
+        {/* ── 부스 위치 (정의서 1-3, 협의 필요) — 자료가 있을 때만 ─────── */}
         {booths.length ? (
           <section>
             <SectionHeader title="부스 위치" note="주최 상점가 제공" />
@@ -145,31 +156,20 @@ export function FestivalDetail({ festival, onBack, onReport, asOf }) {
           </section>
         ) : null}
 
-        {/* ── 당일 임시시설 (U-FT-05, 우선순위 C) — 자료가 있을 때만 ───── */}
-        {temps.length ? (
-          <section>
-            <SectionHeader title="당일 임시시설" note="행사 시간에만 운영" />
-            <div style={{ background: "var(--surface-card)", border: "var(--stroke-hairline) solid var(--border-default)",
-              borderRadius: "var(--radius-card)", padding: "var(--space-2) var(--space-4)" }}>
-              {temps.map((t, i) => (
-                <ListRow key={t.name} icon={<Icon name="pill" size={22} />} title={t.name}
-                  meta={`${t.where} · ${t.note}`} trailing={null}
-                  divider={i < temps.length - 1} />
-              ))}
-            </div>
-            <p style={{ marginTop: "var(--space-2)", fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.5 }}>
-              임시 화장실과 의료소는 행사 시간에만 운영합니다. 평소에 이용할 수 있는 곳은
-              공공시설 탭에서 확인해 주세요.
-            </p>
-          </section>
-        ) : null}
+        {/* 당일 임시시설(U-FT-05)을 뺐다 (2026-08-19) — 정의서 1-3 에 항목이 없다.
+             임시 화장실·의료소 자료를 시가 전달하기로 확정되면 정의서에 항목을 더하고
+             여기에 되살린다. 데이터(districts.js 의 tempFacilities)는 남겨 두었다. */}
 
         <Button variant="ghost" size="sm" icon="flag" onClick={onReport}
           style={{ alignSelf: "flex-start", color: "var(--text-muted)" }}>
           정보 오류 신고
         </Button>
 
-        <DetailNotice asOf={`축제 정보 ${asOf}`}>
+        {/* 기준일자를 적지 않는다 (정의서 3-2: 축제 정보는 미표기 대상).
+             축제는 공공데이터가 아니라 시가 그때그때 전달하는 자료라 "몇 월 기준"이라는 말이
+             성립하지 않는다 — 없는 근거를 적으면 그 날짜가 보증처럼 읽힌다.
+             대신 바뀔 수 있다는 사실은 그대로 적는다. */}
+        <DetailNotice>
           <span style={{ display: "block" }}>
             일정과 프로그램은 주최 상점가 사정으로 변경될 수 있습니다.
           </span>

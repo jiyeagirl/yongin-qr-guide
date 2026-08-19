@@ -3,7 +3,7 @@ import {
   NearbyFacilities, ListControls, OnnuriToggle, Pagination,
   Notice, StoreRow, FestivalBanner, CATEGORY_LABELS,
 } from "../../design-systems/index.js";
-import { PAGE_SIZE } from "./config.js";
+import { PAGE_SIZE, STORE_AS_OF } from "./config.js";
 
 /* S03 상점가 탭 바텀시트 내용.
  *
@@ -130,7 +130,7 @@ export function DistrictSheet({
         {/* U-CM-07 정보 기준일자 · U-CM-08 참고용 고지와 119.
             오류 신고(U-CM-10)는 여기 두지 않는다 — 신고 대상이 특정되는 상세 화면에서 진입한다 */}
         <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-          점포 정보 {data.district.asOf} · 온누리 가맹 정보 2025.07 기준<br />
+          점포 정보 {STORE_AS_OF} 기준<br />
           안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
         </p>
       </div>

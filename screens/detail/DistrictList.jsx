@@ -56,7 +56,7 @@ import {
  * 열어봐야 이 줄에 이미 적힌 것을 한 번 더 보게 된다. 소개·연혁·연락처는 시가 이미
  * 관리하므로 그리로 보낸다 (`DistrictRow` 의 external 주석).
  */
-export function DistrictList({ districts = [], guOrder = [], asOf, sortNear, pageSize = 10,
+export function DistrictList({ districts = [], guOrder = [], sortNear, pageSize = 10,
   onBack, base = "../../design-systems/" }) {
   const [gu, setGu] = React.useState("전체");
   const [page, setPage] = React.useState(1);
@@ -149,7 +149,8 @@ export function DistrictList({ districts = [], guOrder = [], asOf, sortNear, pag
           </div>
         ) : null}
 
-        <DetailNotice asOf={`상점가 지정 현황 ${asOf}`} style={{ marginTop: "var(--space-6)" }}>
+        {/* 기준일자를 적지 않는다 (정의서 3-2: 상점가 정보는 미표기 대상) */}
+        <DetailNotice style={{ marginTop: "var(--space-6)" }}>
           <span style={{ display: "block" }}>
             점포 수와 온누리 가맹 수는 시 안내 기준이며 실제와 다를 수 있습니다.
           </span>
