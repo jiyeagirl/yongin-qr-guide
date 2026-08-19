@@ -21,7 +21,7 @@ import { FestivalDetail } from "../detail/FestivalDetail.jsx";
 import { FestivalList } from "../detail/FestivalList.jsx";
 import { DistrictList } from "../detail/DistrictList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
-import { useHashRoute, go, back, closeAll } from "./router.js";
+import { useHashRoute, go, replace, back, closeAll } from "./router.js";
 import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
   DISTRICT_LIST_PAGE_SIZE } from "./config.js";
 
@@ -415,14 +415,13 @@ export function MainApp({ qr = null, noDistrict = false }) {
     return null;
   }, [route, d.stores, d.courses]);
 
-  /* ── 길찾기의 출발지 (2026-08-18) ────────────────────────────────────────
-     보통은 QR 스캔 지점이다 (제안서 3-1 — 화면의 "내 위치"는 언제나 그 고정 좌표다).
+  /* ── 길찾기의 출발지 (2026-08-18 · 08-19 고를 수 있게 바뀜) ─────────────────
+     기본은 QR 스캔 지점이다 (제안서 3-1 — 화면의 "내 위치"는 언제나 그 고정 좌표다).
+     골목 한바퀴에서 들어오면 코스 순서상 직전 가게가 기본값이 된다 — 코스를 도는 사람은
+     이미 그 앞에 서 있고, 거기서 QR 지점으로 되돌아갔다가 다시 나오지 않는다.
 
-     **코스에서 들어온 길찾기만 다르다.** 골목 한바퀴의 ②로 가는 길은 QR 지점이 아니라
-     ①에서 출발한다 — 코스를 도는 사람은 이미 ①에 서 있고, 거기서 QR 지점으로 되돌아갔다가
-     다시 ②로 가지 않는다. 출발지는 방문 표시와 무관하게 **코스 순서로 정해진다**
-     (직전 순번). 방문을 눌렀는지에 따라 출발지가 달라지면 같은 화면이 사람마다 다른 길을
-     안내하게 되고, 방문 표시는 원래 눌러도 되고 안 눌러도 되는 값이다.
+     **기본값일 뿐 확정이 아니다** (2026-08-19). 사용자가 S07 에서 바꿀 수 있다.
+     ②를 건너뛰고 ③ 앞에 서 있는 사람에게 "②에서 출발"이라고 말하던 자리였다.
 
      URL 이 진실이라는 규칙은 여기서도 같다 — 출발지 id 를 해시에 담는다
      (#/route/store/dj-042/dj-041). 화면 상태에 두면 새로고침이나 딥링크에서 사라진다. */
@@ -431,6 +430,35 @@ export function MainApp({ qr = null, noDistrict = false }) {
     const id = route.parts[2];
     return id ? (d.stores.find(x => x.id === id) || null) : null;
   }, [route, d.stores]);
+
+  /* 고를 수 있는 출발지 = **QR 지점 + 같은 코스의 다른 지점들.**
+
+     후보를 코스로 좁히는 이유는 그 밖에 우리가 이름 댈 수 있는 자리가 없어서다. 주소 검색은
+     이 서비스가 갖지 않기로 한 기능이고(제안서 3-1), 점포 335곳을 드롭다운에 넣으면 고르는
+     일이 걷는 일보다 오래 걸린다. 코스의 네 곳은 사용자가 방금 그 목록을 보고 들어왔다는
+     점에서 "지금 서 있을 법한 자리"의 근거가 있는 유일한 묶음이다.
+
+     어느 코스인지는 **도착지로 찾고**, 도착지가 어느 코스에도 없으면(공공시설로 가는 길
+     같은 경우) 지금 출발지로 한 번 더 찾는다 — 코스를 돌다 AED 를 찾는 흐름이 그렇다.
+     둘 다 아니면 후보가 QR 지점 하나뿐이고, 그때 RouteView 는 드롭다운을 그리지 않는다. */
+  const routeOrigins = React.useMemo(() => {
+    if (route.name !== "route" || !target) return [];
+    const inCourse = c => (c.stops || []).some(s => s.id === target.id);
+    const hasOrigin = c => originStop && (c.stops || []).some(s => s.id === originStop.id);
+    const course = (d.courses || []).find(inCourse) || (d.courses || []).find(hasOrigin);
+    const stops = course ? course.stops.filter(s => s.id !== target.id) : [];
+    return [d.anchor, ...stops];
+  }, [route.name, target, originStop, d.courses, d.anchor]);
+
+  /* 출발지를 바꾸면 해시의 마지막 조각만 갈아 끼운다. **history 에 쌓지 않는다** —
+     쌓으면 출발지를 세 번 바꿔본 사람이 도착지 상세로 돌아가려고 뒤로가기를 세 번 눌러야
+     한다. 되돌아갈 자리는 이전 출발지가 아니라 길찾기에 들어오기 전이다 (router 의 replace). */
+  const setRouteOrigin = React.useCallback(id => {
+    const kind = route.parts[0];
+    const destId = route.parts[1];
+    if (!kind || !destId) return;
+    replace(`#/route/${kind}/${encodeURIComponent(destId)}${id ? `/${encodeURIComponent(id)}` : ""}`);
+  }, [route.parts]);
 
   /* 길찾기로 보내는 길은 여기 하나다 (U-FC-07 / U-ST-05 → U-NV-01).
      시설 상세·점포 상세·지도 미리보기 카드가 모두 이 함수를 부른다 — 세 곳이 각자 해시를
@@ -534,13 +562,15 @@ export function MainApp({ qr = null, noDistrict = false }) {
     /* ── S07 길찾기 ────────────────────────────────────────────────────
            도착지 상세(S05/S06) 위에 한 칸 더 쌓인다. 뒤로가기를 누르면 그 상세로 돌아온다 —
            길을 확인하고 "여기가 어디였더라" 하며 되짚는 것이 자연스러운 순서다.
-           출발지는 사용자가 고르지 않는다 — QR 지점이거나, 코스에서 들어왔다면 직전 순번의
-           가게다 (위 originStop 주석). 어느 쪽이든 URL 이 정하고 화면에는 입력란이 없다. */
+           출발지는 URL 이 정한다 — QR 지점이거나, 코스에서 들어왔다면 직전 순번의 가게다.
+           그것을 **기본값으로 두고 사용자가 바꿀 수 있다** (위 routeOrigins 주석). */
     : route.name === "route" ? (
       <RouteView
         dest={target}
         origin={originStop || d.anchor}
         fromAnchor={!originStop}
+        origins={routeOrigins}
+        onOriginChange={setRouteOrigin}
         onBack={back}
         onClose={closeAll}
         onOpenDest={() => go(`#/${route.parts[0]}/${encodeURIComponent(target.id)}`)}

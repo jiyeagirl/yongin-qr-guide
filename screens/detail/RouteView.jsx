@@ -2,7 +2,7 @@ import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice, KakaoMap, RouteSteps, routeStepText,
   Button, Badge, Notice, SectionHeader, Icon, EmptyState, FacilityIcon, CategoryIcon,
-  FACILITY_LABELS, CATEGORY_LABELS, OnnuriBadge, ro,
+  InlineSelect, FACILITY_LABELS, CATEGORY_LABELS, OnnuriBadge, ro,
 } from "../../design-systems/index.js";
 import { KAKAO_APP_KEY, WALK_M_PER_MIN, FACILITY_AS_OF, STORE_AS_OF } from "../main/config.js";
 import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
@@ -29,15 +29,27 @@ import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
  *
  * 하단 액션바가 없다. 되돌아가는 길은 왼쪽 위 뒤로가기 하나뿐이다 (footer 주석 참조).
  *
- * ── 출발지는 고를 수 없다 (다만 언제나 QR 지점인 것은 아니다) ────────────
- * 이 화면에는 출발지 입력란이 없다. 보통은 QR 스캔 지점이 출발지다 — 화면의 "내 위치"가
- * 그 고정 좌표이기 때문이다 (제안서 3-1 · U-CM-04). GPS 를 쓰지 않으므로 사용자가
- * 이동해도 이 좌표는 바뀌지 않고, 그래서 컨텍스트 바가 늘 기준점을 보여준다.
+ * ── 출발지를 고를 수 있다 (2026-08-19) ──────────────────────────────────────
+ * 기본값은 QR 스캔 지점이다 — 화면의 "내 위치"가 그 고정 좌표이기 때문이다
+ * (제안서 3-1 · U-CM-04). GPS 를 쓰지 않으므로 사용자가 이동해도 이 좌표는 바뀌지 않는다.
+ * 그리고 **바로 그것이 문제였다**: 코스를 반쯤 돈 사람의 "내 위치"는 이미 QR 지점이 아닌데,
+ * 화면은 여전히 거기서부터 길을 안내했다.
  *
- * **예외는 골목 한바퀴(S08)에서 들어온 경우 하나다** (2026-08-18). 코스의 ②로 가는 길은
- * ①에서 출발한다. 코스를 도는 사람은 이미 ①에 서 있고, 거기서 QR 지점으로 되돌아갔다가
- * 다시 나오지 않는다. 그래도 **고르는 것이 아니라 코스 순서가 정하는 값**이라 입력란이
- * 없다는 사실은 그대로다. 어느 쪽인지는 `fromAnchor` 로 들어온다 (MainApp 이 URL 에서 읽는다).
+ * 전에는 골목 한바퀴(S08)에서 들어온 경우만 예외로 두어, **코스 순서상 직전 가게**를
+ * 출발지로 삼았다. 그것도 추측이다 — ②를 건너뛰고 ③ 앞에 서 있는 사람에게 "②에서
+ * 출발"이라고 말하게 된다. 이제 그 자리를 사용자가 직접 고른다. 기본값은 예전과 같으므로
+ * (URL 이 정한다) 아무것도 고르지 않으면 화면은 그대로다.
+ *
+ * **고를 수 있는 것은 QR 지점과 그 코스의 다른 지점들뿐이다.** 임의의 주소를 받지 않는다 —
+ * 주소 검색은 이 서비스가 갖지 않기로 한 기능이고(제안서 3-1), 335곳을 드롭다운에 넣으면
+ * 고르는 일이 걷는 일보다 오래 걸린다. 도착지가 어느 코스에도 없으면(대개 공공시설)
+ * 후보가 QR 지점 하나뿐이라 **드롭다운이 아예 나오지 않는다** — 고를 것이 하나뿐인
+ * 드롭다운은 고를 수 있다고 말해놓고 아무것도 주지 않는다.
+ *
+ * 고른 값은 해시에 실린다 (`#/route/store/dj-042/dj-041`). URL 이 진실이라는 규칙은
+ * 여기서도 같고, 새로고침하거나 링크를 넘겨도 같은 안내가 나온다. 다만 history 에 쌓지 않고
+ * **갈아 끼운다** (router 의 replace) — 되돌아갈 자리는 이전 출발지가 아니라 길찾기에
+ * 들어오기 전이다.
  *
  * ── 목록의 거리와 여기 거리가 다른 이유 ─────────────────────────────────
  * 목록·상세의 "약 320m"는 **QR 지점에서의 직선거리**다 (U-FC-06 이 그렇게 못박았다 —
@@ -57,7 +69,17 @@ import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
 const km = m => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`);
 const mins = sec => Math.max(1, Math.round(sec / 60));
 
-export function RouteView({ dest, origin, fromAnchor = true, onBack, onClose, onOpenDest, onReport }) {
+/* 드롭다운에서 QR 지점을 가리키는 값. 해시에는 "출발지 조각 없음"으로 실리므로
+   (그래야 예전 링크와 형식이 같다) 이 화면 안에서만 쓰는 이름이다 —
+   점포 id 와 겹칠 수 없도록 접두사를 단다. */
+export const ANCHOR_ORIGIN = "@anchor";
+
+export function RouteView({ dest, origin, fromAnchor = true,
+  /* 고를 수 있는 출발지. [QR 지점, ...같은 코스의 다른 지점] 이고, 하나뿐이면
+     드롭다운을 그리지 않는다 (머리말). 무엇을 담을지는 셸이 정한다 — 이 화면은
+     코스가 무엇인지 모르고, 알 필요도 없다. */
+  origins = [], onOriginChange,
+  onBack, onClose, onOpenDest, onReport }) {
   const [result, setResult] = React.useState(null);
   const [active, setActive] = React.useState(-1);
   const [mapReady, setMapReady] = React.useState(false);
@@ -121,6 +143,8 @@ export function RouteView({ dest, origin, fromAnchor = true, onBack, onClose, on
      목록에 없던 숫자를 적으면 사용자가 본 적 없는 값을 인용하는 셈이 된다.
      dist 를 갖지 않는 목적지(딥링크 등)에서만 좌표로 잰다. */
   const straight = dest.dist != null ? dest.dist : Math.round(distanceM(origin, dest));
+  /* 고를 것이 하나뿐이면 드롭다운을 그리지 않는다 (머리말) */
+  const canPickOrigin = origins.length > 1 && Boolean(onOriginChange);
   const isFacility = Boolean(dest.type && FACILITY_LABELS[dest.type]);
   const kindLabel = isFacility ? (FACILITY_LABELS[dest.type] || "공공시설") : (CATEGORY_LABELS[dest.cat] || "점포");
 
@@ -179,9 +203,27 @@ export function RouteView({ dest, origin, fromAnchor = true, onBack, onClose, on
             </div>
 
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+              {/* ── 출발 ─────────────────────────────────────────────────────
+                     후보가 둘 이상일 때만 드롭다운이 된다 (머리말). 그때도 **글자로 적힌
+                     이름은 그대로 남는다** — 드롭다운 단추가 그 이름을 다시 적으면 같은
+                     낱말이 두 줄에 겹치고, 지도가 목업으로 떨어졌을 때 이 줄이 유일한
+                     "어디서"인데 그것을 컨트롤 안으로 밀어 넣을 이유가 없다.
+                     단추에는 "바꾸기"만 적는다. */}
               <div>
-                <div style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                  {fromAnchor ? "출발 · QR 스캔 지점" : "출발 · 코스에서 앞선 가게"}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                  gap: "var(--space-2)", minHeight: canPickOrigin ? "var(--tap-min)" : 0 }}>
+                  <span style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.4 }}>
+                    {fromAnchor ? "출발 · QR 스캔 지점" : "출발 · 코스 안의 가게"}
+                  </span>
+                  {canPickOrigin ? (
+                    <InlineSelect
+                      icon="map-pin" label="출발지" menuMinWidth={180}
+                      value={fromAnchor ? ANCHOR_ORIGIN : origin.id}
+                      options={origins.map(o => ({ id: o.id || ANCHOR_ORIGIN, label: o.name }))}
+                      onChange={id => onOriginChange && onOriginChange(id === ANCHOR_ORIGIN ? null : id)}
+                      /* 단추 글자는 값이 아니라 할 일이다. 값은 바로 아래 줄에 있다 */
+                      buttonLabel="바꾸기" />
+                  ) : null}
                 </div>
                 <div style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-body)", fontWeight: "var(--fw-semibold)",
                   color: "var(--text-heading)", lineHeight: 1.45, wordBreak: "keep-all" }}>{origin.name}</div>
@@ -286,7 +328,9 @@ export function RouteView({ dest, origin, fromAnchor = true, onBack, onClose, on
                **출발지가 QR 지점이 아니면 그 문장을 적지 않는다.** 목록의 수는 QR 지점에서
                잰 값이라 여기 거리와 견줄 대상이 아니고, 나란히 적으면 없던 오해를 만든다.
                대신 어디서 잰 거리인지를 밝힌다 — 코스 ②의 "약 95m"가 QR 지점에서의 거리로
-               읽히면 그 수는 완전히 틀린 안내가 된다. */}
+               읽히면 그 수는 완전히 틀린 안내가 된다. 그리고 그 자리가 맞지 않는 사람에게
+               고칠 길이 있다는 것도 함께 적는다 (2026-08-19). [바꾸기]는 화면 위쪽 출발 줄에
+               있어 아래로 내려온 사람의 눈에는 이미 없다. */}
         {/* 기준일은 카테고리 단위다 (정의서 3-2). 시설은 유형마다 값이 다르다 */}
         <DetailNotice asOf={isFacility ? `공공시설 정보 ${FACILITY_AS_OF[dest.type] || ""} 기준` : `점포 정보 ${STORE_AS_OF} 기준`}>
           {result && !failed ? (
@@ -300,7 +344,8 @@ export function RouteView({ dest, origin, fromAnchor = true, onBack, onClose, on
                 ) : (
                   <>
                     위에 적힌 <b>약 {km(result.distance)}</b>는 QR 지점이 아니라 <b>{origin.name}</b>에서
-                    걸어가는 거리입니다. 코스는 순서대로 도는 것이라 앞선 가게에서 이어 걷는 기준으로 안내합니다.
+                    걸어가는 거리입니다.
+                    {canPickOrigin ? " 다른 곳에서 출발하신다면 위 [바꾸기]로 출발지를 고르실 수 있습니다." : ""}
                   </>
                 )}
               </span>

@@ -31,6 +31,7 @@ export { Accordion } from "./components/core/Accordion.jsx";
 export { FilterBar } from "./components/core/FilterBar.jsx";
 export { ListControls } from "./components/core/ListControls.jsx";
 export { Pagination } from "./components/core/Pagination.jsx";
+export { InlineSelect } from "./components/core/InlineSelect.jsx";
 export { SortSelect } from "./components/core/SortSelect.jsx";
 export { VisuallyHidden } from "./components/core/VisuallyHidden.jsx";
 export { token, clearTokenCache } from "./components/core/token.js";

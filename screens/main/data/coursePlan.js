@@ -3,23 +3,26 @@ import { WALK_M_PER_MIN } from "../config.js";
 /* 골목 한바퀴 코스의 **순서를 짜는 곳** (U-DC-03).
  *
  * 여기에는 두 가지가 있다. 하나는 코스를 만들 때 4곳을 잇는 일(dunjeon.js 가 쓴다),
- * 다른 하나는 사용자가 순서를 벗어났을 때 남은 곳을 다시 잇는 일(S08 화면이 쓴다).
- * 둘은 **같은 알고리즘이어야 한다** — 추천 순서와 다시 짠 순서가 다른 규칙으로 나오면
- * 같은 코스가 두 가지 논리로 안내되고, 사용자는 어느 쪽이 맞는지 알 수 없다.
+ * 다른 하나는 **사용자가 끌어 옮긴 순서**를 화면이 깔 배열로 옮기는 일(S08 이 쓴다).
  *
- * ── 왜 다시 짜야 하나 ─────────────────────────────────────────────────────
- * 방문 순서를 강제하지 않는다는 것이 이 기능의 전제다 (courseVisits.js 머리말) —
- * 문 닫은 가게를 건너뛰는 일은 흔하다. 그런데 ①을 들르고 ③으로 갔는데도 남은 안내가
- * "②가 다음 차례, ②까지 3분"이라고 말하면, 그 3분은 **①에서 잰 값**이라 지금 서 있는
- * ③에서는 맞지 않는다. 순서를 벗어나도 된다고 해놓고 벗어나면 틀린 수를 주는 셈이다.
+ * ── 순서를 화면이 자동으로 바꾸지 않는다 (2026-08-19 뒤집음) ────────────────
+ * 전에는 [방문 완료]를 누를 때마다 그 곳을 기준으로 남은 곳을 가까운 순으로 다시 이었고,
+ * 방문한 곳은 "실제로 걸은 차례"로 번호가 바뀌었다. 계산은 맞았다 — ①을 들르고 ③으로
+ * 갔는데 "②까지 3분"이라고 말하면 그 3분은 ①에서 잰 값이라 실제로 틀린 수다.
  *
- * 그래서 방문 표시를 누를 때마다 **그 곳을 기준으로** 남은 곳을 다시 잇고 구간을 다시 잰다.
+ * 그런데 그 답이 **목록을 통째로 뒤바꾸는 것**이었다. 사용자가 누른 것은 "여기 들렀다"는
+ * 표시 하나인데, 그 한 번에 번호가 옮겨 붙고 줄 차례가 바뀌고 총 시간까지 달라졌다.
+ * 요청하지 않은 변화가 동작에 딸려 오면, 다음에 그 단추를 누를 때 무슨 일이 일어날지
+ * 예측할 수 없다 — 실제로 그 지점의 피드백을 받았다.
  *
- * ── 방문한 곳은 실제로 걸은 순서로 앞에 남는다 ────────────────────────────
- * 목록에서 빼지 않는다 (빼면 몇 번째였는지 알 수 없다). 다만 번호는 **추천 순번이 아니라
- * 실제로 걸은 차례**가 된다 — ③을 두 번째로 갔다면 그 줄은 ②다. 코스를 도는 중에 알고
- * 싶은 것은 "추천안에서 몇 번이었나"가 아니라 "내가 몇 번째로 갔나"이기 때문이다.
- * 지도의 순번 핀도 같은 배열을 보므로 목록과 지도의 숫자가 어긋나지 않는다.
+ * 그래서 역할을 갈랐다:
+ *
+ *   방문 표시   표시만 한다. 순서·번호·총 시간 어느 것도 건드리지 않는다.
+ *   순서        기본은 코스가 추천한 그대로이고, **바꾸는 것은 사용자뿐**이다 —
+ *               손잡이를 끌어 옮긴다 (courseOrder.js 에 남는다).
+ *
+ * 출발지는 여기서 다루지 않는다. 이 코스의 출발점은 언제나 QR 지점이고, "지금 어디서
+ * 출발하나"는 실제로 길을 물을 때(S07 길찾기) 정해진다 — 그 화면이 출발지를 고르게 한다.
  */
 
 /* 두 지점 사이의 거리(m). 평면 근사로 충분하다 — 코스는 골목 한 구역 안이라
@@ -67,6 +70,29 @@ export function withLegs(order, origin) {
   });
 }
 
+/* 사용자가 정한 차례로 늘어놓는다. 기록에 없는 곳(코스 자료가 바뀌어 새로 생긴 곳)은
+   뒤에 붙인다 — 빠뜨리면 화면에서 통째로 사라지고, 그건 순서 조정이 아니라 삭제다. */
+export function orderStops(stops = [], orderIds = []) {
+  if (!orderIds.length) return stops;
+  const byId = new Map(stops.map(s => [s.id, s]));
+  const picked = orderIds.map(id => byId.get(id)).filter(Boolean);
+  const seen = new Set(picked.map(s => s.id));
+  return picked.concat(stops.filter(s => !seen.has(s.id)));
+}
+
+/* 한 곳을 다른 자리로 옮긴다. 목록 밖으로는 나가지 않는다 — 끌다가 화면 위아래로 벗어나도
+   맨 위·맨 아래에서 멈춘다. 감싸 돌게 두면 위로 끌다가 맨 아래에 가 붙는다.
+   `to` 가 지금 자리와 같으면 **같은 배열을 그대로 돌려준다** — 부르는 쪽이 그것으로
+   "바뀐 것이 없다"를 알고 저장을 건너뛴다 (끌기는 픽셀마다 부른다). */
+export function moveStop(order = [], id, to) {
+  const i = order.findIndex(s => s.id === id);
+  const j = Math.min(Math.max(to, 0), order.length - 1);
+  if (i < 0 || i === j) return order;
+  const out = order.slice();
+  out.splice(j, 0, out.splice(i, 1)[0]);
+  return out;
+}
+
 /* 총합은 **구간의 합이다.** 총 거리를 따로 구하면 화면에 적힌 구간들을 더한 값과 어긋나고,
    사용자가 더해보고 틀린 화면이라고 읽는다. */
 export function totals(order) {
@@ -76,30 +102,25 @@ export function totals(order) {
   };
 }
 
-/* 방문 기록에 맞춰 순서를 다시 짠다.
-     stops       코스가 추천한 순서 (구간 값이 이미 붙어 있다)
-     visitedIds  사용자가 누른 **차례대로**의 id 배열 (courseVisits.js 가 그렇게 보관한다)
-     origin      QR 지점
+/* 사용자가 정한 순서를 화면이 깔 배열로 옮긴다.
+     stops     코스가 추천한 순서 (구간 값이 이미 붙어 있다)
+     orderIds  사용자가 끌어 옮긴 차례 (courseOrder.js 가 세션에 보관한다)
+     anchor    QR 지점 — 첫 구간의 출발점이다
 
-   아무 것도 누르지 않았으면 추천 순서를 **그대로 돌려준다.** 다시 계산하지 않는다 —
-   같은 결과가 나오리라 기대할 수는 있지만, 부동소수 동률에서 갈리면 화면을 열기만 해도
-   순서가 흔들린 것처럼 보인다. "한 번도 누르지 않으면 예전과 똑같다"는 것이 이 기능의
-   약속이고(CourseDetail 머리말), 그 약속은 계산이 아니라 구조로 지킨다. */
-export function planCourse(stops = [], visitedIds = [], origin) {
-  if (!stops.length || !visitedIds.length) {
-    return { order: stops, replanned: false, ...totals(stops) };
+   손댄 것이 없으면 추천 순서를 **그대로 돌려준다.** 다시 계산하지 않는다 — 같은 결과가
+   나오리라 기대할 수는 있지만, 부동소수 동률에서 갈리면 화면을 열기만 해도 순서가 흔들린
+   것처럼 보인다. "손대지 않으면 코스가 추천한 그대로"라는 것이 이 화면의 약속이고,
+   그 약속은 계산이 아니라 구조로 지킨다.
+
+   돌려주는 값:
+     order     화면과 지도가 함께 보는 배열 (구간 값이 다시 붙어 있다)
+     adjusted  사용자가 손댄 상태인가 ([추천 순서로] 를 보일지 정한다)
+     minutes·meters  구간의 합 (totals) */
+export function planCourse(stops = [], orderIds = [], anchor) {
+  if (!stops.length || !orderIds.length) {
+    return { order: stops, adjusted: false, ...totals(stops) };
   }
-
-  const byId = new Map(stops.map(s => [s.id, s]));
-  /* 이 코스에 없는 id 는 버린다 — 기록은 세션에 남고 코스 자료는 바뀔 수 있다 */
-  const walked = visitedIds.map(id => byId.get(id)).filter(Boolean);
-  const doneIds = new Set(walked.map(s => s.id));
-  const rest = stops.filter(s => !doneIds.has(s.id));
-
-  /* 남은 곳은 **마지막으로 들른 곳**에서부터 잇는다. 그것이 지금 서 있는 자리다 */
-  const from = walked[walked.length - 1] || origin;
-  const order = withLegs([...walked, ...nearestChain(rest, from)], origin);
-
-  const replanned = order.some((s, i) => stops[i] && stops[i].id !== s.id);
-  return { order, replanned, ...totals(order) };
+  const order = withLegs(orderStops(stops, orderIds), anchor);
+  const adjusted = order.some((s, i) => stops[i] && stops[i].id !== s.id);
+  return { order, adjusted, ...totals(order) };
 }

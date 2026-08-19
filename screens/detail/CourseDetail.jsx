@@ -2,13 +2,14 @@ import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice, KakaoMap, MapPreviewCard, Badge, Icon,
   CategoryIcon, CATEGORY_LABELS, OnnuriBadge, SectionHeader, ProgressBar,
-  TextButton, Chip, Mascot, Notice, VisuallyHidden,
+  TextButton, Chip, Mascot, VisuallyHidden,
 } from "../../design-systems/index.js";
 /* WALK_M_PER_MIN 을 여기서 쓰지 않는다 — 구간 시간(legMin)은 data/coursePlan.js 가 잰다.
    화면에서 따로 환산하면 같은 구간이 두 값으로 갈린다. */
 import { KAKAO_APP_KEY } from "../main/config.js";
 import { useCourseVisits } from "../main/data/courseVisits.js";
-import { planCourse, nearestChain } from "../main/data/coursePlan.js";
+import { useCourseOrder } from "../main/data/courseOrder.js";
+import { planCourse, moveStop } from "../main/data/coursePlan.js";
 
 /* S08 골목 한바퀴 코스 상세 (기능명세서 v1.0 4장 S08 행).
  * 관련 기능: U-DC-03(골목 한바퀴 추천 코스) · U-CM-07 · U-CM-08
@@ -21,19 +22,19 @@ import { planCourse, nearestChain } from "../main/data/coursePlan.js";
  *   ─────────────────────────────────
  *   (조아용) 2/4 방문  ▓▓▓░░░░    [처음부터]   ← 방문 완료 (선택 기능)
  *   ─────────────────────────────────
+ *   추천 코스                    4곳 · 순서대로
  *        ⌗                                 ← 출발점(QR 지점)에만 띠가 따로 있다
  *   2분  ┊
  *        ①  가게  업종                     ← 누르면 지도가 그 순번으로 가고 카드가 뜬다
  *        ┊      중식 · 중국집                  (U-DC-03 "순번 이동")
- *   3분  ┊                                 ← 시간은 점선 왼쪽, 그 구간의 세로 한가운데
- *        ┊      [✓ 방문 완료]                  (칩보다 위에 온다 — 칩이 아니라 선에 딸렸다)
+ *   3분  ┊      [✓ 방문 완료]         ⠿     ← 시간은 점선 왼쪽, 그 구간의 세로 한가운데
  *        ②  가게 (흐림)          (조아용)  ← 방문 도장. 점선은 ①에서 ②까지 안 끊긴다
- *        ┊      [✓ 방문함]
+ *        ┊      [✓ 방문함]            ⠿     ← 손잡이를 끌면 순서가 바뀐다
  *   2분  ┊
  *        ③  가게  [다음 차례]              ← 마지막 아래로는 선이 없다
  *   ...
  *   ─────────────────────────────────
- *   기준일자 · 참고용 고지 · 119
+ *   기준일자 · 참고용 고지
  *
  * ── 셸의 지도와 같은 어법을 쓴다 ────────────────────────────────────────
  * 순번을 고르면 지도 바닥에 미리보기 카드가 뜬다. S02·S03 에서 마커를 눌렀을 때와
@@ -43,24 +44,42 @@ import { planCourse, nearestChain } from "../main/data/coursePlan.js";
  * 구분되지 않았다 (tokens/icons.css 의 --pin-course-active 주석).
  *
  * ── 방문 완료는 화면의 전제가 아니다 ────────────────────────────────────
- * 한 번도 누르지 않아도 이 화면은 예전과 똑같이 동작한다. 진행률이 0/4 로 서 있을 뿐이다.
+ * 한 번도 누르지 않아도 이 화면은 온전하다. 진행률이 0/4 로 서 있을 뿐이다.
  * 순서를 강제하지 않고(문 닫은 가게를 건너뛰는 일은 흔하다), 방문한 곳을 목록에서 빼지
  * 않으며(빼면 몇 번째였는지 알 수 없다), 언제든 되돌릴 수 있다.
  * GPS 로 자동 판정하지 않는다 — 기록의 성격은 data/courseVisits.js 머리말 참조.
+ * **누른다고 목록이 바뀌지도 않는다** (2026-08-19. 바로 아래 참조).
  *
- * ── 순서를 벗어나면 남은 순서를 다시 짠다 (2026-08-18) ──────────────────
- * "순서를 강제하지 않는다"고 해놓고 벗어났을 때 안내가 그대로면, 그 안내는 틀린 수가 된다.
- * ①을 들르고 ③으로 갔는데 "②가 다음 차례, ②까지 3분"이라고 말하면 그 3분은 **①에서 잰
- * 값**이고, 지금 서 있는 ③에서는 맞지 않는다. 방문 표시를 누를 때마다 마지막으로 들른 곳을
- * 기준으로 남은 곳을 다시 잇고 구간을 다시 잰다 (data/coursePlan.js).
+ * ── 순서를 바꾸는 것은 사용자뿐이다 (2026-08-19 뒤집음) ─────────────────────
+ * 전에는 [방문 완료]를 누를 때마다 그 곳을 기준으로 남은 곳을 가까운 순으로 다시 이었다.
+ * 계산은 맞았다 — ①을 들르고 ③으로 갔는데 "②까지 3분"이라고 말하면 그 3분은 ①에서 잰
+ * 값이라 실제로 틀린 수다. 그런데 그 답이 **목록을 통째로 뒤바꾸는 것**이었다.
  *
- * 방문한 곳은 **실제로 걸은 차례**로 앞에 남는다 — ③을 두 번째로 갔다면 그 줄은 ②다.
- * 코스를 도는 중에 알고 싶은 것은 "추천안에서 몇 번이었나"가 아니라 "내가 몇 번째로
- * 갔나"이기 때문이다. 지도의 순번 핀과 점선 경로도 같은 배열을 보므로 함께 다시 그려진다.
- * 머리말의 총 시간·거리도 다시 짠 순서의 합이다 — 아래 구간을 더해본 사람과 어긋나지 않게.
+ * 사용자가 누른 것은 "여기 들렀다"는 표시 하나인데, 그 한 번에 번호가 옮겨 붙고 줄 차례가
+ * 바뀌고 총 시간까지 달라졌다. 요청하지 않은 변화가 동작에 딸려 오면 다음에 그 단추를
+ * 누를 때 무슨 일이 일어날지 예측할 수 없다 — 그 지점의 피드백을 받고 뒤집었다.
  *
- * 추천 순서를 되찾는 길은 [처음부터]다. 순서가 바뀌었을 때는 목록 위에 왜 바뀌었는지
- * 한 줄을 적는다 — 적지 않으면 목록이 저 혼자 뒤바뀐 것처럼 보이고, 그건 고장으로 읽힌다.
+ * 이제 역할이 갈린다:
+ *
+ *   방문 표시   표시만 한다. 순서·번호·총 시간 어느 것도 건드리지 않는다.
+ *   순서        기본은 코스가 추천한 그대로. **손잡이(⠿)를 끌어** 사용자가 옮긴다.
+ *
+ * 출발지는 이 화면에 없다. 코스 목록은 "어디를 도나"를 말하고, "지금 어디서 출발하나"는
+ * 실제로 길을 물을 때 정해진다 — 순번의 [길찾기]가 여는 S07 이 그 자리를 갖는다.
+ *
+ * ── 끌기는 손잡이에서만 시작한다 ────────────────────────────────────────────
+ * 이 화면은 지도가 sticky 로 붙어 있고 그 아래를 세로로 스크롤한다. 행 아무 데나 잡아도
+ * 끌리게 두면 "끄는 것"과 "스크롤하는 것"이 같은 몸짓이 되어, 순서를 옮기려다 화면이
+ * 흐르고 화면을 내리려다 순서가 바뀐다. 그래서 `touch-action: none` 은 **손잡이에만**
+ * 건다 — 손잡이 밖은 예전 그대로 스크롤되고, 손잡이를 잡은 손가락만 목록을 옮긴다.
+ *
+ * 손잡이는 단추다. 초점을 받고 **↑/↓ 키로도 한 칸씩 옮긴다** — 끌기는 키보드와
+ * 스크린리더에 아무것도 주지 않으므로, 같은 자리에서 같은 일을 하는 길을 함께 둔다
+ * (화면에 단추가 하나 더 늘지 않는다). 옮긴 결과는 aria-live 로 읽어준다.
+ *
+ * 되돌리는 길은 목록 바로 위의 [추천 순서로]다 — 손댄 뒤에만 나온다.
+ * 방문 기록의 [처음부터]와 **다른 단추다.** 둘을 하나로 묶으면 순서를 되돌리려다
+ * 애써 찍은 방문 표시가 함께 지워진다.
  *
  * ── 지도를 여기서 새로 만드는 이유 ──────────────────────────────────────
  * 셸의 지도는 세 탭이 공유하는 한 개뿐이고 U-CM-16 이 그것의 재로딩을 막는다.
@@ -97,25 +116,82 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
   const { visited, toggle, clear } = useCourseVisits(c.id);
   const isDone = React.useCallback(id => visited.includes(id), [visited]);
 
-  /* ── 순서는 방문한 곳을 기준으로 다시 짜인다 (2026-08-18) ──────────────────
-     ①을 들르고 ③으로 갔는데도 "②가 다음 차례, ②까지 3분"이라고 말하면, 그 3분은
-     **①에서 잰 값**이라 지금 서 있는 ③에서는 맞지 않는다. 순서를 벗어나도 된다고 해놓고
-     벗어나면 틀린 수를 주는 셈이다. 그래서 방문 표시를 누를 때마다 마지막으로 들른 곳을
-     기준으로 남은 곳을 다시 잇고 구간을 다시 잰다 (data/coursePlan.js).
+  /* ── 순서와 출발지는 사용자가 정한다 (2026-08-19) ──────────────────────────
+     방문 기록은 여기에 관여하지 않는다 (머리말 "순서를 바꾸는 것은 사용자뿐이다").
+     세션에 남으므로 가게를 한 번 눌러보고 돌아와도 맞춰둔 순서가 그대로다.
 
-     방문한 곳은 목록에서 빼지 않고 **실제로 걸은 차례**로 앞에 남는다 — 번호가 추천 순번이
-     아니라 걸은 차례가 된다. 코스를 도는 중에 알고 싶은 것은 "추천안에서 몇 번이었나"가
-     아니라 "내가 몇 번째로 갔나"다.
+     손대지 않았으면 추천 순서 그대로다 (planCourse 가 계산 없이 돌려준다).
+     지도도 같은 배열(stops)을 받으므로 순번 핀과 점선 경로가 목록과 함께 그려진다. */
+  const { orderIds, setIds, reset } = useCourseOrder(c.id);
 
-     아무 것도 누르지 않았으면 추천 순서 그대로다 (planCourse 가 계산 없이 돌려준다) —
-     "한 번도 누르지 않아도 예전과 똑같다"는 이 화면의 약속이다.
-
-     지도도 같은 배열(stops)을 받으므로 순번 핀과 점선 경로가 목록과 함께 다시 그려진다. */
   const plan = React.useMemo(
-    () => planCourse(c.stops || [], visited, anchor), [c.stops, visited, anchor]);
+    () => planCourse(c.stops || [], orderIds, anchor),
+    [c.stops, orderIds, anchor]);
   const stops = plan.order;
 
-  /* "지금 고른 곳"은 **다시 짜인 순서 안에서** 찾는다. 그래서 이 두 줄은 stops 아래에 있어야
+  /* 한 곳을 to 번째 자리로 옮긴다. **지금 화면에 깔린 배열**을 기준으로 옮겨 그대로
+     저장한다 — 끌어 옮긴 결과가 사용자가 보고 있던 그 목록 그대로여야 한다.
+     자리가 그대로면 moveStop 이 같은 배열을 돌려주므로 저장이 돌지 않는다
+     (끌기는 손가락이 움직이는 내내 이 함수를 부른다). */
+  const moveTo = React.useCallback((id, to) => {
+    const next = moveStop(stops, id, to);
+    if (next === stops) return;
+    setIds(next.map(x => x.id));
+  }, [stops, setIds]);
+
+  /* ── 끌어서 순서 바꾸기 (2026-08-19) ────────────────────────────────────
+     포인터 이벤트 하나로 손가락·마우스·펜을 함께 받는다. 잡은 손잡이가 포인터를 가두므로
+     (setPointerCapture) 손가락이 행 밖으로 나가도 이 행의 이벤트로 계속 들어온다.
+
+     자리를 정하는 방법: 지금 포인터가 **어느 행의 상자 안에 있는지**를 실제 위치에서
+     읽는다 (getBoundingClientRect). 처음 잡은 자리에서 몇 px 움직였는지로 계산하지 않는다 —
+     행 높이가 저마다 다르고(상호명이 두 줄이 되거나 조아용 도장이 붙는다) 옮기는 순간
+     그 높이가 서로 바뀌기 때문에, px 로 환산하면 한 칸을 넘길 때마다 어긋난다.
+
+     화면이 sticky 지도에 가려지는 부분은 셈에 넣지 않아도 된다. 가려진 행 위에서는
+     그 행의 상자에 들어오지 않으므로 자리가 바뀌지 않고, 손가락을 내리면 다시 잡힌다. */
+  const rowEls = React.useRef(new Map());
+  const [dragId, setDragId] = React.useState(null);
+  /* 옮긴 결과를 소리로 알린다. 끌기는 화면을 봐야만 알 수 있는 동작이라, 키보드로 옮긴
+     사람에게는 이 한 줄이 유일한 응답이다 */
+  const [moveSay, setMoveSay] = React.useState("");
+
+  const dropAt = React.useCallback((id, clientY) => {
+    let to = -1;
+    stops.forEach((x, i) => {
+      const el = rowEls.current.get(x.id);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (clientY >= r.top && clientY <= r.bottom) to = i;
+    });
+    if (to >= 0) moveTo(id, to);
+  }, [stops, moveTo]);
+
+  const endDrag = React.useCallback(() => {
+    setDragId(cur => {
+      if (cur) {
+        const i = stops.findIndex(x => x.id === cur);
+        const s = stops[i];
+        if (s) setMoveSay(`${s.name}, ${stops.length}곳 중 ${i + 1}번`);
+      }
+      return null;
+    });
+  }, [stops]);
+
+  /* ↑/↓ 키로도 한 칸씩. 끌기가 키보드에 주지 않는 것을 같은 손잡이가 준다 (머리말) */
+  const onHandleKey = React.useCallback((s, e) => {
+    const delta = e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0;
+    if (!delta) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const from = stops.findIndex(x => x.id === s.id);
+    const to = from + delta;
+    if (to < 0 || to >= stops.length) return;
+    moveTo(s.id, to);
+    setMoveSay(`${s.name}, ${stops.length}곳 중 ${to + 1}번`);
+  }, [stops, moveTo]);
+
+  /* "지금 고른 곳"은 **지금 깔린 순서 안에서** 찾는다. 그래서 이 두 줄은 stops 아래에 있어야
      한다 — 위에 두면 선언 전 참조(TDZ)라 화면이 통째로 죽는다. activeIndex 를 쓰는 곳이
      미리보기 카드의 "직전 가게"라서, 순서가 바뀌면 이 값도 함께 따라와야 맞기도 하다. */
   const active = stops.find(s => s.id === activeId) || null;
@@ -156,11 +232,12 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
     const turningOn = !isDone(s.id);
     toggle(s.id);
     if (!turningOn) return;
-    /* 다음 차례는 **방금 들른 곳에서 가장 가까운** 남은 곳이다 — 아래 렌더에서 새로 짜일
-       순서의 첫 곳과 같은 값이다. 여기서 미리 같은 규칙으로 구한다: `visited` 갱신은 다음
-       렌더에나 반영되므로 지금 plan 을 읽으면 한 박자 늦은 순서를 보게 된다. */
-    const rest = stops.filter(x => x.id !== s.id && !isDone(x.id));
-    const next = nearestChain(rest, s, 1)[0];
+    /* 다음 차례는 **목록에서 아직 안 들른 첫 곳**이다 (2026-08-19). 전에는 "방금 들른 곳에서
+       가장 가까운 곳"이었는데, 그건 순서를 다시 짜던 시절의 값이다. 이제 순서는 그대로 있고
+       화면의 [다음 차례] 배지도 목록 차례로 붙으므로, 지도가 옮겨가는 곳과 배지가 붙는 곳이
+       같아야 한다 — 다르면 지도가 가리키는 곳과 목록이 가리키는 곳이 갈린다.
+       `visited` 갱신은 다음 렌더에나 반영되므로 방금 켠 곳을 여기서 직접 뺀다. */
+    const next = stops.find(x => x.id !== s.id && !isDone(x.id));
     if (next) goTo(next.id);
   }, [isDone, toggle, stops, goTo]);
 
@@ -235,9 +312,9 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
         {/* ── 요약 ────────────────────────────────────────────────────── */}
         <div>
           {/* 총 시간·거리는 **지금 화면에 깔린 순서의 합**이다 (plan). 코스 자료의 값
-              (c.minutes)이 아니다 — 순서가 다시 짜이면 걷는 길이 달라지는데 머리말만
+              (c.minutes)이 아니다 — 순서나 출발지를 바꾸면 걷는 길이 달라지는데 머리말만
               추천안의 수를 붙들고 있으면, 아래 구간을 더해본 사람에게 틀린 화면이 된다.
-              아무 것도 누르지 않았으면 둘은 같은 값이다. */}
+              손대지 않았으면 둘은 같은 값이다. */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "var(--space-2)" }}>
             <Badge tone="brand" dot>도보 {plan.minutes}분</Badge>
             <Badge tone="neutral">{stops.length}곳</Badge>
@@ -250,7 +327,7 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
               길을 나타내는 선이라면 "코스"가 아니라 "경로"라고 적었을 것이다.
               실제로 걷는 길은 순번마다 [길찾기]가 따로 안내한다. */}
           <p style={{ marginTop: 4, fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.5 }}>
-            QR 지점에서 출발해 순서대로 도는 코스를 나타냅니다.
+            {anchor.name}에서 출발해 순서대로 도는 코스를 나타냅니다.
           </p>
         </div>
 
@@ -301,16 +378,41 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                **조아용 도장 · 흐린 글자 · [방문함] 칩** 셋으로 말하고, 다음 차례는 배지로
                말한다 — 어느 것도 색 하나에 기대지 않는다. */}
         <section>
+          {/* 머리말 오른쪽은 지금 목록이 무엇인지 적는다. "직접 정한 순서"는 사용자가
+              순서나 출발지를 손댔다는 뜻이고, 되돌리는 길은 아래 [추천 순서로]다. */}
           <SectionHeader title="추천 코스"
-            note={plan.replanned ? `${stops.length}곳 · 다시 짠 순서` : `${stops.length}곳 · 순서대로`} />
-          {/* 순서가 바뀐 이유를 한 줄로 적는다. 적지 않으면 목록이 저 혼자 뒤바뀐 것처럼
-              보이고, 그건 화면이 고장난 것으로 읽힌다. 추천 순서를 되찾는 길([처음부터])이
-              바로 위에 있으므로 여기서는 무슨 일이 있었는지만 말한다. */}
-          {plan.replanned ? (
-            <Notice tone="neutral" size="sm" style={{ marginBottom: "var(--space-3)" }}>
-              마지막으로 들른 곳에서 가까운 순서로 다시 잡았습니다
-            </Notice>
+            note={`${stops.length}곳 · ${plan.adjusted ? "직접 정한 순서" : "순서대로"}`}
+            style={{ marginBottom: "var(--space-2)" }} />
+
+          {/* 끌 수 있다는 것을 한 줄로 알린다. 손잡이(⠿)는 익숙한 기호지만 **작고 오른쪽
+              끝에 있어** 먼저 눈에 들어오지 않는다. 목록을 훑기 전에 한 번 읽히는 자리에
+              적어두면 손잡이를 봤을 때 무엇인지 바로 이어진다.
+              고지가 아니라 안내라서 Notice 상자를 두르지 않는다 — 상자는 이 화면에서
+              가장 큰 덩어리가 되고, 정작 중요한 것은 그 아래 목록이다. */}
+          {stops.length > 1 ? (
+            <p style={{ marginBottom: "var(--space-2)", fontSize: "var(--fs-caption)",
+              color: "var(--text-muted)", lineHeight: 1.5 }}>
+              <Icon name="grip-vertical" size={14} style={{ verticalAlign: "-2px", marginRight: 2 }} />
+              손잡이를 끌어 도는 순서를 바꿀 수 있습니다.
+            </p>
           ) : null}
+
+          {/* 되돌리는 길. 손대지 않았으면 나오지 않는다 — 0/4 에 [처음부터]를 두지 않는
+              것과 같은 규칙이고(위 진행률), 되돌릴 것이 없는데 되돌리기가 서 있으면
+              무언가 이미 바뀐 것처럼 읽힌다. 순서와 출발지를 함께 되돌리고 **방문 기록은
+              건드리지 않는다** — 위 [처음부터]와 다른 단추인 이유다 (머리말 참조).
+              목록 바로 위에 둔다: 되돌아갈 대상이 아래에 있어야 무엇이 되돌아가는지 보인다. */}
+          {plan.adjusted ? (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-1)" }}>
+              <TextButton tone="muted" icon="rotate-ccw" onClick={reset}
+                style={{ paddingRight: 0 }}>추천 순서로</TextButton>
+            </div>
+          ) : null}
+
+          {/* 옮긴 결과를 소리로 알린다. 화면에서는 줄이 움직이는 것이 보이지만, 끌기도
+              키보드 조작도 그 사실을 저절로 읽어주지는 않는다 */}
+          <VisuallyHidden aria-live="polite">{moveSay}</VisuallyHidden>
+
           <div role="list">
             {stops.map((s, i) => {
               const on = s.id === activeId;
@@ -350,6 +452,8 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                   ) : null}
 
                   <div role="listitem" onClick={() => goTo(s.id)}
+                    /* 끌 때 자리를 정하는 기준이 이 상자다 (위 dropAt 주석) */
+                    ref={el => { if (el) rowEls.current.set(s.id, el); else rowEls.current.delete(s.id); }}
                     style={{ position: "relative",
                       display: "flex", alignItems: "flex-start", gap: "var(--space-3)",
                       minHeight: "var(--tap-comfortable)",
@@ -363,8 +467,21 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                       padding: "var(--space-2) var(--space-3) var(--space-2) calc(var(--space-3) + 28px)",
                       cursor: "pointer",
                       borderRadius: "var(--radius-sm)",
-                      background: on ? "var(--brand-primary-soft)" : "transparent",
-                      border: "var(--stroke-hairline) solid " + (on ? "var(--border-brand)" : "transparent") }}>
+                      /* ── 끌고 있는 줄 ─────────────────────────────────────────
+                         들어올린 것처럼 보여야 한다 — 그림자를 얹고 카드 바탕을 깔아
+                         아래 줄들과 층을 나눈다. "지금 고른 곳"(on)의 초록 바탕과 겹치면
+                         둘 중 어느 상태인지 알 수 없으므로 끄는 쪽이 이긴다.
+                         크기는 건드리지 않는다 — 줄 높이가 변하면 자리를 정하는 상자
+                         (dropAt 이 재는 값)가 끄는 도중에 흔들린다. */
+                      background: dragId === s.id ? "var(--surface-card)"
+                        : on ? "var(--brand-primary-soft)" : "transparent",
+                      border: "var(--stroke-hairline) solid "
+                        + (dragId === s.id ? "var(--border-strong)"
+                          : on ? "var(--border-brand)" : "transparent"),
+                      boxShadow: dragId === s.id ? "var(--shadow-raised)" : "none",
+                      /* 끄는 동안에는 이 줄이 위로 온다. 아래 줄이 그림자를 덮으면
+                         들어올린 느낌이 사라진다 */
+                      zIndex: dragId === s.id ? 1 : "auto" }}>
 
                     {/* ── 점선은 행 안에서 그린다 (2026-08-19) ──────────────────────
                            행 사이에 띠를 두고 거기에만 점선을 그렸을 때는 ①에서 ②까지가
@@ -422,15 +539,58 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                         {CATEGORY_LABELS[s.cat] || "기타"} · {s.biz}
                       </div>
 
-                      {/* 방문 토글 — 작은 알약(size="sm", 28px)이다. 행의 주인공은 상호명이고
-                          이건 그 행에 붙이는 표시라 상호명보다 커서는 안 된다. 눌리는 크기는
-                          그대로 44px 이다 — 눈에만 작아진다 (Chip 의 CHIP_SIZES 주석).
-                          행을 누르면 지도가 옮겨가므로 여기서 전파를 끊는다. */}
-                      <Chip size="sm" selected={done} icon="check" aria-pressed={done}
-                        onClick={e => { e.stopPropagation(); markVisited(s); }}
-                        style={{ marginTop: 0 }}>
-                        {done ? "방문함" : "방문 완료"}
-                      </Chip>
+                      {/* ── 이 행에 하는 조작 한 줄 ───────────────────────────────
+                             왼쪽은 방문 표시, 오른쪽은 순서 손잡이다. 손잡이를 행 오른쪽
+                             끝(조아용 도장 옆)에 세우지 않은 이유는 **가로 폭**이다 — 360px
+                             화면에서 도장(56)과 손잡이(44)가 함께 서면 상호명이 170px 남아
+                             두 줄로 접힌다. 이 줄에 두면 상호명에서 가져가는 폭이 없다.
+
+                             방문 토글은 작은 알약(size="sm", 28px)이다. 행의 주인공은 상호명이고
+                             이건 그 행에 붙이는 표시라 상호명보다 커서는 안 된다. 눌리는 크기는
+                             그대로 44px 이다 — 눈에만 작아진다 (Chip 의 CHIP_SIZES 주석).
+                             행을 누르면 지도가 옮겨가므로 둘 다 전파를 끊는다. */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                        gap: "var(--space-2)" }}>
+                        <Chip size="sm" selected={done} icon="check" aria-pressed={done}
+                          onClick={e => { e.stopPropagation(); markVisited(s); }}
+                          style={{ marginTop: 0 }}>
+                          {done ? "방문함" : "방문 완료"}
+                        </Chip>
+
+                        {/* ── 순서 손잡이 (2026-08-19 신설) ──────────────────────
+                               곳이 하나뿐이면 옮길 데가 없으므로 나오지 않는다.
+
+                               `touch-action: none` 이 **여기에만** 걸린다 — 이 44px 안에서만
+                               브라우저의 스크롤을 끄고, 손잡이 밖에서는 화면이 예전처럼
+                               흐른다 (머리말 "끌기는 손잡이에서만 시작한다").
+
+                               단추다. 초점을 받고 ↑/↓ 키로도 옮긴다. 이름에 지금 자리까지
+                               적는다 — 소리로 훑으면 "순서 옮기기" 넷이 줄줄이 지나갈 뿐이라
+                               무엇이 몇 번째인지가 이름 안에 있어야 한다. */}
+                        {stops.length > 1 ? (
+                          <button type="button"
+                            aria-label={`${s.name} 순서 옮기기, ${stops.length}곳 중 ${i + 1}번. 위아래 화살표 키로 옮깁니다`}
+                            onClick={e => e.stopPropagation()}
+                            onKeyDown={e => onHandleKey(s, e)}
+                            onPointerDown={e => {
+                              e.stopPropagation();
+                              e.currentTarget.setPointerCapture(e.pointerId);
+                              setDragId(s.id);
+                            }}
+                            onPointerMove={e => { if (dragId === s.id) dropAt(s.id, e.clientY); }}
+                            onPointerUp={endDrag}
+                            onPointerCancel={endDrag}
+                            style={{ flex: "0 0 auto",
+                              width: "var(--tap-min)", height: "var(--tap-min)",
+                              display: "inline-flex", alignItems: "center", justifyContent: "center",
+                              background: "none", border: "none", borderRadius: "var(--radius-pill)",
+                              touchAction: "none",
+                              cursor: dragId === s.id ? "grabbing" : "grab",
+                              color: dragId === s.id ? "var(--text-heading)" : "var(--text-muted)" }}>
+                            <Icon name="grip-vertical" size={20} />
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
 
                     {/* 방문 도장 — 조아용이 이 행의 상태를 그림으로 한 번 더 말한다.
