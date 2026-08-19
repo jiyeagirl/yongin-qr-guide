@@ -57,21 +57,38 @@
 --tint-veil:rgba(22,34,28,.10);
 
 /* ── 축제 상태 3종 — 카드 틴트와 상태 배지를 **한 세트로** 묶는다 ─────────────
-   Design 프로젝트의 `--status-*` 를 그대로 들여왔다 (2026-08-19).
+   Design 프로젝트의 `--status-*` 를 들여왔고(2026-08-19), 진행중만 그 뒤에 초록으로
+   바꿨다 (같은 날, 아래).
 
-   상태 배지는 카드 틴트와 같은 **난색 계열**이면서 **채도로 위계**를 만든다:
-   진행중은 선명한 딥앰버로 올라오고, 예정은 채도를 낮춘 코코아로 물러나며, 종료는
-   무채색으로 빠진다. 셋 다 흰 글자 대비 4.5:1 이상이다
-   (앰버 5.32:1 · 코코아 6.66:1 · 잉크 5.70:1).
+   **진행중은 브랜드 초록이다.** 바탕 green-50 · 테두리 green-200 · 배지 green-800.
+   앞서는 크림 바탕에 딥앰버 배지였는데, 세 상태가 크림·샌드·회색으로 전부 난색·무채색이라
+   **"지금 열려 있다"가 목록에서 앞으로 나오지 못했다** — 채도 위계만으로 세운 구별이라
+   나란히 놓고 봐야 갈렸다. 초록은 계열 자체가 달라 훑는 눈에 먼저 걸린다.
+
+   틴트 도메인 표(위)에서 green 은 상점가·점포다. 축제에 그 계열을 쓰는 것은 표를 벗어나는
+   일이고, 그래서 `--tint-green-*` 을 가리키지 않고 램프의 단을 **직접** 적는다 — 틴트를
+   고쳤을 때 축제가 딸려 오지 않아야 하고, 이 자리가 예외라는 사실이 코드에 남아야 한다.
+   같은 화면(S04 둘러보기)의 신규·인기 매장 레일도 초록인데, 그쪽은 같은 날 **바탕을 비워
+   선만 초록으로** 남겼다 (--rail-*). 축제는 면이 초록이고 레일은 선이 초록이라 층이 갈린다.
+
+   배지는 green-700(--brand-primary)이 아니라 **green-800**(--brand-primary-strong)이다.
+   green-700(#2f9260) 위의 흰 글자는 3.89:1 로 AA(4.5:1)를 넘지 못한다. green-800(#216e48)은
+   6.28:1 이다. 배지 글자는 fs-micro 라 큰 글자 기준(3:1)을 쓸 수 없다.
+
+   예정·종료는 그대로다. 예정은 카드 틴트와 같은 **난색 계열**이면서 채도를 낮춘 코코아로
+   물러나고, 종료는 무채색으로 빠진다. 셋 다 흰 글자 대비 4.5:1 이상이다
+   (초록 6.28:1 · 코코아 6.66:1 · 잉크 5.70:1).
 
    **적색은 응급(AED·대피소) 전용이므로 "진행중"에 쓰지 않는다.** 한때 여기 red-500 을
    썼다가 되돌렸다 — 크림 카드 위에서 눈에는 잘 띄었지만, 이 앱에서 붉은 알약은
    "지금 열려 있다"가 아니라 "위험"으로 읽힌다. 지도의 AED·대피소 핀이 같은 붉은색이다.
 
    틴트 이름을 직접 쓰지 않고 이 세 벌을 따로 두는 이유: 바탕과 배지가 **같은 틴트의
-   다른 단이 아니다.** 진행중은 바탕 cream + 배지 amber 이고, 그 짝은 채도 위계에서 나온
-   것이라 틴트 표에서 유도할 수 없다. 짝을 이름으로 묶어두면 한쪽만 바뀌지 않는다. */
---status-ongoing-surface:var(--tint-cream-bg);--status-ongoing-border:var(--tint-cream-border);--status-ongoing-badge:var(--yong-amber-800);
---status-upcoming-surface:var(--tint-sand-bg);--status-upcoming-border:var(--tint-sand-border);--status-upcoming-badge:var(--yong-sand-600);
---status-ended-surface:var(--tint-neutral-bg);--status-ended-border:var(--tint-neutral-border);--status-ended-badge:var(--yong-ink-500);
+   다른 단이 아니다.** 짝을 이름으로 묶어두면 한쪽만 바뀌지 않는다. */
+/* `-ink` 는 그 바탕 위의 **글자**다 (2026-08-19 추가). 전에는 festivalPalette 가 틴트
+   이름에서 `--tint-{cream}-fg` 로 끌어 썼는데, 진행중 바탕이 크림을 떠나면서 그 유도가
+   끊겼다 — 바탕이 여기 있으니 글자도 여기 있어야 한 세트가 온전하다. 값은 전과 같다. */
+--status-ongoing-surface:var(--yong-green-50);--status-ongoing-border:var(--yong-green-200);--status-ongoing-badge:var(--brand-primary-strong);--status-ongoing-ink:var(--yong-ink-900);
+--status-upcoming-surface:var(--tint-sand-bg);--status-upcoming-border:var(--tint-sand-border);--status-upcoming-badge:var(--yong-sand-600);--status-upcoming-ink:var(--tint-sand-fg);
+--status-ended-surface:var(--tint-neutral-bg);--status-ended-border:var(--tint-neutral-border);--status-ended-badge:var(--yong-ink-500);--status-ended-ink:var(--tint-neutral-fg);
 }

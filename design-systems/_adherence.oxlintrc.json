@@ -458,12 +458,15 @@
       "--state-warning",
       "--state-warning-soft",
       "--status-ended-badge",
+      "--status-ended-ink",
       "--status-ended-border",
       "--status-ended-surface",
       "--status-ongoing-badge",
+      "--status-ongoing-ink",
       "--status-ongoing-border",
       "--status-ongoing-surface",
       "--status-upcoming-badge",
+      "--status-upcoming-ink",
       "--status-upcoming-border",
       "--status-upcoming-surface",
       "--stroke-bold",
@@ -866,12 +869,15 @@
       "--status-ongoing-surface": "color",
       "--status-ongoing-border": "color",
       "--status-ongoing-badge": "color",
+      "--status-ongoing-ink": "color",
       "--status-upcoming-surface": "color",
       "--status-upcoming-border": "color",
       "--status-upcoming-badge": "color",
+      "--status-upcoming-ink": "color",
       "--status-ended-surface": "color",
       "--status-ended-border": "color",
-      "--status-ended-badge": "color"
+      "--status-ended-badge": "color",
+      "--status-ended-ink": "color"
     },
     "fontFamilies": [
       "Pretendard"

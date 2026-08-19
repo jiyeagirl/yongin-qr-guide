@@ -13,12 +13,12 @@ const TONES = {
   onnuri: ["var(--state-info-soft)", "var(--yong-teal-900)"],
 
   /* ── 축제 상태 3종 (2026-08-19. Design 프로젝트의 Badge 스펙) ────────────────
-     카드 틴트와 **한 세트**다 (tokens/surfaces.css 의 --status-*). 카드는 난색 틴트를
-     깔고 배지는 같은 계열의 진한 단으로 올라온다 — 흰 글자로 대비를 낸다.
+     카드 색과 **한 세트**다 (tokens/surfaces.css 의 --status-*). 카드는 옅은 바탕을
+     깔고 배지는 그 위로 진한 단이 올라온다 — 흰 글자로 대비를 낸다.
 
-       ongoing   딥앰버   cream 카드 위
-       upcoming  코코아   sand 카드 위
-       ended     잉크     neutral 카드 위
+       ongoing   짙은 초록  green-50 카드 위 (2026-08-19. 그 전에는 딥앰버 / cream)
+       upcoming  코코아     sand 카드 위
+       ended     잉크       neutral 카드 위
 
      **셋 다 언제나 점(dot)과 함께 쓴다.** 형태가 같아야 세 상태를 서로 견줄 수 있다.
      쓰는 쪽은 festivalState.js 의 festivalBadge() 를 거치므로 이 규칙을 빠뜨릴 수 없다. */
