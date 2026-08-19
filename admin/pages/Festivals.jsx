@@ -1,6 +1,7 @@
 import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Modal, ConfirmDialog, Button, Select, Badge, EMPTY_MARK, Notice,
+  FESTIVAL_STATES, festivalBadge,
 } from "../../design-systems/admin.js";
 import { FESTIVALS, DISTRICTS } from "../../screens/main/data/districts.js";
 import { TODAY } from "../../screens/main/config.js";
@@ -28,9 +29,11 @@ import { RecordForm } from "./RecordForm.jsx";
  * 여기에도 상태 필터 하나만 둔다.
  */
 
-const STATE_TONE = { 진행중: "success", 예정: "info", 종료: "neutral" };
+/* 상태 색과 차례는 디자인 시스템의 표를 그대로 쓴다 (festivalState.js. 2026-08-19).
+   여기에 따로 적어 두었더니 예정이 청록(info)이 되어, 담당자가 이 표에서 본 색과
+   시민 화면의 색(크림)이 달랐다. 같은 축제를 두 색으로 말한 셈이다. */
 const STATE_OPTIONS = [{ value: "", label: "전체 상태" }]
-  .concat(["진행중", "예정", "종료"].map(v => ({ value: v, label: v })));
+  .concat(FESTIVAL_STATES.map(v => ({ value: v, label: v })));
 
 const DISTRICT_NAME = DISTRICTS.reduce((o, d) => { o[d.id] = d.name; return o; }, {});
 
@@ -85,8 +88,8 @@ export function Festivals({ onToast }) {
             sortValue: f => f.start || "" },
           { key: "time", label: "시간", width: 130, render: f => f.time || EMPTY_MARK },
           { key: "state", label: "상태", width: 90, align: "center", hint: "자동 계산",
-            render: f => <Badge tone={STATE_TONE[stateOf(f)]} size="sm">{stateOf(f)}</Badge>,
-            sortValue: f => ["진행중", "예정", "종료"].indexOf(stateOf(f)) },
+            render: f => <Badge size="sm" {...festivalBadge(stateOf(f))}>{stateOf(f)}</Badge>,
+            sortValue: f => FESTIVAL_STATES.indexOf(stateOf(f)) },
           { key: "manage", label: "관리", width: 96, align: "right",
             render: f => (
               <Button variant="ghost" size="sm" icon="trash-2"

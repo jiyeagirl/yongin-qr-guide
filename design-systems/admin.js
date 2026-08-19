@@ -46,6 +46,10 @@ export { Pagination, SectionHeader, VisuallyHidden, InfoList, yesNoMark, EMPTY_M
 /* ── 공용: 도메인 아이콘과 이름표 ────────────────────────────────────────── */
 export { FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, EMERGENCY, CategoryIcon, CATEGORY_LABELS, OnnuriBadge } from "./index.js";
 
+/* 축제 상태 색은 시민 화면과 **같은 표**를 본다. 여기서 따로 정하면 담당자가 관리자에서
+   본 색과 시민 화면의 색이 갈린다 — 실제로 예정이 청록/크림으로 갈려 있었다 */
+export { FESTIVAL_STATES, FESTIVAL_STATE_TONE, FESTIVAL_BADGE_TONE, festivalTone, festivalBadge } from "./index.js";
+
 /* ── 공용: 알림 ──────────────────────────────────────────────────────────── */
 export { Notice, Toast, EmptyState, LoadingBar, ProgressBar } from "./index.js";
 

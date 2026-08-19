@@ -1,7 +1,7 @@
 import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice, InfoList, Accordion, SectionHeader,
-  Button, Badge, ListRow, Icon, Notice,
+  Button, Badge, ListRow, Icon, Notice, festivalBadge,
 } from "../../design-systems/index.js";
 
 /* S09 축제 상세 (기능명세서 v1.0 4장 S09 행).
@@ -70,9 +70,10 @@ export function FestivalDetail({ festival, onBack, onReport }) {
         {/* ── 머리 ─────────────────────────────────────────────────────── */}
         <header>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "var(--space-2)" }}>
-            {/* 상태 색을 셋으로 나눈다 — 진행중만 눈에 띄어야 한다.
-                예정과 종료가 같은 무게면 목록에서 정렬한 의미가 상세에서 사라진다 */}
-            <Badge tone={live ? "success" : ended ? "neutral" : "accent"} dot={live}>{f.state}</Badge>
+            {/* 상태 알약은 디자인 시스템의 표 하나가 정한다 (festivalState.js). 여기서
+                삼항으로 다시 적고 있었는데, 같은 표가 네 곳에 흩어진 결과 관리자 표만
+                예정이 청록으로 갈려 있었다. 진행중이 꽉 찬 빨강에 점을 다는 것도 그 표가 정한다 */}
+            <Badge {...festivalBadge(f.state)}>{f.state}</Badge>
             <Badge tone="neutral">{f.districtName} · {distance}</Badge>
           </div>
           <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-start" }}>
@@ -135,8 +136,12 @@ export function FestivalDetail({ festival, onBack, onReport }) {
                (머리말 "협의 필요 항목은 -로 남기지 않는다"). */}
         {programs.length ? (
           <section>
-            <SectionHeader title="주요 프로그램 일정" note={`${programs.length}개 · 시간대별`} />
-            <Accordion items={programs} defaultOpen={0} />
+            {/* note 를 달지 않는다 (2026-08-19). "4개 · 시간대별"이라 적었는데, 개수는 바로
+                아래 네 줄이 이미 보여주고 "시간대별"은 각 줄 왼쪽의 시각이 말한다 —
+                머리말이 아래를 한 번 더 설명하면 읽을 것만 늘어난다 */}
+            <SectionHeader title="주요 프로그램 일정" />
+            {/* 전부 닫힌 채로 시작한다 (Accordion 의 기본값. 그쪽 주석 참조) */}
+            <Accordion items={programs} />
           </section>
         ) : null}
 
@@ -169,10 +174,11 @@ export function FestivalDetail({ festival, onBack, onReport }) {
              축제는 공공데이터가 아니라 시가 그때그때 전달하는 자료라 "몇 월 기준"이라는 말이
              성립하지 않는다 — 없는 근거를 적으면 그 날짜가 보증처럼 읽힌다.
              대신 바뀔 수 있다는 사실은 그대로 적는다. */}
-        <DetailNotice>
-          <span style={{ display: "block" }}>
-            일정과 프로그램은 주최 상점가 사정으로 변경될 수 있습니다.
-          </span>
+        {/* 119 안내를 끈다 — 이 화면에는 안전시설이 한 줄도 없다 (DetailNotice 의 emergency 주석).
+             그러면서 "참고용"과 "바뀔 수 있다"를 한 문장으로 잇는다. 두 줄로 나누면 앞줄이
+             축제 이야기, 뒷줄이 일반 고지로 읽혀 같은 말을 두 번 하는 것처럼 보였다 */}
+        <DetailNotice emergency={false}>
+          안내 정보는 참고용이며, 일정과 프로그램은 주최 상점가 사정으로 변경될 수 있습니다.
         </DetailNotice>
       </DetailBody>
     </DetailPage>

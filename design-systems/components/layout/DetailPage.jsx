@@ -141,15 +141,28 @@ export function DetailBody({ children, style, ...rest }) {
 }
 
 /* 화면 하단 고지 (U-CM-07 정보 기준일자 · U-CM-08 참고용 고지와 119).
-   두 상세 화면이 같은 문장을 각자 적으면 한쪽만 고쳐지는 일이 생긴다. */
-export function DetailNotice({ asOf, children, style, ...rest }) {
+   여러 상세 화면이 같은 문장을 각자 적으면 한쪽만 고쳐지는 일이 생긴다.
+
+   ── `emergency` — 119 안내를 끄는 자리가 있다 (2026-08-19) ───────────────────
+   119 문장은 **안전시설을 보여준 화면의 고지**다. AED·대피소를 안내한 다음 "그래도 급하면
+   119"로 잇는 자리이고, 그 앞의 안내가 있어야 뒷문장이 고지가 된다.
+
+   축제 화면(S09 상세 · S12 전체보기)에는 안전시설이 한 줄도 없다. 시설을 보여주지 않은
+   화면에서 응급을 말하면 고지가 아니라 관용구가 되고, 정작 공공시설 탭에서 같은 문장을
+   읽을 때 무게가 빠진다. 둘러보기 탭(DiscoverPanel)에서 같은 이유로 뺐다.
+
+   **끄는 쪽이 예외다.** 기본값은 켜짐이라, 새 상세 화면을 만들 때 아무것도 하지 않으면
+   119 가 붙는다 — 빠뜨려서 안 붙는 일보다 필요 없는데 붙는 일이 낫다. */
+export function DetailNotice({ asOf, children, emergency = true, style, ...rest }) {
   return (
     <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55, ...style }} {...rest}>
       {asOf}
       {children}
-      <span style={{ display: "block" }}>
-        안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
-      </span>
+      {emergency ? (
+        <span style={{ display: "block" }}>
+          안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
+        </span>
+      ) : null}
     </p>
   );
 }

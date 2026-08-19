@@ -2,6 +2,7 @@ import React from "react";
 import { ListRow } from "../core/ListRow.jsx";
 import { Icon } from "../core/Icon.jsx";
 import { Badge } from "../core/Badge.jsx";
+import { festivalBadge } from "./festivalState.js";
 
 /* 축제 목록의 한 행 (U-DC-01, U-FT-01). 둘러보기 탭 최상단 섹션이 쓴다.
    `FestivalBanner` 와 짝을 이룬다 — 배너는 "우리 상점가 축제 1건"(U-FT-03),
@@ -23,8 +24,6 @@ import { Badge } from "../core/Badge.jsx";
    대신 "지금 계신 곳"이라고 쓴다. 설명이 필요 없는 말이고, 상단 띠가 말하는 QR 지점과
    같은 것을 가리킨다. 그 줄을 읽은 사람은 여기서 한 번 더 배울 것이 없다. */
 
-const STATE_TONE = { 진행중: "success", 예정: "accent", 종료: "neutral" };
-
 export function FestivalRow({ festival, onClick, divider = true, style, ...rest }) {
   const f = festival;
   const done = f.state === "종료";
@@ -36,7 +35,7 @@ export function FestivalRow({ festival, onClick, divider = true, style, ...rest 
       divider={divider}
       icon={<Icon name="party-popper" size={22} color={done ? "var(--text-disabled)" : "var(--yong-cream-900)"} />}
       title={f.name}
-      tag={<Badge size="sm" tone={STATE_TONE[f.state] || "neutral"}>{f.state}</Badge>}
+      tag={<Badge size="sm" {...festivalBadge(f.state)}>{f.state}</Badge>}
       meta={<>
         {f.date}
         {/* 상점가명과 거리는 한 줄로 내린다 — 날짜와 같은 줄에 넣으면 넷이 붙어 읽히지 않는다 */}

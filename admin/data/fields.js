@@ -77,8 +77,10 @@ export const FESTIVAL_FIELDS = [
   { key: "start", label: "시작일", required: true, type: "text", example: "2026-10-17" },
   { key: "end", label: "종료일", required: true, type: "text", example: "2026-10-17" },
   { key: "time", label: "시간", required: false, type: "text", example: "15:00~21:00" },
+  /* 예시값은 담당자가 보고 그대로 따라 적는 자리다. 시민 화면의 표기 규칙과 어긋나면
+     어긋난 값이 그대로 들어온다 — 프로그램 이름 사이는 쉼표다 (districts.js 주석) */
   { key: "program", label: "주요 프로그램", required: false, type: "textarea", rows: 3,
-    example: "먹거리 장터 · 상인 경품행사 · 어르신 한마당", span: 2 },
+    example: "먹거리 장터, 상인 경품행사, 어르신 한마당", span: 2 },
 ];
 
 /* ── 2-1 ~ 2-4 공공시설 ─────────────────────────────────────────────────────

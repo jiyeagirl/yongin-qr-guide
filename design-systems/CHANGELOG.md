@@ -133,6 +133,53 @@ red 가 이 시스템에서 응급(AED·대피소)의 색인 것을 알고 쓴�
 
 ---
 
+## 2026-08-19 — 축제 색을 상태 3색으로 통일 (`festivalState.js` 신설)
+
+축제를 가리키는 색이 화면마다 달랐다. 같은 표가 네 곳에 따로 적혀 있었고 그중 하나는
+값까지 달랐다.
+
+| 자리 | 진행중 | 예정 | 종료 |
+| --- | --- | --- | --- |
+| `FestivalRow` | success | accent | neutral |
+| `FestivalBanner` | success | accent | neutral |
+| `FestivalDetail` | 삼항 연산자로 손수 다시 적음 | | |
+| `admin/pages/Festivals` | success | **info** | neutral |
+
+그래서 같은 축제의 "예정"이 시민 화면에서는 크림색, 관리자 표에서는 청록색이었다.
+담당자가 관리자에서 보고 시민 화면을 열면 다른 색이 나온다.
+
+`FestivalCard` 는 더 갈라져 있었다 — 상태와 **무관한** 여섯 파스텔(sky · lilac · sand ·
+peach · rose · stone)을 축제마다 하나씩 배정해 바탕에 깔았다. 카드끼리 구별하려던 것인데,
+배지는 그와 별개로 상태 색을 써서 **한 화면에 축제를 가리키는 색이 아홉 가지**가 됐다.
+뜻이 없는 여섯 색은 보는 사람에게 있지도 않은 규칙을 찾게 만든다 — 붉은 카드가 급한 축제인가?
+
+**상태가 셋이므로 색도 셋이다.**
+
+| 상태 | 색 | 토큰 | Badge 톤 |
+| --- | --- | --- | --- |
+| 진행중 | 초록 | `--fest-live-*` | `success` |
+| 예정 | 크림 | `--fest-soon-*` | `accent` |
+| 종료 | 회색 | `--fest-done-*` | `neutral` |
+
+세 `-bg` 값은 Badge 의 `success` · `accent` · `neutral` 바탕색과 **정확히 같다.** 같은 상태를
+가리키는 색이 카드에서와 목록 행에서 갈릴 여지를 없앴다. 축제끼리 구별하는 일은 이제 색이
+아니라 축제명 · 날짜 · 홍보 문구가 맡는다 — 원래 그 일을 하는 자리이고, 색을 못 보는
+사람에게도 남는다. "색만으로 상태를 말하지 않는다"는 규칙은 그대로다.
+
+**새 파일 `components/store/festivalState.js` 가 단일 출처다.** `FESTIVAL_STATES`(차례) ·
+`FESTIVAL_STATE_TONE` · `festivalTone()` · `festivalPalette()` 를 내주고, `index.js` 와
+`admin.js` 양쪽이 재수출한다. 관리자가 다시 갈라질 수 있는 자리를 없앤 것이다.
+
+**`FestivalCard` 에서 조아용 발치의 성격 아이콘 스티커를 뺐다.** 캐릭터 오른쪽 아래 모서리에
+걸린 원형 배지였는데, 카드가 알리려는 것(무슨 축제이고 언제인가)에 아무것도 보태지 못하면서
+조아용 그림 위에 올라탔다. 축제의 성격은 바로 왼쪽 홍보 문구가 한 문장으로 말한다.
+
+깨지는 변경: `FestivalCard` 의 `tone` · `icon` prop 이 없어졌다. 데이터(`districts.js` 의
+`LOOK`)도 `[포즈, 문구]` 두 값으로 줄었다. 토큰 `--fest-{sky,lilac,sand,peach,rose,stone}-*` 과
+공용 `--fest-ink` · `--fest-veil` 을 지웠다.
+
+---
+
 ## 2026-08-19 — 관리자 웹 진입점 신설 (`admin.js`) · 컴포넌트 8종 · `tokens/admin.css`
 
 기능명세서 2장 관리자 웹(A-* 8화면)을 퍼블리싱하면서 데스크톱용 부품이 필요해졌다.

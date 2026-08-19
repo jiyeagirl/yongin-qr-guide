@@ -93,7 +93,7 @@ export function DiscoverPanel({
               gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
               {shownFestivals.map(f => (
                 <FestivalCard key={f.id} festival={f} base={base}
-                  tone={f.tone} icon={f.icon} pose={f.pose} hook={f.hook}
+                  pose={f.pose} hook={f.hook}
                   onClick={() => onOpenFestival(f)} />
               ))}
             </div>
@@ -201,8 +201,15 @@ export function DiscoverPanel({
       {/* ── 고지 (U-CM-07 · U-CM-08) ───────────────────────────────────── */}
       <div style={{ ...scope, marginTop: "var(--space-5)" }}>
         <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
+          {/* 119 안내를 여기서는 뺀다 (2026-08-19). 그 문장은 **안전시설을 보여주는 화면의
+              고지**다 — AED·대피소를 안내한 다음 "그래도 급하면 119"라고 잇는 자리.
+              둘러보기 탭에는 안전시설이 한 줄도 없다(축제·매장·코스·상점가뿐). 시설을
+              보여주지 않은 화면에서 응급을 말하면 고지가 아니라 관용구가 되고, 정작
+              공공시설 탭에서 같은 문장을 읽을 때 무게가 빠진다.
+              공공시설 탭(FacilitySheet)·상점가 탭(DistrictSheet, 하단에 주변 공공시설
+              4줄이 붙는다)·상세 화면은 그대로 둔다. */}
           상점가 지정 현황 2026.07 기준 · 축제 일정은 주최 상점가 사정으로 변경될 수 있습니다<br />
-          안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
+          안내 정보는 참고용입니다.
         </p>
       </div>
       </div>

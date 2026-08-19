@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  DetailPage, DetailNotice, ListControls, Chip, FestivalCard, EmptyState,
+  DetailPage, DetailNotice, ListControls, Chip, FestivalCard, EmptyState, FESTIVAL_STATES,
 } from "../../design-systems/index.js";
 
 /* S12 축제 전체보기 (2026-08-18 신설 · 08-18 카드형으로 개편).
@@ -35,11 +35,14 @@ import {
  *   이 화면      화면 전체가 축제다. 여섯 줄이 똑같이 생기면 훑고 나가지 한 건도
  *                읽지 않는다. 상점가 축제를 알리는 자리인데 알려지지 않는다 → 카드.
  *
- * 그래서 카드마다 바탕색·아이콘·조아용 포즈를 다르게 주고, 축제의 성질을 한 문장으로
- * 적는다 (`hook`). 그 값은 화면이 아니라 데이터가 정한다 (`districts.js` 의 LOOK) —
- * 화면이 인덱스로 색을 돌리면 축제 하나가 늘 때 나머지 색이 전부 밀린다.
+ * 그래서 카드마다 축제의 성질을 한 문장으로 적고(`hook`), 조아용 포즈를 다르게 준다.
+ * 그 값은 화면이 아니라 데이터가 정한다 (`districts.js` 의 LOOK).
  *
- * 카드 색은 **구별일 뿐 상태가 아니다.** 진행중·예정·종료는 카드 안 배지가 글자로 말한다.
+ * **카드 바탕색은 상태다** (2026-08-19 개편). 진행중 초록 · 예정 크림 · 종료 회색이고,
+ * 세 값은 목록 행·배너·상세·관리자 표가 쓰는 배지 색과 같다 (`festivalState.js`).
+ * 전에는 축제마다 다른 파스텔 여섯을 깔아 카드끼리 구별했는데, 배지의 상태 색과 겹쳐
+ * 한 화면에 축제를 가리키는 색이 아홉 가지가 됐다. 구별은 축제명·날짜·`hook` 이 맡는다.
+ * 색만으로 상태를 말하지는 않는다 — 카드 안에 "진행중"·"예정"·"종료"가 글자로 함께 나간다.
  *
  * ── 제어는 상태 칩 하나뿐이다 (2026-08-18 정리) ──────────────────────────
  * 처음에는 결과 수 · 정렬(임박순|가까운 순) · 상점가 Select 까지 넉 줄이 있었다.
@@ -88,7 +91,7 @@ export function FestivalList({ festivals = [], sortNear, onOpen, onBack,
         <div role="tablist" aria-label="축제 상태"
           style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto",
             scrollbarWidth: "none", padding: "var(--space-1) 0 var(--space-2)" }}>
-          {["전체", "진행중", "예정", "종료"].map(s => (
+          {["전체", ...FESTIVAL_STATES].map(s => (
             <Chip key={s} selected={state === s} count={counts[s] || 0}
               role="tab" aria-selected={state === s}
               onClick={() => setState(s)}>{s}</Chip>
@@ -103,7 +106,7 @@ export function FestivalList({ festivals = [], sortNear, onOpen, onBack,
           <div role="list" style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
             {rows.map(f => (
               <FestivalCard key={f.id} festival={f} base={base}
-                tone={f.tone} icon={f.icon} pose={f.pose} hook={f.hook}
+                pose={f.pose} hook={f.hook}
                 onClick={() => onOpen(f)} />
             ))}
           </div>
@@ -117,11 +120,11 @@ export function FestivalList({ festivals = [], sortNear, onOpen, onBack,
             style={{ padding: "var(--space-8) 0" }} />
         )}
 
-        {/* 기준일자를 적지 않는다 (입력 항목 정의서 3-2: 축제 정보는 미표기 대상) */}
-        <DetailNotice style={{ marginTop: "var(--space-6)" }}>
-          <span style={{ display: "block" }}>
-            일정과 프로그램은 주최 상점가 사정으로 변경될 수 있습니다.
-          </span>
+        {/* 기준일자를 적지 않는다 (입력 항목 정의서 3-2: 축제 정보는 미표기 대상).
+             119 안내도 끈다 — S09 축제 상세와 같은 이유이고 같은 문장이다. 두 화면이
+             같은 축제를 다루는데 고지만 다르면 어느 쪽이 맞는지 알 수 없다 */}
+        <DetailNotice emergency={false} style={{ marginTop: "var(--space-6)" }}>
+          안내 정보는 참고용이며, 일정과 프로그램은 주최 상점가 사정으로 변경될 수 있습니다.
         </DetailNotice>
       </div>
     </DetailPage>
