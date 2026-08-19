@@ -2,12 +2,13 @@ import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice, KakaoMap, MapPreviewCard, Button, Badge, Icon,
   CategoryIcon, CATEGORY_LABELS, OnnuriBadge, SectionHeader, ProgressBar,
-  TextButton, Chip, Mascot,
+  TextButton, Chip, Mascot, Notice,
 } from "../../design-systems/index.js";
-/* WALK_M_PER_MIN 을 여기서 쓰지 않는다 — 구간 시간(legMin)은 데이터가 미리 갖고 있다.
-   화면에서 다시 환산하면 코스 카드의 총 시간과 여기 구간의 합이 어긋난다. */
+/* WALK_M_PER_MIN 을 여기서 쓰지 않는다 — 구간 시간(legMin)은 data/coursePlan.js 가 잰다.
+   화면에서 따로 환산하면 같은 구간이 두 값으로 갈린다. */
 import { KAKAO_APP_KEY } from "../main/config.js";
 import { useCourseVisits } from "../main/data/courseVisits.js";
+import { planCourse, nearestChain } from "../main/data/coursePlan.js";
 
 /* S08 골목 한바퀴 코스 상세 (기능명세서 v1.0 4장 S08 행).
  * 관련 기능: U-DC-03(골목 한바퀴 추천 코스) · U-CM-07 · U-CM-08
@@ -20,13 +21,17 @@ import { useCourseVisits } from "../main/data/courseVisits.js";
  *   ─────────────────────────────────
  *   (조아용) 2/4 방문  ▓▓▓░░░░    [처음부터]   ← 방문 완료 (선택 기능)
  *   ─────────────────────────────────
- *   ⌗ QR 지점에서 도보 2분
+ *    ⌗
+ *    ┊  QR 지점에서 도보 2분                 ← 점선 기둥이 순번과 순번을 잇는다
+ *    ↓
  *   ①  가게  업종                          ← 누르면 지도가 그 순번으로 가고 카드가 뜬다
  *       [✓ 방문 완료]                         (U-DC-03 "순번 이동")
- *   ↓ 도보 3분
+ *    ┊  도보 3분
+ *    ↓
  *   ②  가게 (흐림)              (조아용)   ← 방문 도장
  *       [✓ 방문함]
- *   ↓ 도보 2분
+ *    ┊  도보 2분
+ *    ↓
  *   ③  가게  [다음 차례]
  *   ...
  *   ─────────────────────────────────
@@ -45,6 +50,20 @@ import { useCourseVisits } from "../main/data/courseVisits.js";
  * 않으며(빼면 몇 번째였는지 알 수 없다), 언제든 되돌릴 수 있다.
  * GPS 로 자동 판정하지 않는다 — 기록의 성격은 data/courseVisits.js 머리말 참조.
  *
+ * ── 순서를 벗어나면 남은 순서를 다시 짠다 (2026-08-18) ──────────────────
+ * "순서를 강제하지 않는다"고 해놓고 벗어났을 때 안내가 그대로면, 그 안내는 틀린 수가 된다.
+ * ①을 들르고 ③으로 갔는데 "②가 다음 차례, ②까지 3분"이라고 말하면 그 3분은 **①에서 잰
+ * 값**이고, 지금 서 있는 ③에서는 맞지 않는다. 방문 표시를 누를 때마다 마지막으로 들른 곳을
+ * 기준으로 남은 곳을 다시 잇고 구간을 다시 잰다 (data/coursePlan.js).
+ *
+ * 방문한 곳은 **실제로 걸은 차례**로 앞에 남는다 — ③을 두 번째로 갔다면 그 줄은 ②다.
+ * 코스를 도는 중에 알고 싶은 것은 "추천안에서 몇 번이었나"가 아니라 "내가 몇 번째로
+ * 갔나"이기 때문이다. 지도의 순번 핀과 점선 경로도 같은 배열을 보므로 함께 다시 그려진다.
+ * 머리말의 총 시간·거리도 다시 짠 순서의 합이다 — 아래 구간을 더해본 사람과 어긋나지 않게.
+ *
+ * 추천 순서를 되찾는 길은 [처음부터]다. 순서가 바뀌었을 때는 목록 위에 왜 바뀌었는지
+ * 한 줄을 적는다 — 적지 않으면 목록이 저 혼자 뒤바뀐 것처럼 보이고, 그건 고장으로 읽힌다.
+ *
  * ── 지도를 여기서 새로 만드는 이유 ──────────────────────────────────────
  * 셸의 지도는 세 탭이 공유하는 한 개뿐이고 U-CM-16 이 그것의 재로딩을 막는다.
  * 이 화면은 탭이 아니라 그 위에 덮이는 페이지이고, 보여줄 것도 다르다 —
@@ -60,7 +79,6 @@ import { useCourseVisits } from "../main/data/courseVisits.js";
 export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRouteStore, onReport,
   base = "../../design-systems/" }) {
   const c = course;
-  const stops = c.stops || [];
 
   /* 지도와 목록이 같은 "지금 고른 곳"을 공유한다. 목록에서 누르면 지도가 옮겨가고,
      지도의 순번 핀을 눌러도 같은 상태가 바뀐다 (U-DC-03 "순번 이동").
@@ -83,6 +101,25 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
      아니다 — 그래서 순서를 강제하지도, 방문한 곳을 목록에서 빼지도 않는다. */
   const { visited, toggle, clear } = useCourseVisits(c.id);
   const isDone = React.useCallback(id => visited.includes(id), [visited]);
+
+  /* ── 순서는 방문한 곳을 기준으로 다시 짜인다 (2026-08-18) ──────────────────
+     ①을 들르고 ③으로 갔는데도 "②가 다음 차례, ②까지 3분"이라고 말하면, 그 3분은
+     **①에서 잰 값**이라 지금 서 있는 ③에서는 맞지 않는다. 순서를 벗어나도 된다고 해놓고
+     벗어나면 틀린 수를 주는 셈이다. 그래서 방문 표시를 누를 때마다 마지막으로 들른 곳을
+     기준으로 남은 곳을 다시 잇고 구간을 다시 잰다 (data/coursePlan.js).
+
+     방문한 곳은 목록에서 빼지 않고 **실제로 걸은 차례**로 앞에 남는다 — 번호가 추천 순번이
+     아니라 걸은 차례가 된다. 코스를 도는 중에 알고 싶은 것은 "추천안에서 몇 번이었나"가
+     아니라 "내가 몇 번째로 갔나"다.
+
+     아무 것도 누르지 않았으면 추천 순서 그대로다 (planCourse 가 계산 없이 돌려준다) —
+     "한 번도 누르지 않아도 예전과 똑같다"는 이 화면의 약속이다.
+
+     지도도 같은 배열(stops)을 받으므로 순번 핀과 점선 경로가 목록과 함께 다시 그려진다. */
+  const plan = React.useMemo(
+    () => planCourse(c.stops || [], visited, anchor), [c.stops, visited, anchor]);
+  const stops = plan.order;
+
   const doneCount = stops.filter(s => isDone(s.id)).length;
   const allDone = stops.length > 0 && doneCount === stops.length;
 
@@ -118,8 +155,12 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
     const turningOn = !isDone(s.id);
     toggle(s.id);
     if (!turningOn) return;
+    /* 다음 차례는 **방금 들른 곳에서 가장 가까운** 남은 곳이다 — 아래 렌더에서 새로 짜일
+       순서의 첫 곳과 같은 값이다. 여기서 미리 같은 규칙으로 구한다: `visited` 갱신은 다음
+       렌더에나 반영되므로 지금 plan 을 읽으면 한 박자 늦은 순서를 보게 된다. */
     const rest = stops.filter(x => x.id !== s.id && !isDone(x.id));
-    if (rest.length) goTo(rest[0].id);
+    const next = nearestChain(rest, s, 1)[0];
+    if (next) goTo(next.id);
   }, [isDone, toggle, stops, goTo]);
 
   return (
@@ -181,9 +222,10 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
               /* 출발지는 **코스 순서상 직전 가게**다 (첫 곳만 QR 지점). ②로 가는 길을
                  QR 지점에서 시작하면, ①에 서 있는 사람에게 왔던 길을 되돌아갔다가 다시
                  나오라고 안내하는 셈이 된다.
-                 방문 표시와는 무관하다 — 눌렀는지에 따라 출발지가 달라지면 같은 화면이
-                 사람마다 다른 길을 안내하게 되고, 방문 표시는 눌러도 되고 안 눌러도 되는
-                 값이다 (courseVisits.js 머리말). */
+                 순서가 방문 기록에 따라 다시 짜이므로(plan) 이 "직전 가게"도 함께 바뀐다 —
+                 ③을 들르고 남은 곳으로 갈 때 출발지는 ③이다. 사용자가 실제로 서 있는
+                 자리에서 안내하는 것이라, 예전처럼 추천안의 직전 순번을 붙들고 있는 것보다
+                 맞다 (2026-08-18. 그 전 주석은 "방문 표시와 무관"이라고 적혀 있었다). */
               onRoute={() => onRouteStore && onRouteStore(active, activeIndex > 0 ? stops[activeIndex - 1] : null)}
               onDetail={() => onPickStore(active)} />
           ) : null}
@@ -191,10 +233,14 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
 
         {/* ── 요약 ────────────────────────────────────────────────────── */}
         <div>
+          {/* 총 시간·거리는 **지금 화면에 깔린 순서의 합**이다 (plan). 코스 자료의 값
+              (c.minutes)이 아니다 — 순서가 다시 짜이면 걷는 길이 달라지는데 머리말만
+              추천안의 수를 붙들고 있으면, 아래 구간을 더해본 사람에게 틀린 화면이 된다.
+              아무 것도 누르지 않았으면 둘은 같은 값이다. */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "var(--space-2)" }}>
-            <Badge tone="brand" dot>도보 {c.minutes}분</Badge>
+            <Badge tone="brand" dot>도보 {plan.minutes}분</Badge>
             <Badge tone="neutral">{stops.length}곳</Badge>
-            <Badge tone="neutral">약 {c.meters >= 1000 ? `${(c.meters / 1000).toFixed(1)}km` : `${c.meters}m`}</Badge>
+            <Badge tone="neutral">약 {plan.meters >= 1000 ? `${(plan.meters / 1000).toFixed(1)}km` : `${plan.meters}m`}</Badge>
           </div>
           <p style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: "var(--lh-body)",
             wordBreak: "keep-all" }}>{c.desc}</p>
@@ -254,7 +300,16 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                **조아용 도장 · 흐린 글자 · [방문함] 칩** 셋으로 말하고, 다음 차례는 배지로
                말한다 — 어느 것도 색 하나에 기대지 않는다. */}
         <section>
-          <SectionHeader title="추천 코스" note={`${stops.length}곳 · 순서대로`} />
+          <SectionHeader title="추천 코스"
+            note={plan.replanned ? `${stops.length}곳 · 다시 짠 순서` : `${stops.length}곳 · 순서대로`} />
+          {/* 순서가 바뀐 이유를 한 줄로 적는다. 적지 않으면 목록이 저 혼자 뒤바뀐 것처럼
+              보이고, 그건 화면이 고장난 것으로 읽힌다. 추천 순서를 되찾는 길([처음부터])이
+              바로 위에 있으므로 여기서는 무슨 일이 있었는지만 말한다. */}
+          {plan.replanned ? (
+            <Notice tone="neutral" size="sm" style={{ marginBottom: "var(--space-3)" }}>
+              마지막으로 들른 곳에서 가까운 순서로 다시 잡았습니다
+            </Notice>
+          ) : null}
           <div role="list">
             {stops.map((s, i) => {
               const on = s.id === activeId;
@@ -265,12 +320,33 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                   {/* ── 구간 ────────────────────────────────────────────
                          첫 곳 위에는 QR 지점에서의 시간이 온다. 나머지는 직전 곳에서다.
                          값은 데이터가 미리 갖고 있다 (dunjeon.js) — 화면에서 다시 재면
-                         코스 카드의 총 시간과 여기 구간의 합이 어긋난다. */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 6,
-                    padding: i === 0 ? "0 var(--space-3) var(--space-1)" : "var(--space-1) var(--space-3)",
+                         코스 카드의 총 시간과 여기 구간의 합이 어긋난다.
+
+                         ── 점선 기둥으로 잇는다 (2026-08-18) ──────────────
+                         전에는 글자 옆에 14px 짜리 ↓ 하나였다. 그 부호는 "아래로"라고만
+                         말할 뿐 **1번에서 2번까지**를 잇지 못해서, 옆의 "도보 1분"이 어느
+                         구간의 값인지 와닿지 않았다. 순번 동그라미에서 다음 동그라미까지
+                         점선을 내리면 구간이 눈에 보이고, 그 옆 글자가 그 선을 읽는 말이 된다.
+
+                         기둥 폭 26px 은 순번 동그라미와 같은 값이고, 좌우 여백도 아래 행과
+                         맞춰 두 원의 중심을 정확히 잇는다 (행에는 1px 테두리가 있어 그만큼
+                         더한다). 지도의 코스 경로도 같은 색 점선이다 — 같은 길이다. */}
+                  <div style={{ display: "flex", alignItems: "stretch", gap: "var(--space-3)",
+                    padding: "0 calc(var(--space-3) + var(--stroke-hairline))",
                     fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                    <Icon name={i === 0 ? "qr-code" : "arrow-down"} size={14} style={{ flex: "0 0 auto" }} />
-                    <span>{i === 0 ? `QR 지점에서 도보 ${s.legMin}분` : `도보 ${s.legMin}분`}</span>
+                    <span aria-hidden="true" style={{ flex: "0 0 auto", width: 26,
+                      display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      {/* 첫 구간의 출발점은 QR 지점이다. 순번이 없는 자리라 아이콘이 대신 선다 */}
+                      {i === 0 ? <Icon name="qr-code" size={14} color="var(--text-muted)" /> : null}
+                      <span style={{ flex: 1, minHeight: "var(--course-leg-min)", width: 0,
+                        borderLeft: "2px dotted var(--course-leg-line)" }} />
+                      {/* 화살촉은 선 끝에 물린다 — 사이가 뜨면 선과 화살표가 남남이 된다 */}
+                      <Icon name="chevron-down" size={16} color="var(--course-leg-line)"
+                        style={{ marginTop: -5 }} />
+                    </span>
+                    <span style={{ alignSelf: "center" }}>
+                      {i === 0 ? `QR 지점에서 도보 ${s.legMin}분` : `도보 ${s.legMin}분`}
+                    </span>
                   </div>
 
                   <div role="listitem" onClick={() => goTo(s.id)}

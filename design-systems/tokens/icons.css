@@ -91,6 +91,18 @@
 --pin-course-active:var(--yong-cream-700); /* @kind color */
 --pin-course-active-ink:var(--yong-ink-900); /* @kind color */
 --pin-course-done-opacity:.45; /* @kind other */
+/* 코스 상세(S08) **목록**에서 순번과 순번을 잇는 점선 기둥 (2026-08-18).
+   화살표 하나(↓ 도보 3분)만 있을 때는 그 3분이 어디에서 어디까지인지 와닿지 않았다 —
+   글자 옆의 14px 짜리 부호는 "아래로"라고만 말할 뿐 두 곳을 잇지 못한다.
+   순번 동그라미에서 다음 동그라미까지 점선을 내리면 구간 자체가 눈에 보이고,
+   그 옆의 "도보 3분"이 그 선의 길이를 읽는 말이 된다.
+
+   색은 지도의 코스 경로(Polyline, shortdash)와 같은 --brand-primary 다. 같은 길을 지도와
+   목록 두 곳에서 그리므로 색이 갈리면 다른 것으로 읽힌다.
+   --course-leg-min 은 점선 자체의 최소 길이다. 화살촉(16px)은 그 아래에 따로 붙는다 —
+   너무 짧으면 점 두어 개만 찍혀 다시 부호처럼 보인다. */
+--course-leg-line:var(--brand-primary); /* @kind color */
+--course-leg-min:22px; /* @kind spacing */
 /* 지도 위 라벨(앵커 지점명 등) 바탕 — 위성/일반 지도 어느 쪽에서도 읽히도록 잉크 계열 반투명 */
 --map-label-bg:rgba(22,34,28,.86); /* @kind color */
 
