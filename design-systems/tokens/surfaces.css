@@ -1,0 +1,77 @@
+/* 카드 · 칩 · 배지 틴트 시스템 (2026-08-19 도입)
+   Claude Design 프로젝트("용인 실증지원 Design System")의 `tokens/surfaces.css` 를 들여온 것이다.
+   저쪽 `components/core/cards.card.html` 이 보여주는 10틴트 카드가 이 토큰 위에 선다.
+
+   10개 틴트 × 4역할 (bg / border / fg / solid).
+
+     -bg      100단을 쓴다. 50단은 --surface-page(#f5f8f6) 및 흰 카드와 거리가 5~10 에
+              불과해 분류 기능을 못 한다.
+     -border  300단.
+     -fg      700단. 자기 -bg 위에서 4.5:1 이상을 확보한다.
+     -solid   500~700단. 선택된 칩과 지도 핀처럼 색을 꽉 채우는 자리.
+
+   **틴트 배경 위의 보조 텍스트는 --text-muted 가 아니라 -fg(투명도 .8)를 쓴다** —
+   neutral 배경에서 --text-muted 는 4.4:1 로 AA 에 못 미친다.
+
+   ── 틴트는 "장식"이 아니라 "분류"다 ─────────────────────────────────────────
+   한 화면에서 세 가지를 넘기지 않는다. 그리고 아래 도메인 매핑을 지킨다 — 화면마다
+   어울리는 색을 새로 고르면 같은 것이 화면에 따라 다른 색이 되고, 색이 뜻을 잃는다.
+
+     green   상점가·점포          teal    공공시설·안내
+     cream   축제·이벤트          amber   쉼터·주의
+     red     응급 (AED·대피소)     blue    교통·정보
+     violet  여가·문화            sand    기타·아카이브
+     rose    온누리·혜택          neutral 비활성·기본
+
+   이 매핑이 화면에서 실제로 어떻게 쓰이는지:
+     축제 상태 3색   진행중 cream(축제·이벤트) · 예정 sand(아직 열리지 않은 것) ·
+                    종료 neutral(비활성). components/store/festivalState.js
+     매장 레일 2종   둘 다 green 이다 — 신규도 인기도 "점포"라 도메인이 같다. 대신
+                    신규는 틴트를 채우고(bg) 인기는 흰 바탕에 테두리만 준다(border).
+                    다른 색을 주면 인기 매장이 점포가 아닌 다른 무엇으로 읽힌다.
+
+   ── 로컬에서 하나 다르다 ────────────────────────────────────────────────────
+   --tint-red-fg 가 red-800(#a5322b)이다. 저쪽은 red-700 을 쓰는데, 이 저장소의
+   red-700(#b23a33)은 대피소 핀 색이라 값이 다르다 (colors.css 주석 참조). */
+:root{
+--tint-green-bg:var(--yong-green-100);--tint-green-border:var(--yong-green-300);--tint-green-fg:var(--yong-green-800);--tint-green-solid:var(--yong-green-700);
+--tint-teal-bg:var(--yong-teal-100);--tint-teal-border:var(--yong-teal-300);--tint-teal-fg:var(--yong-teal-900);--tint-teal-solid:var(--yong-teal-700);
+/* cream 은 100단이 흰색과 구분되지 않고 500단은 sand·neutral 과 나란히 두면 과하게 튄다.
+   300단이 균형점이다 (Design 프로젝트와 같은 결론). 그 위 글자는 잉크다. */
+--tint-cream-bg:var(--yong-cream-300);--tint-cream-border:var(--yong-cream-500);--tint-cream-fg:var(--yong-ink-900);--tint-cream-solid:var(--yong-cream-700);
+--tint-amber-bg:var(--yong-amber-100);--tint-amber-border:var(--yong-amber-300);--tint-amber-fg:var(--yong-amber-700);--tint-amber-solid:var(--yong-amber-500);
+--tint-red-bg:var(--yong-red-100);--tint-red-border:var(--yong-red-300);--tint-red-fg:var(--yong-red-800);--tint-red-solid:var(--yong-red-500);
+--tint-blue-bg:var(--yong-blue-100);--tint-blue-border:var(--yong-blue-300);--tint-blue-fg:var(--yong-blue-700);--tint-blue-solid:var(--yong-blue-500);
+--tint-violet-bg:var(--yong-violet-100);--tint-violet-border:var(--yong-violet-300);--tint-violet-fg:var(--yong-violet-700);--tint-violet-solid:var(--yong-violet-500);
+--tint-sand-bg:var(--yong-sand-100);--tint-sand-border:var(--yong-sand-300);--tint-sand-fg:var(--yong-sand-700);--tint-sand-solid:var(--yong-sand-500);
+--tint-rose-bg:var(--yong-rose-100);--tint-rose-border:var(--yong-rose-300);--tint-rose-fg:var(--yong-rose-700);--tint-rose-solid:var(--yong-rose-500);
+--tint-neutral-bg:var(--yong-ink-100);--tint-neutral-border:var(--yong-ink-200);--tint-neutral-fg:var(--yong-ink-700);--tint-neutral-solid:var(--yong-ink-500);
+
+/* 틴트 바탕 **위에** 얹는 막. 틴트 카드 안의 알약처럼, 이미 색이 깔린 자리에서 한 단
+   더 짙게 나와야 하는 것들이 쓴다. 열 틴트가 하나를 같이 쓴다 — -bg 가 전부 밝은 쪽이라
+   검은 막 하나면 어디서든 같은 만큼 짙어진다 (흰 막은 밝은 바탕에서 사라진다).
+
+   틴트마다 -fg 를 옅게 섞는 방법(color-mix)도 되지만 그렇게 하지 않았다. 이 서비스는
+   길에서 QR 을 찍고 여는 모바일 웹이고, color-mix 를 모르는 브라우저에서는 색이 그냥
+   비어 알약이 통째로 사라진다. 고정값은 어디서나 칠해진다. */
+--tint-veil:rgba(22,34,28,.10);
+
+/* ── 축제 상태 3종 — 카드 틴트와 상태 배지를 **한 세트로** 묶는다 ─────────────
+   Design 프로젝트의 `--status-*` 를 그대로 들여왔다 (2026-08-19).
+
+   상태 배지는 카드 틴트와 같은 **난색 계열**이면서 **채도로 위계**를 만든다:
+   진행중은 선명한 딥앰버로 올라오고, 예정은 채도를 낮춘 코코아로 물러나며, 종료는
+   무채색으로 빠진다. 셋 다 흰 글자 대비 4.5:1 이상이다
+   (앰버 5.32:1 · 코코아 6.66:1 · 잉크 5.70:1).
+
+   **적색은 응급(AED·대피소) 전용이므로 "진행중"에 쓰지 않는다.** 한때 여기 red-500 을
+   썼다가 되돌렸다 — 크림 카드 위에서 눈에는 잘 띄었지만, 이 앱에서 붉은 알약은
+   "지금 열려 있다"가 아니라 "위험"으로 읽힌다. 지도의 AED·대피소 핀이 같은 붉은색이다.
+
+   틴트 이름을 직접 쓰지 않고 이 세 벌을 따로 두는 이유: 바탕과 배지가 **같은 틴트의
+   다른 단이 아니다.** 진행중은 바탕 cream + 배지 amber 이고, 그 짝은 채도 위계에서 나온
+   것이라 틴트 표에서 유도할 수 없다. 짝을 이름으로 묶어두면 한쪽만 바뀌지 않는다. */
+--status-ongoing-surface:var(--tint-cream-bg);--status-ongoing-border:var(--tint-cream-border);--status-ongoing-badge:var(--yong-amber-800);
+--status-upcoming-surface:var(--tint-sand-bg);--status-upcoming-border:var(--tint-sand-border);--status-upcoming-badge:var(--yong-sand-600);
+--status-ended-surface:var(--tint-neutral-bg);--status-ended-border:var(--tint-neutral-border);--status-ended-badge:var(--yong-ink-500);
+}

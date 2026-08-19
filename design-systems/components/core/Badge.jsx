@@ -1,15 +1,30 @@
 import React from "react";
 
+/* 뜻으로 부르는 톤. 화면이 "성공"·"위험"을 말할 때 쓴다 */
 const TONES = {
   neutral: ["var(--surface-sunken)", "var(--text-body)"],
   brand: ["var(--brand-primary-soft)", "var(--yong-green-800)"],
   info: ["var(--state-info-soft)", "var(--yong-teal-700)"],
   success: ["var(--state-success-soft)", "var(--yong-green-800)"],
   warning: ["var(--state-warning-soft)", "var(--yong-amber-800)"],
-  danger: ["var(--state-danger-soft)", "#a5322b"],
+  /* 값을 직접 적어두었던 자리다. 램프에 red-800 을 세우면서 토큰으로 바꿨다 (2026-08-19) */
+  danger: ["var(--state-danger-soft)", "var(--yong-red-800)"],
   accent: ["var(--brand-accent)", "var(--yong-ink-900)"],
   onnuri: ["var(--state-info-soft)", "var(--yong-teal-900)"],
 };
+
+/* 갈래로 부르는 톤 — `tokens/surfaces.css` 의 10틴트 (2026-08-19 추가).
+   카드·칩과 **같은 이름을 받는다.** 축제 상태를 `tone="cream"` 으로 적으면 배지와 카드가
+   같은 색표를 보게 되고, 한쪽만 고쳐지는 일이 없어진다.
+
+   이름이 겹치는 것은 neutral 하나뿐이고 위의 것이 이긴다 — 둘 다 회색이라 결과가 같고,
+   기존 배지 16곳의 바탕(surface-sunken)을 건드릴 이유가 없다. */
+const TINTS = ["green", "teal", "cream", "amber", "red", "blue", "violet", "sand", "rose", "neutral"];
+
+/* 한때 `fill`(soft·medium·strong) 3단계를 두었다가 걷어냈다 (2026-08-19).
+   "틴트 카드 위에 얹은 옅은 알약이 묻힌다"를 알약 쪽 농도로 풀려던 것이었는데, 그 문제는
+   **바탕과 배지를 짝으로 정하면** 풀린다 — 그것이 위 `--status-*` 세 톤이 하는 일이다.
+   농도 손잡이를 열어두면 같은 상태가 화면마다 다른 농도로 나올 길이 열린다. */
 
 /* 크기는 둘뿐이고 글자 크기는 건드리지 않는다 — 달라지는 것은 여백뿐이다 (2026-08-18).
    sm 은 **ListRow 의 tag 자리**를 위한 값이다. 그 자리에는 온누리 배지(OnnuriBadge)가
@@ -20,10 +35,13 @@ const TONES = {
 const SIZES = { md: "4px 9px", sm: "2px 7px" };
 
 export function Badge({ children, tone = "neutral", size = "md", dot = false, style, ...rest }) {
-  const [bg, fg] = TONES[tone] || TONES.neutral;
+  /* 이름표(success·ongoing·onnuri…)가 먼저고, 없으면 틴트 이름으로 떨어진다 */
+  const [bg, fg] = TONES[tone]
+    || (TINTS.includes(tone) ? [`var(--tint-${tone}-bg)`, `var(--tint-${tone}-fg)`] : TONES.neutral);
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: bg, color: fg, fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", fontWeight: "var(--fw-semibold)", lineHeight: 1.4, letterSpacing: "var(--ls-normal)", padding: SIZES[size] || SIZES.md, borderRadius: "var(--radius-pill)", ...style }} {...rest}>
-      {dot ? <span style={{ width: 6, height: 6, borderRadius: 999, background: fg }} /> : null}
+      {/* 점은 글자색을 따라간다 — 톤이 무엇이든 알약 안에서 저절로 맞는다 (Design 프로젝트와 같다) */}
+      {dot ? <span style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor", opacity: 0.9 }} /> : null}
       {children}
     </span>
   );

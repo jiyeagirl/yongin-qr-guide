@@ -5,7 +5,32 @@
 --yong-cream-100:#fffce6;--yong-cream-300:#fef8cc;--yong-cream-500:#fef5aa;--yong-cream-700:#f0dc72;--yong-cream-900:#b99f2c;
 --yong-ink-900:#16221c;--yong-ink-700:#2f3d36;--yong-ink-500:#5b6a62;--yong-ink-300:#8b9a92;--yong-ink-200:#c3cec8;--yong-ink-100:#dce4df;--yong-ink-50:#eef2f0;
 --yong-white:#ffffff;--yong-mist:#f5f8f6;
---yong-amber-800:#8a5a12;--yong-amber-500:#f2a73b;--yong-amber-100:#fdeed6;--yong-red-700:#b23a33;--yong-red-500:#e5544b;--yong-red-100:#fbe2e0;--yong-blue-500:#3d7be5;--yong-blue-100:#e2ecfb;
+/* ── 보조 램프 — 카드·칩 틴트용으로 50·100·300·500·700 다섯 단으로 확장 (2026-08-19)
+   Claude Design 프로젝트("용인 실증지원 Design System")의 램프를 들여온 것이다.
+   `tokens/surfaces.css` 의 10틴트가 이 값들 위에 선다.
+
+   두 군데만 그쪽과 다르다. 이유가 있어 다르므로 맞추지 않는다:
+
+     --yong-red-700   저쪽은 #a5322b. 여기 #b23a33 은 **대피소 핀 색**이고 AED(red-500)와
+                      한 단계 나뉘도록 고른 값이다 (icons.css --pin-shelter). 덮으면 지도의
+                      두 적색 핀 간격이 바뀐다. 틴트가 필요로 하는 짙은 적색은 red-800 으로
+                      따로 세웠다 — Badge 의 danger 글자색이 쓰던 #a5322b 가 바로 그 값이다.
+     --yong-amber-800 **저쪽 값(#9c5c0a)으로 맞췄다** (2026-08-19). 한동안 여기만 #8a5a12
+                      였는데, 저쪽이 이 단을 축제 "진행중" 배지 바탕으로 쓰기 시작하면서
+                      값이 갈리면 배지 색이 갈린다. Badge·Notice 의 warning 글자색도 이 단을
+                      쓰는데, amber-100 바탕 위에서 4.65:1 로 AA 를 넘는다 (#8a5a12 는 5.17:1
+                      이었다 — 조금 얇아지지만 기준 안이다).
+
+   sand-600 · cream-950 은 저쪽에서 새로 세운 단이다. sand-600 은 "예정" 배지가 쓴다 —
+   500(#b99a63)은 흰 글자가 2.67:1 로 못 미치고 700(#6b5530)은 종료(ink-500)와 명도가
+   붙는다. 그 사이의 코코아색이다. */
+--yong-amber-50:#fef7ed;--yong-amber-100:#fdeed6;--yong-amber-300:#f8cb8e;--yong-amber-500:#f2a73b;--yong-amber-700:#7a4f0d;--yong-amber-800:#9c5c0a;
+--yong-red-50:#fdf1f0;--yong-red-100:#fbe2e0;--yong-red-300:#f2a9a3;--yong-red-500:#e5544b;--yong-red-700:#b23a33;--yong-red-800:#a5322b;
+--yong-blue-50:#f0f5fd;--yong-blue-100:#e2ecfb;--yong-blue-300:#a8c4f0;--yong-blue-500:#3d7be5;--yong-blue-700:#26509c;
+--yong-violet-50:#f5f2fb;--yong-violet-100:#eae3f6;--yong-violet-300:#c4b0e4;--yong-violet-500:#8163c0;--yong-violet-700:#573f87;
+--yong-sand-50:#faf7f2;--yong-sand-100:#f2ebdf;--yong-sand-300:#dfcfb2;--yong-sand-500:#b99a63;--yong-sand-600:#6f5844;--yong-sand-700:#6b5530;
+--yong-rose-50:#fdf2f5;--yong-rose-100:#f9e3ea;--yong-rose-300:#eeaec3;--yong-rose-500:#d75f8b;--yong-rose-700:#9c3a5d;
+--yong-cream-950:#8a7418;
 
 /* Semantic aliases */
 /* 캐릭터 색은 일러스트·틴트용, UI 액션 색은 한 단계 깊은 톤 */
@@ -55,63 +80,50 @@
    미리보기 카드가 이름으로 말하고, 이 바탕은 그 확인을 거드는 것뿐이다. */
 --surface-selected:var(--yong-green-50);
 
-/* ── 둘러보기 매장 레일 두 종류 (StoreRail. 2026-08-18) ───────────────────────
+/* ── 둘러보기 매장 레일 두 종류 (StoreRail) ──────────────────────────────────
    신규 매장과 인기 매장이 같은 초록 카드였다. 두 섹션이 나란히 이어져 있어서 머리말을
    읽지 않으면 **같은 줄이 두 번 깔린 것처럼** 보였다 — 뽑은 근거가 다른 목록인데
    ("새로 생겼다" / "많이 봤다") 생김새가 같으면 그 근거가 화면에서 사라진다.
 
-   ── 왜 이 두 색인가 ───────────────────────────────────────────────────────
-   신규는 초록(brand)에 둔다. 이 앱의 기본색이고, 목록 위 지름길이라는 성격이 브랜드 쪽이다.
-   인기는 크림(accent)이다 — 이 시스템에서 "눈길"을 맡는 색이고, 조회수 상위라는 뜻과 맞는다.
+   ── 두 색이 아니라 **한 틴트의 두 겹**이다 (2026-08-19 개편) ─────────────────
+   전에는 신규 초록 · 인기 크림이었다. 갈리기는 했는데, 틴트 시스템의 도메인 매핑
+   (surfaces.css)에서 크림은 **축제·이벤트**의 색이다. 둘러보기 탭은 축제 섹션이 맨 위에
+   있고 그 바로 아래가 매장 레일이라, 같은 화면에서 크림이 두 가지를 뜻하게 된다 —
+   위에서는 "축제", 아래에서는 "인기". 색이 분류가 되려면 그럴 수 없다.
 
-   나머지 계열은 이미 임자가 있어 쓸 수 없었다:
-     teal   온누리다. 카드 안에 온누리 배지(teal-100)가 앉으므로 바탕까지 teal 이면 배지가 묻힌다
-     ink    회색 바탕은 이 패널의 바탕(mist)과 1.03:1 이라 카드가 사라진다
-     red    위험(danger)이다. 가게 목록에 쓸 색이 아니다
+   신규도 인기도 도메인은 **상점가·점포(green)** 하나다. 그래서 색이 아니라 **테두리의
+   무게**로 가른다:
 
-   크림이 축제(FestivalBanner·accent 배지)와 겹치지 않느냐는 물음이 남는데, 둘러보기 탭의
-   축제는 마스코트가 붙은 큰 파스텔 카드라 152px 짜리 레일 카드와 생김새가 아주 다르고
-   섹션 머리말도 따로 있다. 같은 화면에서 헷갈릴 만한 크기가 아니다.
+     new  bg=green-bg  line=green-border(300단, 조용한 테두리)
+     hot  bg=green-bg  line=green-solid(700단, 굵게 도드라지는 테두리)
 
-   ── 글자색이 -ink 인 이유 ─────────────────────────────────────────────────
+   같은 계열이니 "둘 다 점포"라는 사실이 남고, 테두리 한 단 차이는 두 레일이 위아래로
+   붙어 있을 때 바로 갈린다. 인기 매장에 다른 색을 주면 그 카드가 점포가 아닌 다른
+   무엇으로 읽힌다.
+
+   **인기 쪽을 흰 카드로 비우는 방법은 쓸 수 없다.** 이 레일은 흰 시트 위에 놓이고,
+   흰 카드였을 때 테두리만 남아 지름길로 읽히지 않았던 것이 애초에 색을 깐 이유다
+   (StoreRail 주석). 두 레일 모두 바탕은 틴트를 채운 채로 둔다.
+
+   ── 글자색 ────────────────────────────────────────────────────────────────
    카드의 `note`("이번 주 조회 1위")는 그 카드가 거기 있는 이유다. 회색으로 묻히면 지름길의
-   근거가 사라지므로 바탕과 같은 계열의 짙은 색으로 적는다. 크림 쪽에서 cream-900(#b99f2c)은
-   2.52:1 로 AA 에 한참 못 미쳐 쓸 수 없고, 한 단계 더 어두운 amber-800 이 5.72:1 이다.
-   (초록 쪽 green-800 은 5.86:1.) */
---rail-new-bg:var(--yong-green-50);--rail-new-line:var(--yong-green-200);--rail-new-ink:var(--yong-green-800);
---rail-hot-bg:var(--brand-accent-soft);--rail-hot-line:var(--yong-cream-700);--rail-hot-ink:var(--yong-amber-800);
+   근거가 사라지므로 틴트의 -fg(green-800)로 적는다. 흰 바탕에서도 초록 바탕에서도 AA 를
+   넘는 값이다 (흰 배경 6.4:1 · green-100 배경 5.86:1). */
+--rail-new-bg:var(--tint-green-bg);--rail-new-line:var(--tint-green-border);--rail-new-ink:var(--tint-green-fg);
+--rail-hot-bg:var(--tint-green-bg);--rail-hot-line:var(--tint-green-solid);--rail-hot-ink:var(--tint-green-fg);
 
-/* ── 축제 홍보 카드 6색 (FestivalCard) ────────────────────────────────────────
-   축제 목록(S12·S04)에서 카드마다 다른 바탕을 깔아 여섯 건이 한 덩어리로 읽히지 않게 한다.
-   색은 축제를 **구별**할 뿐 아무 뜻도 담지 않는다 — 상태(진행중·예정·종료)는 카드 안의
-   배지가 글자로 말한다. 색만으로 상태를 읽게 하면 색을 못 보는 사람에게 목록이 무너진다.
+/* ── 축제 상태 3색은 여기 없다 ───────────────────────────────────────────────
+   틴트 시스템(surfaces.css)의 세 틴트를 그대로 쓴다. 상태 → 틴트 이름의 표는
+   `components/store/festivalState.js` 한 곳에 있고, 카드·배지·칩이 그 이름을 받는다.
 
-   ── 전부 옅은 파스텔이다 (2026-08-18 재조정) ────────────────────────────────
-   처음에는 짙은 청록·검정·팥·파랑·주황·노랑이었다. 카드끼리는 확실히 갈렸지만 **앱과
-   갈렸다** — 이 서비스의 나머지 화면은 흰 바탕에 초록 한 점이 전부인데, 그 사이에 원색
-   여섯 장이 끼면 광고 배너를 붙여놓은 것처럼 보였다.
+     진행중  cream    축제·이벤트   도메인 매핑 그대로다. 이 시스템에서 축제의 색
+     예정    sand     기타·아카이브 아직 열리지 않은 것. 크림보다 물러나 있다
+     종료    neutral  비활성·기본   지난 일. 지우지는 않되 무게를 거둔다
 
-   그래서 여섯 색을 전부 램프의 **가장 옅은 칸**에서 뽑고, 글자는 모두 잉크색 하나로
-   통일한다. 카드끼리 갈리는 일은 여전히 여섯 색이 하고, 앱 전체와의 결은 "밝은 바탕 +
-   어두운 글자"라는 같은 규칙으로 이어진다. 톤이 하나면 새 축제가 늘어도 흔들리지 않는다.
+   전용 `--fest-*` 토큰을 따로 두었다가 지웠다 (2026-08-19). 축제만 자기 색표를 가지면
+   틴트 시스템 밖에 또 하나의 색 규칙이 생기고, 그것이 여기까지 온 이유였다 —
+   `--fest-*` 이전에는 아홉 가지 색이 축제 하나를 가리키고 있었다.
 
-   `-bg` 는 바탕, `-deep` 은 그 색의 짙은 짝이다. 파스텔만으로는 카드에 초점이 없어
-   아이콘 스티커 한 점에만 짙은 짝을 쓴다 — 색을 진하게 쓰는 자리를 카드당 하나로 묶으면
-   여섯 장이 나란히 놓여도 소란스럽지 않다.
-
-   글자색(--fest-ink)과 막(--fest-veil)은 여섯이 공유한다. 바탕이 전부 밝으므로
-   막은 검은 쪽이다 — 흰 막은 밝은 바탕에서 사라진다. */
---fest-ink:var(--yong-ink-900);
---fest-veil:rgba(22,34,28,.10);
---fest-sky-bg:var(--yong-teal-100);--fest-sky-deep:var(--yong-teal-700);
---fest-lilac-bg:var(--yong-blue-100);--fest-lilac-deep:var(--yong-blue-500);
---fest-sand-bg:var(--yong-cream-300);--fest-sand-deep:var(--yong-cream-900);
---fest-peach-bg:var(--yong-amber-100);--fest-peach-deep:var(--yong-amber-500);
---fest-rose-bg:var(--yong-red-100);--fest-rose-deep:var(--yong-red-700);
---fest-stone-bg:var(--yong-ink-100);--fest-stone-deep:var(--yong-ink-500);
-
-/* 종료된 축제는 색을 거둔다. 지난 일이 진행 중인 축제와 같은 무게로 눈에 들어오면
-   목록 맨 위의 급한 건이 묻힌다. 대신 지우지는 않는다 — "그거 언제였지"를 확인하러 온다 */
---fest-done-bg:var(--yong-ink-50);--fest-done-deep:var(--yong-ink-300);
---fest-done-ink:var(--yong-ink-500);--fest-done-veil:rgba(22,34,28,.08);
+   막(veil)과 짙은 짝(deep)이 필요하던 자리는 틴트의 -fg 에 투명도를 얹어 만든다.
+   틴트 배경 위 보조 텍스트는 --text-muted 가 아니라 -fg 를 쓴다는 규칙과 같은 이유다. */
 }

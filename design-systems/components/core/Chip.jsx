@@ -16,8 +16,28 @@ const CHIP_SIZES = {
   sm: { pill: 28, pad: ["0 9px 0 7px", "0 10px"], font: "var(--fs-micro)", icon: 13, gap: 4 },
 };
 
-export function Chip({ children, selected = false, icon, count, elevated = false, size = "md", onClick, style, ...rest }) {
+/* tint 는 **선택되지 않은** 쉼 상태에 색을 준다 (2026-08-19 추가). 칩 줄이 그대로
+   범례가 되게 하려는 것이다 — AED 는 적색, 쉼터는 호박색처럼 지도 핀과 같은 갈래로
+   보이면 칩을 누르기 전에 무엇이 무엇인지 알 수 있다. 선택 상태는 언제나 꽉 찬 색(-solid)
+   이라, "지금 고른 것"이 어느 틴트에서든 같은 방식으로 읽힌다.
+   tint 를 주지 않으면 예전 그대로 흰 알약이다 — 업종 칩처럼 갈래가 없는 자리를 위해서다. */
+const CHIP_TINTS = ["green", "teal", "cream", "amber", "red", "blue", "violet", "sand", "rose", "neutral"];
+const SOLID_INK = { cream: true, sand: true };
+
+export function Chip({ children, selected = false, tint, icon, count, elevated = false, size = "md", onClick, style, ...rest }) {
   const z = CHIP_SIZES[size] || CHIP_SIZES.md;
+  const t = CHIP_TINTS.includes(tint) ? tint : null;
+  const skin = selected
+    ? (t
+      /* cream·sand 만 -solid 위 글자가 잉크다. 나머지 여덟은 흰 글자로 대비가 나오지만
+         이 둘은 -solid 단(cream-700 · sand-500)도 밝아 흰 글자가 AA 에 못 미친다
+         (sand-500 위 흰 글자 2.67:1 · 잉크 6.14:1) */
+      ? { background: `var(--tint-${t}-solid)`, color: SOLID_INK[t] ? "var(--yong-ink-900)" : "var(--yong-white)",
+          borderColor: `var(--tint-${t}-solid)` }
+      : { background: "var(--brand-primary)", color: "var(--text-on-brand)", borderColor: "var(--brand-primary)" })
+    : (t
+      ? { background: `var(--tint-${t}-bg)`, color: `var(--tint-${t}-fg)`, borderColor: `var(--tint-${t}-border)` }
+      : { background: "var(--surface-card)", color: "var(--text-body)", borderColor: "var(--border-strong)" });
   return (
     <button onClick={onClick}
       style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -30,9 +50,7 @@ export function Chip({ children, selected = false, icon, count, elevated = false
         transition: "background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard)",
         /* elevated: 지도 위에 떠 있을 때. 배경 패널 없이 알약만 놓이므로 그림자로 지도와 분리한다 */
         boxShadow: elevated ? "var(--shadow-card)" : "none",
-        background: selected ? "var(--brand-primary)" : "var(--surface-card)",
-        color: selected ? "var(--text-on-brand)" : "var(--text-body)",
-        border: selected ? "var(--stroke-hairline) solid var(--brand-primary)" : "var(--stroke-hairline) solid var(--border-strong)" }}>
+        borderWidth: "var(--stroke-hairline)", borderStyle: "solid", ...skin }}>
         {icon ? (typeof icon === "string" ? <Icon name={icon} size={z.icon} /> : icon) : null}
         {children}
         {count != null ? <span style={{ fontSize: "var(--fs-micro)", fontWeight: "var(--fw-medium)", opacity: selected ? 0.85 : 0.55 }}>{count}</span> : null}
