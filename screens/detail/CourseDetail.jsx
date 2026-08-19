@@ -89,9 +89,6 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
   const [activeId, setActiveId] = React.useState(null);
   const mapApi = React.useRef(null);
 
-  const active = stops.find(s => s.id === activeId) || null;
-  const activeIndex = stops.findIndex(s => s.id === activeId);
-
   /* ── 방문 완료 (선택 기능) ───────────────────────────────────────────────
      기록은 화면이 들고 있지 않다 — 가게를 한 번 눌러보고 돌아오면 이 화면은 언마운트된다.
      courseVisits.js 가 세션 단위로 보관한다 (그쪽 머리말에 왜 세션인지 적어두었다).
@@ -119,6 +116,12 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
   const plan = React.useMemo(
     () => planCourse(c.stops || [], visited, anchor), [c.stops, visited, anchor]);
   const stops = plan.order;
+
+  /* "지금 고른 곳"은 **다시 짜인 순서 안에서** 찾는다. 그래서 이 두 줄은 stops 아래에 있어야
+     한다 — 위에 두면 선언 전 참조(TDZ)라 화면이 통째로 죽는다. activeIndex 를 쓰는 곳이
+     미리보기 카드의 "직전 가게"라서, 순서가 바뀌면 이 값도 함께 따라와야 맞기도 하다. */
+  const active = stops.find(s => s.id === activeId) || null;
+  const activeIndex = stops.findIndex(s => s.id === activeId);
 
   const doneCount = stops.filter(s => isDone(s.id)).length;
   const allDone = stops.length > 0 && doneCount === stops.length;
