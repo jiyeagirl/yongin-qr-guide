@@ -141,15 +141,19 @@ export function DiscoverPanel({
 
           {/* 신규 및 인기 매장 (U-DC-02).
               "신규"와 "인기"를 한 줄에 섞지 않는다 — 새로 생긴 가게는 아직 조회수가 낮고
-              조회수 상위는 대개 오래된 가게라, 섞으면 어느 근거로 뽑힌 카드인지 알 수 없다 */}
+              조회수 상위는 대개 오래된 가게라, 섞으면 어느 근거로 뽑힌 카드인지 알 수 없다.
+
+              그런데 두 레일이 같은 초록이라, 나란히 이어진 두 섹션이 머리말을 읽지 않으면
+              **같은 줄이 두 번 깔린 것처럼** 보였다 (2026-08-18). 근거가 다른 목록이면
+              색도 갈라야 그 근거가 화면에 남는다 — tone 은 StoreRail 주석 참조. */}
           <section style={{ ...scope, marginTop: "var(--space-5)" }}>
             <SectionHeader title="신규 매장" note={currentDistrict.name} />
-            <StoreRail items={newStores} label="신규 매장" onPick={onOpenStore} />
+            <StoreRail items={newStores} label="신규 매장" tone="new" onPick={onOpenStore} />
           </section>
 
           <section style={{ ...scope, marginTop: "var(--space-5)" }}>
             <SectionHeader title="인기 매장" note={currentDistrict.name} />
-            <StoreRail items={popular} label="인기 매장" onPick={onOpenStore} />
+            <StoreRail items={popular} label="인기 매장" tone="hot" onPick={onOpenStore} />
           </section>
         </>
       ) : (

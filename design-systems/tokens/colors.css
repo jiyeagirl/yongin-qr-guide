@@ -5,7 +5,7 @@
 --yong-cream-100:#fffce6;--yong-cream-300:#fef8cc;--yong-cream-500:#fef5aa;--yong-cream-700:#f0dc72;--yong-cream-900:#b99f2c;
 --yong-ink-900:#16221c;--yong-ink-700:#2f3d36;--yong-ink-500:#5b6a62;--yong-ink-300:#8b9a92;--yong-ink-200:#c3cec8;--yong-ink-100:#dce4df;--yong-ink-50:#eef2f0;
 --yong-white:#ffffff;--yong-mist:#f5f8f6;
---yong-amber-500:#f2a73b;--yong-amber-100:#fdeed6;--yong-red-700:#b23a33;--yong-red-500:#e5544b;--yong-red-100:#fbe2e0;--yong-blue-500:#3d7be5;--yong-blue-100:#e2ecfb;
+--yong-amber-800:#8a5a12;--yong-amber-500:#f2a73b;--yong-amber-100:#fdeed6;--yong-red-700:#b23a33;--yong-red-500:#e5544b;--yong-red-100:#fbe2e0;--yong-blue-500:#3d7be5;--yong-blue-100:#e2ecfb;
 
 /* Semantic aliases */
 /* 캐릭터 색은 일러스트·틴트용, UI 액션 색은 한 단계 깊은 톤 */
@@ -54,6 +54,32 @@
    **색만으로 상태를 전하지 않는다**는 규칙은 지킨다 — 고른 줄이 무엇인지는 지도 위에 뜨는
    미리보기 카드가 이름으로 말하고, 이 바탕은 그 확인을 거드는 것뿐이다. */
 --surface-selected:var(--yong-green-50);
+
+/* ── 둘러보기 매장 레일 두 종류 (StoreRail. 2026-08-18) ───────────────────────
+   신규 매장과 인기 매장이 같은 초록 카드였다. 두 섹션이 나란히 이어져 있어서 머리말을
+   읽지 않으면 **같은 줄이 두 번 깔린 것처럼** 보였다 — 뽑은 근거가 다른 목록인데
+   ("새로 생겼다" / "많이 봤다") 생김새가 같으면 그 근거가 화면에서 사라진다.
+
+   ── 왜 이 두 색인가 ───────────────────────────────────────────────────────
+   신규는 초록(brand)에 둔다. 이 앱의 기본색이고, 목록 위 지름길이라는 성격이 브랜드 쪽이다.
+   인기는 크림(accent)이다 — 이 시스템에서 "눈길"을 맡는 색이고, 조회수 상위라는 뜻과 맞는다.
+
+   나머지 계열은 이미 임자가 있어 쓸 수 없었다:
+     teal   온누리다. 카드 안에 온누리 배지(teal-100)가 앉으므로 바탕까지 teal 이면 배지가 묻힌다
+     ink    회색 바탕은 이 패널의 바탕(mist)과 1.03:1 이라 카드가 사라진다
+     red    위험(danger)이다. 가게 목록에 쓸 색이 아니다
+
+   크림이 축제(FestivalBanner·accent 배지)와 겹치지 않느냐는 물음이 남는데, 둘러보기 탭의
+   축제는 마스코트가 붙은 큰 파스텔 카드라 152px 짜리 레일 카드와 생김새가 아주 다르고
+   섹션 머리말도 따로 있다. 같은 화면에서 헷갈릴 만한 크기가 아니다.
+
+   ── 글자색이 -ink 인 이유 ─────────────────────────────────────────────────
+   카드의 `note`("이번 주 조회 1위")는 그 카드가 거기 있는 이유다. 회색으로 묻히면 지름길의
+   근거가 사라지므로 바탕과 같은 계열의 짙은 색으로 적는다. 크림 쪽에서 cream-900(#b99f2c)은
+   2.52:1 로 AA 에 한참 못 미쳐 쓸 수 없고, 한 단계 더 어두운 amber-800 이 5.72:1 이다.
+   (초록 쪽 green-800 은 5.86:1.) */
+--rail-new-bg:var(--yong-green-50);--rail-new-line:var(--yong-green-200);--rail-new-ink:var(--yong-green-800);
+--rail-hot-bg:var(--brand-accent-soft);--rail-hot-line:var(--yong-cream-700);--rail-hot-ink:var(--yong-amber-800);
 
 /* ── 축제 홍보 카드 6색 (FestivalCard) ────────────────────────────────────────
    축제 목록(S12·S04)에서 카드마다 다른 바탕을 깔아 여섯 건이 한 덩어리로 읽히지 않게 한다.

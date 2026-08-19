@@ -5,7 +5,7 @@ const TONES = {
   brand: ["var(--brand-primary-soft)", "var(--yong-green-800)"],
   info: ["var(--state-info-soft)", "var(--yong-teal-700)"],
   success: ["var(--state-success-soft)", "var(--yong-green-800)"],
-  warning: ["var(--state-warning-soft)", "#8a5a12"],
+  warning: ["var(--state-warning-soft)", "var(--yong-amber-800)"],
   danger: ["var(--state-danger-soft)", "#a5322b"],
   accent: ["var(--brand-accent)", "var(--yong-ink-900)"],
   onnuri: ["var(--state-info-soft)", "var(--yong-teal-900)"],

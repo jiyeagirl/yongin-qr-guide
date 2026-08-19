@@ -5,7 +5,7 @@ import { Icon } from "../core/Icon.jsx";
 const TONES = {
   info: ["var(--state-info-soft)", "var(--yong-teal-700)", "info", "var(--text-body)"],
   success: ["var(--state-success-soft)", "var(--yong-green-800)", "circle-check", "var(--text-body)"],
-  warning: ["var(--state-warning-soft)", "#8a5a12", "triangle-alert", "var(--text-body)"],
+  warning: ["var(--state-warning-soft)", "var(--yong-amber-800)", "triangle-alert", "var(--text-body)"],
   danger: ["var(--state-danger-soft)", "#a5322b", "circle-alert", "var(--text-body)"],
   /* ── neutral (2026-08-18) ────────────────────────────────────────────────
      `info` 의 바탕(teal-100)이 **온누리 배지와 같은 색**이다. 둘 다 같은 화면에 있으면
