@@ -1,6 +1,7 @@
 import React from "react";
 import {
-  DetailPage, DetailNotice, ListControls, Chip, FestivalCard, EmptyState, FESTIVAL_STATES,
+  DetailPage, DetailNotice, ListControls, Chip, FestivalCard, EmptyState, Pagination,
+  FESTIVAL_STATES,
 } from "../../design-systems/index.js";
 
 /* S12 축제 전체보기 (2026-08-18 신설 · 08-18 카드형으로 개편).
@@ -38,8 +39,8 @@ import {
  * 그래서 카드마다 축제의 성질을 한 문장으로 적고(`hook`), 조아용 포즈를 다르게 준다.
  * 그 값은 화면이 아니라 데이터가 정한다 (`districts.js` 의 LOOK).
  *
- * **카드 바탕색은 상태다** (2026-08-19 개편). 진행중 초록 · 예정 크림 · 종료 회색이고,
- * 세 값은 목록 행·배너·상세·관리자 표가 쓰는 배지 색과 같다 (`festivalState.js`).
+ * **카드 바탕색은 상태다** (2026-08-19 개편). 진행중 cream · 예정 sand · 종료 neutral 이고,
+ * 그 바탕과 짝이 되는 배지 색까지 한 세트로 묶여 있다 (`festivalState.js` · `--status-*`).
  * 전에는 축제마다 다른 파스텔 여섯을 깔아 카드끼리 구별했는데, 배지의 상태 색과 겹쳐
  * 한 화면에 축제를 가리키는 색이 아홉 가지가 됐다. 구별은 축제명·날짜·`hook` 이 맡는다.
  * 색만으로 상태를 말하지는 않는다 — 카드 안에 "진행중"·"예정"·"종료"가 글자로 함께 나간다.
@@ -60,10 +61,25 @@ import {
  * 차례는 `sortNear` 하나로 고정한다 — 상태 먼저, 그 다음 가까운 순이다. 순수 거리순으로
  * 두지 않는 이유: [전체] 칩에서 종료된 축제가 진행 중인 축제 위로 올라온다. 갈 수 있는
  * 것이 위에 있어야 한다. 상태 칩을 누르면 그 안은 어차피 거리순뿐이다.
+ *
+ * ── 쪽을 나눈다 (2026-08-19 추가) ────────────────────────────────────────
+ * 전에는 조건에 걸린 것을 한 번에 다 깔았다. 그런데 카드는 한 장이 화면 한 뼘이라, 여섯
+ * 장이면 스크롤이 여섯 뼘이다. **끝이 어디인지 모른 채 내려가면 계속 나올 것처럼 보이고,**
+ * 실제로는 여섯 건뿐이라 그 기대가 어긋난다.
+ *
+ * 쪽 단추와 "n건 중 1–5" 한 줄이 그 답을 미리 준다. 형식은 S13 상점가 전체보기와 같다 —
+ * 두 화면 다 [전체보기]로 들어오는 목록이라 같은 자리에서 같은 방식으로 넘어가야 한다.
+ *
+ * `pageSize` 가 5 다 (S13 은 10). 저쪽은 한 줄짜리 행이고 여기는 한 뼘짜리 카드다 —
+ * 쪽당 몇 줄이냐가 아니라 **쪽당 몇 화면이냐**를 맞춘 값이다.
  */
-export function FestivalList({ festivals = [], sortNear, onOpen, onBack,
+export function FestivalList({ festivals = [], sortNear, onOpen, onBack, pageSize = 5,
   base = "../../design-systems/" }) {
   const [state, setState] = React.useState("전체");
+  const [page, setPage] = React.useState(1);
+
+  /* 상태를 바꾸면 1쪽으로. 1건뿐인 상태에서 2쪽을 보고 있으면 빈 화면이 열린다 (S13 과 같다) */
+  React.useEffect(() => { setPage(1); }, [state]);
 
   /* 상태 칩에 개수를 함께 적는다. "종료"를 눌러보기 전에 몇 건인지 알 수 있어야
      누를지 말지를 정한다 (S03 업종 칩과 같은 규칙). */
@@ -78,10 +94,18 @@ export function FestivalList({ festivals = [], sortNear, onOpen, onBack,
     return [...out].sort(sortNear);
   }, [festivals, state, sortNear]);
 
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const start = (safePage - 1) * pageSize;
+  const shown = rows.slice(start, start + pageSize);
+
   const gutter = { padding: "0 var(--gutter-screen)" };
 
   return (
-    <DetailPage title="상점가 축제 정보" onBack={onBack}>
+    /* 칩을 바꾸거나 쪽을 넘기면 본문을 맨 위로 되돌린다. 쪽 단추는 목록 **끝**에 있어서
+       [다음]을 누르면 새 쪽의 끝 카드 근처가 열리고, 칩을 바꾸면 다른 목록의 한가운데가
+       열린다. 둘 다 "위에 무엇이 있는지 모른 채 올려봐야 하는" 상태다 (S13 과 같은 장치) */
+    <DetailPage title="상점가 축제 정보" onBack={onBack} scrollKey={`${state}|${safePage}`}>
       {/* sticky 를 끈다. S03 상점가 탭에서는 335곳을 스크롤하는 내내 정렬이 손에 닿아야 해서
           붙여두지만, 여기는 축제 6건이라 스크롤이 길지 않다. 칩이 화면 위에 눌러앉으면
           정작 카드가 설 자리가 사라진다.
@@ -104,7 +128,7 @@ export function FestivalList({ festivals = [], sortNear, onOpen, onBack,
           /* 한 열이다. 두 열로 깔면 카드 폭이 절반이 되어 홍보 문구가 들어갈 자리가 없고,
              축제명조차 세 줄로 접힌다 — 카드로 바꾼 이유가 사라진다. */
           <div role="list" style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-            {rows.map(f => (
+            {shown.map(f => (
               <FestivalCard key={f.id} festival={f} base={base}
                 pose={f.pose} hook={f.hook}
                 onClick={() => onOpen(f)} />
@@ -119,6 +143,18 @@ export function FestivalList({ festivals = [], sortNear, onOpen, onBack,
             description="[전체]를 누르면 다른 상태의 축제도 함께 볼 수 있습니다."
             style={{ padding: "var(--space-8) 0" }} />
         )}
+
+        {/* 지금 쪽이 목록의 어디인지 한 줄로 적는다 — 칩이 말하는 수는 조건에 걸린 전부이고,
+            이 줄은 그중 지금 화면에 있는 구간이다 (S13 과 같은 어법) */}
+        {rows.length ? (
+          <div style={{ padding: "var(--space-4) 0 var(--space-2)" }}>
+            <p style={{ textAlign: "center", fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
+              {rows.length}건 중 {start + 1}–{start + shown.length}
+            </p>
+            <Pagination page={safePage} pageCount={pageCount} onChange={setPage}
+              label="축제 목록 쪽 넘기기" style={{ marginTop: "var(--space-2)" }} />
+          </div>
+        ) : null}
 
         {/* 기준일자를 적지 않는다 (입력 항목 정의서 3-2: 축제 정보는 미표기 대상).
              119 안내도 끈다 — S09 축제 상세와 같은 이유이고 같은 문장이다. 두 화면이

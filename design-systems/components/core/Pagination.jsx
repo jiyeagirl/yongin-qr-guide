@@ -72,9 +72,22 @@ const disc = {
 };
 
 export function Pagination({ page = 1, pageCount = 1, onChange, label = "쪽 넘기기", style, ...rest }) {
-  /* 한 쪽뿐이면 그리지 않는다. 넘길 곳이 없는데 [1] 하나가 덩그러니 서 있으면
-     "여기서 뭔가 더 볼 수 있나" 하고 한 번 눌러보게 된다 */
-  if (pageCount <= 1) return null;
+  /* ── 한 쪽뿐이어도 [1] 을 그린다 (2026-08-19 뒤집음) ──────────────────────
+     전에는 `pageCount <= 1` 이면 아무것도 그리지 않았다. "넘길 곳이 없는데 [1] 하나가
+     덩그러니 서 있으면 눌러보게 된다"는 이유였는데, 실제로 걸린 문제는 반대쪽이었다.
+
+     이 컨트롤을 쓰는 세 화면은 모두 **조건을 좁히는 칩**을 함께 둔다. [전체]에서는 쪽 단추가
+     있다가 [진행중]을 누르면 통째로 사라지니, 목록 아래가 칩마다 다른 모양이 된다 — 좁힐
+     때마다 컨트롤이 나타났다 없어졌다 하면 그것이 목록의 성질인지 내가 뭘 없앤 것인지
+     알 수 없다. 그리고 **"1쪽이 전부다"는 그 자체로 알려줄 값이 있는 사실**이다.
+
+     눌러보게 된다는 걱정은 남지만, 지금 쪽 단추는 `go()` 가 같은 쪽을 걸러내고 커서도
+     default 다 — 눌러도 아무 일이 없고 눌리는 것처럼 보이지도 않는다. 함께 놓이는
+     "n건 중 1–5" 줄이 이미 같은 말을 하고 있어서, [1] 은 그 말을 되풀이할 뿐 새 기대를
+     만들지 않는다.
+
+     **결과가 0 건일 때는 호출하는 쪽이 통째로 감춘다** (`rows.length ? … : null`).
+     빈 목록 아래의 [1] 은 없는 쪽을 가리키게 되므로 여기서 그릴 일이 아니다. */
 
   const go = n => { if (n >= 1 && n <= pageCount && n !== page && onChange) onChange(n); };
 
@@ -91,7 +104,9 @@ export function Pagination({ page = 1, pageCount = 1, onChange, label = "쪽 넘
         <button key={n} type="button" onClick={() => go(n)}
           /* 지금 쪽을 색으로만 알리지 않는다 — aria-current 로 읽히고, 굵기까지 달라진다 */
           aria-current={n === page ? "page" : undefined}
-          aria-label={`${n}쪽${n === pageCount ? `, 마지막` : ""}`}
+          /* 한 쪽뿐이면 "1쪽, 마지막"이 아니라 그렇게 읽어준다 — 화면의 [1] 이 말하는 것과
+             같은 말이어야 하고, "마지막"만으로는 앞에 뭔가 더 있었는지 알 수 없다 */
+          aria-label={pageCount === 1 ? "1쪽, 전체" : `${n}쪽${n === pageCount ? ", 마지막" : ""}`}
           style={{ ...cell, cursor: n === page ? "default" : "pointer",
             color: n === page ? "var(--brand-primary-strong)" : "var(--text-body)",
             fontWeight: n === page ? "var(--fw-bold)" : "var(--fw-medium)" }}>
