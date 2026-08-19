@@ -21,18 +21,16 @@ import { planCourse, nearestChain } from "../main/data/coursePlan.js";
  *   ─────────────────────────────────
  *   (조아용) 2/4 방문  ▓▓▓░░░░    [처음부터]   ← 방문 완료 (선택 기능)
  *   ─────────────────────────────────
- *    ⌗
- *    ┊                                     ← 점선 기둥이 순번과 순번을 잇는다
- *   2분                                    ← 구간 시간은 번호 칸 안, 점선과 번호 사이
- *   ①  가게  업종                          ← 누르면 지도가 그 순번으로 가고 카드가 뜬다
- *       [✓ 방문 완료]                         (U-DC-03 "순번 이동")
- *    ┊
- *   3분
- *   ②  가게 (흐림)              (조아용)   ← 방문 도장
- *       [✓ 방문함]
- *    ┊
- *   2분
- *   ③  가게  [다음 차례]
+ *        ⌗                                 ← 출발점(QR 지점)에만 띠가 따로 있다
+ *   2분  ┊
+ *        ①  가게  업종                     ← 누르면 지도가 그 순번으로 가고 카드가 뜬다
+ *        ┊      중식 · 중국집                  (U-DC-03 "순번 이동")
+ *   3분  ┊                                 ← 시간은 점선 왼쪽, 그 구간의 세로 한가운데
+ *        ┊      [✓ 방문 완료]                  (칩보다 위에 온다 — 칩이 아니라 선에 딸렸다)
+ *        ②  가게 (흐림)          (조아용)  ← 방문 도장. 점선은 ①에서 ②까지 안 끊긴다
+ *        ┊      [✓ 방문함]
+ *   2분  ┊
+ *        ③  가게  [다음 차례]              ← 마지막 아래로는 선이 없다
  *   ...
  *   ─────────────────────────────────
  *   기준일자 · 참고용 고지 · 119
@@ -320,62 +318,80 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
               const isNext = i === nextIndex;
               return (
                 <React.Fragment key={s.id}>
-                  {/* ── 구간 ────────────────────────────────────────────
-                         첫 곳 위에는 QR 지점에서의 시간이 온다. 나머지는 직전 곳에서다.
-                         값은 데이터가 미리 갖고 있다 (coursePlan.js) — 화면에서 다시 재면
-                         머리말의 총 시간과 여기 구간의 합이 어긋난다.
+                  {/* ── 출발 구간 (QR 지점 → ①) ────────────────────────
+                         **첫 곳 위에만** 온다. 가게와 가게 사이의 구간은 띠를 따로 두지 않고
+                         행 안에 그린다 (아래 "구간 시간은 행 안에 띄운다" 참조) — 여기만
+                         위에 행이 없어서 걸 자리가 없다.
 
-                         ── 시간을 번호 칸 안으로 옮겼다 (2026-08-19) ──────
-                         전에는 점선 오른쪽에 "도보 1분"이 있었고, 기둥은 점선(22) + 화살촉(16)
-                         = 38px 였다. 순번 동그라미가 26px 인데 **사이가 번호보다 커서** 목록이
-                         번호 사이의 빈 띠로 읽혔다.
+                         값은 데이터가 미리 갖고 있다 (coursePlan.js). 화면에서 다시 재면
+                         머리말의 총 시간과 구간의 합이 어긋난다.
 
-                         시간을 점선과 동그라미 사이에 끼우면 그 띠가 26px 로 줄고, 값이
-                         "이 선을 걸으면 아래 번호에 닿는다"는 자리에 놓여 어느 구간의 값인지도
-                         분명해진다. 화살촉은 뺐다 — 바로 아래에 번호가 오므로 방향은 번호가
-                         말한다. 폭은 26px 그대로라 **이름 칸을 한 픽셀도 내주지 않는다**
-                         (왼쪽 여백으로 빼는 안은 61px 이 필요해 320px 화면에서 상호명과 배지가
-                         한 줄에 못 들어갔다).
-
-                         글자는 "도보"를 떼고 "1분"만 적는다 — 26px 안에 들어가야 하고,
-                         걷는 시간이라는 것은 점선과 머리말의 [도보 10분]이 이미 말한다.
-                         소리에는 그 맥락이 없으므로 읽어줄 때는 온전한 문장을 들려준다.
-
-                         기둥 폭 26px 은 순번 동그라미와 같은 값이고, 좌우 여백도 아래 행과
-                         맞춰 두 원의 중심을 정확히 잇는다 (행에는 1px 테두리가 있어 그만큼
-                         더한다). 지도의 코스 경로도 같은 색 점선이다 — 같은 길이다. */}
-                  <div style={{ display: "flex",
-                    padding: "0 calc(var(--space-3) + var(--stroke-hairline))" }}>
-                    {/* width 가 아니라 minWidth 다 (U-CM-14). 실제 값은 한 자리(1~5분)라
-                        26px 에 넉넉히 들어가지만, 2차 글자 확대에서 폭을 못 넘게 막으면
-                        "12분"이 잘리거나 두 줄로 깨진다. 아래 순번 동그라미도 같은 minWidth 라
-                        둘이 함께 늘어난다. */}
-                    <span style={{ flex: "0 0 auto", minWidth: 26,
-                      display: "flex", flexDirection: "column", alignItems: "center" }}>
-                      {/* 첫 구간의 출발점은 QR 지점이다. 순번이 없는 자리라 아이콘이 대신 선다 */}
-                      {i === 0 ? <Icon name="qr-code" size={14} color="var(--text-muted)" /> : null}
-                      <span aria-hidden="true" style={{ minHeight: "var(--course-leg-min)", width: 0,
-                        borderLeft: "2px dotted var(--course-leg-line)" }} />
-                      <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)",
+                         출발점은 QR 지점이라 순번이 없다. 그 자리에 아이콘이 대신 선다.
+                         글자는 아이콘 높이(14px)만큼 내려 점선 한가운데에 세운다. */}
+                  {i === 0 ? (
+                    <div style={{ display: "flex", alignItems: "center",
+                      padding: "0 calc(var(--space-3) + var(--stroke-hairline))" }}>
+                      <span style={{ flex: "0 0 auto", minWidth: 24, textAlign: "right",
+                        marginTop: 14,
+                        fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)",
                         fontWeight: "var(--fw-semibold)", color: "var(--text-muted)",
                         lineHeight: 1.2, whiteSpace: "nowrap" }}>
-                        <VisuallyHidden>
-                          {i === 0 ? "QR 지점에서 도보 " : "직전 지점에서 도보 "}
-                        </VisuallyHidden>
+                        <VisuallyHidden>QR 지점에서 도보 </VisuallyHidden>
                         {s.legMin}분
                       </span>
-                    </span>
-                  </div>
+                      <span aria-hidden="true" style={{ flex: "0 0 auto", minWidth: 26,
+                        marginLeft: "var(--space-1)",
+                        display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <Icon name="qr-code" size={14} color="var(--text-muted)" />
+                        <span style={{ minHeight: "var(--course-leg-min)", width: 0,
+                          borderLeft: "2px dotted var(--course-leg-line)" }} />
+                      </span>
+                    </div>
+                  ) : null}
 
                   <div role="listitem" onClick={() => goTo(s.id)}
-                    style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)",
-                      minHeight: "var(--tap-comfortable)", padding: "var(--space-3)",
-                      /* 행 사이 여백은 0 이다 — 행과 행 사이에는 언제나 구간 띠가 있어서
-                         둘이 맞붙는 일이 없고, 4px 를 더하면 그만큼 번호 사이가 벌어진다 */
+                    style={{ position: "relative",
+                      display: "flex", alignItems: "flex-start", gap: "var(--space-3)",
+                      minHeight: "var(--tap-comfortable)",
+                      /* 왼쪽만 28px 더 들어간다 = [시간 자리 24 + 사이 4]. 그래야 순번
+                         동그라미의 중심이 점선과 정확히 맞는다. 이 값을 한쪽만 고치면
+                         점선이 동그라미를 비껴간다.
+                         위아래 8px 은 좌우 12px 보다 좁다 (2026-08-19). 이 값이 두 번(윗행의
+                         아래쪽 + 아랫행의 위쪽) 더해져 **번호 사이의 간격 전부**가 되기
+                         때문이다 — 지금 [방문 완료] 칩과 다음 상호명 사이는 8+8 = 16px 다.
+                         행 사이 여백은 0 이다. */
+                      padding: "var(--space-2) var(--space-3) var(--space-2) calc(var(--space-3) + 28px)",
                       cursor: "pointer",
                       borderRadius: "var(--radius-sm)",
                       background: on ? "var(--brand-primary-soft)" : "transparent",
                       border: "var(--stroke-hairline) solid " + (on ? "var(--border-brand)" : "transparent") }}>
+
+                    {/* ── 점선은 행 안에서 그린다 (2026-08-19) ──────────────────────
+                           행 사이에 띠를 두고 거기에만 점선을 그렸을 때는 ①에서 ②까지가
+                           이어지지 않았다. 동그라미 아래 여백, 띠, 다음 동그라미 위 여백 중
+                           **가운데 토막만** 점선이라 잇는 선이 아니라 띄엄띄엄 놓인 부호로
+                           보였다. 이제 행이 자기 높이 전부를 두 토막으로 그리고, 아래 토막이
+                           다음 행의 위 토막과 맞닿아 **끊기지 않는 한 줄**이 된다.
+
+                           동그라미를 관통하는 선 하나로 그리지 않는다 — 방문한 순번은
+                           opacity 0.5 라 뒤의 선이 비쳐 숫자 위에 줄이 그어진 것처럼 보인다.
+
+                           x 는 52px = 왼쪽 여백(12) + 시간 자리(28) + 동그라미 반지름(13)
+                           − 선 두께의 절반(1). 절대 위치의 기준이 테두리 안쪽이라 테두리 1px 은
+                           빼지 않는다. 아래 토막이 시작하는 34px 은 여백(8) + 동그라미(26)다.
+
+                           마지막 순번 아래로는 내리지 않는다 — 갈 곳이 없는데 선이 이어지면
+                           아직 더 있는 것으로 읽힌다. */}
+                    <span aria-hidden="true" style={{ position: "absolute",
+                      left: "calc(var(--space-3) + 28px + 12px)",
+                      top: 0, height: "var(--space-2)",
+                      width: 0, borderLeft: "2px dotted var(--course-leg-line)" }} />
+                    {i < stops.length - 1 ? (
+                      <span aria-hidden="true" style={{ position: "absolute",
+                        left: "calc(var(--space-3) + 28px + 12px)",
+                        top: "calc(var(--space-2) + 26px)", bottom: 0,
+                        width: 0, borderLeft: "2px dotted var(--course-leg-line)" }} />
+                    ) : null}
 
                     {/* 순번 — 지도 핀과 같은 숫자, 같은 색. 고른 곳은 지도와 같은 호박색이다.
                         방문한 곳도 **숫자를 지우지 않는다** — 몇 번째였는지가 코스의 전부다.
@@ -426,6 +442,39 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                     {done ? (
                       <Mascot pose="thumbsup" size={56} base={base} alt=""
                         style={{ flex: "0 0 auto", alignSelf: "center" }} />
+                    ) : null}
+
+                    {/* ── 구간 시간은 행 안에 띄운다 (2026-08-19) ────────────────────
+                           행과 행 사이에 띠로 두었더니, **글자가 자기 높이만큼 두 순번을
+                           밀어냈다.** [방문 완료] 칩과 다음 상호명 사이가 그만큼 벌어지는데,
+                           거기 벌어질 이유가 없다 — 다음 가게는 바로 다음 줄이다.
+
+                           그래서 흐름에서 빼 왼쪽 여백에 띄운다. 자리는 **점선의 세로
+                           한가운데**다: 이 행의 동그라미 밑(34px)에서 행 끝까지가 다음
+                           순번으로 가는 구간이고, 글자는 그 구간의 중앙에 선다. 결과적으로
+                           [방문 완료] 칩보다 위에 오는데, 그게 맞다 — 글자는 칩에 딸린 것이
+                           아니라 **선에 딸린 것**이다.
+
+                           띄웠으므로 행 높이에 보태지 않는다. 번호 사이의 간격은 이제
+                           여백 두 개(8+8)뿐이다.
+
+                           값은 **다음 순번의 legMin** 이다. legMin 은 "여기까지 오는 데
+                           걸린 시간"이라 ②의 값이 ①→② 구간이다.
+
+                           읽는 차례는 이 행의 끝이다. 화면에서는 위로 떠 있지만 소리로는
+                           "…방문 완료. 다음 지점까지 도보 2분." 이 자연스럽다 —
+                           떠난 뒤의 이야기이기 때문이다. */}
+                    {i < stops.length - 1 ? (
+                      <span style={{ position: "absolute",
+                        left: "var(--space-3)", width: 24, textAlign: "right",
+                        top: "calc(var(--space-2) + 26px)", bottom: 0,
+                        display: "flex", alignItems: "center", justifyContent: "flex-end",
+                        fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)",
+                        fontWeight: "var(--fw-semibold)", color: "var(--text-muted)",
+                        lineHeight: 1.2, whiteSpace: "nowrap" }}>
+                        <VisuallyHidden>다음 지점까지 도보 </VisuallyHidden>
+                        {stops[i + 1].legMin}분
+                      </span>
                     ) : null}
                   </div>
                 </React.Fragment>
