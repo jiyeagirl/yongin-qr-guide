@@ -459,8 +459,14 @@ export function MainApp({ qr = null, noDistrict = false }) {
      지도로 가는 길이 셋이 됐다. 게다가 그 버튼은 탭을 옮기고 필터까지 풀어야 마커가
      보이는 동작이라, 사용자가 걸어둔 조건을 상세 화면이 조용히 건드리는 셈이었다.
      뒤로가기는 떠날 때 모습 그대로 돌아온다 — 그게 오버레이 구조를 택한 이유다. */
-  /* 오류신고로 보내는 길 (U-CM-10). 상세 화면 넷이 모두 이 함수를 부른다 —
-     대상 종류를 해시에 실어야 ReportForm 이 아이콘을 고를 수 있고, 새로고침해도 대상이 남는다. */
+  /* 오류신고로 보내는 길 (U-CM-10). 대상 종류를 해시에 실어야 ReportForm 이 아이콘을
+     고를 수 있고, 새로고침해도 대상이 남는다.
+
+     **부르는 곳이 셋으로 줄었다** (2026-08-19) — 시설 상세 · 점포 상세 · 길찾기다.
+     축제 상세와 코스 상세에서 뺐다. 신고할 대상을 실어 보낼 수 없어 대상 칸이 빈 폼이
+     열렸는데, U-CM-10 이 받는 것은 시설과 점포의 정보다 (각 화면의 주석 참조).
+     대상 없는 폼(#/report)은 그대로 둔다 — 어디에도 링크가 없지만 ReportForm 이 그
+     상태를 그릴 줄 알고, 검수 경로로 README 에 적혀 있다. */
   const goReport = React.useCallback(item => {
     if (!item) { go("#/report"); return; }
     const kind = item.type && FACILITY_LABELS[item.type] ? "facility" : "store";
@@ -550,13 +556,11 @@ export function MainApp({ qr = null, noDistrict = false }) {
            다시 맞춰지고, 방문 기록만 세션에 남는다 (data/courseVisits.js). */
         onPickStore={s => go(`#/store/${s.id}`)}
         /* 출발지는 코스 순서상 직전 가게다. 첫 곳(from 없음)만 QR 지점에서 출발한다 */
-        onRouteStore={(s, from) => go(`#/route/store/${s.id}${from ? `/${from.id}` : ""}`)}
-        onReport={() => go("#/report")} />
+        onRouteStore={(s, from) => go(`#/route/store/${s.id}${from ? `/${from.id}` : ""}`)} />
     ) : route.name === "festival" ? (
       <FestivalDetail
         festival={target}
-        onBack={back}
-        onReport={() => go("#/report")} />
+        onBack={back} />
     ) : route.name === "facility" ? (
       <FacilityDetail
         facility={target}

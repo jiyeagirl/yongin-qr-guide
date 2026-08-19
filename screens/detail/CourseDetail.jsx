@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  DetailPage, DetailBody, DetailNotice, KakaoMap, MapPreviewCard, Button, Badge, Icon,
+  DetailPage, DetailBody, DetailNotice, KakaoMap, MapPreviewCard, Badge, Icon,
   CategoryIcon, CATEGORY_LABELS, OnnuriBadge, SectionHeader, ProgressBar,
   TextButton, Chip, Mascot, Notice, VisuallyHidden,
 } from "../../design-systems/index.js";
@@ -74,7 +74,7 @@ import { planCourse, nearestChain } from "../main/data/coursePlan.js";
  * "반경 300~500m". 명세서 U-DC-03 이 "300~500m는 내부 로직 값이며 사용자 필터가 아니다"
  * 라고 못박았다. 사용자가 읽어야 할 것은 몇 분 걸리고 어디를 도는가다.
  */
-export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRouteStore, onReport,
+export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRouteStore,
   base = "../../design-systems/" }) {
   const c = course;
 
@@ -487,10 +487,14 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
               아는 일(축소)에 버튼을 하나 더 얹고 있었다. */}
         </section>
 
-        <Button variant="ghost" size="sm" icon="flag" onClick={onReport}
-          style={{ alignSelf: "flex-start", color: "var(--text-muted)" }}>
-          정보 오류 신고
-        </Button>
+        {/* [정보 오류 신고]를 뺐다 (2026-08-19). U-CM-10 이 받는 것은 **시설과 점포**의
+            정보인데, 이 화면에는 신고할 대상이 없다 — 코스는 원본 자료가 아니라 점포
+            데이터로 우리가 만들어낸 묶음이라, 여기서 열리는 폼은 대상 칸이 빈 채로 떴다.
+            무엇을 신고하는지 사용자가 직접 적어야 하는 폼이었던 셈이다.
+
+            고칠 것이 있으면 그 가게의 상세로 들어가면 된다 — 위 목록의 순번을 누르면
+            미리보기 카드가 뜨고 [상세 보기]가 거기로 데려간다. 그 화면의 신고 버튼은
+            대상이 이미 채워져 있다. */}
 
         {/* 코스는 상점가 점포 데이터에서 만들어지므로 기준일자도 그쪽을 따른다 */}
         <DetailNotice asOf={`점포 정보 ${asOf}`}>

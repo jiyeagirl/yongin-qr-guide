@@ -1,12 +1,13 @@
 import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice, InfoList, Accordion, SectionHeader,
-  Button, Badge, ListRow, Icon, Notice, festivalBadge,
+  Badge, ListRow, Icon, Notice, festivalBadge,
 } from "../../design-systems/index.js";
 
 /* S09 축제 상세 (기능명세서 v1.0 4장 S09 행).
  * 관련 기능: U-FT-02(축제 상세) · U-FT-04(부스 위치) `C` · U-FT-05(당일 임시시설) `C`
- *            U-CM-07 · U-CM-08 · U-CM-10
+ *            U-CM-08 (U-CM-07 기준일자와 U-CM-10 오류신고는 이 화면에 두지 않는다.
+ *            둘 다 아래에 이유를 적었다)
  *
  *   [AppBar]  ← 뒤로 · 축제명
  *   ─────────────────────────────────
@@ -44,7 +45,7 @@ import {
  * 목록(U-FT-01)이 종료 상태도 노출하므로 상세에도 들어올 수 있다. 이때 프로그램을
  * 그대로 보여주면 아직 열리는 행사로 읽힌다. 맨 위에 끝났다는 사실을 먼저 적는다.
  */
-export function FestivalDetail({ festival, onBack, onReport }) {
+export function FestivalDetail({ festival, onBack }) {
   const f = festival;
   const ended = f.state === "종료";
   const live = f.state === "진행중";
@@ -108,7 +109,7 @@ export function FestivalDetail({ festival, onBack, onReport }) {
                되돌아오는 길을 스스로 찾아야 한다. */}
         {/* 항목과 순서는 정의서 1-3 그대로다. 라벨 "상권명"은 정의서의 항목명이고,
              시민에게는 "주최 상점가"가 더 자연스럽지만 원천 항목명을 그대로 쓴다 —
-             관리자 화면과 시민 화면이 다른 이름으로 같은 칸을 부르면 오류 신고가 들어왔을 때
+             관리자 화면과 시민 화면이 다른 이름으로 같은 칸을 부르면 문의가 들어왔을 때
              어느 칸 이야기인지 맞춰봐야 한다. */}
         <InfoList items={[
           { label: "기간", value: f.period },
@@ -165,10 +166,14 @@ export function FestivalDetail({ festival, onBack, onReport }) {
              임시 화장실·의료소 자료를 시가 전달하기로 확정되면 정의서에 항목을 더하고
              여기에 되살린다. 데이터(districts.js 의 tempFacilities)는 남겨 두었다. */}
 
-        <Button variant="ghost" size="sm" icon="flag" onClick={onReport}
-          style={{ alignSelf: "flex-start", color: "var(--text-muted)" }}>
-          정보 오류 신고
-        </Button>
+        {/* [정보 오류 신고]를 뺐다 (2026-08-19). U-CM-10 이 받는 것은 **시설과 점포**의
+            정보 오류다. 그 둘은 공공데이터를 옮겨온 것이라 원본이 틀려 있을 수 있고,
+            신고가 그것을 고치는 유일한 통로다.
+
+            축제는 다르다. 관리자가 직접 입력한 자료라(정의서 3-1 의 5번) 틀렸다면 입력한
+            사람이 고치면 되고, 게다가 여기서 열리는 폼은 대상 칸이 비어 있었다 —
+            시설·점포처럼 대상을 실어 보낼 수 없어서다. 무엇에 대한 신고인지 사용자가
+            직접 적어야 하는 폼을 축제마다 달아둘 이유가 없다. */}
 
         {/* 기준일자를 적지 않는다 (정의서 3-2: 축제 정보는 미표기 대상).
              축제는 공공데이터가 아니라 시가 그때그때 전달하는 자료라 "몇 월 기준"이라는 말이
