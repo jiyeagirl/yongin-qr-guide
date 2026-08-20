@@ -30,8 +30,15 @@ import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
  * 기본 차례는 넘겨받은 배열 그대로다 — 화면이 정한 차례(가까운 순 등)를 표가 덮지 않는다.
  *
  * ── 고정 높이 없음 ──────────────────────────────────────────────────────────
- * --table-row-min 은 min-height 다. 상호명이 길어 두 줄이 되는 점포가 실제로 있고,
+ * --table-row-min 은 최소 높이다. 상호명이 길어 두 줄이 되는 점포가 실제로 있고,
  * 2차 글자 확대에서는 모든 행이 그렇게 된다 (U-CM-14).
+ *
+ * 그 최소 높이를 **`height` 로 준다** (2026-08-20). `min-height` 는 표의 칸에 적용되지
+ * 않는다 — CSS 는 `display: table-cell` 에서 그 속성을 무시하고, 대신 `height` 를 최소
+ * 높이로 읽는다. 그래서 지금까지 52px 은 아무 일도 하지 않았고 행 높이는 내용이 정했다.
+ * 배지가 든 칸과 글자만 든 칸이 1~2px 씩 어긋났고, 대시보드처럼 표 둘을 나란히 놓으면
+ * 줄이 서로 맞지 않았다. `height` 로 바꾸면 52px 이 바닥이 되고 내용이 넘치면 그만큼
+ * 늘어난다 — 원래 이 토큰이 하려던 일이다.
  */
 
 /* ── 칸 안에 여럿을 나란히 놓을 때 ───────────────────────────────────────────
@@ -171,7 +178,7 @@ export function DataTable({
                 <th key={col.key} scope="col"
                   aria-sort={sort && sort.key === col.key
                     ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}
-                  style={{ width: col.width, minHeight: "var(--table-head-min)", padding: cellPad,
+                  style={{ width: col.width, height: "var(--table-head-min)", padding: cellPad,
                     textAlign: col.align || "left", whiteSpace: "nowrap",
                     fontSize: "var(--fs-label)", fontWeight: "var(--fw-bold)", color: "var(--text-heading)",
                     borderBottom: "var(--stroke-hairline) solid var(--border-default)" }}>
@@ -201,7 +208,7 @@ export function DataTable({
                     /* 첫 열만 버튼이 된다 — 위 머리말의 "행 전체를 누르게 만들지 않는다" 참조 */
                     const asButton = ci === 0 && typeof onRowClick === "function";
                     return (
-                      <td key={col.key} style={{ minHeight: "var(--table-row-min)", padding: cellPad,
+                      <td key={col.key} style={{ height: "var(--table-row-min)", padding: cellPad,
                         textAlign: col.align || "left", verticalAlign: "middle",
                         fontSize: "var(--fs-label)", color: "var(--text-body)", lineHeight: 1.5 }}>
                         {asButton ? (
