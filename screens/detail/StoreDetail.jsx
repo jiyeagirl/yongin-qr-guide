@@ -5,7 +5,7 @@ import {
 } from "../../design-systems/index.js";
 import { WALK_M_PER_MIN, STORE_AS_OF } from "../main/config.js";
 
-/* S06 점포 상세 (기능명세서 v1.0 4장 S06 행).
+/* S06 점포 상세 (기능명세서 v1.1 4장 S06 행).
  * 관련 기능: U-ST-05(점포 상세) · U-ST-06(온누리 가맹 표시) · U-CM-07 · U-CM-08 · U-CM-10
  *
  * S05 시설 상세와 **같은 골격**이다 (DetailPage 를 공유한다). 두 화면이 다르게 보이면
@@ -21,6 +21,13 @@ import { WALK_M_PER_MIN, STORE_AS_OF } from "../main/config.js";
  *
  *   상호명 · 도로명주소 · 상권업종대분류명                              (필수)
  *   지점명 · 상권업종소분류명 · 표준산업분류명 · 온누리상품권 가맹 여부   (선택)
+ *
+ * **표준산업분류명도 적지 않는다** (2026-08-20). 통계청 KSIC 는 행정·통계 쪽 분류 체계라
+ * 가게를 고르는 사람에게 건네는 말이 아니다 — "한식 음식점업"·"기타 주점업"처럼 앞의
+ * 대분류·소분류가 이미 한 말을 관청 말투로 한 번 더 적는 줄이 된다. 세 줄 중 둘이 겹치면
+ * 표를 읽는 사람은 셋이 서로 다른 것인 줄 알고 차이를 찾는다(중분류를 뺀 것과 같은 이유다).
+ * 정의서 1-2 의 **선택** 항목이라 빼도 표가 무너지지 않는다. 데이터에는 `ksic` 로 남아 있고
+ * 관리자 화면은 이 항목을 그대로 다룬다 — 시민 화면이 안 보여줄 뿐이다.
  *
  * **중분류를 적지 않는다** (2026-08-19). 소분류와 겹치는 자리가 너무 많다 — 중분류 45종 중
  * 13종이 소분류와 글자까지 같고(동물병원·제과점·세탁소·의원·안경·분식·신발·이용원·
@@ -115,9 +122,9 @@ export function StoreDetail({ store, district, onBack, onRoute, onReport, onCopi
         {/* 오류 신고는 상세 정보 박스에 바짝 붙인다 (U-CM-10) — S05 와 같은 자리, 같은 크기.
              [지도에서 보기]는 뺐다: 위에 뒤로가기, 아래에 길찾기가 이미 있다. */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-          {/* 정의서 1-2 의 항목 순서 그대로다. 대분류만 필수이고 나머지는 선택이라,
-              원천이 비면 줄을 지우지 않고 "-" 로 남는다 — 골목상점가의 점포는 대부분
-              단독 점포라 지점명이 실제로 자주 빈다.
+          {/* 정의서 1-2 의 항목 순서 그대로다(중분류·표준산업분류명은 빼고 — 머리말).
+              대분류만 필수이고 나머지는 선택이라, 원천이 비면 줄을 지우지 않고 "-" 로
+              남는다 — 골목상점가의 점포는 대부분 단독 점포라 지점명이 실제로 자주 빈다.
 
               온누리 가맹 여부는 ○ · × 로 적는다 (yesNoMark). 답이 둘뿐인 항목이라
               부호가 낱말보다 빨리 읽히고, 읽어줄 때는 "가맹"·"미가맹"으로 들려준다.
@@ -128,7 +135,6 @@ export function StoreDetail({ store, district, onBack, onRoute, onReport, onCopi
             { label: "지점명", value: s.branch },
             { label: "상권업종대분류명", value: s.bizL },
             { label: "상권업종소분류명", value: s.bizS },
-            { label: "표준산업분류명", value: s.ksic },
             { label: "온누리상품권 가맹 여부", value: yesNoMark(s.onnuri, "가맹", "미가맹") },
           ]} />
           <Button variant="ghost" size="sm" icon="flag" onClick={onReport}

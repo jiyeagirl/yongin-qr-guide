@@ -5,7 +5,7 @@ import {
 } from "../../design-systems/index.js";
 import { WALK_M_PER_MIN, FACILITY_AS_OF } from "../main/config.js";
 
-/* S05 시설 상세 (기능명세서 v1.0 4장 S05 행).
+/* S05 시설 상세 (기능명세서 v1.1 4장 S05 행).
  * 관련 기능: U-FC-05(시설 상세) · U-FC-06(거리 표기) · U-FC-07(길찾기 진입)
  *            U-CM-07(정보 기준일자) · U-CM-08(참고용 고지와 119) · U-CM-10(오류 신고)
  *

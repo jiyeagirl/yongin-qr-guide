@@ -25,7 +25,7 @@ import { useHashRoute, go, replace, back, closeAll } from "./router.js";
 import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
   DISTRICT_LIST_PAGE_SIZE } from "./config.js";
 
-/* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.0 확정 결정사항 11).
+/* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.1 확정 결정사항 11).
  *
  *   S02 공공시설 탭   AED · 화장실 · 쉼터 · 대피소   (U-FC-01~04, 06, 08, 09)   지도 + 시트
  *   S03 상점가 탭     현재 상점가의 점포 목록         (U-ST-02~06, 10~13, 15, U-FT-03)  지도 + 시트

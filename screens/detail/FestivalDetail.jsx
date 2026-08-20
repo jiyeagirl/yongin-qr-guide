@@ -4,7 +4,7 @@ import {
   Badge, ListRow, Icon, Notice, festivalBadge,
 } from "../../design-systems/index.js";
 
-/* S09 축제 상세 (기능명세서 v1.0 4장 S09 행).
+/* S09 축제 상세 (기능명세서 v1.1 4장 S09 행).
  * 관련 기능: U-FT-02(축제 상세) · U-FT-04(부스 위치) `C` · U-FT-05(당일 임시시설) `C`
  *            U-CM-08 (U-CM-07 기준일자와 U-CM-10 오류신고는 이 화면에 두지 않는다.
  *            둘 다 아래에 이유를 적었다)

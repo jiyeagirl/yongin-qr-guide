@@ -4,7 +4,7 @@ import {
 } from "../../design-systems/index.js";
 import { DISTRICT_PREVIEW, FESTIVAL_PREVIEW } from "./config.js";
 
-/* S04 둘러보기 탭 (기능명세서 v1.0 4장 S04 행).
+/* S04 둘러보기 탭 (기능명세서 v1.1 4장 S04 행).
  * 관련 기능: U-DC-01~06 · U-FT-01 · U-ST-14(→U-DC-04)
  *
  * ── 이 탭에는 지도가 없다 (2026-08-18 변경) ─────────────────────────────────

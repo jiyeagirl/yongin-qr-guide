@@ -7,7 +7,7 @@ import {
 import { KAKAO_APP_KEY, WALK_M_PER_MIN, FACILITY_AS_OF, STORE_AS_OF } from "../main/config.js";
 import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
 
-/* S07 길찾기 (기능명세서 v1.0 4장 S07 행).
+/* S07 길찾기 (기능명세서 v1.1 4장 S07 행).
  * 관련 기능: U-NV-01(도보 경로 안내) · U-NV-02(경로 지도 표시) · U-NV-03(구간별 상세 안내)
  *            U-NV-04(경로 실패 처리) · U-NV-05(호출량 제어) · U-CM-07 · U-CM-08
  *

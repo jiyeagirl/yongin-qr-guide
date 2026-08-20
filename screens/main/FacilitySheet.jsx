@@ -4,7 +4,7 @@ import {
 } from "../../design-systems/index.js";
 import { FACILITY_PAGE_SIZE } from "./config.js";
 
-/* S02 공공시설 탭 바텀시트 내용 (기능명세서 v1.0 4장 S02 행).
+/* S02 공공시설 탭 바텀시트 내용 (기능명세서 v1.1 4장 S02 행).
  * 관련 기능: U-FC-02(주변 시설 목록) · U-FC-04(안전시설 우선) · U-FC-06(거리 표기) · U-FC-09(원거리 안내)
  *
  * 상점가 탭(DistrictSheet)과 골격이 같다. 시트는 결과만 담고, 유형 칩은 지도 위 필터 바가 갖는다.

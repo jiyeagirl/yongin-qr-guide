@@ -7,7 +7,7 @@ No app install, no login, no membership. Primary users include older residents a
 The brand image is **조아용**, the Yongin city mascot (green dragon, cream belly, gold horns, teal spine). Its use is deliberately bounded — see below.
 
 ## Sources provided
-- 기능명세서 v0.8 (this system is built against it): 확정 결정사항, 시민용 13화면 목록(S01–S13), 데이터 처리 방안(3장), 디자인 방향(5장), 지도 오버레이 레이어 규칙(5-3), 핸드오프(7장).
+- 기능명세서 — this system was first built against **v0.8** (13화면, S07 상점가 상세가 대표 화면) and has tracked the document since; the current edition is **v1.1 (2026-08-20)**, whose 4장 lists 14 screens and whose 대표 화면 is S03 상점가 탭. What the system reads from it: 확정 결정사항, 화면 목록, 데이터 처리 방안(3장), 디자인 방향(5장), 지도 오버레이 레이어 규칙(5-3), 핸드오프(7장). See the 개정 이력 at the top of `docs/functional_specifications.md`.
 - Referenced upstream documents (not supplied to this project): `2026년 QR기반 공공시설 및 골목형상점가 위치 안내_사업계획서_나인라이트.pdf`, `용인시 서비스 아이디어 및 추진 방안 제안_내부공유.pdf`, 소상공인시장진흥공단 상가(상권)정보 경기 202606, 전국 온누리상품권 가맹점 현황 20250731, 둔전 골목형 상점가 정보 xlsx.
 - 14 PNG artworks of 조아용 → `assets/character/`.
 - Pretendard OTF, 9 weights → `assets/fonts/`.

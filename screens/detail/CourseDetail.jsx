@@ -11,7 +11,7 @@ import { useCourseVisits } from "../main/data/courseVisits.js";
 import { useCourseOrder } from "../main/data/courseOrder.js";
 import { planCourse, moveStop } from "../main/data/coursePlan.js";
 
-/* S08 골목 한바퀴 코스 상세 (기능명세서 v1.0 4장 S08 행).
+/* S08 골목 한바퀴 코스 상세 (기능명세서 v1.1 4장 S08 행).
  * 관련 기능: U-DC-03(골목 한바퀴 추천 코스) · U-CM-07 · U-CM-08
  *
  *   [AppBar]  ← 뒤로 · 코스명
