@@ -144,15 +144,12 @@ export function Festivals({ onToast }) {
             sortValue: f => FESTIVAL_STATES.indexOf(stateOf(f)) },
           { key: "category", label: "노출 카테고리", width: 120, align: "center", hint: "시민 화면",
             render: f => <Badge tone="neutral" size="sm">{categoryOf(f)}</Badge> },
-          { key: "visible", label: "노출", width: 92, align: "center",
+          { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: f => (
-              <Switch checked={f.visible !== false}
-                label={<span style={{ fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
-                  {f.visible === false ? "숨김" : "노출"}
-                </span>}
+              <Switch checked={f.visible !== false} aria-label={`${f.name} 노출 여부`}
                 onChange={() => patch(f.id, { visible: f.visible === false }, f.name)} />
             ) },
-          { key: "manage", label: "관리", width: 96, align: "right",
+          { key: "manage", label: "관리", width: 96, align: "center",
             render: f => (
               <Button variant="ghost" size="sm" icon="trash-2"
                 onClick={() => ed.askRemove(f)} style={{ color: "var(--state-danger)" }}>삭제</Button>

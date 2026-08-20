@@ -1,7 +1,8 @@
 import React from "react";
 import {
-  SectionHeader, Notice, FacilityRow, FACILITY_LABELS, SAFETY, CONVENIENCE,
+  SectionHeader, Notice, Pagination, FacilityRow, FACILITY_LABELS, SAFETY, CONVENIENCE,
 } from "../../design-systems/index.js";
+import { FACILITY_PAGE_SIZE } from "./config.js";
 
 /* S02 공공시설 탭 바텀시트 내용 (기능명세서 v1.0 4장 S02 행).
  * 관련 기능: U-FC-02(주변 시설 목록) · U-FC-04(안전시설 우선) · U-FC-06(거리 표기) · U-FC-09(원거리 안내)
@@ -13,16 +14,30 @@ import {
  *   ────────────────────────────────────────────────
  *   안전시설   AED · 대피소   거리순     (U-FC-04)
  *   편의시설   화장실 · 쉼터  거리순
+ *   16곳 중 1–8      1  2                                  ← 쪽 나누기 (아래)
  *   ────────────────────────────────────────────────
  *   기준일자 · 참고용 고지 · 119
  *
  * 상점가 탭에 있는 것 중 여기 없는 것과 그 이유
  *   정렬 토글      시설은 거리순 하나뿐이다. 인기순 시설이라는 개념이 없다
  *   검색창        이름을 알고 찾는 대상이 아니라 유형으로 고르는 대상이다
- *   무한 스크롤    수십 건이라 한 번에 다 그린다. 페이지를 나눌 이유가 없다
  *   결과 수 sticky 줄
  *                섹션 머리(안전시설/편의시설)가 그 역할을 겸한다. 여기에 sticky 줄까지 더하면
  *                20건도 안 되는 목록 위에 제어 줄이 두 겹이 된다
+ *
+ * ── 쪽 나누기를 들였다 (2026-08-20) ──────────────────────────────────────────
+ * 여기에는 "수십 건이라 한 번에 다 그린다. 페이지를 나눌 이유가 없다"고 적혀 있었다.
+ * 그 판단의 근거는 **둔전이라는 한 지점**이었다. QR 지점은 시 전역에 서고, 시설이 몰린
+ * 곳에서는 목록이 그만큼 길어진다 — 그때 이 화면에는 끝까지 끌고 가는 것 말고 길이 없다.
+ * 세 줄짜리 행이 서른 개면 절반 스냅에서 열 번 넘게 밀어야 목록 끝의 기준일자에 닿는다.
+ *
+ * 장치는 점포 목록(U-ST-04)에서 쓰던 것 그대로다. 새로 만들지 않는 이유는 두 목록이
+ * **같은 시트 안에서 탭으로만 갈리기** 때문이다 — 한쪽은 쪽 단추, 한쪽은 [더 보기]면
+ * 같은 자리의 같은 컨트롤이 탭에 따라 다른 물건이 된다.
+ *
+ * 쪽은 **읽는 단위이지 범위가 아니다** — 지도 마커는 쪽을 따르지 않고 필터에 걸린 전부가
+ * 그대로 찍힌다 (DistrictSheet 와 같은 규칙). 2쪽으로 넘겼다고 핀이 사라지면 지도가
+ * 목록의 부속이 되고, AED 가 어디 있는지 보려고 연 화면에서 AED 가 없어진다.
  */
 
 /* U-FC-04 — 안전시설을 먼저, 그 다음 편의시설. 각 묶음 안에서는 거리순.
@@ -48,14 +63,38 @@ function asOfLine(asOf, cat, labels) {
   return `공공시설 정보 ${parts.join(" · ")} 기준`;
 }
 
-export function FacilitySheet({ rows, cat, selectedId, onPick, asOf }) {
+export function FacilitySheet({
+  rows, cat, selectedId, onPick, asOf,
+  /* 쪽 번호는 셸이 들고 있다 — 점포 목록과 같은 이유다. 쪽을 넘기면 목록을 맨 위로
+     되돌려야 하는데 그 스크롤 컨테이너는 이 시트가 아니라 Sheet 이고, Sheet 는
+     scrollKey 로만 되돌린다. 유형 칩이 바뀔 때 1쪽으로 되돌리는 것도 셸이 한다
+     (유형 칩도 셸의 상태다 — 지도 마커가 같은 값을 본다). */
+  page = 1, setPage, pageSize = FACILITY_PAGE_SIZE,
+}) {
   /* 단일 유형을 고른 상태에서는 섹션을 나누지 않는다 — 한 묶음뿐인데 머리말을 달면
      "다른 묶음이 아래 더 있나" 하고 스크롤하게 된다 */
   const grouped = cat === "all";
 
+  /* ── 쪽은 섹션 위가 아니라 아래에서 자른다 ─────────────────────────────────
+     묶음마다 따로 쪽을 매기지 않는다. 쪽 단추가 둘이면 어느 쪽 것을 넘기는지 매번
+     확인해야 하고, 안전시설 2쪽·편의시설 1쪽 같은 상태가 화면에 남는다.
+
+     자르는 대상은 **화면에 놓이는 그 순서 그대로 편 한 줄**(안전시설 다음 편의시설,
+     각 묶음 안에서는 거리순)이다. 그래서 쪽을 넘겨도 U-FC-04 의 "안전시설이 먼저"가
+     깨지지 않고, 잘린 자리에 걸친 묶음은 다음 쪽에서 머리말을 다시 달고 이어진다 —
+     머리말 없이 이어붙이면 2쪽 첫 줄이 무슨 묶음인지 알 수 없다. */
+  const ordered = grouped
+    ? GROUPS.flatMap(g => rows.filter(r => g.types.includes(r.type)))
+    : rows;
+
+  const pageCount = Math.max(1, Math.ceil(ordered.length / pageSize));
+  const safePage = Math.min(Math.max(page, 1), pageCount);
+  const start = (safePage - 1) * pageSize;
+  const shown = ordered.slice(start, start + pageSize);
+
   const sections = grouped
-    ? GROUPS.map(g => ({ ...g, items: rows.filter(r => g.types.includes(r.type)) })).filter(g => g.items.length)
-    : [{ id: cat, title: null, items: rows }];
+    ? GROUPS.map(g => ({ ...g, items: shown.filter(r => g.types.includes(r.type)) })).filter(g => g.items.length)
+    : [{ id: cat, title: null, items: shown }];
 
   return (
     <div style={{ paddingBottom: "var(--space-9)" }}>
@@ -86,6 +125,20 @@ export function FacilitySheet({ rows, cat, selectedId, onPick, asOf }) {
             </div>
           </section>
         ))}
+
+        {/* 지금 쪽이 목록의 어디인지 한 줄로 적는다. 시트 헤더의 유형별 개수(FacilitySummary)는
+            조건에 걸린 전부이고, 이 줄은 그중 화면에 있는 구간이다 — 쪽 단추만 있으면
+            "8곳씩인가 10곳씩인가"를 세어봐야 안다. 점포 목록과 같은 문장, 같은 자리다.
+            0건일 때는 통째로 감춘다 (Pagination 머리말) — 없는 쪽을 가리키는 [1] 이 된다. */}
+        {ordered.length > 0 ? (
+          <div style={{ padding: "var(--space-4) 0 var(--space-2)" }}>
+            <p style={{ textAlign: "center", fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
+              {ordered.length}곳 중 {start + 1}–{start + shown.length}
+            </p>
+            <Pagination page={safePage} pageCount={pageCount} onChange={setPage}
+              label="공공시설 목록 쪽 넘기기" style={{ marginTop: "var(--space-2)" }} />
+          </div>
+        ) : null}
       </div>
 
       {/* ── 고지 (U-CM-07 · U-CM-08) ───────────────────────────────────── */}

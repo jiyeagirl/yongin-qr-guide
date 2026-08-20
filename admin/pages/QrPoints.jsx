@@ -131,7 +131,7 @@ export function QrPoints({ onToast }) {
           { key: "active", label: "활성", width: 90, align: "center", sortable: true,
             render: p => <Badge tone={p.active ? "success" : "neutral"} size="sm">{p.active ? "활성" : "비활성"}</Badge>,
             sortValue: p => (p.active ? 0 : 1) },
-          { key: "manage", label: "관리", width: 96, align: "right",
+          { key: "manage", label: "관리", width: 96, align: "center",
             render: p => (
               <Button variant="ghost" size="sm" icon="trash-2"
                 onClick={() => ed.askRemove(p)} style={{ color: "var(--state-danger)" }}>삭제</Button>

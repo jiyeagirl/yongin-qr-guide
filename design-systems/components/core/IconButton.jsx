@@ -14,7 +14,17 @@ import { Icon } from "./Icon.jsx";
    아니라 opacity 를 쓴다 — brand 처럼 바탕이 있는 결에서는 글자색만 바꿔서는 흐려지지 않는다. */
 const DISABLED_OPACITY = 0.35;
 
-export function IconButton({ name, label, size = 44, variant = "ghost", disabled = false, style, ...rest }) {
+/* ── 그림쇠 크기를 따로 받는다 (2026-08-20 추가) ────────────────────────────
+   `size` 는 **누르는 상자**이고 `iconSize` 는 **보이는 그림쇠**다. 둘이 한 값에 묶여
+   있어서, 아이콘을 작게 하려면 손가락 자리까지 함께 줄여야 했다 (U-CM-13 이 막는다).
+
+   ghost 결에서는 상자가 투명해 화면에 보이는 것이 그림쇠뿐이라, 이 둘을 가르면
+   **44px 를 지키면서 눈에는 작게** 둘 수 있다 — Chip 의 size="sm" 과 같은 수법이다.
+   S08 코스 상세의 [추천 순서로](↺)가 이것을 쓴다. 그 단추는 안내 문구와 한 줄에 서는데,
+   22px 짜리 그림쇠는 13px 글자 옆에서 문장보다 커 보였다. */
+const ICON_SIZE = 22;
+
+export function IconButton({ name, label, size = 44, iconSize = ICON_SIZE, variant = "ghost", disabled = false, style, ...rest }) {
   const skins = {
     ghost: { background: "transparent", border: "none", color: "var(--text-heading)" },
     soft: { background: "var(--surface-sunken)", border: "none", color: "var(--text-heading)" },
@@ -24,7 +34,7 @@ export function IconButton({ name, label, size = 44, variant = "ghost", disabled
   return (
     <button aria-label={label} disabled={disabled}
       style={{ width: size, height: size, minWidth: "var(--tap-min)", minHeight: "var(--tap-min)", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--radius-pill)", cursor: disabled ? "default" : "pointer", opacity: disabled ? DISABLED_OPACITY : 1, ...(skins[variant] || skins.ghost), ...style }} {...rest}>
-      <Icon name={name} size={22} />
+      <Icon name={name} size={iconSize} />
     </button>
   );
 }

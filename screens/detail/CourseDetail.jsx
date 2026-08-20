@@ -2,7 +2,7 @@ import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice, KakaoMap, MapPreviewCard, Badge, Icon,
   CategoryIcon, CATEGORY_LABELS, OnnuriBadge, SectionHeader, ProgressBar,
-  TextButton, Chip, Mascot, VisuallyHidden,
+  TextButton, IconButton, Chip, Mascot, VisuallyHidden,
 } from "../../design-systems/index.js";
 /* WALK_M_PER_MIN 을 여기서 쓰지 않는다 — 구간 시간(legMin)은 data/coursePlan.js 가 잰다.
    화면에서 따로 환산하면 같은 구간이 두 값으로 갈린다. */
@@ -22,16 +22,17 @@ import { planCourse, moveStop } from "../main/data/coursePlan.js";
  *   ─────────────────────────────────
  *   (조아용) 2/4 방문  ▓▓▓░░░░    [처음부터]   ← 방문 완료 (선택 기능)
  *   ─────────────────────────────────
- *   추천 코스                    4곳 · 순서대로
+ *   추천 코스                              ← 머리말은 넉 자뿐. 오른쪽 보조 문구를 뺐다
  *        ⌗                                 ← 출발점(QR 지점)에만 띠가 따로 있다
  *   2분  ┊
  *        ①  가게  업종                     ← 누르면 지도가 그 순번으로 가고 카드가 뜬다
- *        ┊      중식 · 중국집                  (U-DC-03 "순번 이동")
- *   3분  ┊      [✓ 방문 완료]         ⠿     ← 시간은 점선 왼쪽, 그 구간의 세로 한가운데
- *        ②  가게 (흐림)          (조아용)  ← 방문 도장. 점선은 ①에서 ②까지 안 끊긴다
- *        ┊      [✓ 방문함]            ⠿     ← 손잡이를 끌면 순서가 바뀐다
+ *        ┊      중식 · 중국집          ⠿    ← 끌면 순서가 바뀐다 (행 오른쪽 · 세로 한가운데)
+ *   3분  ┊      [✓ 방문 완료]                  (U-DC-03 "순번 이동")
+ *        ②  가게 (흐림)                      ← 시간은 점선 왼쪽, 그 구간의 세로 한가운데
+ *        ┊      중식 · 중국집   (조아용) ⠿   ← 방문 도장. 점선은 ①에서 ②까지 안 끊긴다
+ *        ┊      [✓ 방문함]
  *   2분  ┊
- *        ③  가게  [다음 차례]              ← 마지막 아래로는 선이 없다
+ *        ③  가게                           ← 진하게 남은 첫 줄이 곧 다음 차례다 (배지 없음)
  *   ...
  *   ─────────────────────────────────
  *   기준일자 · 참고용 고지
@@ -76,6 +77,12 @@ import { planCourse, moveStop } from "../main/data/coursePlan.js";
  * 손잡이는 단추다. 초점을 받고 **↑/↓ 키로도 한 칸씩 옮긴다** — 끌기는 키보드와
  * 스크린리더에 아무것도 주지 않으므로, 같은 자리에서 같은 일을 하는 길을 함께 둔다
  * (화면에 단추가 하나 더 늘지 않는다). 옮긴 결과는 aria-live 로 읽어준다.
+ *
+ * ── 끄는 동안 화면이 답한다 (2026-08-20) ────────────────────────────────────
+ * 잡은 줄은 손가락을 1:1 로 따라가고, 나머지 줄은 놓일 자리를 비우며 밀리고, 순번은 놓았을
+ * 때의 번호로 미리 바뀐다. **배열은 손을 뗄 때 한 번만** 바뀐다 — 예전에는 옆 행에 들어서는
+ * 순간 순서를 갈아치워서, 잡은 줄이 제자리에 선 채 한 칸씩 순간이동했다. 자세한 규칙과
+ * 그 앞에 있었던 문제는 본문 `startDrag` 앞 주석에 적어 두었다.
  *
  * 되돌리는 길은 목록 바로 위의 [추천 순서로]다 — 손댄 뒤에만 나온다.
  * 방문 기록의 [처음부터]와 **다른 단추다.** 둘을 하나로 묶으면 순서를 되돌리려다
@@ -139,44 +146,88 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
     setIds(next.map(x => x.id));
   }, [stops, setIds]);
 
-  /* ── 끌어서 순서 바꾸기 (2026-08-19) ────────────────────────────────────
+  /* ── 끌어서 순서 바꾸기 (2026-08-19 신설 · 2026-08-20 다시 짬) ──────────────
      포인터 이벤트 하나로 손가락·마우스·펜을 함께 받는다. 잡은 손잡이가 포인터를 가두므로
      (setPointerCapture) 손가락이 행 밖으로 나가도 이 행의 이벤트로 계속 들어온다.
 
-     자리를 정하는 방법: 지금 포인터가 **어느 행의 상자 안에 있는지**를 실제 위치에서
-     읽는다 (getBoundingClientRect). 처음 잡은 자리에서 몇 px 움직였는지로 계산하지 않는다 —
-     행 높이가 저마다 다르고(상호명이 두 줄이 되거나 조아용 도장이 붙는다) 옮기는 순간
-     그 높이가 서로 바뀌기 때문에, px 로 환산하면 한 칸을 넘길 때마다 어긋난다.
+     ── 끄는 동안에는 배열을 건드리지 않는다 (2026-08-20) ───────────────────────
+     전에는 손가락이 옆 행의 상자에 들어서는 순간 순서를 **바로 갈아치웠다.** 계산은 맞았지만
+     화면이 툭툭 끊겼다: 잡은 줄은 손가락을 따라오지 않고 제자리에 선 채 한 칸씩 순간이동했고,
+     지나친 줄도 같은 순간 자리를 바꿔서 무엇이 어디로 가는지 눈으로 좇을 수 없었다.
+     세션 저장도 한 칸 넘길 때마다 돌았다.
 
-     화면이 sticky 지도에 가려지는 부분은 셈에 넣지 않아도 된다. 가려진 행 위에서는
-     그 행의 상자에 들어오지 않으므로 자리가 바뀌지 않고, 손가락을 내리면 다시 잡힌다. */
+     이제 끄는 동안 화면이 하는 일은 셋이고, **배열은 손을 뗄 때 한 번만** 바뀐다.
+
+       잡은 줄     transform 으로 손가락을 1:1 로 따라간다. 여기엔 transition 을 걸지 않는다 —
+                   한 프레임이라도 늦으면 손가락과 카드가 어긋나 끌리는 느낌이 사라진다.
+       나머지 줄   놓일 자리를 비우려고 잡은 줄의 높이(h)만큼 위/아래로 밀린다. 이쪽에는
+                   transition 을 건다 — **벌어지는 틈이 곧 "여기 들어갑니다"** 이므로,
+                   그 틈이 생기는 과정이 보여야 한다.
+       순번        놓았을 때 붙을 번호로 **미리 바뀐다.** 배열은 그대로이므로 화면용으로만
+                   센다 (아래 moved / num). 틈은 자리를 그림으로, 번호는 같은 것을 숫자로
+                   말한다 — 둘 중 하나만으로는 "3번이 2번이 된다"가 확인되지 않는다.
+
+     자리는 잡는 순간 한 번 재둔 **다른 행들의 중심선**으로 정한다. 손가락보다 위에 남은
+     중심선의 수가 곧 끼워질 자리다 (moveStop 의 `to` 와 같은 값). 끄는 동안 배열도 레이아웃도
+     그대로라 이 기준이 발밑에서 움직이지 않는다 — 예전 방식은 한 칸 옮긴 직후 상자들이
+     다시 배치되면서, 경계에서 두 자리를 오가며 떨었다.
+
+     잡은 줄의 중심선은 셈에서 뺀다. 그 줄은 손가락을 따라다녀 자기 상자 안에 손가락이 늘
+     들어 있으므로, 넣어두면 언제나 제자리가 답으로 나온다.
+
+     px 차이로 칸수를 세지 않는 이유는 그대로다 — 행 높이가 저마다 다르다 (상호명이 두 줄이
+     되거나 조아용 도장이 붙는다). */
   const rowEls = React.useRef(new Map());
-  const [dragId, setDragId] = React.useState(null);
+  /* 끄는 중인 줄 하나. { id, from, h, y, to } — y 는 손가락을 따라간 거리, to 는 놓일 자리.
+     null 이면 아무것도 끌고 있지 않다 (그때 화면은 예전 그대로다). */
+  const [drag, setDrag] = React.useState(null);
+  /* 잡는 순간 한 번 재고 끝나는 값들. 렌더에 쓰지 않으므로 state 가 아니다 */
+  const grabRef = React.useRef(null);
   /* 옮긴 결과를 소리로 알린다. 끌기는 화면을 봐야만 알 수 있는 동작이라, 키보드로 옮긴
      사람에게는 이 한 줄이 유일한 응답이다 */
   const [moveSay, setMoveSay] = React.useState("");
 
-  const dropAt = React.useCallback((id, clientY) => {
-    let to = -1;
-    stops.forEach((x, i) => {
-      const el = rowEls.current.get(x.id);
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      if (clientY >= r.top && clientY <= r.bottom) to = i;
-    });
-    if (to >= 0) moveTo(id, to);
-  }, [stops, moveTo]);
-
-  const endDrag = React.useCallback(() => {
-    setDragId(cur => {
-      if (cur) {
-        const i = stops.findIndex(x => x.id === cur);
-        const s = stops[i];
-        if (s) setMoveSay(`${s.name}, ${stops.length}곳 중 ${i + 1}번`);
-      }
-      return null;
-    });
+  const startDrag = React.useCallback((s, from, e) => {
+    const el = rowEls.current.get(s.id);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    grabRef.current = {
+      pointerY0: e.clientY,
+      mids: stops.filter(x => x.id !== s.id).map(x => {
+        const el2 = rowEls.current.get(x.id);
+        if (!el2) return null;
+        const r2 = el2.getBoundingClientRect();
+        return (r2.top + r2.bottom) / 2;
+      }).filter(m => m != null),
+    };
+    setDrag({ id: s.id, from, h: r.height, y: 0, to: from });
   }, [stops]);
+
+  const onDragMove = React.useCallback(e => {
+    const g = grabRef.current;
+    if (!g) return;
+    const y = e.clientY - g.pointerY0;
+    let to = 0;
+    g.mids.forEach(mid => { if (e.clientY > mid) to++; });
+    /* 값이 그대로면 새 객체를 만들지 않는다 — 끌기는 초당 수십 번 들어온다 */
+    setDrag(d => (d && (d.y !== y || d.to !== to) ? { ...d, y, to } : d));
+  }, []);
+
+  /* 손을 떼는 순간이 **유일하게 배열이 바뀌는 지점**이다. 화면에서 이미 밀려나 있던 줄들은
+     같은 렌더에서 transform 을 잃고 새 자리에 놓이므로, 둘이 상쇄되어 눈에는 아무 일도
+     일어나지 않는다 — 벌어져 있던 틈이 그대로 그 줄의 자리가 된다. */
+  const endDrag = React.useCallback(() => {
+    grabRef.current = null;
+    if (!drag) return;
+    /* 자리가 그대로면 아무 말도 하지 않는다 — 잡았다 놓기만 해도 "3번입니다"가 읽히면
+       무언가 바뀐 것으로 들린다 */
+    if (drag.to !== drag.from) {
+      moveTo(drag.id, drag.to);
+      const s = stops.find(x => x.id === drag.id);
+      if (s) setMoveSay(`${s.name}, ${stops.length}곳 중 ${drag.to + 1}번`);
+    }
+    setDrag(null);
+  }, [drag, stops, moveTo]);
 
   /* ↑/↓ 키로도 한 칸씩. 끌기가 키보드에 주지 않는 것을 같은 손잡이가 준다 (머리말) */
   const onHandleKey = React.useCallback((s, e) => {
@@ -200,9 +251,12 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
   const doneCount = stops.filter(s => isDone(s.id)).length;
   const allDone = stops.length > 0 && doneCount === stops.length;
 
-  /* "다음 차례" — 아직 방문하지 않은 곳 중 순서가 가장 앞선 곳. 이것은 **표시일 뿐**이고
-     다른 곳을 누르는 것을 막지 않는다 (문 닫은 가게를 건너뛰는 일은 흔하다). */
-  const nextIndex = stops.findIndex(s => !isDone(s.id));
+  /* [다음 차례] 배지를 뺐다 (2026-08-20). 아직 안 들른 첫 곳에 붙던 표시인데, 그 곳은
+     **번호와 흐림만으로 이미 읽힌다** — 방문한 곳은 흐리고 도장이 찍혀 있으므로 진하게
+     남은 첫 줄이 곧 다음 차례다. 같은 사실에 배지를 하나 더 붙이면 행마다 붙는 것
+     ([방문함] 칩 · 온누리 · 업종)이 넷이 되어, 정작 주인공인 상호명이 그 사이에 묻힌다.
+     "다음은 어디"라는 질문에는 지도가 답한다 — 방문 표시를 켜면 카메라가 그리로 옮겨간다
+     (markVisited). 배지가 없어져도 그 동작은 그대로다. */
 
   /* 처음 열렸을 때는 코스 전체가 한눈에 들어와야 한다. 첫 지점으로 확대해 들어가면
      "네 곳을 도는 코스"라는 것이 지도에서 읽히지 않는다. QR 지점까지 함께 담는다 —
@@ -233,9 +287,9 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
     toggle(s.id);
     if (!turningOn) return;
     /* 다음 차례는 **목록에서 아직 안 들른 첫 곳**이다 (2026-08-19). 전에는 "방금 들른 곳에서
-       가장 가까운 곳"이었는데, 그건 순서를 다시 짜던 시절의 값이다. 이제 순서는 그대로 있고
-       화면의 [다음 차례] 배지도 목록 차례로 붙으므로, 지도가 옮겨가는 곳과 배지가 붙는 곳이
-       같아야 한다 — 다르면 지도가 가리키는 곳과 목록이 가리키는 곳이 갈린다.
+       가장 가까운 곳"이었는데, 그건 순서를 다시 짜던 시절의 값이다. 이제 순서는 그대로
+       있으므로 지도도 목록 차례를 따라야 한다 — 다르면 지도가 가리키는 곳과 목록이 가리키는
+       곳이 갈린다. 배지를 뺀 뒤로는 이것이 "다음은 어디"에 답하는 **유일한 장치**다.
        `visited` 갱신은 다음 렌더에나 반영되므로 방금 켠 곳을 여기서 직접 뺀다. */
     const next = stops.find(x => x.id !== s.id && !isDone(x.id));
     if (next) goTo(next.id);
@@ -375,37 +429,94 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
 
                방문 상태에는 행 배경을 쓰지 않는다. 배경은 "지금 고른 곳"이 가져간 자리라
                같은 수단으로 두 가지를 말하면 둘 다 읽히지 않는다. 방문은
-               **조아용 도장 · 흐린 글자 · [방문함] 칩** 셋으로 말하고, 다음 차례는 배지로
-               말한다 — 어느 것도 색 하나에 기대지 않는다. */}
+               **조아용 도장 · 흐린 글자 · [방문함] 칩** 셋으로 말한다 — 어느 것도 색 하나에
+               기대지 않는다. 진하게 남은 첫 줄이 곧 다음 차례라, 그것을 따로 적지 않는다. */}
         <section>
-          {/* 머리말 오른쪽은 지금 목록이 무엇인지 적는다. "직접 정한 순서"는 사용자가
-              순서나 출발지를 손댔다는 뜻이고, 되돌리는 길은 아래 [추천 순서로]다. */}
-          <SectionHeader title="추천 코스"
-            note={`${stops.length}곳 · ${plan.adjusted ? "직접 정한 순서" : "순서대로"}`}
-            style={{ marginBottom: "var(--space-2)" }} />
+          {/* 머리말 오른쪽 보조 문구를 뺐다 (2026-08-20). `4곳 · 직접 정한 순서` 였는데
+              두 값 다 이 자리에서만 알 수 있는 것이 아니었다 — 곳수는 지도 아래 배지가 이미
+              달고 있고(도보 n분 · n곳 · 약 nnnm), 순서를 손댔다는 사실은 바로 아래
+              [추천 순서로]가 **나타나는 것 자체로** 말한다. 되돌릴 것이 없으면 그 단추가
+              없으므로, 두 상태가 단추 하나로 갈린다.
+              머리말이 "추천 코스" 넉 자만 남아 그 아래 목록이 곧바로 시작된다. */}
+          <SectionHeader title="추천 코스" style={{ marginBottom: "var(--space-2)" }} />
 
-          {/* 끌 수 있다는 것을 한 줄로 알린다. 손잡이(⠿)는 익숙한 기호지만 **작고 오른쪽
-              끝에 있어** 먼저 눈에 들어오지 않는다. 목록을 훑기 전에 한 번 읽히는 자리에
-              적어두면 손잡이를 봤을 때 무엇인지 바로 이어진다.
+          {/* 끌 수 있다는 것을 한 줄로 알린다. ⠿ 는 **작고 행 오른쪽 끝에 있어** 먼저 눈에
+              들어오지 않으므로, 목록을 훑기 전에 한 번 읽히는 자리에 문장을 둔다.
               고지가 아니라 안내라서 Notice 상자를 두르지 않는다 — 상자는 이 화면에서
-              가장 큰 덩어리가 되고, 정작 중요한 것은 그 아래 목록이다. */}
-          {stops.length > 1 ? (
-            <p style={{ marginBottom: "var(--space-2)", fontSize: "var(--fs-caption)",
-              color: "var(--text-muted)", lineHeight: 1.5 }}>
-              <Icon name="grip-vertical" size={14} style={{ verticalAlign: "-2px", marginRight: 2 }} />
-              손잡이를 끌어 도는 순서를 바꿀 수 있습니다.
-            </p>
-          ) : null}
+              가장 큰 덩어리가 되고, 정작 중요한 것은 그 아래 목록이다.
 
-          {/* 되돌리는 길. 손대지 않았으면 나오지 않는다 — 0/4 에 [처음부터]를 두지 않는
-              것과 같은 규칙이고(위 진행률), 되돌릴 것이 없는데 되돌리기가 서 있으면
-              무언가 이미 바뀐 것처럼 읽힌다. 순서와 출발지를 함께 되돌리고 **방문 기록은
-              건드리지 않는다** — 위 [처음부터]와 다른 단추인 이유다 (머리말 참조).
-              목록 바로 위에 둔다: 되돌아갈 대상이 아래에 있어야 무엇이 되돌아가는지 보인다. */}
-          {plan.adjusted ? (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-1)" }}>
-              <TextButton tone="muted" icon="rotate-ccw" onClick={reset}
-                style={{ paddingRight: 0 }}>추천 순서로</TextButton>
+              ── 문장에서 ⠿ 를 뺐다 · "손잡이"라는 말도 뺐다 (2026-08-20) ──────────────
+              앞에도 붙여 보고 뒤에도 붙여 봤지만, 어느 쪽이든 **기호가 문장 밖으로 떨어질
+              길**을 안고 있었다 (글자를 키우면 줄이 접힌다). 기호 하나만 남은 줄은 아래
+              목록의 손잡이처럼 보여 누를 것으로 읽힌다. nowrap 으로 붙들 수는 있지만, 그
+              장치가 필요하다는 것 자체가 이 줄에 기호가 꼭 있어야 하는 것은 아니라는 뜻이다.
+
+              "손잡이"라는 말도 쓰지 않는다. 그건 **우리가 부르는 이름**이지 화면에 적힌
+              이름이 아니라, QR 을 찍고 들어온 사람에게는 그것이 ⠿ 인지 시트 위의 짧은
+              막대인지 알 길이 없다. 지금 문구가 부르는 이름은 **순서 변경 아이콘** 이다 —
+              무엇을 하는 것인지가 이름 안에 있어서, 처음 보는 기호를 그 이름으로 찾을 수 있다.
+
+              ── 한 줄에 들어가는 길이로 줄였다 (2026-08-20) ─────────────────────────
+              "순서 변경 아이콘을 드래그하여 코스 순서를 변경할 수 있습니다."는 한글 26자다.
+              캡션 13px 에서 한글 한 자는 13px 를 그대로 먹으므로 띄어쓰기까지 370px 남짓이
+              되는데, 360px 화면에서 이 줄이 쓸 수 있는 폭은 좌우 여백 20px 을 뺀 **320px**
+              이다. 글자를 줄이지 않는 한 어떤 배치로도 한 줄이 되지 않는다 — 그래서 문장을
+              줄였다 (본문 16px 고정과 같은 결이다. 읽는 크기를 깎아 길이를 사지 않는다).
+
+              지운 말과 그 이유:
+                "코스"        바로 위 머리말이 "추천 코스"다. 같은 화면에서 두 번 부를 말이 아니다
+                "변경할 수 있습니다" → "변경됩니다". 뜻은 같고 네 자가 짧다. 무엇을 잡아야
+                              하는지("순서 변경 아이콘")는 그대로 남아 있어 문장의 일은 끝난다
+              남은 문장은 한글 21자 · 290px 남짓이다. ↺ 가 함께 서는 상태에서도 한 줄이 되도록
+              단추를 좌우 12px 씩 물리고 사이 여백을 4px 로 좁혀 **296px** 를 남겼다 — 문장이
+              여기서 더 길어지면 (한글 23자 넘어가면) 좁은 기기에서 접힌다. */}
+          {/* ── 안내 문구와 되돌리기가 **한 줄에 선다** (2026-08-20) ───────────────
+                 [추천 순서로]는 문구 아래 자기 줄을 갖고 있었다. 손대기 전에는 없다가
+                 순서를 바꾸는 순간 나타나므로, **그 줄이 생기면서 목록 전체가 아래로
+                 밀렸다** — 방금 옮긴 줄을 눈으로 좇고 있는데 화면이 통째로 내려간다.
+
+                 같은 줄에 세우고 자리를 **미리 비워 둔다** (minHeight = --tap-min).
+                 단추가 없을 때도 그 높이가 서 있으므로 나타나고 사라지는 것이 레이아웃을
+                 건드리지 않는다. 비워두는 24px 남짓이 이 줄에서 치르는 값이고, 얻는 것은
+                 "순서를 바꿔도 목록이 제자리에 있다"이다.
+
+                 문구는 글자가 커지면 두 줄로 접힌다 — 그때 줄 높이는 문구가 정하고
+                 단추는 가운데에 선다 (alignItems: center). */}
+          {stops.length > 1 || plan.adjusted ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)",
+              minHeight: "var(--tap-min)", marginBottom: "var(--space-1)" }}>
+              <p style={{ flex: 1, minWidth: 0, fontSize: "var(--fs-caption)",
+                color: "var(--text-muted)", lineHeight: 1.5 }}>
+                {stops.length > 1 ? "순서 변경 아이콘을 드래그하면 순서가 변경됩니다" : ""}
+              </p>
+
+              {/* 되돌리는 길. 손대지 않았으면 나오지 않는다 — 0/4 에 [처음부터]를 두지 않는
+                  것과 같은 규칙이고(위 진행률), 되돌릴 것이 없는데 되돌리기가 서 있으면
+                  무언가 이미 바뀐 것처럼 읽힌다. 순서와 출발지를 함께 되돌리고 **방문 기록은
+                  건드리지 않는다** — 위 [처음부터]와 다른 단추인 이유다 (머리말 참조).
+
+                  **글자를 뗐다** (2026-08-20). "추천 순서로" 넉 자가 안내 문구와 한 줄에
+                  서면 두 문장이 나란히 놓인 꼴이라 어느 쪽이 읽을 것이고 어느 쪽이 누를
+                  것인지 갈리지 않았다. 화살표 하나면 이 줄에서 **누를 수 있는 유일한 것**이
+                  되고, 이름은 label 로 남아 보조기기에 그대로 읽힌다. 되돌아갈 대상이
+                  바로 아래 목록이라, 무엇이 되돌아가는지는 자리가 말한다.
+
+                  **그림쇠는 18px, 누르는 자리는 그대로 44px 이다** (2026-08-20).
+                  기본값 22px 는 13px 짜리 안내 문구 옆에서 문장보다 커 보였다 — 이 줄의
+                  주인공은 문구이고 단추는 손댔을 때만 나타나는 곁가지다. 둘을 가르는
+                  `iconSize` 는 IconButton 에 새로 낸 것이다 (U-CM-13 을 지키면서 눈에만
+                  작게 하는 유일한 길).
+
+                  좌우로 12px 씩 물린다(margin). 44px 상자가 폭을 다 차지하면 문구가 쓸 수
+                  있는 자리가 그만큼 줄어 한 줄에 못 들어간다. 물린 만큼은 화면 여백
+                  (--gutter-screen 20px)과 문구 사이 여백 위로 넘치는데, 거기에는 눌리는
+                  것이 없어 손가락 자리를 빼앗지 않는다. 그림쇠(18px)는 상자 가운데라
+                  가장자리에서 13px 안쪽에 있어, 물려도 문구와 맞닿지 않는다. */}
+              {plan.adjusted ? (
+                <IconButton name="rotate-ccw" iconSize={18} label="추천 순서로 되돌리기" onClick={reset}
+                  style={{ flex: "0 0 auto", color: "var(--text-muted)",
+                    marginRight: -12, marginLeft: -12 }} />
+              ) : null}
             </div>
           ) : null}
 
@@ -417,7 +528,19 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
             {stops.map((s, i) => {
               const on = s.id === activeId;
               const done = isDone(s.id);
-              const isNext = i === nextIndex;
+
+              /* ── 끄는 동안의 이 줄 (위 drag 주석) ────────────────────────────
+                 dragging  잡힌 줄. 손가락을 따라간다
+                 moved     밀려나는 칸수. -1 은 한 칸 위, +1 은 한 칸 아래.
+                           잡은 줄이 지나간 구간의 줄들만 밀린다
+                 num       놓았을 때 붙을 번호. 배열은 아직 그대로이므로 여기서 센다 */
+              const dragging = !!drag && drag.id === s.id;
+              const moved = !drag || dragging ? 0
+                : (drag.to > drag.from && i > drag.from && i <= drag.to) ? -1
+                : (drag.to < drag.from && i >= drag.to && i < drag.from) ? 1 : 0;
+              const num = dragging ? drag.to + 1 : i + 1 + moved;
+              const shiftY = dragging ? drag.y : moved * (drag ? drag.h : 0);
+
               return (
                 <React.Fragment key={s.id}>
                   {/* ── 출발 구간 (QR 지점 → ①) ────────────────────────
@@ -452,7 +575,7 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                   ) : null}
 
                   <div role="listitem" onClick={() => goTo(s.id)}
-                    /* 끌 때 자리를 정하는 기준이 이 상자다 (위 dropAt 주석) */
+                    /* 잡는 순간 이 상자의 높이와 중심선을 잰다 (위 startDrag) */
                     ref={el => { if (el) rowEls.current.set(s.id, el); else rowEls.current.delete(s.id); }}
                     style={{ position: "relative",
                       display: "flex", alignItems: "flex-start", gap: "var(--space-3)",
@@ -471,17 +594,31 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                          들어올린 것처럼 보여야 한다 — 그림자를 얹고 카드 바탕을 깔아
                          아래 줄들과 층을 나눈다. "지금 고른 곳"(on)의 초록 바탕과 겹치면
                          둘 중 어느 상태인지 알 수 없으므로 끄는 쪽이 이긴다.
-                         크기는 건드리지 않는다 — 줄 높이가 변하면 자리를 정하는 상자
-                         (dropAt 이 재는 값)가 끄는 도중에 흔들린다. */
-                      background: dragId === s.id ? "var(--surface-card)"
+                         크기는 건드리지 않는다 — 줄 높이가 변하면 잡을 때 재둔 h 와 어긋나
+                         비워둔 틈이 실제 줄보다 크거나 작아진다. */
+                      background: dragging ? "var(--surface-card)"
                         : on ? "var(--brand-primary-soft)" : "transparent",
                       border: "var(--stroke-hairline) solid "
-                        + (dragId === s.id ? "var(--border-strong)"
+                        + (dragging ? "var(--border-strong)"
                           : on ? "var(--border-brand)" : "transparent"),
-                      boxShadow: dragId === s.id ? "var(--shadow-raised)" : "none",
+                      boxShadow: dragging ? "var(--shadow-raised)" : "none",
                       /* 끄는 동안에는 이 줄이 위로 온다. 아래 줄이 그림자를 덮으면
                          들어올린 느낌이 사라진다 */
-                      zIndex: dragId === s.id ? 1 : "auto" }}>
+                      zIndex: dragging ? 2 : "auto",
+
+                      /* ── 실시간 되먹임 (2026-08-20) ──────────────────────────
+                         잡은 줄은 손가락을 그대로 따라가고(transition 없음), 나머지 줄은
+                         놓일 자리를 비우며 밀린다(transition 있음). 손을 떼면 drag 가 null 이
+                         되어 두 값이 같은 렌더에서 사라진다 — 그 순간 배열이 바뀌므로
+                         밀려 있던 자리가 곧 실제 자리가 되어, 눈에는 아무 일도 없다.
+                         willChange 는 끄는 동안에만 건다. 늘 걸어두면 목록 네 줄이 계속
+                         합성 레이어를 잡고 있게 된다. */
+                      transform: shiftY ? `translateY(${shiftY}px)` : undefined,
+                      transition: drag && !dragging
+                        ? "transform var(--dur-fast) var(--ease-standard)" : "none",
+                      willChange: drag ? "transform" : undefined,
+                      /* 잡은 줄 위에서는 커서가 손을 쥔 모양이다 (손잡이 밖까지) */
+                      ...(dragging ? { cursor: "grabbing" } : null) }}>
 
                     {/* ── 점선은 행 안에서 그린다 (2026-08-19) ──────────────────────
                            행 사이에 띠를 두고 거기에만 점선을 그렸을 때는 ①에서 ②까지가
@@ -512,15 +649,17 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
 
                     {/* 순번 — 지도 핀과 같은 숫자, 같은 색. 고른 곳은 지도와 같은 호박색이다.
                         방문한 곳도 **숫자를 지우지 않는다** — 몇 번째였는지가 코스의 전부다.
-                        체크는 숫자 옆이 아니라 아래 조아용 도장이 맡는다. */}
-                    <span aria-label={done ? `${i + 1}번, 방문함` : `${i + 1}번`}
+                        체크는 숫자 옆이 아니라 아래 조아용 도장이 맡는다.
+                        끄는 동안에는 `num` 이 **놓았을 때의 번호**다 (위 moved/num 주석) —
+                        벌어진 틈이 그림으로 말하는 것을 숫자로도 한 번 더 말한다. */}
+                    <span aria-label={done ? `${num}번, 방문함` : `${num}번`}
                       style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center",
                         minWidth: 26, minHeight: 26, borderRadius: 999,
                         background: on ? "var(--pin-course-active)" : "var(--brand-primary-soft)",
                         color: on ? "var(--pin-course-active-ink)" : "var(--yong-green-800)",
                         opacity: !on && done ? 0.5 : 1,
                         fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)", fontWeight: "var(--fw-bold)" }}>
-                      {i + 1}
+                      {num}
                     </span>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -530,8 +669,7 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                         <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-body)",
                           fontWeight: "var(--fw-semibold)", color: "var(--text-heading)", lineHeight: 1.4 }}>{s.name}</span>
                         {s.onnuri ? <OnnuriBadge size="sm" /> : null}
-                        {/* 아직 안 들른 곳 중 첫 번째. 표시일 뿐 다른 곳을 막지 않는다 */}
-                        {isNext ? <Badge tone="brand" dot>다음 차례</Badge> : null}
+                        {/* [다음 차례] 배지가 여기 있었다 (2026-08-20 뺌. 위 markVisited 앞 주석) */}
                       </div>
 
                       <div style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", marginTop: 3,
@@ -539,57 +677,19 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                         {CATEGORY_LABELS[s.cat] || "기타"} · {s.biz}
                       </div>
 
-                      {/* ── 이 행에 하는 조작 한 줄 ───────────────────────────────
-                             왼쪽은 방문 표시, 오른쪽은 순서 손잡이다. 손잡이를 행 오른쪽
-                             끝(조아용 도장 옆)에 세우지 않은 이유는 **가로 폭**이다 — 360px
-                             화면에서 도장(56)과 손잡이(44)가 함께 서면 상호명이 170px 남아
-                             두 줄로 접힌다. 이 줄에 두면 상호명에서 가져가는 폭이 없다.
+                      {/* ── 방문 표시 ───────────────────────────────────────────
+                             작은 알약(size="sm", 28px)이다. 행의 주인공은 상호명이고 이건 그
+                             행에 붙이는 표시라 상호명보다 커서는 안 된다. 눌리는 크기는 그대로
+                             44px 이다 — 눈에만 작아진다 (Chip 의 CHIP_SIZES 주석).
+                             행을 누르면 지도가 옮겨가므로 전파를 끊는다.
 
-                             방문 토글은 작은 알약(size="sm", 28px)이다. 행의 주인공은 상호명이고
-                             이건 그 행에 붙이는 표시라 상호명보다 커서는 안 된다. 눌리는 크기는
-                             그대로 44px 이다 — 눈에만 작아진다 (Chip 의 CHIP_SIZES 주석).
-                             행을 누르면 지도가 옮겨가므로 둘 다 전파를 끊는다. */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-                        gap: "var(--space-2)" }}>
+                             순서 손잡이가 이 줄에 함께 있었다 (2026-08-20 옮김. 아래 참조). */}
+                      <div style={{ display: "flex", alignItems: "center" }}>
                         <Chip size="sm" selected={done} icon="check" aria-pressed={done}
                           onClick={e => { e.stopPropagation(); markVisited(s); }}
                           style={{ marginTop: 0 }}>
                           {done ? "방문함" : "방문 완료"}
                         </Chip>
-
-                        {/* ── 순서 손잡이 (2026-08-19 신설) ──────────────────────
-                               곳이 하나뿐이면 옮길 데가 없으므로 나오지 않는다.
-
-                               `touch-action: none` 이 **여기에만** 걸린다 — 이 44px 안에서만
-                               브라우저의 스크롤을 끄고, 손잡이 밖에서는 화면이 예전처럼
-                               흐른다 (머리말 "끌기는 손잡이에서만 시작한다").
-
-                               단추다. 초점을 받고 ↑/↓ 키로도 옮긴다. 이름에 지금 자리까지
-                               적는다 — 소리로 훑으면 "순서 옮기기" 넷이 줄줄이 지나갈 뿐이라
-                               무엇이 몇 번째인지가 이름 안에 있어야 한다. */}
-                        {stops.length > 1 ? (
-                          <button type="button"
-                            aria-label={`${s.name} 순서 옮기기, ${stops.length}곳 중 ${i + 1}번. 위아래 화살표 키로 옮깁니다`}
-                            onClick={e => e.stopPropagation()}
-                            onKeyDown={e => onHandleKey(s, e)}
-                            onPointerDown={e => {
-                              e.stopPropagation();
-                              e.currentTarget.setPointerCapture(e.pointerId);
-                              setDragId(s.id);
-                            }}
-                            onPointerMove={e => { if (dragId === s.id) dropAt(s.id, e.clientY); }}
-                            onPointerUp={endDrag}
-                            onPointerCancel={endDrag}
-                            style={{ flex: "0 0 auto",
-                              width: "var(--tap-min)", height: "var(--tap-min)",
-                              display: "inline-flex", alignItems: "center", justifyContent: "center",
-                              background: "none", border: "none", borderRadius: "var(--radius-pill)",
-                              touchAction: "none",
-                              cursor: dragId === s.id ? "grabbing" : "grab",
-                              color: dragId === s.id ? "var(--text-heading)" : "var(--text-muted)" }}>
-                            <Icon name="grip-vertical" size={20} />
-                          </button>
-                        ) : null}
                       </div>
                     </div>
 
@@ -602,6 +702,56 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                     {done ? (
                       <Mascot pose="thumbsup" size={56} base={base} alt=""
                         style={{ flex: "0 0 auto", alignSelf: "center" }} />
+                    ) : null}
+
+                    {/* ── 순서 손잡이 (2026-08-19 신설 · 2026-08-20 자리 옮김) ──────────
+                           곳이 하나뿐이면 옮길 데가 없으므로 나오지 않는다.
+
+                           **행 오른쪽 끝, 세로 한가운데다.** 전에는 [방문 완료] 칩과 한 줄로
+                           내용 안에 있었다 — 그 줄이 행의 세 번째 줄이라 손잡이가 행 바닥에
+                           붙어 섰고, 잡는 자리가 실제로 옮겨지는 덩어리(행 전체)의 가운데가
+                           아니라 아래 모서리였다. 끄는 물건은 자기가 옮기는 것의 무게중심에
+                           있어야 한다: 위 칸으로 올리려면 잡은 곳보다 위를 겨눠야 했고,
+                           이웃 행의 손잡이와도 한 칸 어긋나 세로로 훑을 때 지그재그가 됐다.
+                           이제 넷이 오른쪽에서 한 줄로 서고, 끌면 잡은 높이가 곧 그 행의
+                           높이다 (자리를 정하는 기준도 행 상자의 중심선이다 — startDrag).
+
+                           가로 폭을 여기서 44px 가져간다. 방문한 행에서는 도장(56)까지 서므로
+                           360px 화면의 긴 상호명이 두 줄로 접힐 수 있다 — 접히게 둔다.
+                           행은 고정 높이가 아니고(U-CM-14), 접혀서 잃는 것은 한 줄의 여백인데
+                           손잡이가 바닥에 있어서 잃던 것은 끌기 그 자체였다.
+
+                           `touch-action: none` 이 **여기에만** 걸린다 — 이 44px 안에서만
+                           브라우저의 스크롤을 끄고, 손잡이 밖에서는 화면이 예전처럼
+                           흐른다 (머리말 "끌기는 손잡이에서만 시작한다").
+
+                           단추다. 초점을 받고 ↑/↓ 키로도 옮긴다. 이름에 지금 자리까지
+                           적는다 — 소리로 훑으면 "순서 옮기기" 넷이 줄줄이 지나갈 뿐이라
+                           무엇이 몇 번째인지가 이름 안에 있어야 한다. */}
+                    {stops.length > 1 ? (
+                      <button type="button"
+                        aria-label={`${s.name} 순서 옮기기, ${stops.length}곳 중 ${num}번. 위아래 화살표 키로 옮깁니다`}
+                        onClick={e => e.stopPropagation()}
+                        onKeyDown={e => onHandleKey(s, e)}
+                        onPointerDown={e => {
+                          e.stopPropagation();
+                          /* 포인터를 이 단추에 가둔다 — 손가락이 행 밖으로 나가도 아래
+                             onPointerMove 로 계속 들어온다 */
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                          startDrag(s, i, e);
+                        }}
+                        onPointerMove={e => { if (dragging) onDragMove(e); }}
+                        onPointerUp={endDrag}
+                        onPointerCancel={endDrag}
+                        style={{ flex: "0 0 auto", alignSelf: "center",
+                          width: "var(--tap-min)", height: "var(--tap-min)",
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          background: "none", border: "none", borderRadius: "var(--radius-pill)",
+                          touchAction: "none",
+                          cursor: dragging ? "grabbing" : "grab",
+                          color: dragging ? "var(--text-heading)" : "var(--text-muted)" }}>
+                        <Icon name="grip-vertical" size={20} />
+                      </button>
                     ) : null}
 
                     {/* ── 구간 시간은 행 안에 띄운다 (2026-08-19) ────────────────────

@@ -134,7 +134,9 @@ export function Districts({ onToast }) {
             render: d => (
               <Cell>
                 {d.name}
-                {d.id === CURRENT_DISTRICT_ID ? <Badge tone="brand" size="sm">현재</Badge> : null}
+                {/* 「현재」 배지를 두지 않는다 — 그것은 QR 을 찍은 시민이 서 있는 곳이라는
+                    뜻이라 관리자 표에서는 가리키는 대상이 없다. 이 상점가에 QR 지점이
+                    걸려 있다는 사실은 QR 지점 관리와 삭제 차단 안내가 이미 말한다. */}
                 {d.visible === false ? <Badge tone="neutral" size="sm">숨김</Badge> : null}
               </Cell>
             ) },
@@ -164,15 +166,12 @@ export function Districts({ onToast }) {
           { key: "onnuriMarket", label: "온누리 원본 표기명", width: 170,
             hint: "매칭 키",
             render: d => d.onnuriMarket || <span style={{ color: "var(--text-muted)" }}>{EMPTY_MARK}</span> },
-          { key: "visible", label: "노출", width: 92, align: "center",
+          { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: d => (
-              <Switch checked={d.visible !== false}
-                label={<span style={{ fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
-                  {d.visible === false ? "숨김" : "노출"}
-                </span>}
+              <Switch checked={d.visible !== false} aria-label={`${d.name} 노출 여부`}
                 onChange={() => patch(d.id, { visible: d.visible === false }, d.name)} />
             ) },
-          { key: "manage", label: "관리", width: 96, align: "right",
+          { key: "manage", label: "관리", width: 96, align: "center",
             render: d => (
               <Button variant="ghost" size="sm" icon="trash-2"
                 onClick={() => askRemove(d)} style={{ color: "var(--state-danger)" }}>삭제</Button>
@@ -216,7 +215,7 @@ export function Districts({ onToast }) {
 
       <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
         description="상점가를 삭제합니다."
-        footnote="소속 점포는 함께 지워지지 않습니다. 당장 목록에서 내리려면 삭제 대신 [노출] 토글을 꺼 주세요 — 시민 화면에서는 사라지고 연결은 그대로 남습니다."
+        footnote="소속 점포는 함께 지워지지 않습니다. 당장 목록에서 내리려면 삭제 대신 [노출 여부] 토글을 꺼 주세요 — 시민 화면에서는 사라지고 연결은 그대로 남습니다."
         onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
 
       {/* 삭제 차단 (명세서 10장). 버튼을 감추지 않고 눌렀을 때 이유를 말한다 —
@@ -233,7 +232,7 @@ export function Districts({ onToast }) {
             <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-label)",
               color: "var(--text-muted)", lineHeight: 1.6 }}>
               연결을 먼저 정리한 뒤에 삭제할 수 있습니다 (명세서 10장). 당장 목록에서 내리려면
-              삭제 대신 [노출] 토글을 꺼 주세요.
+              삭제 대신 [노출 여부] 토글을 꺼 주세요.
             </p>
           </>
         ) : null}

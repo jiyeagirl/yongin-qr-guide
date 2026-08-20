@@ -156,7 +156,7 @@ export function Accounts({ account, onToast }) {
                 </span>}
                 onChange={() => toggleActive(a)} />
             ) },
-          { key: "manage", label: "관리", width: 96, align: "right",
+          { key: "manage", label: "관리", width: 96, align: "center",
             render: a => (
               <Button variant="ghost" size="sm" icon="trash-2"
                 onClick={() => askRemove(a)} style={{ color: "var(--state-danger)" }}>삭제</Button>

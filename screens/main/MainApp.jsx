@@ -131,6 +131,12 @@ export function MainApp({ qr = null, noDistrict = false }) {
      하나로 합치면 탭을 오갈 때 "음식"이 "AED"로 둔갑한다 */
   const [fcType, setFcType] = React.useState("all");
 
+  /* 공공시설 목록의 쪽 번호 (2026-08-20). 점포 쪽 `page` 와 **따로 둔다** — 하나로 합치면
+     상점가에서 3쪽을 보다가 공공시설 탭으로 옮겼을 때 있지도 않은 3쪽이 열린다.
+     셸이 드는 이유는 점포와 같다 (위 page 주석). */
+  const [fcPage, setFcPage] = React.useState(1);
+  React.useEffect(() => { setFcPage(1); }, [fcType]);
+
   /* U-FC-09 원거리 안내 말풍선을 닫았는지. **셸이 들고 있어야 한다** —
      그 말풍선을 그리는 FacilitySummary 는 공공시설 탭일 때만 존재해서, 탭을 옮기면
      언마운트되며 닫은 기억이 사라진다. 값은 경고 묶음을 나타내는 문자열이고, 경고가
@@ -776,7 +782,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
           /* 쪽 번호도 함께 넣는다 (2026-08-18). 쪽 단추는 목록 **끝**에 있어서, 거기서
              [다음]을 누르면 새 쪽의 끝줄 근처가 열린다 — 방금 넘긴 쪽의 위쪽을 보지 못한
              채 다시 올려야 한다. 조건이 바뀔 때와 같은 이유이고 같은 장치로 푼다. */
-          scrollKey={isFacility ? `facility|${fcType}` : `district|${cat}|${onnuriOnly}|${sort}|${q}|${page}`}
+          scrollKey={isFacility ? `facility|${fcType}|${fcPage}` : `district|${cat}|${onnuriOnly}|${sort}|${q}|${page}`}
           /* U-ST-02 구역 안내 — 제목 줄 **오른쪽**이다 (2026-08-18). 제목 아래 한 줄로
              두면 절반 스냅에서 그 한 줄이 점포 한 줄을 먹어, 시트를 열었는데 가게가
              하나밖에 안 보였다. 상점가명은 짧고 그 옆은 비어 있다 (Sheet 의 titleAside).
@@ -804,6 +810,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
             <FacilitySheet
               rows={facilityRows}
               cat={fcType}
+              page={fcPage} setPage={setFcPage}
               selectedId={selected ? selected.id : null}
               asOf={FACILITY_AS_OF}
               /* 상세로 곧장 가지 않는다 — 마커를 누른 것과 같이 지도가 그리로 움직이고

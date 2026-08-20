@@ -159,15 +159,12 @@ export function Stores({ onToast }) {
           { key: "addr", label: "도로명주소", sortable: true },
           { key: "views", label: "조회", width: 90, align: "right", sortable: true, hint: "인기순 원천",
             render: s => <span style={{ fontVariantNumeric: "tabular-nums" }}>{Number(s.views || 0).toLocaleString("ko-KR")}</span> },
-          { key: "visible", label: "노출", width: 92, align: "center",
+          { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: s => (
-              <Switch checked={s.visible !== false}
-                label={<span style={{ fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
-                  {s.visible === false ? "숨김" : "노출"}
-                </span>}
+              <Switch checked={s.visible !== false} aria-label={`${s.name} 노출 여부`}
                 onChange={() => patch(s.id, { visible: s.visible === false }, s.name)} />
             ) },
-          { key: "manage", label: "관리", width: 96, align: "right",
+          { key: "manage", label: "관리", width: 96, align: "center",
             render: s => (
               <Button variant="ghost" size="sm" icon="trash-2"
                 onClick={() => ed.askRemove(s)} style={{ color: "var(--state-danger)" }}>삭제</Button>
