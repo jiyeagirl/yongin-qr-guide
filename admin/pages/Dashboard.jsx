@@ -166,7 +166,7 @@ export function Dashboard({ onNavigate }) {
         gap: "var(--space-4)", marginBottom: "var(--space-7)" }}>
         <Card>
           <Section title="일별 스캔 추이">
-            <MiniChart data={s.daily} type={s.daily.length > 10 ? "bar" : "bar"} height={180}
+            <MiniChart data={s.daily} type="bar" height={180}
               label={`${s.period.label} 일별 QR 스캔 수`} />
             <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-caption)",
               color: "var(--text-muted)", lineHeight: 1.55 }}>

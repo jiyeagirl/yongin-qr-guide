@@ -34,7 +34,10 @@ export function FestivalRow({ festival, onClick, divider = true, style, ...rest 
       onClick={onClick}
       divider={divider}
       icon={<Icon name="party-popper" size={22} color={done ? "var(--text-disabled)" : "var(--yong-cream-900)"} />}
-      title={f.name}
+      /* 행은 견주는 자리라 **짧은 이름**이다 — 실제 축제명(최대 24자)이 들어오면 한 줄이
+         두 줄이 되어, 여섯을 나란히 세워 견준다는 이 컴포넌트의 목적이 무너진다.
+         실제 명칭은 카드(FestivalCard)와 상세(S09)가 적는다 */
+      title={f.short || f.name}
       tag={<Badge size="sm" {...festivalBadge(f.state)}>{f.state}</Badge>}
       meta={<>
         {f.date}

@@ -6,6 +6,12 @@ p{margin:0}
    라벨-값을 세로로 쌓는 자리에서 값만 40px 안으로 밀려, 그 왼쪽이 아이콘을 넣다 만
    빈 자리처럼 보인다. dl 의 세로 여백(1em)도 함께 지운다 — 간격은 컴포넌트가 정한다. */
 dl,dt,dd{margin:0}
+/* ul 도 같은 사정이다. 기본값이 padding-inline-start:40px 라, 목록으로 짠 것은
+   글머리표를 껐어도(list-style:none) 통째로 40px 오른쪽으로 밀린다 — 240px 짜리
+   관리자 좌측 메뉴에서는 그 40px 이 메뉴 폭의 6분의 1이고, 왼쪽이 아이콘을 넣다 만
+   빈 자리처럼 보인다. 위아래 1em 여백도 함께 지운다 (간격은 컴포넌트가 gap 으로 정한다).
+   글머리표가 필요한 목록을 새로 만들면 그 목록이 자기 padding-inline-start 를 적는다. */
+ul,ol{margin:0;padding:0}
 button{font-family:inherit}
 a{color:var(--text-link);text-decoration:none;font-weight:var(--fw-semibold)}
 a:hover{color:var(--yong-teal-500);text-decoration:underline}

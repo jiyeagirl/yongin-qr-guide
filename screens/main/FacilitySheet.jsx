@@ -55,26 +55,29 @@ const GROUPS = [
 ];
 
 /* 기준일 문구 (입력 항목 정의서 3-2). **시설 4종이 각각 다른 값을 갖는다** — 표준데이터
-   갱신 주기가 유형마다 달라서다. 한 유형만 보고 있으면 그 값 하나를, [전체]에서는 화면에
-   깔린 유형을 전부 적는다. 대표값 하나로 뭉치면 나머지 세 종에는 틀린 날짜가 붙는다. */
-function asOfLine(asOf, cat, labels) {
-  if (cat !== "all") return `공공시설 정보 ${asOf[cat] || ""} 기준`;
-  const parts = Object.keys(asOf).map(t => `${labels[t] || t} ${asOf[t]}`);
+   갱신 주기가 유형마다 달라서다. 그래서 **화면에 깔린 유형만** 적는다: 한 종만 보고 있으면
+   그 값 하나를, 여럿이면 그 여럿을. 대표값 하나로 뭉치면 나머지 종에는 틀린 날짜가 붙고,
+   보이지도 않는 유형의 날짜까지 적으면 그 줄이 화면과 어긋난다. */
+function asOfLine(asOf, types, labels) {
+  if (types.length === 1) return `공공시설 정보 ${asOf[types[0]] || ""} 기준`;
+  const parts = types.map(t => `${labels[t] || t} ${asOf[t]}`);
   return `공공시설 정보 ${parts.join(" · ")} 기준`;
 }
 
 export function FacilitySheet({
-  rows, cat, selectedId, onPick, asOf,
+  rows,
+  /* 고른 유형들. **빈 배열이 전체**다 (2026-08-20. [전체] 칩을 없앤 뒤로 그것이 전체를
+     뜻하는 유일한 상태다 — FilterBar 머리말). 이 값은 목록을 거르는 데 쓰이지 않는다:
+     걸러진 결과는 셸이 rows 로 내려준다. 여기서는 **무엇을 보고 있는지**를 적는 데만 쓴다
+     (기준일 줄) — 거르는 자리가 둘이면 칩과 목록이 갈릴 길이 열린다. */
+  types = [],
+  selectedId, onPick, asOf,
   /* 쪽 번호는 셸이 들고 있다 — 점포 목록과 같은 이유다. 쪽을 넘기면 목록을 맨 위로
      되돌려야 하는데 그 스크롤 컨테이너는 이 시트가 아니라 Sheet 이고, Sheet 는
      scrollKey 로만 되돌린다. 유형 칩이 바뀔 때 1쪽으로 되돌리는 것도 셸이 한다
      (유형 칩도 셸의 상태다 — 지도 마커가 같은 값을 본다). */
   page = 1, setPage, pageSize = FACILITY_PAGE_SIZE,
 }) {
-  /* 단일 유형을 고른 상태에서는 섹션을 나누지 않는다 — 한 묶음뿐인데 머리말을 달면
-     "다른 묶음이 아래 더 있나" 하고 스크롤하게 된다 */
-  const grouped = cat === "all";
-
   /* ── 쪽은 섹션 위가 아니라 아래에서 자른다 ─────────────────────────────────
      묶음마다 따로 쪽을 매기지 않는다. 쪽 단추가 둘이면 어느 쪽 것을 넘기는지 매번
      확인해야 하고, 안전시설 2쪽·편의시설 1쪽 같은 상태가 화면에 남는다.
@@ -82,19 +85,26 @@ export function FacilitySheet({
      자르는 대상은 **화면에 놓이는 그 순서 그대로 편 한 줄**(안전시설 다음 편의시설,
      각 묶음 안에서는 거리순)이다. 그래서 쪽을 넘겨도 U-FC-04 의 "안전시설이 먼저"가
      깨지지 않고, 잘린 자리에 걸친 묶음은 다음 쪽에서 머리말을 다시 달고 이어진다 —
-     머리말 없이 이어붙이면 2쪽 첫 줄이 무슨 묶음인지 알 수 없다. */
-  const ordered = grouped
-    ? GROUPS.flatMap(g => rows.filter(r => g.types.includes(r.type)))
-    : rows;
+     머리말 없이 이어붙이면 2쪽 첫 줄이 무슨 묶음인지 알 수 없다.
+
+     묶음 순서는 **고른 것과 무관하게 늘 같다**. 유형을 여럿 고를 수 있게 되면서 (2026-08-20)
+     "안전시설이 먼저"가 걸리는 조합이 늘었다 — 화장실+AED 를 고르면 AED 가 위다. */
+  const ordered = GROUPS.flatMap(g => rows.filter(r => g.types.includes(r.type)));
 
   const pageCount = Math.max(1, Math.ceil(ordered.length / pageSize));
   const safePage = Math.min(Math.max(page, 1), pageCount);
   const start = (safePage - 1) * pageSize;
   const shown = ordered.slice(start, start + pageSize);
 
-  const sections = grouped
-    ? GROUPS.map(g => ({ ...g, items: shown.filter(r => g.types.includes(r.type)) })).filter(g => g.items.length)
-    : [{ id: cat, title: null, items: shown }];
+  /* 머리말(안전시설/편의시설)은 **두 묶음이 다 있을 때만** 단다 (2026-08-20).
+     한 묶음뿐인데 머리말이 붙으면 "다른 묶음이 아래 더 있나" 하고 스크롤하게 된다 —
+     예전에는 "[전체]인가 아닌가"로 갈랐는데, 여럿 고르기에서는 그 물음이 답을 주지 못한다
+     (AED+대피소를 고르면 둘 다 안전시설이라 머리말이 한 줄짜리 장식이 된다).
+     **지금 화면에 무엇이 깔렸는지**로 정하면 어느 조합에서도 맞는다. */
+  const sections = GROUPS
+    .map(g => ({ ...g, items: shown.filter(r => g.types.includes(r.type)) }))
+    .filter(g => g.items.length);
+  const showHeads = sections.length > 1;
 
   return (
     <div style={{ paddingBottom: "var(--space-9)" }}>
@@ -110,11 +120,11 @@ export function FacilitySheet({
           /* 유형 칩은 0건이면 아예 숨기므로(FilterBar) 여기까지 오는 경우는 거의 없다.
              그래도 빈 화면 대신 문장을 둔다 — U-FC-09 와 같은 취지다 */
           <Notice tone="info" title="표시할 시설이 없습니다">
-            다른 유형을 선택하거나 전체 보기로 돌아가 보세요.
+            선택한 유형 칩을 해제하면 주변 공공시설이 모두 나옵니다.
           </Notice>
         ) : sections.map((sec, si) => (
           <section key={sec.id} style={{ marginTop: si === 0 ? 0 : "var(--space-5)" }}>
-            {sec.title ? (
+            {showHeads ? (
               <SectionHeader title={sec.title} style={{ marginBottom: "var(--space-1)" }} />
             ) : null}
             <div role="list">
@@ -144,7 +154,8 @@ export function FacilitySheet({
       {/* ── 고지 (U-CM-07 · U-CM-08) ───────────────────────────────────── */}
       <div style={{ padding: "var(--space-5) var(--gutter-screen) 0" }}>
         <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-          {asOfLine(asOf, cat, FACILITY_LABELS)}<br />
+          {/* 고른 것이 없으면(=전체) 화면에 깔린 유형은 4종 전부다 */}
+          {asOfLine(asOf, types.length ? types : Object.keys(asOf), FACILITY_LABELS)}<br />
           안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
         </p>
       </div>

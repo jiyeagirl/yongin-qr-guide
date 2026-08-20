@@ -45,28 +45,35 @@ import { Accounts } from "./pages/Accounts.jsx";
  * 실서비스의 권한은 서버가 막는다. 화면이 막는 것은 실수를 줄이는 장치이지 보안이 아니다.
  */
 
-/* 내비 — 명세서의 장 구성이 그대로 구획이 된다. `{ section }` 한 줄이 제목이고,
-   뒤에 오는 항목들이 그 구획에 속한다 (AdminShell 이 빈 구획을 걷어낸다). */
+/* 내비 — `{ section }` 한 줄이 구획 제목이고, 뒤에 오는 항목들이 그 구획에 속한다
+   (AdminShell 이 빈 구획을 걷어낸다).
+
+   ── 이름은 **담당자가 하는 일**로 적는다 (2026-08-20) ─────────────────────────
+   전에는 구획이 명세서의 장 이름(골목형 상점가 · 공공시설 · 안내 지점)이고 항목이
+   대상 이름 한 마디(상점가 · 점포 · 축제)였다. 명세서를 펴 놓고 보면 맞는 차례지만,
+   화면을 여는 사람은 명세서를 펴 놓고 있지 않다. 「상점가」는 무엇을 하는 자리인지
+   말하지 않는다 — 보는 자리인지, 고치는 자리인지, 새로 넣는 자리인지.
+
+   그래서 항목은 「상점가 정보 관리」처럼 **일 이름**으로 적고, 구획은 그 일들을 묶는
+   더 큰 일(정보 관리 · 민원 관리 · 시스템 운영)로 적는다. 대상 이름(골목형 상점가 ·
+   공공시설)은 항목 안에 이미 들어 있으므로 구획 제목에서 되풀이하지 않는다.
+   이름이 길어진 만큼 --admin-nav-w 를 264px 로 넓혔다. */
 const NAV = [
   { key: "dashboard", label: "대시보드", icon: "layout-dashboard" },
 
-  { section: "골목형 상점가" },
-  { key: "districts", label: "상점가", icon: "store" },
-  { key: "stores", label: "점포", icon: "shopping-bag" },
-  { key: "festivals", label: "축제", icon: "party-popper" },
+  { section: "정보 관리" },
+  { key: "districts", label: "상점가 정보 관리", icon: "store" },
+  { key: "stores", label: "점포 정보 관리", icon: "shopping-bag" },
+  { key: "festivals", label: "축제 정보 관리", icon: "party-popper" },
+  { key: "facilities", label: "공공시설 정보 관리", icon: "life-buoy" },
+  { key: "qr", label: "QR 지점 관리", icon: "qr-code" },
 
-  { section: "공공시설" },
-  { key: "facilities", label: "공공시설", icon: "life-buoy" },
+  { section: "민원 관리" },
+  { key: "reports", label: "오류신고 관리", icon: "inbox" },
 
-  { section: "안내 지점" },
-  { key: "qr", label: "QR 지점", icon: "qr-code" },
-
-  { section: "시민 접수" },
-  { key: "reports", label: "오류신고", icon: "inbox" },
-
-  { section: "운영" },
-  { key: "asof", label: "데이터 기준일", icon: "calendar-clock" },
-  { key: "settings", label: "설정", icon: "settings" },
+  { section: "시스템 운영" },
+  { key: "asof", label: "데이터 기준일 관리", icon: "calendar-clock" },
+  { key: "settings", label: "환경 설정", icon: "settings" },
   { key: "accounts", label: "계정 관리", icon: "users" },
 ];
 

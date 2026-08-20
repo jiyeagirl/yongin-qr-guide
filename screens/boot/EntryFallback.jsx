@@ -116,7 +116,7 @@ export function EntryFallback({
               {picked.gu} {picked.area}
               <span style={{ display: "block", marginTop: 4 }}>
                 점포 {picked.stores}곳{picked.onnuri != null ? ` · 온누리 가맹 ${picked.onnuri}곳` : ""}
-                {picked.festival ? <> · {picked.festival.name}</> : null}
+                {picked.festival ? <> · {picked.festival.short || picked.festival.name}</> : null}
               </span>
               <span style={{ display: "block", marginTop: "var(--space-2)", color: "var(--text-muted)" }}>
                 이 상점가로 들어가려면 그곳 안내판의 QR 을 찍어 주세요.

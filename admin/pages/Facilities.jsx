@@ -128,7 +128,7 @@ export function Facilities({ onToast }) {
 
   return (
     <>
-      <PageHeader title="공공시설 관리" count={`${filtered.length}곳`}
+      <PageHeader title="공공시설 정보 관리" count={`${filtered.length}곳`}
         note={`AED · 공중화장실 · 쉼터 · 대피소. 입력 항목은 명세서 3장을 따릅니다.${asOfNote ? ` ${asOfNote}` : ""}`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>시설 등록</Button>} />
 

@@ -114,7 +114,7 @@ export function Settings({ account, onToast }) {
 
   return (
     <>
-      <PageHeader title="설정"
+      <PageHeader title="환경 설정"
         note="서비스 운영 값과 API 쿼터. 입력 항목은 명세서 8장을 따릅니다." />
 
       <Section title="서비스 운영 설정"

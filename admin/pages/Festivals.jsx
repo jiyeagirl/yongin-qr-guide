@@ -114,7 +114,7 @@ export function Festivals({ onToast }) {
 
   return (
     <>
-      <PageHeader title="축제 관리" count={`${filtered.length}건`}
+      <PageHeader title="축제 정보 관리" count={`${filtered.length}건`}
         note={`입력 항목은 명세서 2-3 을 따릅니다. 상태는 오늘(${TODAY}) 기준으로 자동 판정되며 직접 고를 수 없습니다.`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>축제 등록</Button>} />
 

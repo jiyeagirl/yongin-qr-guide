@@ -1,7 +1,7 @@
 import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Cell, Modal, ConfirmDialog, Button, Select, Pagination,
-  Badge, Notice, Switch, EMPTY_MARK,
+  Badge, Notice, Switch,
 } from "../../design-systems/admin.js";
 import { DISTRICTS, GU_ORDER, FESTIVALS, CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
 import { STORES } from "../../screens/main/data/dunjeon.js";
@@ -34,8 +34,11 @@ import { EditorModal } from "./EditorModal.jsx";
  * 점포 자료가 있는 상점가(지금은 둔전 하나)는 **노출 상태인 점포를 실제로 세어** 보여준다 —
  * 명세서가 정의한 그대로("구역 주소 매칭 결과 중 노출 상태인 건수")이고, 점포 관리에서
  * 한 곳을 숨기면 이 숫자가 줄어드는 것으로 그 정의가 화면에서 확인된다.
- * 점포 자료가 없는 31곳은 세지 못하므로 상점가 레코드의 값을 그대로 보여주고
- * **「점포 미등록」이라고 적는다** — 센 값과 받아 적은 값을 같은 얼굴로 두지 않는다.
+ * 점포 자료가 없는 31곳은 세지 못하므로 상점가 레코드의 값을 그대로 보여준다.
+ * 그 사실을 「점포 미등록」 배지로 적었었는데 뺐다 (2026-08-20, 사용자 요청) —
+ * 더미 데이터에서는 31곳이 전부 그 상태라 배지가 목록의 거의 모든 줄에 붙었고,
+ * 늘 붙어 있는 표시는 아무것도 가려내지 못한다. 실제 데이터가 들어오면 이 구분
+ * 자체가 사라진다 (모든 상점가에 점포 자료가 있다).
  */
 
 const GU_OPTIONS = [{ value: "", label: "전체 구" }].concat(GU_ORDER.map(g => ({ value: g, label: g })));
@@ -58,8 +61,8 @@ export function Districts({ onToast }) {
   const list0 = useListState([gu]);
   const [blocked, setBlocked] = React.useState(null);
 
-  /* 노출 상태인 점포를 상점가별로 센다. 점포 자료가 없는 곳은 키가 아예 없어서
-     「미등록」과 「0곳」이 구분된다 */
+  /* 노출 상태인 점포를 상점가별로 센다. 점포 자료가 없는 곳은 키가 아예 없다 —
+     그때는 상점가 레코드에 적힌 값을 그대로 쓴다 (아래 countOf). */
   const counts = React.useMemo(() => {
     const o = {};
     for (const s of storeRows) {
@@ -78,7 +81,6 @@ export function Districts({ onToast }) {
     return {
       stores: c ? c.stores : Number(d.stores || 0),
       onnuri: c ? c.onnuri : Number(d.onnuri || 0),
-      counted: !!c,
     };
   };
 
@@ -114,7 +116,7 @@ export function Districts({ onToast }) {
 
   return (
     <>
-      <PageHeader title="상점가 관리" count={`${filtered.length}곳`}
+      <PageHeader title="상점가 정보 관리" count={`${filtered.length}곳`}
         note="용인시 골목형 상점가. 입력 항목은 명세서 2-1 을 따르며 데이터 기준일을 갖지 않습니다 (7장)."
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>상점가 등록</Button>} />
 
@@ -142,20 +144,14 @@ export function Districts({ onToast }) {
             ) },
           { key: "gu", label: "구", width: 80, sortable: true },
           { key: "area", label: "소재지", sortable: true },
-          { key: "stores", label: "점포수", width: 150, align: "right", sortable: true,
+          { key: "stores", label: "점포수", width: 110, align: "right", sortable: true,
             hint: "노출 상태 기준",
             sortValue: d => countOf(d).stores,
-            render: d => {
-              const c = countOf(d);
-              return (
-                <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
-                  {c.stores.toLocaleString("ko-KR")}곳
-                  {c.counted ? null : (
-                    <Badge tone="neutral" size="sm" style={{ marginLeft: 6 }}>점포 미등록</Badge>
-                  )}
-                </span>
-              );
-            } },
+            render: d => (
+              <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                {countOf(d).stores.toLocaleString("ko-KR")}곳
+              </span>
+            ) },
           { key: "onnuri", label: "온누리", width: 100, align: "right", sortable: true,
             sortValue: d => countOf(d).onnuri,
             render: d => (
@@ -163,9 +159,9 @@ export function Districts({ onToast }) {
                 {countOf(d).onnuri.toLocaleString("ko-KR")}곳
               </span>
             ) },
-          { key: "onnuriMarket", label: "온누리 원본 표기명", width: 170,
-            hint: "매칭 키",
-            render: d => d.onnuriMarket || <span style={{ color: "var(--text-muted)" }}>{EMPTY_MARK}</span> },
+          /* 「온누리 원본 표기명」 열은 목록에서 뺐다 (2026-08-20, 사용자 요청) —
+             온누리 자료와 상점가를 잇는 매칭 키라 담당자가 목록에서 훑을 값이 아니다.
+             항목 자체는 그대로 있고 등록·수정 폼에서 보고 고친다 (data/fields.js). */
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: d => (
               <Switch checked={d.visible !== false} aria-label={`${d.name} 노출 여부`}

@@ -209,7 +209,7 @@ export function AdminShell({
             {dropEmptySections(nav).map((item, i) => (item.section ? (
               <li key={`s-${item.section}`} aria-hidden="true"
                 style={{ padding: `${i === 0 ? 0 : "var(--space-4)"} var(--space-4) var(--space-1)`,
-                  fontSize: "var(--fs-micro)", fontWeight: "var(--fw-bold)",
+                  fontSize: "var(--fs-caption)", fontWeight: "var(--fw-bold)",
                   letterSpacing: "var(--ls-wide)", color: "var(--text-muted)" }}>
                 {item.section}
               </li>

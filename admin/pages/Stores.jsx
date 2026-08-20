@@ -114,7 +114,7 @@ export function Stores({ onToast }) {
 
   return (
     <>
-      <PageHeader title="점포 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`}
+      <PageHeader title="점포 정보 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`}
         note={`입력 항목은 명세서 2-2 를 따릅니다. 시민 화면 고지 — ${asOfPhrase(storeCat, asOf.value.store) || "기준일 미설정"}`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>점포 등록</Button>} />
 

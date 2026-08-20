@@ -18,10 +18,36 @@ import { Icon } from "./Icon.jsx";
 
    renderIcon / label 은 같은 칩 줄을 다른 축에도 쓰기 위한 것이다.
    상점가 탭은 업종 7종(CategoryIcon), 공공시설 탭은 시설 4종(FacilityIcon)을 칩으로 쓴다 —
-   생김새와 sticky 규칙은 같아야 하고 아이콘 체계만 달라야 한다 (5-2). */
+   생김새와 sticky 규칙은 같아야 하고 아이콘 체계만 달라야 한다 (5-2).
+
+   ── 여럿 고르기 (2026-08-20) ───────────────────────────────────────────────
+   `value` 에 **배열**을 주면 칩이 켜고 끄는 스위치가 된다. 문자열을 주면 예전처럼 하나만
+   골린다 — 부르는 쪽이 축의 성질에 따라 고른다.
+
+   배열 모드에서 **빈 배열은 "전체"** 다. 그래서 [전체] 칩을 따로 두지 않는다:
+
+     자리    5종이면 [전체]까지 여섯 알약이 되어 좁은 화면에서 마지막 칩이 화면 밖으로
+             밀렸다 (공공시설 탭의 [화장실]이 실제로 그랬다). 가로로 밀면 나오기는 하지만,
+             **밀 수 있다는 것 자체가 보이지 않는다** — 없는 칩과 구별되지 않는다.
+     뜻     여럿 고르기에서 [전체]는 칩이 아니라 **다른 종류의 동작**(모두 해제)이다.
+             같은 줄에 같은 모양으로 서 있으면서 혼자 다르게 동작하는 알약이 된다.
+     되돌리기 켠 칩을 다시 누르면 꺼진다. 전부 끄면 전체로 돌아오므로 길이 막히지 않는다.
+
+   역할(role)도 함께 바뀐다. 하나만 고르는 줄은 tablist/tab 이지만, 여럿 고르는 줄에서
+   그것은 틀린 이름이다 — 탭은 한 번에 하나만 선택되는 것을 뜻한다. 배열 모드에서는
+   group + aria-pressed 로, 켜고 끄는 단추 묶음이라고 말한다. */
 export function FilterBar({ chips = [], value, onChange, active = [], sticky = true, floating = false, leading,
   renderIcon, label = "업종 필터", gutter = "var(--gutter-screen)", style, ...rest }) {
   const icon = renderIcon || (c => <CategoryIcon type={c.id} size={15} />);
+
+  const multi = Array.isArray(value);
+  const isOn = id => (multi ? value.includes(id) : value === id);
+  /* 배열 모드는 **다음 배열**을 돌려준다 — 부르는 쪽이 토글 규칙을 저마다 다시 적으면
+     탭마다 다르게 동작한다 (한쪽만 "다시 누르면 꺼짐"이 되는 식으로) */
+  const hit = id => {
+    if (!onChange) return;
+    onChange(multi ? (value.includes(id) ? value.filter(v => v !== id) : [...value, id]) : id);
+  };
   return (
     <div style={{
       position: floating ? "static" : (sticky ? "sticky" : "static"), top: 0, zIndex: "var(--z-filter)",
@@ -33,13 +59,17 @@ export function FilterBar({ chips = [], value, onChange, active = [], sticky = t
           leading 은 칩과 함께 흐르면 안 되는 컨트롤(온누리 토글) 자리 — 스크롤 바깥에 고정된다 */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: `2px ${gutter} var(--space-1)` }}>
         {leading ? <span style={{ flex: "0 0 auto", display: "inline-flex", paddingRight: 2 }}>{leading}</span> : null}
-        <div role="tablist" aria-label={label} style={{ flex: 1, minWidth: 0, display: "flex", gap: 6,
-          overflowX: "auto", padding: "5px 0", margin: "-5px 0", scrollbarWidth: "none" }}>
+        <div role={multi ? "group" : "tablist"} aria-label={label}
+          style={{ flex: 1, minWidth: 0, display: "flex", gap: 6,
+            overflowX: "auto", padding: "5px 0", margin: "-5px 0", scrollbarWidth: "none" }}>
           {/* 해당 상점가에 0건인 칩은 숨긴다 (U-ST-10). 공공시설 탭에서도 같은 규칙이 통한다 —
               그 QR 지점 주변에 없는 시설 유형을 눌러 빈 결과를 보게 하지 않는다 */}
           {chips.filter(c => c.count > 0).map(c => (
-            <Chip key={c.id} selected={value === c.id} count={c.count} elevated={floating} role="tab" aria-selected={value === c.id}
-              icon={icon(c)} onClick={() => onChange && onChange(c.id)}>{c.label}</Chip>
+            <Chip key={c.id} selected={isOn(c.id)} count={c.count} elevated={floating}
+              role={multi ? undefined : "tab"}
+              aria-selected={multi ? undefined : isOn(c.id)}
+              aria-pressed={multi ? isOn(c.id) : undefined}
+              icon={icon(c)} onClick={() => hit(c.id)}>{c.label}</Chip>
           ))}
         </div>
       </div>

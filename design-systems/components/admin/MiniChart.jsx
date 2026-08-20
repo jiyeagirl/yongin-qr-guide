@@ -14,11 +14,38 @@ import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
  *
  * ── 축을 그리지 않는다 ──────────────────────────────────────────────────────
  * 30일 추이에서 담당자가 읽는 것은 "늘고 있나 줄고 있나"와 "언제 튀었나" 둘이다.
- * 눈금선을 넣으면 그 둘이 격자 뒤로 숨는다. 최댓값만 오른쪽 위에 적고,
- * 막대에 마우스를 올리면 그 날의 값이 뜬다(<title>).
+ * 눈금선을 넣으면 그 둘이 격자 뒤로 숨는다.
+ *
+ * ── 값은 막대 끝 위에 적는다 (2026-08-20) ──────────────────────────────────
+ * 전에는 오른쪽 위에 「최대 833」 한 줄만 있었다. 그 한 줄로는 **어느 막대가 그 값인지**,
+ * 나머지 날이 몇 건인지 알 수 없어, 담당자는 결국 막대마다 마우스를 올려 보게 된다
+ * (그마저도 마우스가 없으면 못 한다). 그래서 최댓값 표시를 걷어내고 값을 막대 위에 적는다.
+ *
+ * 다만 서른 개를 다 적으면 12px 숫자가 16px 막대 위에서 서로 겹친다. 그래서 자리가
+ * 모자라면 **띄엄띄엄** 적되, 가장 높은 날과 마지막 날은 언제나 적는다 — 「언제 튀었나」와
+ * 「오늘 몇 건인가」가 이 그래프를 보는 두 가지 이유다. 기본 기간인 7일에서는 전부 적힌다.
+ * 적히지 않은 막대의 값은 마우스를 올리면 뜨고(<title>), 아래 숨은 목록에는 60일치가
+ * 하나도 빠짐없이 들어 있다.
+ *
+ * 숫자를 SVG 안에 넣지 않는 이유: 이 그래프는 preserveAspectRatio="none" 이라
+ * 가로로 늘어난다. 그 안의 <text> 는 글자까지 함께 늘어나 뭉개진다.
  */
 
 const PAD = 2;   /* 막대 사이 간격(퍼센트 아님, viewBox 단위) */
+
+/* 값을 적을 막대를 고른다. 자리가 넉넉하면(막대 12개 이하) 전부, 아니면 띄엄띄엄 +
+   가장 높은 날 + 마지막 날. 12는 500px 남짓한 카드에서 세 자리 숫자가 겹치지 않는 수다. */
+function labelledIndexes(values) {
+  const n = values.length;
+  const step = Math.max(1, Math.ceil(n / 12));
+  const maxIdx = values.indexOf(Math.max(...values));
+  const keep = new Set([maxIdx, n - 1]);
+  for (let i = 0; i < n; i += step) {
+    /* 늘 적는 두 개와 붙어 버리면 건너뛴다 — 겹쳐 읽히느니 하나가 낫다 */
+    if (Math.abs(i - maxIdx) >= step && n - 1 - i >= step) keep.add(i);
+  }
+  return keep;
+}
 
 export function MiniChart({
   data = [], type = "bar", height = 160,
@@ -40,13 +67,12 @@ export function MiniChart({
 
   const line = bars.map((b, i) => `${i === 0 ? "M" : "L"}${b.x + b.w / 2},${b.y}`).join(" ");
 
+  const labelled = labelledIndexes(values);
+
   return (
     <div style={style} {...rest}>
-      <div style={{ position: "relative" }}>
-        <span style={{ position: "absolute", top: 0, right: 0, fontSize: "var(--fs-micro)",
-          color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>
-          최대 {format(max)}
-        </span>
+      {/* 위쪽 여백은 가장 높은 막대의 숫자가 설 자리다 — 없으면 카드 밖으로 잘린다 */}
+      <div style={{ position: "relative", paddingTop: 20 }}>
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true"
           style={{ display: "block", width: "100%", height, overflow: "visible" }}>
           {type === "line" ? (
@@ -64,6 +90,23 @@ export function MiniChart({
             </rect>
           ))}
         </svg>
+
+        {/* 막대 끝 위의 숫자. SVG 밖의 겹친 층이라 글자가 늘어나지 않는다.
+            세로 위치는 막대 높이(값/최댓값)를 퍼센트로 그대로 쓴다 — 막대와 같은 계산이라
+            둘이 어긋날 수 없다. pointerEvents:none 이라 막대의 <title> 을 가리지 않는다. */}
+        <div aria-hidden="true" style={{ position: "absolute", left: 0, right: 0, top: 20, height,
+          pointerEvents: "none" }}>
+          {bars.map((b, i) => (labelled.has(i) ? (
+            <span key={i} style={{ position: "absolute",
+              left: `${((i + 0.5) / Math.max(1, data.length)) * 100}%`,
+              bottom: `calc(${(b.h / H) * 100}% + 3px)`, transform: "translateX(-50%)",
+              fontSize: "var(--fs-micro)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
+              fontWeight: b.h === H ? "var(--fw-bold)" : "var(--fw-medium)",
+              color: b.h === H ? "var(--brand-primary)" : "var(--text-muted)" }}>
+              {format(Number(b.value) || 0)}
+            </span>
+          ) : null))}
+        </div>
       </div>
 
       {/* 양 끝 날짜만 적는다. 서른 개를 다 적으면 글자가 겹쳐 아무 것도 안 읽힌다 */}

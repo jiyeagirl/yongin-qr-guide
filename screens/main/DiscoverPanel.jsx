@@ -93,7 +93,7 @@ export function DiscoverPanel({
               gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
               {shownFestivals.map(f => (
                 <FestivalCard key={f.id} festival={f} base={base}
-                  pose={f.pose} hook={f.hook}
+                  pose={f.pose}
                   onClick={() => onOpenFestival(f)} />
               ))}
             </div>

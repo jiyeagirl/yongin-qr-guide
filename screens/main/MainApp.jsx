@@ -114,8 +114,10 @@ export function MainApp({ qr = null, noDistrict = false }) {
      탭·시트 스냅·필터는 건드리지 않는다. 그게 페이지를 나누지 않은 이유 그 자체다. */
   const route = useHashRoute();
 
-  /* 상점가 탭 필터 (U-ST-10 / 11 / 12 / 15) */
-  const [cat, setCat] = React.useState("all");
+  /* 상점가 탭 필터 (U-ST-10 / 11 / 12 / 15)
+     업종 칩은 **여럿 고를 수 있고 빈 배열이 전체**다 (2026-08-20. FilterBar 머리말 참조).
+     [전체] 칩을 없앤 자리를 "아무것도 안 고른 상태"가 대신한다 — 그래서 초기값이 [] 다. */
+  const [cats, setCats] = React.useState([]);
   const [onnuriOnly, setOnnuriOnly] = React.useState(false);
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState("distance");
@@ -125,17 +127,18 @@ export function MainApp({ qr = null, noDistrict = false }) {
      되돌린다. 필터와 쪽을 한 문자열로 묶으려면 둘 다 여기 있어야 한다. */
   const [page, setPage] = React.useState(1);
   /* 조건이 바뀌면 1쪽으로. 12곳짜리 결과에서 3쪽을 보고 있으면 빈 화면이 열린다 */
-  React.useEffect(() => { setPage(1); }, [cat, onnuriOnly, q, sort]);
+  React.useEffect(() => { setPage(1); }, [cats, onnuriOnly, q, sort]);
 
   /* 공공시설 탭 필터 (U-FC-01) — 상점가의 업종 칩과 별개의 상태다.
-     하나로 합치면 탭을 오갈 때 "음식"이 "AED"로 둔갑한다 */
-  const [fcType, setFcType] = React.useState("all");
+     하나로 합치면 탭을 오갈 때 "음식"이 "AED"로 둔갑한다.
+     여기도 여럿 고르기이고 빈 배열이 전체다 (위 cats 와 같은 규칙) */
+  const [fcTypes, setFcTypes] = React.useState([]);
 
   /* 공공시설 목록의 쪽 번호 (2026-08-20). 점포 쪽 `page` 와 **따로 둔다** — 하나로 합치면
      상점가에서 3쪽을 보다가 공공시설 탭으로 옮겼을 때 있지도 않은 3쪽이 열린다.
      셸이 드는 이유는 점포와 같다 (위 page 주석). */
   const [fcPage, setFcPage] = React.useState(1);
-  React.useEffect(() => { setFcPage(1); }, [fcType]);
+  React.useEffect(() => { setFcPage(1); }, [fcTypes]);
 
   /* U-FC-09 원거리 안내 말풍선을 닫았는지. **셸이 들고 있어야 한다** —
      그 말풍선을 그리는 FacilitySummary 는 공공시설 탭일 때만 존재해서, 탭을 옮기면
@@ -182,14 +185,17 @@ export function MainApp({ qr = null, noDistrict = false }) {
      정렬은 칩·온누리·검색과 독립된 축이라 조합이 가능하다 (예: 음식 칩 + 인기순) */
   const storeRows = React.useMemo(() => {
     const needle = q.trim();
+    /* 고른 업종이 없으면 거르지 않는다 = 전체. 여럿 고르면 그중 아무 것에나 걸리면 남는다
+       (칩끼리는 OR 다 — 음식과 카페를 함께 고른 사람이 원하는 것은 "둘 다 아닌 곳"이 아니라
+       "둘 중 하나인 곳"이다). 온누리·검색은 그대로 AND 로 겹친다. */
     const filtered = d.stores.filter(s =>
-      (cat === "all" || s.cat === cat) &&
+      (cats.length === 0 || cats.includes(s.cat)) &&
       (!onnuriOnly || s.onnuri) &&
       (!needle || s.name.includes(needle) || s.biz.includes(needle)));
     return sort === "popular"
       ? [...filtered].sort((a, b) => b.views - a.views || a.dist - b.dist)
       : [...filtered].sort((a, b) => a.dist - b.dist);
-  }, [d.stores, cat, onnuriOnly, q, sort]);
+  }, [d.stores, cats, onnuriOnly, q, sort]);
 
   /* ── S02 공공시설: 안내 반경 (U-FC-08) ─────────────────────────────────
      4종이 같은 선을 쓴다 (2026-08-19 통일. 근거는 facilities.js 의 NEAR_LIMIT 머리말).
@@ -210,27 +216,29 @@ export function MainApp({ qr = null, noDistrict = false }) {
 
   /* 칩 개수는 상한을 적용한 뒤의 개수다 — 칩에 6이라 적고 목록에 5줄이 나오면
      사용자는 한 곳이 사라졌다고 읽는다. 0건인 유형은 FilterBar 가 칩째로 숨긴다 (U-ST-10 과 같은 규칙) */
-  const facilityChips = React.useMemo(() => {
-    const chips = FACILITY_TYPES.map(t => ({ id: t, label: FACILITY_LABELS[t], count: facilityByType[t].length }));
-    return [{ id: "all", label: "전체", count: chips.reduce((n, c) => n + c.count, 0) }, ...chips];
-  }, [facilityByType]);
+  /* [전체] 칩을 뺐다 (2026-08-20). 다섯 알약이 되면서 좁은 화면에서 [화장실]이 화면 밖으로
+     밀렸는데, 가로로 밀면 나온다는 것을 **화면이 알려주지 못한다** — 없는 칩과 구별되지 않는다.
+     아무것도 안 고른 상태가 전체이므로 그 칩이 하던 일은 그대로 남는다 (FilterBar 머리말) */
+  const facilityChips = React.useMemo(() =>
+    FACILITY_TYPES.map(t => ({ id: t, label: FACILITY_LABELS[t], count: facilityByType[t].length })),
+    [facilityByType]);
 
   const facilityRows = React.useMemo(() => {
-    const pick = fcType === "all" ? FACILITY_TYPES : [fcType];
+    const pick = fcTypes.length ? fcTypes : FACILITY_TYPES;
     return pick.flatMap(t => facilityByType[t]).sort((a, b) => a.dist - b.dist);
-  }, [facilityByType, fcType]);
+  }, [facilityByType, fcTypes]);
 
   /* U-FC-09 원거리 안내 배너.
      "가깝다"의 선(NEAR_ENOUGH)을 넘는 최근접만 대상이다. 전체 보기에서는 안전시설(AED·대피소·쉼터)만 본다 —
      화장실이 멀다는 것은 배너를 쓸 만큼 급하지 않고, 4종마다 배너가 뜨면 목록보다 배너가 길어진다.
      유형을 하나 고른 상태에서는 그 유형만 본다 (화장실을 골랐으면 화장실이 먼 것도 알려야 한다). */
   const facilityNotices = React.useMemo(() => {
-    const watch = fcType === "all" ? SAFETY : [fcType];
+    const watch = fcTypes.length ? fcTypes : SAFETY;
     return watch
       .map(t => facilityByType[t][0])
       .filter(f => f && f.dist > NEAR_ENOUGH)
       .map(f => ({ type: f.type, text: km(f.dist) }));
-  }, [facilityByType, fcType]);
+  }, [facilityByType, fcTypes]);
 
   /* ── 결정 2: 지도 가림 높이 ────────────────────────────────────
      위는 상단 필터 바, 아래는 시트(+미리보기 카드)가 가린다. 마커는 그 사이 띠의 중앙으로 온다 */
@@ -257,13 +265,13 @@ export function MainApp({ qr = null, noDistrict = false }) {
      두 탭이 같은 MapFilterOverlay 를 쓰고 축만 갈아끼운다 — 필터 바의 위치·z·measure 규칙이
      탭마다 달라지면 지도 패딩 계산이 탭별로 따로 놀게 된다. */
   const filterProps = isFacility
-    ? { showSearch: false, chips: facilityChips, cat: fcType, onCatChange: setFcType,
+    ? { showSearch: false, chips: facilityChips, cat: fcTypes, onCatChange: setFcTypes,
         filterLabel: "시설 유형 필터",
         /* 칩에서는 색이 선택 상태를 뜻하므로 안전시설 적색 강조를 끈다 (emphasis={false}).
            아이콘 표는 FacilityIcon 한 곳에만 있다 (U-CM-05) */
         renderIcon: c => <FacilityIcon type={c.id} size={15} emphasis={false} /> }
     : { q, onQueryChange: e => setQ(e.target.value), onQueryClear: () => setQ(""),
-        chips: d.chips, cat, onCatChange: setCat };
+        chips: d.chips, cat: cats, onCatChange: setCats };
 
   const focus = React.useCallback((lat, lng) => {
     if (mapApi.current) mapApi.current.focus(lat, lng);
@@ -302,7 +310,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
   /* 상점가 마커도 같은 카드를 쓴다. 다만 "길찾기"가 아니라 "이 상점가 보기"다 —
      상점가는 점이 아니라 구역이라 도보 경로의 도착지가 될 수 없다 (확정 결정사항 6). */
   const pickDistrict = React.useCallback(x => pickOnMap({
-    ...x, biz: x.festival ? `${x.gu} · ${x.festival.name}` : x.gu,
+    /* 축제는 **짧은 이름**으로 적는다 — 카드 한 줄에 구 이름과 함께 서는 자리라
+       실제 축제명(최대 24자)이 들어오면 그 줄이 두 줄이 된다 (districts.js 의 short) */
+    ...x, biz: x.festival ? `${x.gu} · ${x.festival.short || x.festival.name}` : x.gu,
     addr: `${x.area} · 점포 ${x.stores}곳${x.onnuri != null ? `, 온누리 ${x.onnuri}곳` : ""}`,
   }), [pickOnMap]);
 
@@ -335,9 +345,11 @@ export function MainApp({ qr = null, noDistrict = false }) {
        그대로 살아남아 지도가 열릴 때 이미 그 시설이 켜져 있다 (U-CM-16). */
     if (fromOverlay) closeAll();
     if (tab !== "facility") changeTab("facility");
-    /* 유형 필터가 그 시설을 걸러내고 있으면 그 유형으로 좁힌다. "전체"로 풀면 사용자가
-       걸어둔 조건을 말없이 지우는 셈이고, 그대로 두면 켤 마커가 없다 */
-    if (fcType !== "all" && fcType !== f.type) setFcType(f.type);
+    /* 유형 필터가 그 시설을 걸러내고 있으면 **그 유형을 더한다** (2026-08-20).
+       여럿 고르기가 되면서 "그 유형으로 바꾸기"보다 나은 길이 생겼다 — 걸어둔 조건을
+       그대로 두고 필요한 것만 하나 켜면 되므로, 사용자가 고른 것을 아무것도 잃지 않는다.
+       칩을 다 끄면(전체) 애초에 걸리지 않으므로 여기 들어오지 않는다 */
+    if (fcTypes.length && !fcTypes.includes(f.type)) setFcTypes([...fcTypes, f.type]);
     pickFacility(f);
     /* 탭이 발밑에서 바뀌는 이동이라 무슨 일이 일어났는지 한 줄로 말한다.
        **시설 이름은 넣지 않는다** (2026-08-18). 토스트에 이름까지 넣으면 "에버랜드로
@@ -354,15 +366,15 @@ export function MainApp({ qr = null, noDistrict = false }) {
 
      이 카드는 335곳 목록을 우회하는 지름길이다 (U-ST-09). 지름길로 고른 가게가 필터에
      걸려 지도에 없으면 지름길이 아니라 막다른 길이 되므로, **걸린 축만 골라 푼다.**
-     업종 칩은 그 가게의 업종으로 좁히고(전체로 되돌리면 걸어둔 조건이 말없이 지워진다),
-     온누리와 검색어는 좁힐 자리가 없어 끄는 수밖에 없다. 아무것도 안 걸렸으면 아무것도
-     건드리지 않는다 — 대개 이 경우다. */
+     업종 칩은 그 가게의 업종을 **더한다** (2026-08-20. 여럿 고르기가 되면서 바꾸지 않고
+     더할 수 있게 됐다 — 걸어둔 조건을 아무것도 잃지 않는다), 온누리와 검색어는 좁힐 자리가
+     없어 끄는 수밖에 없다. 아무것도 안 걸렸으면 아무것도 건드리지 않는다 — 대개 이 경우다. */
   const showStoreOnMap = s => {
     /* 카드가 들고 있는 것은 note("이번 주 조회 1위")가 붙은 사본이다. 지도와 목록이 보는
        원본을 id 로 되찾는다 — 사본을 그대로 고르면 목록용 문구가 selected 에 딸려 간다 */
     const store = d.stores.find(x => x.id === s.id) || s;
     if (tab !== "district") changeTab("district");
-    if (cat !== "all" && cat !== store.cat) setCat(store.cat);
+    if (cats.length && !cats.includes(store.cat)) setCats([...cats, store.cat]);
     if (onnuriOnly && !store.onnuri) setOnnuriOnly(false);
     const needle = q.trim();
     if (needle && !(store.name.includes(needle) || store.biz.includes(needle))) setQ("");
@@ -629,8 +641,19 @@ export function MainApp({ qr = null, noDistrict = false }) {
 
   /* 시트 제목 — 탭마다 다르다. 상점가는 상점가명이 곧 제목이고(U-ST-03), 공공시설은 대상이 여럿이라
      유형을 고른 상태를 제목에 담는다 ("주변 AED"). 지금 무엇을 보고 있는지가 제목에서 읽혀야 한다. */
+  /* 여럿 고르기가 되면서 "고른 상태"가 한 낱말로 떨어지지 않는다 (2026-08-20).
+     아무것도 안 골랐거나 네 종을 다 골랐으면 같은 목록이므로 같은 제목("주변 공공시설")이고,
+     그 사이는 고른 것을 그대로 잇는다 — 유형 이름이 짧아서(AED·화장실·쉼터·대피소) 셋까지는
+     제목 한 줄에 들어간다. "3종"처럼 세어 적지 않는 이유는, 무엇을 골랐는지가 지금 목록에
+     무엇이 들어 있는지와 같은 말이기 때문이다.
+
+     **가운뎃점 앞뒤를 띄운다** (2026-08-20). 붙여 쓰면("대피소·쉼터·화장실") 19px 굵은
+     제목에서 세 낱말이 한 덩어리로 뭉쳐 하나의 긴 이름처럼 읽힌다. 이 화면의 다른 자리도
+     전부 띄어 쓴다 — "둔전골목형상점가 · 지금 계신 곳", "10.17 (금) · 15:00~21:00". */
   const sheetTitle = isFacility
-    ? (fcType === "all" ? "주변 공공시설" : `주변 ${FACILITY_LABELS[fcType]}`)
+    ? (fcTypes.length === 0 || fcTypes.length === FACILITY_TYPES.length
+        ? "주변 공공시설"
+        : `주변 ${FACILITY_TYPES.filter(t => fcTypes.includes(t)).map(t => FACILITY_LABELS[t]).join(" · ")}`)
     : isDistrict ? (hasDistrict ? d.district.name : "상점가") : "둘러보기";
 
   return (
@@ -782,7 +805,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
           /* 쪽 번호도 함께 넣는다 (2026-08-18). 쪽 단추는 목록 **끝**에 있어서, 거기서
              [다음]을 누르면 새 쪽의 끝줄 근처가 열린다 — 방금 넘긴 쪽의 위쪽을 보지 못한
              채 다시 올려야 한다. 조건이 바뀔 때와 같은 이유이고 같은 장치로 푼다. */
-          scrollKey={isFacility ? `facility|${fcType}|${fcPage}` : `district|${cat}|${onnuriOnly}|${sort}|${q}|${page}`}
+          scrollKey={isFacility
+            ? `facility|${fcTypes.join(",")}|${fcPage}`
+            : `district|${cats.join(",")}|${onnuriOnly}|${sort}|${q}|${page}`}
           /* U-ST-02 구역 안내 — 제목 줄 **오른쪽**이다 (2026-08-18). 제목 아래 한 줄로
              두면 절반 스냅에서 그 한 줄이 점포 한 줄을 먹어, 시트를 열었는데 가게가
              하나밖에 안 보였다. 상점가명은 짧고 그 옆은 비어 있다 (Sheet 의 titleAside).
@@ -809,7 +834,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
           {isFacility ? (
             <FacilitySheet
               rows={facilityRows}
-              cat={fcType}
+              types={fcTypes}
               page={fcPage} setPage={setFcPage}
               selectedId={selected ? selected.id : null}
               asOf={FACILITY_AS_OF}
@@ -830,7 +855,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
             <DistrictSheet
               data={d}
               rows={storeRows}
-              cat={cat}
+              cats={cats}
               onnuriOnly={onnuriOnly} setOnnuriOnly={setOnnuriOnly}
               sort={sort} setSort={setSort}
               page={page} setPage={setPage}

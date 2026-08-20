@@ -65,7 +65,9 @@ export function FestivalDetail({ festival, onBack }) {
 
        상점가로 가는 길은 아래 정보 표의 "주최 상점가" 줄이 맡는다. 축제를 읽다가 주최가
        궁금해진 사람이 그 낱말을 보고 있는 바로 그 자리다. */
-    <DetailPage title={f.name} onBack={onBack}>
+    /* 앱바 제목은 **짧은 이름**이다 (2026-08-20). 실제 축제명은 24자까지 가는데 그 줄은
+       뒤로가기 단추와 한 줄을 나눠 쓴다 — 아래 머리에서 온전히 적으므로 여기서 잘릴 이유가 없다 */
+    <DetailPage title={f.short || f.name} onBack={onBack}>
 
       <DetailBody>
         {/* ── 머리 ─────────────────────────────────────────────────────── */}
@@ -83,7 +85,17 @@ export function FestivalDetail({ festival, onBack }) {
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <h2 style={{ font: "var(--type-title-2)", letterSpacing: "var(--ls-snug)",
-                color: "var(--text-heading)", wordBreak: "keep-all" }}>{f.name}</h2>
+                color: "var(--text-heading)", wordBreak: "keep-all" }}>{f.short || f.name}</h2>
+              {/* 실제 축제명 (2026-08-20). 제목은 짧은 이름이고 — 여섯 축제가 모두
+                  "OO 골목축제"라 목록에서 견주기 좋다 — 이 줄이 현수막에 적힌 그 이름이다.
+                  카드에서 이미 보고 들어온 줄이라 상세에서 사라지면 딴 축제로 읽힌다.
+                  정보 표(아래 InfoList)에 한 칸으로 넣지 않은 이유: 표는 기간·시간·상권명처럼
+                  **항목값**이 서는 자리이고, 이것은 값이 아니라 이 화면의 이름이다. */}
+              {f.short ? (
+                <p style={{ marginTop: 2, fontSize: "var(--fs-body)",
+                  fontWeight: "var(--fw-semibold)", color: "var(--text-body)",
+                  wordBreak: "keep-all" }}>{f.name}</p>
+              ) : null}
               <p style={{ marginTop: 4, fontSize: "var(--fs-body)", color: "var(--text-body)" }}>
                 {f.period} {f.time}
               </p>

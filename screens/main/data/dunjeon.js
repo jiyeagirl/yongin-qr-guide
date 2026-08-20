@@ -186,8 +186,12 @@ function build() {
         dist,
         /* 인기순 정렬용 조회수 (U-ST-15). 실서비스에서는 서버 집계값이다.
            세제곱으로 롱테일을 만든다 — 대부분 낮고 소수만 크게 튀어야 "인기순"이 의미를 갖는다.
-           전부 비슷하면 정렬을 바꿔도 목록이 그대로처럼 보인다 */
-        views: 12 + Math.round(Math.pow(rand(), 3) * 2400),
+           전부 비슷하면 정렬을 바꿔도 목록이 그대로처럼 보인다.
+
+           크기는 스캔 수에 맞춘다 (2026-08-20). 사업 목표가 2개월 누적 1만 건이고
+           관리자 대시보드의 60일 스캔이 5,800건인데, 점포 한 곳의 조회가 1,900회이면
+           앞뒤가 맞지 않는다 — 최댓값을 110 대로 낮췄다 (admin/data/stats.js 머리말). */
+        views: 3 + Math.round(Math.pow(rand(), 3) * 110),
         /* 등록 시점 — "신규 매장"(U-DC-02) 을 뽑는 기준. 최근 24개월에 분포시키되
            제곱으로 눌러 대부분 오래된 가게이고 소수만 최근이게 한다. 전부 최근이면
            "신규"라는 말이 아무 것도 가리키지 못한다. 값은 기준월(2026.06)에서 뺀 개월 수. */
@@ -209,10 +213,13 @@ function build() {
 
 export const STORES = build();
 
-export const CHIPS = [
-  { id: "all", label: "전체", count: STORES.length },
-  ...CATS.map(c => ({ id: c.id, label: c.label, count: STORES.filter(s => s.cat === c.id).length })),
-];
+/* [전체] 칩을 뺐다 (2026-08-20). 업종 칩이 **여럿 고르기**가 되면서 아무것도 안 고른 상태가
+   전체를 뜻하게 됐고, 그러면 [전체]는 칩이 아니라 "모두 해제"라는 다른 종류의 동작이 된다 —
+   같은 줄에 같은 모양으로 서서 혼자 다르게 움직이는 알약이다. 자리도 아깝다: 일곱 알약에
+   [전체]까지 여덟이면 좁은 화면에서 뒤쪽 칩이 화면 밖으로 밀리는데, 가로로 밀 수 있다는 것을
+   화면이 알려주지 못한다 (공공시설 탭의 [화장실]이 실제로 그랬다. FilterBar 머리말 참조). */
+export const CHIPS =
+  CATS.map(c => ({ id: c.id, label: c.label, count: STORES.filter(s => s.cat === c.id).length }));
 
 export const DISTRICT = {
   /* 이름과 소재지는 용인시 누리집 표기 그대로다 (districts.js 머리말 참조) —

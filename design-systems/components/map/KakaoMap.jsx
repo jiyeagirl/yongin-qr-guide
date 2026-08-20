@@ -354,7 +354,8 @@ export function KakaoMap({
         map: m,
         position: new k.maps.LatLng(x.lat, x.lng),
         image: baseImage(x),
-        title: x.festival ? `${x.name} · ${x.festival.name}` : x.name,
+        /* 마커 툴팁도 짧은 이름이다 — 실제 축제명은 상세 화면이 온전히 적는다 */
+        title: x.festival ? `${x.name} · ${x.festival.short || x.festival.name}` : x.name,
         zIndex: x.festival ? 3 : 2,
       });
       k.maps.event.addListener(mk, "click", () => cb.current.onSelectDistrict && cb.current.onSelectDistrict(x));

@@ -10,7 +10,18 @@ import { FACILITIES } from "../../screens/main/data/facilities.js";
  * 되나"를 재는 것이고, 요일 주기도 축제 효과도 없는 평평한 그래프는 그 자리에서
  * 가짜로 읽힌다.
  *
- * 그래서 세 가지를 넣었다:
+ * ── 크기는 사업 목표에 맞춘다 (2026-08-20) ─────────────────────────────────
+ * 이 사업의 성과 목표가 **2개월 동안 누적 스캔 1만 건 · QR 50개소**이고, 목표치는 더
+ * 내려갈 수도 있다. 그런데 화면의 숫자가 누적 2만 8천 건이었다 — 목표를 두 배 넘게
+ * 넘긴 그림이라 "이게 말이 되나"를 재는 순간 가짜로 읽히고, 대외 보고 자리에서는
+ * 예시 화면이 목표 자체를 우습게 만든다. 그래서 60일 합계가 목표의 절반을 조금 넘는
+ * 수준(약 5,800건)이 되게 낮췄다. 평일 62 · 주말 108 이 그 크기다.
+ *
+ * 여기서 낮추면 조회수도 함께 낮춰야 한다. 스캔이 5,800인데 점포 한 곳의 조회가
+ * 1,900이면 앞뒤가 맞지 않는다 — 점포 조회수(dunjeon.js)와 시설 조회수(아래)를
+ * 같은 크기로 맞춰 두었다.
+ *
+ * 그래도 세 가지 결은 그대로다:
  *   1. 주말이 평일보다 높다 (골목 상점가를 찾는 때가 그때다)
  *   2. 둔전 축제일(10.17)에 크게 튄다 — config.TODAY 가 그날이라 그래프 오른쪽 끝에 보인다
  *   3. 나머지는 완만한 우상향 (안내판이 계속 붙는 중이라는 전제)
@@ -60,7 +71,7 @@ function buildDaily() {
     const wd = ((WEEKDAY_OF_TODAY - i) % 7 + 7) % 7;
     const weekend = wd === 0 || wd === 6;
     const trend = 1 + (DAYS - 1 - i) * 0.008;              /* 완만한 우상향 */
-    let v = (weekend ? 210 : 128) * trend * (0.85 + rand() * 0.3);
+    let v = (weekend ? 108 : 62) * trend * (0.85 + rand() * 0.3);
     if (day.iso === FESTIVAL_DAY) v *= 2.6;                /* 축제일 */
     const scans = Math.round(v);
     out.push({
@@ -88,10 +99,10 @@ export const DEFAULT_PERIOD = "7d";
 
 const sum = (arr, k) => arr.reduce((n, d) => n + (d[k] || 0), 0);
 
-/* 누적은 기간과 무관한 값이다. 서비스가 시작된 뒤 전부 —
-   화면에 있는 60일치에 그 이전의 값을 더해 둔다. */
-const BEFORE = 18420;
-export const TOTAL_SCANS = BEFORE + sum(DAILY, "value");
+/* 누적은 기간과 무관한 값이다 — 서비스가 시작된 뒤 전부.
+   **여기 있는 60일이 곧 그 전부다.** 전에는 60일 앞에 1만 8천 건을 더해 두었는데,
+   사업 기간이 2개월이라 그 앞에 쌓일 기간 자체가 없다. */
+export const TOTAL_SCANS = sum(DAILY, "value");
 
 export function statsFor(key) {
   const p = PERIODS.find(x => x.key === key) || PERIODS[1];
@@ -146,8 +157,10 @@ export const TOP_FACILITIES = (() => {
   const rand = seeded(4242);
   return [...FACILITIES]
     .map(f => ({ id: f.id, name: f.name, type: f.type,
-      /* 가까운 시설일수록 많이 열린다. 거리와 반비례하게 만들되 난수로 흔든다 */
-      views: Math.round((900 / (1 + f.dist / 300)) * (0.7 + rand() * 0.6)) }))
+      /* 가까운 시설일수록 많이 열린다. 거리와 반비례하게 만들되 난수로 흔든다.
+         크기는 스캔 수에 맞춰 잡았다 — 60일 스캔이 5,800건이고 그중 34%가 공공시설
+         탭으로 가므로(TAB_SHARE), 시설 하나의 조회가 수백 건을 넘으면 앞뒤가 맞지 않는다 */
+      views: Math.round((190 / (1 + f.dist / 300)) * (0.7 + rand() * 0.6)) }))
     .sort((a, b) => b.views - a.views)
     .slice(0, TOP_N)
     /* 유형 이름표(FACILITY_LABELS)는 붙이지 않는다 — 그것은 디자인 시스템의 것이고,
@@ -159,9 +172,10 @@ export const TOP_FACILITIES = (() => {
    **끈 지점에도 스캔이 남는 것이 요점이다.** 2019년 안내판을 아직 찍는 사람이 있고,
    그 숫자가 0 이 아니라는 사실이 "옛 코드를 지우면 안 되는" 이유를 그대로 보여준다
    (U-CM-02 · S11 의 두 갈래). 지우면 그 사람들이 「등록되지 않은 코드」를 만난다. */
+const OLD_SIGN_SCANS = 148;
 export const SCANS_BY_POINT = [
-  { code: "dunjeon-01", name: "둔전 시장 입구 버스정류장", active: true, scans: TOTAL_SCANS - 412 },
-  { code: "dunjeon-2019-04", name: "(구) 둔전 시장 안내판", active: false, scans: 412 },
+  { code: "dunjeon-01", name: "둔전 시장 입구 버스정류장", active: true, scans: TOTAL_SCANS - OLD_SIGN_SCANS },
+  { code: "dunjeon-2019-04", name: "(구) 둔전 시장 안내판", active: false, scans: OLD_SIGN_SCANS },
 ];
 
 /* ── 카카오맵 API 사용량 (명세서 6장 "운영") ────────────────────────────────

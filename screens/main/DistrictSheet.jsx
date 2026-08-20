@@ -35,8 +35,24 @@ import { PAGE_SIZE, STORE_AS_OF } from "./config.js";
  *   신규 및 인기 매장  → 둘러보기 탭 S04 (U-DC-02). 여기서는 정렬 고르기가 그 역할을 한다
  *   다른 상점가 목록   → 둘러보기 탭 S04 최하단 (U-ST-14 → U-DC-04)
  */
+/* 고른 업종을 목록 머리에 한 줄로 적는다 (2026-08-20).
+   [전체] 칩이 없어졌으므로 **아무것도 안 고른 상태가 전체**이고, 그 사실은 여기서만 글자로
+   드러난다 — 칩 줄은 지도 위에 있고 시트를 올리면 그 줄이 보이지 않는다.
+
+   셋부터는 이름을 잇지 않고 세어 적는다. 업종 이름이 짧지 않아서(카페·디저트, 미용·생활)
+   셋만 이어도 이 줄의 절반을 넘기는데, 그 오른쪽에는 정렬 컨트롤이 서 있다.
+
+   잇는 가운뎃점은 **앞뒤를 띄운다** (2026-08-20). 업종 이름 안에 이미 가운뎃점이 들어 있어서
+   붙여 쓰면 "음식·카페·디저트"가 두 업종인지 세 업종인지 갈리지 않는다. 띄우면
+   "음식 · 카페·디저트" 로 어느 점이 잇는 점인지 눈에 보인다. */
+function catTitle(cats, labels) {
+  if (!cats.length) return "전체";
+  if (cats.length <= 2) return cats.map(c => labels[c] || c).join(" · ");
+  return `업종 ${cats.length}종`;
+}
+
 export function DistrictSheet({
-  data, rows, cat, onnuriOnly, setOnnuriOnly, sort, setSort, q,
+  data, rows, cats = [], onnuriOnly, setOnnuriOnly, sort, setSort, q,
   /* 쪽 번호는 셸이 들고 있다 (2026-08-18). 쪽을 넘기면 목록을 맨 위로 되돌려야 하는데,
      그 스크롤 컨테이너는 이 시트가 아니라 Sheet 이고 Sheet 는 scrollKey 로만 되돌린다 —
      셸이 두 값을 다 쥐고 있어야 한 문자열로 묶을 수 있다. 필터가 바뀔 때 1쪽으로
@@ -81,7 +97,7 @@ export function DistrictSheet({
 
       {/* ── 목록 제어 (sticky) — 결과 수 · 정렬(U-ST-15) · 온누리(U-ST-11) ── */}
       <ListControls
-        title={`${CATEGORY_LABELS[cat] || "전체"} ${rows.length}곳`}
+        title={`${catTitle(cats, CATEGORY_LABELS)} ${rows.length}곳`}
         sort={sort}
         onSortChange={setSort}
         sortOptions={[{ id: "distance", label: "거리순" }, { id: "popular", label: "인기순" }]}>
