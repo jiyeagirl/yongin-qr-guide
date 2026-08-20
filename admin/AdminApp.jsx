@@ -151,7 +151,7 @@ export function AdminApp() {
              열면 애초에 닿지 않는다. 그것을 적어두지 않으면 검수하는 사람이 시설 하나를
              고쳐놓고 시민 화면에서 찾다가 "반영이 안 된다"를 결함으로 적게 된다.
              실연동 때는 양쪽이 같은 서버를 보므로 이 줄을 지운다. */
-        note="서버 연동 전입니다. 여기서 고친 내용은 이 브라우저 탭 안에서만 유지되며, 시민용 화면(/screens/main/)에는 반영되지 않습니다.">
+        note="서버 연동 전입니다. 여기서 고친 내용은 이 브라우저 탭 안에서만 유지되며, 사용자 화면(/screens/main/)에는 반영되지 않습니다.">
         {Page ? <Page account={account} onToast={notify} onNavigate={go} /> : null}
       </AdminShell>
 

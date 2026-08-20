@@ -169,14 +169,14 @@ export function QrPoints({ onToast }) {
                        마지막에 보인다), 무엇보다 경고는 값을 고치기 **전에** 읽어야 한다. */}
                 {ed.draft.values.installStatus === "설치완료" && !ed.draft.values.active ? (
                   <Notice tone="warning" size="sm" style={{ marginTop: "var(--space-4)" }}>
-                    설치는 완료인데 활성이 꺼져 있습니다. 지금 이 안내판을 찍으면 시민에게
+                    설치는 완료인데 활성이 꺼져 있습니다. 지금 이 안내판을 찍으면 사용자에게
                     「지금은 쓰지 않는 코드」 안내가 뜹니다. 열 준비가 되었으면 활성을 켜 주세요.
                   </Notice>
                 ) : null}
 
                 {!ed.draft.values.districtId ? (
                   <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-3)" }}>
-                    소속 상점가를 비워 두면 이 지점으로 들어온 시민의 상점가 탭이 안내 상태로 뜹니다.
+                    소속 상점가를 비워 두면 이 지점으로 들어온 사용자의 상점가 탭이 안내 상태로 뜹니다.
                     근처에 상점가가 없는 자리(공원 · 관공서 앞)에서는 그것이 맞는 화면입니다.
                   </Notice>
                 ) : null}

@@ -34,13 +34,14 @@ export const OPERATION_DEFAULTS = {
   courseRadiusM: 500,
   zoomFacility: TAB_MAP_LEVEL.facility || MAP_LEVEL,
   zoomMarket: TAB_MAP_LEVEL.district || MAP_LEVEL,
-  zoomDiscover: TAB_MAP_LEVEL.discover || MAP_LEVEL,
+  /* `zoomDiscover` 는 뺐다 (2026-08-20) — 둘러보기 탭에 지도가 없어 읽는 곳이 없다.
+     `TAB_MAP_LEVEL.discover` 값 자체는 시민 화면 config 에 남아 있다 (그쪽 주석 참조). */
 };
 
 /* 시민 화면 코드에서 그대로 가져온 항목. 화면이 이 목록을 보고 "지금 시민 화면이 쓰는 값"
    이라는 표시를 붙인다 — 나머지는 아직 화면에 연결되지 않은 값이라 구분되어야 한다. */
 export const OPERATION_FROM_CONFIG = [
-  "facilityRadiusM", "safetyFarBannerM", "zoomFacility", "zoomMarket", "zoomDiscover",
+  "facilityRadiusM", "safetyFarBannerM", "zoomFacility", "zoomMarket",
 ];
 
 /* ── 8-2 API 쿼터 설정 (개발자 전용) ─────────────────────────────────────── */

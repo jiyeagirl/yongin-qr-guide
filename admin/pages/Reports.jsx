@@ -241,7 +241,7 @@ export function Reports({ onToast, onNavigate }) {
               <Textarea label="내부 메모" value={draft.memo || ""} rows={2} maxLength={500}
                 onChange={e => setDraft(d => ({ ...d, memo: e.target.value }))}
                 placeholder="확인 경위, 연락한 곳, 판단 근거."
-                hint="시민에게 공개되지 않습니다." />
+                hint="사용자에게 공개되지 않습니다." />
             </div>
 
             <div style={{ marginTop: "var(--space-4)" }}>

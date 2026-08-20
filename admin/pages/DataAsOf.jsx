@@ -90,7 +90,7 @@ export function DataAsOf({ onToast }) {
   return (
     <>
       <PageHeader title="데이터 기준일 관리"
-        note="카테고리마다 값 하나를 정하면, 그 카테고리에 속한 모든 시민용 상세 페이지 하단에 일괄 반영됩니다."
+        note="카테고리마다 값 하나를 정하면, 그 카테고리에 속한 모든 사용자 화면 상세 페이지 하단에 일괄 반영됩니다."
         /* 버튼은 sm 이다. 이 화면에서 실제로 하는 일은 [제출] 한 번뿐이고, 표가 일곱 줄인
            화면에서 md 버튼은 제목만큼 무게를 가져간다 */
         action={editing ? (
@@ -152,7 +152,7 @@ export function DataAsOf({ onToast }) {
                 </div>
               );
             } },
-          { key: "phrase", label: "시민 화면 노출 문구",
+          { key: "phrase", label: "사용자 화면 노출 문구",
             render: c => {
               const p = asOfPhrase(c, draft[c.key]);
               return p
@@ -166,13 +166,13 @@ export function DataAsOf({ onToast }) {
       {editing ? (
         <Notice tone="warning" size="sm" style={{ marginTop: "var(--space-5)" }}>
           입력 형식은 <b>YYYY.MM</b> 입니다 (예: 2026.04).
-          <b>제출하면 그 카테고리의 시민용 상세 페이지 전체에 곧바로 반영됩니다.</b>
+          <b>제출하면 그 카테고리의 사용자 화면 상세 페이지 전체에 곧바로 반영됩니다.</b>
         </Notice>
       ) : null}
 
       {/* 제출 확인 — 바뀐 줄만, 「무엇이 무엇으로」 */}
       <Modal open={!!asking} size="md" title="데이터 기준일을 바꿉니다"
-        description="아래 값이 시민용 상세 페이지 하단에 그대로 나갑니다."
+        description="아래 값이 사용자 화면 상세 페이지 하단에 그대로 나갑니다."
         onClose={() => setAsking(null)}
         footer={
           <>

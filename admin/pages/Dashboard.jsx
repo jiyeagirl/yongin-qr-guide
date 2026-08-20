@@ -288,17 +288,14 @@ export function Dashboard({ onNavigate }) {
       {/* ── 상점가별 둘러보기 매장 (명세서 6장) ─────────────────────────
              시민 화면의 둘러보기 탭을 그대로 미리 보는 자리다. 머리말 참조. */}
       <Section title="상점가별 둘러보기 매장" variant="lead"
-        note="둘러보기 탭이 상점가마다 보여주는 목록입니다. 상점가를 고르면 그곳의 시민 화면에 실제로 걸리는 매장이 나옵니다."
+        note="둘러보기 탭에서 노출되는 상점가별 매장 목록을 확인할 수 있습니다. 상점가를 선택하면 사용자 화면에 노출되는 해당 상점가의 매장 정보를 확인할 수 있습니다."
         style={{ marginBottom: "var(--space-4)" }}>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: "var(--space-4)",
-          marginBottom: "var(--space-4)" }}>
+        {/* 고르개 옆에 「처인구 포곡읍 · 노출 점포 335곳」을 적었었는데 뺐다 (2026-08-20) —
+            고르개의 각 줄이 이미 「처인구 · 둔전골목형상점가 (점포 335곳)」이라 같은 말이
+            바로 옆에서 두 번 읽혔다. */}
+        <div style={{ marginBottom: "var(--space-4)" }}>
           <Select label="상점가" options={districtOptions} value={districtId}
             onChange={e => setDistrictId(e.target.value)} style={{ width: 420 }} />
-          {district ? (
-            <p style={{ paddingBottom: 10, fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
-              {district.gu} {district.area} · 노출 점포 {n(districtStores.filter(x => x.visible !== false).length)}곳
-            </p>
-          ) : null}
         </div>
 
         {picks.popular.length ? (
@@ -353,7 +350,7 @@ export function Dashboard({ onNavigate }) {
           <Notice tone="info" title="점포 목록이 아직 들어오지 않았습니다">
             {district ? `${district.name}${district.stores ? `는 시 안내 기준 점포 ${n(district.stores)}곳이지만,` : "는"}` : ""}
             점포 목록이 아직 적재되지 않아 신규·인기 매장을 뽑을 수 없습니다.
-            시민 화면에서도 이 상점가에서는 두 레일이 나오지 않습니다.
+            사용자 화면에서도 이 상점가에서는 두 레일이 나오지 않습니다.
           </Notice>
         )}
       </Section>
@@ -372,13 +369,11 @@ export function Dashboard({ onNavigate }) {
           ]} />
       </Section>
 
-      <p style={{ marginTop: "var(--space-6)", fontSize: "var(--fs-caption)",
-        color: "var(--text-muted)", lineHeight: 1.6 }}>
-        스캔 수 · 길찾기 실행 수 · 조회 비중 · 점포 조회수 · API 사용량은 서버 로그에서 나오는
-        값이라 서버 연동 전 예시입니다. <b>처리 대기 배지와 오류신고 건수, 상점가별 매장 목록은
-        실제 자료로 뽑은 값</b>이며, 이 브라우저 탭에서 고친 내용이 바로 반영됩니다.
-        이 화면은 조회 전용이며 내보내기 기능을 두지 않습니다.
-      </p>
+      {/* 맨 아래 고지를 뺐다 (2026-08-20, 사용자 요청). 어느 수치가 서버 연동 전 예시이고
+          어느 것이 실제 자료를 센 값인지 적어 두었던 다섯 줄이다. 그 구분이 필요한 것은
+          **지금 검수하는 우리**이지 이 화면을 쓰는 담당자가 아니고, 서버가 붙으면 문단
+          자체가 틀린 말이 된다. 화면 맨 위 띠가 「서버 연동 전」이라는 사실은 늘 적고 있다.
+          어느 값이 예시인지는 admin/README.md 와 data/stats.js 머리말에 남아 있다. */}
     </>
   );
 }

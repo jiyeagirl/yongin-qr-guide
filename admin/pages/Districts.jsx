@@ -199,7 +199,7 @@ export function Districts({ onToast }) {
                     {govLink(ed.draft.values)}
                   </p>
                   <p style={{ marginTop: 4, fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
-                    시민용 상점가 카드의 바로가기 화살표가 이 주소로 갑니다. 비우면 화살표가 사라집니다.
+                    사용자 화면의 상점가 카드 바로가기 화살표가 이 주소로 갑니다. 비우면 화살표가 사라집니다.
                   </p>
                 </div>
               ) : null
@@ -209,7 +209,7 @@ export function Districts({ onToast }) {
 
       <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
         description="상점가를 삭제합니다."
-        footnote="소속 점포는 함께 지워지지 않습니다. 당장 목록에서 내리려면 삭제 대신 [노출 여부] 토글을 꺼 주세요 — 시민 화면에서는 사라지고 연결은 그대로 남습니다."
+        footnote="소속 점포는 함께 지워지지 않습니다. 당장 목록에서 내리려면 삭제 대신 [노출 여부] 토글을 꺼 주세요 — 사용자 화면에서는 사라지고 연결은 그대로 남습니다."
         onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
 
       {/* 삭제 차단 (명세서 10장). 버튼을 감추지 않고 눌렀을 때 이유를 말한다 —

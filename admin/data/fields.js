@@ -111,14 +111,14 @@ export const DISTRICT_FIELDS = [
     example: "처인구" },
   { key: "govSeq", spec: "gov_seq", label: "상권센터 페이지 번호", required: false, type: "text",
     range: "최대 10자", maxLength: 10, example: "114",
-    hint: "비우면 시민용 카드의 바로가기 화살표가 사라집니다" },
+    hint: "비우면 사용자 화면 카드의 바로가기 화살표가 사라집니다" },
   { key: "addr", spec: "address", label: "주소", required: true, type: "text",
     range: "최대 100자", maxLength: 100,
     example: "처인구 김량장동 133-37번지 일원", span: 2 },
 
   { key: "storeCount", spec: "store_count", label: "점포수", required: "auto",
     type: "number", unit: "곳",
-    hint: "구역 주소 매칭 결과 중 노출 상태인 건수. 시민용 헤더에 표시됩니다" },
+    hint: "구역 주소 매칭 결과 중 노출 상태인 건수. 사용자 화면 헤더에 표시됩니다" },
   { key: "onnuriCount", spec: "onnuri_count", label: "온누리 가맹 점포수", required: "auto",
     type: "number", unit: "곳", hint: "위 중 온누리 가맹 건수" },
 
@@ -267,7 +267,7 @@ export const FESTIVAL_FIELDS = [
   { key: "program", spec: "program_text", label: "주요 프로그램", required: false, type: "textarea",
     rows: 3, range: "최대 500자", maxLength: 500,
     example: "먹거리 장터, 상인 경품행사, 어르신 한마당", span: 2,
-    hint: "이름 사이는 쉼표로 나눕니다. 시민 화면이 그 기준으로 줄을 나눕니다" },
+    hint: "이름 사이는 쉼표로 나눕니다. 사용자 화면이 그 기준으로 줄을 나눕니다" },
 ];
 
 /* 2-4 프로그램 일정 (1:N) `C` — 자료 제공 범위 확정 후 반영 여부 결정 */
@@ -424,13 +424,13 @@ export const QR_FIELDS = [
     minLength: 4, maxLength: 12, example: "dunjeon01" },
   { key: "name", spec: "name", label: "지점명", required: true, type: "text",
     range: "2~40자", minLength: 2, maxLength: 40, example: "둔전 시장 입구 버스정류장",
-    hint: "시민용 상단에 상시 노출되므로 40자를 넘기지 않습니다" },
+    hint: "사용자 화면 상단에 상시 노출되므로 40자를 넘기지 않습니다" },
   { key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
     range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 },
   COORD,
   { key: "districtId", spec: "market_id", label: "소속 상점가", required: false, type: "select",
     options: withBlank(DISTRICT_OPTIONS, "— 지정 안 함 —"), span: 2,
-    hint: "비우면 시민용 상점가 탭이 안내 상태(S03-E)로 진입합니다. 앱이 계산하지 않습니다" },
+    hint: "비우면 사용자 화면의 상점가 탭이 안내 상태로 진입합니다" },
 
   { key: "installStatus", spec: "install_status", label: "설치 상태", required: true, type: "select",
     options: INSTALL_STATUS_OPTIONS, example: "설치완료" },
@@ -438,12 +438,12 @@ export const QR_FIELDS = [
     when: v => v.installStatus === "설치완료", type: "date", example: "2026-03-14",
     hint: "설치완료를 고르면 필수가 됩니다" },
   { key: "active", spec: "is_active", label: "활성 여부", required: true, type: "switch",
-    hint: "끄면 이 코드로 들어온 시민에게 교체 안내가 뜹니다. 기본값은 꺼짐입니다" },
+    hint: "끄면 이 코드로 들어온 사용자에게 교체 안내가 뜹니다. 기본값은 꺼짐입니다" },
 
   { key: "locationDetail", spec: "location_detail", label: "설치 상세 위치", required: false,
     type: "textarea", rows: 2, range: "최대 100자", maxLength: 100,
     example: "정류장 승차대 오른쪽 기둥, 눈높이", span: 2,
-    hint: "설치·점검용입니다. 시민용에는 나오지 않습니다" },
+    hint: "설치와 점검에 쓰는 기록입니다. 사용자 화면에는 나오지 않습니다" },
   { key: "memo", spec: "memo", label: "관리 메모", required: false, type: "textarea", rows: 2,
     range: "최대 500자", maxLength: 500, span: 2 },
 ];
@@ -472,7 +472,7 @@ export const REPORT_FIELDS = [
   { key: "assignee", spec: "assignee", label: "담당자", required: false, type: "select" },
   { key: "memo", spec: "internal_memo", label: "내부 메모", required: false, type: "textarea", rows: 3,
     range: "최대 500자", maxLength: 500, span: 2,
-    hint: "시민에게 공개되지 않습니다" },
+    hint: "사용자에게 공개되지 않습니다" },
   { key: "reply", spec: "reply_content", label: "회신 내용", required: "cond",
     when: v => REPORT_NEEDS_REPLY.includes(v.state), type: "textarea", rows: 3,
     range: "최대 500자", maxLength: 500, span: 2,
@@ -496,23 +496,33 @@ export const REPORT_FIELDS = [
 export const OPERATION_FIELDS = [
   { key: "facilityRadiusM", spec: "facility_radius_m", label: "주변 공공시설 안내 범위",
     required: true, type: "number", range: "500~5000", min: 500, max: 5000, unit: "m", example: "2000",
-    hint: "이 안의 시설을 목록에 담습니다. 도보 약 30분 — 4종 전체에 하나로 적용됩니다" },
+    hint: "이 안의 시설을 목록에 담습니다. 도보 약 30분이고 4종 전체에 하나로 적용됩니다" },
   { key: "safetyFarBannerM", spec: "safety_far_banner_m", label: "안전시설 원거리 배너 기준",
     required: true, type: "number", range: "500~5000", min: 500, max: 5000, unit: "m", example: "1000",
-    hint: "AED · 대피소 · 쉼터가 이보다 멀면 배너가 뜹니다. 화장실은 제외입니다" },
+    hint: "AED, 대피소, 쉼터가 이보다 멀면 배너가 뜹니다. 화장실은 제외입니다" },
   { key: "marketThresholdM", spec: "market_threshold_m", label: "상점가 임계 거리",
     required: true, type: "number", range: "100~5000", min: 100, max: 5000, unit: "m", example: "1000",
-    hint: "이 거리 안에 지정 상점가가 없으면 상점가 탭이 안내 상태(S03-E)로 갑니다" },
+    hint: "이 거리 안에 지정 상점가가 없으면 상점가 탭이 안내 상태로 갑니다" },
   { key: "newStoreDays", spec: "new_store_days", label: "신규 매장 판정 기간",
     required: true, type: "number", range: "7~180", min: 7, max: 180, unit: "일", example: "30" },
   { key: "courseRadiusM", spec: "course_radius_m", label: "골목 한바퀴 반경",
     required: true, type: "number", range: "100~1000", min: 100, max: 1000, unit: "m", example: "500" },
-  { key: "zoomFacility", spec: "zoom_facility", label: "공공시설 탭 기본 줌",
-    required: true, type: "number", range: "1~14", min: 1, max: 14, example: "4" },
-  { key: "zoomMarket", spec: "zoom_market", label: "상점가 탭 기본 줌",
-    required: true, type: "number", range: "1~14", min: 1, max: 14, example: "4" },
-  { key: "zoomDiscover", spec: "zoom_discover", label: "둘러보기 탭 기본 줌",
-    required: true, type: "number", range: "1~14", min: 1, max: 14, example: "7" },
+  /* ── 「기본 줌」을 「지도 확대 단계」로 고쳤다 (2026-08-20, 사용자 요청) ──────
+     「공공시설 탭 기본 줌 4」만 보고는 4가 가까운 쪽인지 먼 쪽인지, 무엇의 4인지 알 수 없다.
+     카카오맵의 확대 단계는 **작을수록 가까이**라 숫자를 올리는 직관과 반대로 움직인다.
+     이름에 「지도」를 넣고, 어느 쪽이 가까운지와 기준값 하나를 안내로 적는다.
+
+     ── 「둘러보기 탭 기본 줌」은 지웠다 ────────────────────────────────────────
+     **둘러보기 탭에는 지도가 없다** (2026-08-18 결정). 32개소를 한 화면에 담으려면 시 전역까지
+     줌아웃해야 하는데 그 축척의 핀은 아무것도 알려주지 못해, 이 탭은 정보 화면만 쓴다.
+     시민 화면 코드도 탭을 바꿀 때 둘러보기만 건너뛴다(MainApp 의 `id !== "discover"`).
+     고쳐도 아무 일이 일어나지 않는 값을 화면에 두면 담당자는 고쳐 놓고 결과를 기다린다. */
+  { key: "zoomFacility", spec: "zoom_facility", label: "공공시설 탭 지도 확대 단계",
+    required: true, type: "number", range: "1~14", min: 1, max: 14, example: "4",
+    hint: "탭을 열 때의 지도 배율입니다. 숫자가 작을수록 가까이 보이며 4는 반경 500m 정도가 화면에 들어옵니다" },
+  { key: "zoomMarket", spec: "zoom_market", label: "상점가 탭 지도 확대 단계",
+    required: true, type: "number", range: "1~14", min: 1, max: 14, example: "4",
+    hint: "탭을 열 때의 지도 배율입니다. 숫자가 작을수록 가까이 보입니다" },
 ];
 
 /* ══ 8-2 API 쿼터 — 입력 항목이 없다 (2026-08-20, 사용자 요청) ═════════════

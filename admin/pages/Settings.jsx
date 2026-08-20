@@ -158,7 +158,7 @@ function SettingsBlock({ fields, store, label, onToast, extra, tag }) {
 
       {/* 제출 확인 — 바뀐 줄만, 「무엇이 무엇으로」 */}
       <Modal open={!!asking} size="md" title={`${label}을(를) 바꿉니다`}
-        description="아래 값이 시민용 화면의 안내 범위와 문구를 바꿉니다."
+        description="아래 값이 사용자 화면의 안내 범위와 문구를 바꿉니다."
         onClose={() => setAsking(null)}
         footer={
           <>
@@ -198,23 +198,28 @@ export function Settings({ onToast }) {
 
   return (
     <>
-      <PageHeader title="환경 설정" note="시민용 화면에 적용되는 운영 값을 정합니다." />
+      {/* 제목 아래 설명을 두지 않는다 — 다른 아홉 화면과 같다. 무엇을 정하는 값인지는
+          바로 아래 구획 제목과 그 설명이 말한다 */}
+      <PageHeader title="환경 설정" />
 
       {/* 구획 배지에 명세서 절 번호(8-1 · 8-2 · 10장)를 달아 두었는데 뺐다
           (2026-08-20, 사용자 요청) — 화면을 쓰는 사람에게 그 번호는 아무것도 가리키지 않는다. */}
+      {/* 이 구획의 문구에는 가운뎃점과 줄표를 쓰지 않는다 (2026-08-20, 사용자 요청).
+          거리와 줌 같은 숫자를 읽는 자리라 문장 안의 부호가 값의 일부처럼 보인다
+          (「2km · 1km」가 한 값인지 두 값인지). 나열은 쉼표로, 덧붙이는 말은 문장으로 나눈다. */}
       <Section title="서비스 운영 설정"
-        note="시민용 화면의 거리 임계값과 기본 줌입니다. 여기서 정한 값이 화면의 안내 문구와 목록 범위를 바꿉니다.">
+        note="사용자 화면의 거리 임계값과 기본 줌입니다. 여기서 정한 값이 화면의 안내 문구와 목록 범위를 바꿉니다.">
         <SettingsBlock fields={OPERATION_FIELDS} store={ops} label="운영 설정" onToast={onToast}
-          /* 어느 값이 이미 시민 화면에 연결되어 있는지 항목마다 적는다 */
+          /* 어느 값이 이미 사용자 화면에 연결되어 있는지 항목마다 적는다 */
           tag={f => (OPERATION_FROM_CONFIG.includes(f.key)
-            ? `${f.hint ? `${f.hint} · ` : ""}지금 시민 화면이 쓰는 값입니다`
+            ? `${f.hint ? `${f.hint}. ` : ""}지금 사용자 화면이 쓰는 값입니다`
             : f.hint)}
           extra={
             <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-4)" }}>
               <b>위 두 거리는 역할이 다릅니다.</b> 안내 범위는 <b>목록에 담는</b> 선이고(도보 약 30분),
               배너 기준은 <b>「가깝다」고 말할 수 있는</b> 선입니다(도보 약 12~15분).
               1.4km 대피소는 목록에 나오되 「가까운 곳에 대피소가 없습니다」 배너와 함께 뜹니다.
-              배너는 <b>안전시설(AED · 대피소 · 쉼터)에만</b> 붙습니다 — 근거가 긴급 상황의 접근성이라
+              배너는 <b>안전시설(AED, 대피소, 쉼터)에만</b> 붙습니다. 근거가 긴급 상황의 접근성이라
               화장실에는 성립하지 않습니다. 시설 유형별 검색 상한은 두지 않고 안내 범위 하나로 4종을 처리합니다.
             </Notice>
           } />
@@ -227,12 +232,12 @@ export function Settings({ onToast }) {
 
       {/* ── 변경 이력 ──────────────────────────────────────────────────── */}
       <Section title="변경 이력"
-        note="이 브라우저 탭에서 일어난 등록·수정·삭제입니다. 실서비스에서는 서버가 영구 보관합니다.">
+        note="이 브라우저 탭에서 일어난 등록, 수정, 삭제입니다. 실서비스에서는 서버가 영구 보관합니다.">
         <DataTable
           caption="변경 이력"
           rows={history.slice(0, 50)} rowKey={(r) => `${r.at}-${r.id}`}
           empty={{ title: "아직 고친 것이 없습니다.",
-            description: "어느 화면에서든 저장·삭제하면 여기에 한 줄씩 쌓입니다." }}
+            description: "어느 화면에서든 저장하거나 삭제하면 여기에 한 줄씩 쌓입니다." }}
           columns={[
             { key: "at", label: "일시", width: 170,
               render: r => String(r.at).replace("T", " ").slice(0, 19) },
@@ -246,7 +251,7 @@ export function Settings({ onToast }) {
               ) },
             { key: "name", label: "항목" },
             { key: "fields", label: "변경 필드",
-              render: r => ((r.fields || []).length ? r.fields.join(" · ") : EMPTY_MARK) },
+              render: r => ((r.fields || []).length ? r.fields.join(", ") : EMPTY_MARK) },
           ]} />
         {history.length > 50 ? (
           <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
