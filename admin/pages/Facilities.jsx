@@ -59,15 +59,23 @@ function summaryOf(f) {
   return EMPTY_MARK;
 }
 
-/* 저장 직전 보정 — AED·대피소의 명칭을 도로명주소에서 다시 만든다 (U-FC-10).
-   규칙은 screens/main/data/facilities.js 의 facilityName 하나뿐이다. 여기 다시 적으면
-   주소를 고쳤을 때 관리자 목록과 시민 화면의 이름이 갈린다.
+/* 명칭을 주소에서 만드는 유형 (U-FC-10) — 원천 자료에 이름 항목이 없는 둘이다 */
+const DERIVED_TYPES = ["aed", "shelter"];
 
-   전에는 여기서 `source`(원본 · 원본수정 · 직접등록)도 올렸다. 그 값을 읽는 곳은
-   동기화 화면이었고 그 화면이 개발 쪽으로 가면서 함께 빠졌다 (fields.js 3-1 머리말). */
+/* 주소에서 만들어지는 이름. `facilityName` 은 값이 있으면 그것을 그대로 돌려주므로
+   이름을 지우고 넘겨야 "만들어질 이름"이 나온다 */
+const autoName = row => facilityName({ ...row, name: null });
+
+/* 저장 직전 보정 — 이름이 **비어 있을 때만** 주소에서 만든다 (2026-08-20).
+   전에는 매번 다시 만들어 덮었다. 그러면 담당자가 고친 이름이 저장하는 순간 사라지는데,
+   화면에서는 분명히 고쳐 놓고 목록으로 돌아오면 옛 이름이 서 있다 — 무엇이 잘못됐는지
+   알 수 없는 종류의 고장이다. `facilityName` 이 이미 "값이 있으면 그것"이라 한 줄이면 된다.
+
+   규칙은 screens/main/data/facilities.js 하나뿐이다. 여기 다시 적으면 주소를 고쳤을 때
+   관리자 목록과 시민 화면의 이름이 갈린다. */
 function derive(row) {
-  if (row.type !== "aed" && row.type !== "shelter") return row;
-  return { ...row, name: facilityName({ ...row, name: null }) };
+  if (!DERIVED_TYPES.includes(row.type)) return row;
+  return { ...row, name: facilityName(row) };
 }
 
 export function Facilities({ onToast }) {
@@ -165,7 +173,7 @@ export function Facilities({ onToast }) {
                   ? <Badge tone="warning" size="sm" style={{ marginLeft: 6 }}>좌표 없음</Badge> : null}
               </span>
             ) },
-          { key: "summary", label: "주요 항목", render: summaryOf, hint: "유형별 대표값" },
+          { key: "summary", label: "주요 항목", render: summaryOf },
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: f => (
               <Switch checked={f.visible !== false} aria-label={`${f.name} 노출 여부`}
@@ -189,8 +197,17 @@ export function Facilities({ onToast }) {
         {ed.draft ? (
           <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors}
             onChange={ed.set} before={typePicker}
-            /* 주소 검색이 좌표를 함께 돌려준다 (V-02 · 입력 원칙 3번) */
-            onAddress={(key, picked) => ed.setMany({ [key]: picked.addr, lat: picked.lat, lng: picked.lng })}
+            /* 주소 검색이 좌표를 함께 돌려준다 (V-02 · 입력 원칙 3번).
+               AED·대피소는 명칭도 여기서 채운다 — 다만 **손으로 고친 이름은 덮지 않는다.**
+               지금 이름이 비었거나 옛 주소에서 나온 그 값 그대로일 때만 다시 만든다. */
+            onAddress={(key, picked) => {
+              const v = ed.draft.values;
+              const next = { [key]: picked.addr, lat: picked.lat, lng: picked.lng };
+              if (DERIVED_TYPES.includes(v.type) && (!v.name || v.name === autoName(v))) {
+                next.name = autoName({ ...v, addr: picked.addr });
+              }
+              ed.setMany(next);
+            }}
             slots={{
               coord: (
                 <CoordField key="coord" lat={ed.draft.values.lat} lng={ed.draft.values.lng}

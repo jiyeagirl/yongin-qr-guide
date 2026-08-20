@@ -6,7 +6,7 @@ import { DISTRICTS, GU_ORDER } from "../../screens/main/data/districts.js";
    업종 칩의 이름표를 여기에 다시 적으면 시민 화면의 칩 이름과 갈린다. */
 import { CATEGORY_LABELS } from "../../design-systems/admin.js";
 
-/* 관리자 웹 기능명세서 v1.0 의 항목표 — **폼 열둘의 유일한 출처다.**
+/* 관리자 웹 기능명세서 v1.1 의 항목표 — **폼 열둘의 유일한 출처다.**
  *
  * ── 왜 표를 코드에 두는가 ───────────────────────────────────────────────────
  * 폼을 화면마다 JSX 로 적으면 항목이 열두 군데에 흩어진다. 명세서가 한 줄 바뀌었을 때
@@ -62,11 +62,14 @@ const withBlank = (list, label) => [{ value: "", label }].concat(list);
 /* ── 부록. 검증 규칙 ────────────────────────────────────────────────────────
    V-01 은 좌표라 CoordField 가 지도에서 본다 (숫자 칸이 없으므로 여기서 검사할 것이 없다).
    V-02 도 AddressField 가 본다 — 검색으로만 들어오므로 형식이 어긋날 길이 없다.
-   나머지 넷이 문자열 검사이고, 여기 한 곳에 모아 둔다. */
+   나머지 넷이 문자열 검사이고, 여기 한 곳에 모아 둔다.
+
+   **오류 문구에는 규칙 번호를 적지 않는다** (2026-08-20). 「(V-03)」은 이 파일과 명세서를
+   잇는 표시이지 담당자에게 가리키는 대상이 아니다. 화면이 할 말은 무엇을 어떻게 고치는가다. */
 export const V = {
-  phone: { re: /^[0-9-]{9,13}$/, msg: "숫자와 하이픈만, 9~13자입니다 (V-03)." },
-  email: { re: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, msg: "이메일 형식이 아닙니다 (V-04)." },
-  url: { re: /^https?:\/\/.{1,493}$/, msg: "http:// 또는 https:// 로 시작해야 합니다 (V-05)." },
+  phone: { re: /^[0-9-]{9,13}$/, msg: "숫자와 하이픈만, 9~13자입니다." },
+  email: { re: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, msg: "이메일 형식이 아닙니다." },
+  url: { re: /^https?:\/\/.{1,493}$/, msg: "http:// 또는 https:// 로 시작해야 합니다." },
   qrCode: { re: /^[a-z0-9]{4,12}$/, msg: "영문 소문자와 숫자만, 4~12자입니다." },
   loginId: { re: /^[a-z][a-z0-9]{3,19}$/, msg: "영문 소문자로 시작하는 영문 소문자·숫자 4~20자입니다." },
   yearMonth: { re: /^\d{4}\.(0[1-9]|1[0-2])$/, msg: "YYYY.MM 형식으로 적습니다 (예: 2026.03)." },
@@ -119,17 +122,18 @@ export const DISTRICT_FIELDS = [
   { key: "onnuriCount", spec: "onnuri_count", label: "온누리 가맹 점포수", required: "auto",
     type: "number", unit: "곳", hint: "위 중 온누리 가맹 건수" },
 
-  /* 온누리 가맹점은 주소가 아니라 원본의 `소속 시장명` 컬럼으로 걸러낸다. 그 표기가
+  /* ── `onnuri_market_name`(온누리 원본 표기명)이 여기 없는 이유 (2026-08-20) ──
+     온누리 가맹점은 주소가 아니라 원본의 `소속 시장명` 컬럼으로 걸러내고, 그 표기가
      우리 상점가명과 다를 수 있어("둔전 골목형 상점가" ↔ "둔전시장") 원본 표기를 그대로
-     옮겨 적는 칸이 따로 필요하다. 같으면 같게 적는다.
-     조건은 **산출된 가맹 건수**다 — 게시값 입력칸이 없어졌으므로 견줄 것은 그것뿐이다. */
-  { key: "onnuriMarket", spec: "onnuri_market_name", label: "온누리 원본 표기명", required: "cond",
-    when: v => Number(v.onnuriCount) > 0, type: "text", range: "최대 60자", maxLength: 60,
-    example: "둔전시장", span: 2,
-    hint: "온누리 데이터 필터링에 쓰는 매칭 키입니다. 이름이 안 맞으면 가맹 0건이 나옵니다" },
+     들고 있는 값이 필요하다. 그 값 자체는 남아 있다 — **다만 관리자 화면에서 고치지
+     않는다.**
 
-  { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch",
-    example: "끄면 시민용 목록에서 사라집니다" },
+     매칭에 쓰는 키라, 고쳐도 그 결과(가맹 몇 건이 걸리는지)가 이 화면에서는 보이지
+     않는다. 매칭은 개발 쪽에서 돌리고 관리자가 볼 수 있는 것은 산출된 가맹 건수뿐이다.
+     결과를 볼 수 없는 값을 고치게 하면, 0건이 나왔을 때 담당자가 이름을 이렇게 저렇게
+     바꿔 보며 시간을 쓰게 된다 — 실제로 고쳐야 할 곳은 매칭 설정이다. */
+
+  { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch" },
 ];
 
 /* 상권활성화센터 외부 링크 (명세서 2-1) */
@@ -232,14 +236,14 @@ export const FESTIVAL_FIELDS = [
     hint: "주최 상점가" },
   { key: "start", spec: "date_from", label: "시작일", required: true, type: "date", example: "2026-10-17" },
   { key: "end", spec: "date_to", label: "종료일", required: true, type: "date", example: "2026-10-17",
-    hint: "종료일은 시작일과 같거나 뒤여야 합니다 (V-07)" },
+    hint: "시작일과 같거나 이후여야 합니다" },
   { key: "time", spec: "time_text", label: "시간", required: false, type: "text",
     range: "최대 50자", maxLength: 50, example: "10:00~18:00" },
   { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch" },
   { key: "program", spec: "program_text", label: "주요 프로그램", required: false, type: "textarea",
     rows: 3, range: "최대 500자", maxLength: 500,
     example: "먹거리 장터, 상인 경품행사, 어르신 한마당", span: 2,
-    hint: "이름 사이는 쉼표로 나눕니다 — 시민 화면이 그 기준으로 줄을 나눕니다" },
+    hint: "이름 사이는 쉼표로 나눕니다. 시민 화면이 그 기준으로 줄을 나눕니다" },
 ];
 
 /* 2-4 프로그램 일정 (1:N) `C` — 자료 제공 범위 확정 후 반영 여부 결정 */
@@ -250,21 +254,31 @@ export const PROGRAM_COLUMNS = [
   { key: "desc", label: "설명", type: "text", maxLength: 300, placeholder: "포곡농악보존회" },
 ];
 
-/* 2-5 부스 위치 (1:N) `C` — 제공 자료가 좌표 목록일지 배치도 이미지일지 확정되지 않아
-   두 방식을 모두 받는다. 방식에 따라 어느 좌표 칸이 필수인지가 갈린다. */
-export const BOOTH_TYPES = ["먹거리", "판매", "체험", "전시", "공연", "안내"];
-export const BOOTH_POSITION_TYPES = [
-  { value: "coord", label: "실제 좌표" },
-  { value: "plan", label: "배치도 상대좌표" },
-];
+/* 2-5 부스 위치 (1:N) — **글로 안내한다** (2026-08-20, 사용자 요청)
+   ── 세 칸이 곧 시민 화면의 한 줄이다 ────────────────────────────────────────
+   시민 화면(S09 부스 위치)이 찍는 것은 지도가 아니라 목록 한 줄이다:
+
+     먹거리 부스
+     시장통 입구 ~ 중앙 무대 양쪽 · 20여 곳
+
+   이 표의 세 칸이 그 줄의 세 조각이다 (`name` · `where` · `count`). 관리자가 채운 것이
+   그대로 나가고, 나가지 않는 값은 여기 없다.
+
+   ── 빠진 것들과 그 이유 ─────────────────────────────────────────────────────
+   「위치 지정」(실제 좌표 / 배치도 상대좌표)과 「좌표 / 배치도 %」  좌표를 받아 두어도
+     그것을 찍을 지도가 1차 축제 상세에 없다. 배치도 상대좌표는 배치도 이미지가 있어야
+     뜻이 생기는데 그 칸(V-06)도 없다 — 쓰이지 않을 값을 축제마다 스무 줄씩 적는 일이 된다.
+   「번호」(A-01) 와 「유형」(먹거리 · 판매 …)  둘 다 **부스를 지도에 점으로 찍던 시절의
+     항목**이다. 번호는 배치도 위의 점과 목록을 잇는 열쇠였고, 유형은 점의 색이었다.
+     지도가 없으면 둘 다 시민 화면 어디에도 나가지 않는다.
+
+   좌표로 찍을 자리가 정해지면 그때 네 칸을 함께 되살린다. */
 export const BOOTH_COLUMNS = [
-  { key: "no", label: "번호", type: "text", required: true, width: 84, maxLength: 10, placeholder: "A-01" },
-  { key: "name", label: "부스명", type: "text", required: true, maxLength: 40, placeholder: "포곡 떡집" },
-  { key: "type", label: "유형", type: "select", required: true, width: 120,
-    options: BOOTH_TYPES.map(v => ({ value: v, label: v })) },
-  { key: "posType", label: "위치 지정", type: "select", required: true, width: 150,
-    options: BOOTH_POSITION_TYPES },
-  { key: "pos", label: "좌표 / 배치도 %", type: "text", width: 160, placeholder: "37.2887, 127.1993" },
+  { key: "name", label: "부스명", type: "text", required: true, width: 200, maxLength: 40,
+    placeholder: "먹거리 부스" },
+  { key: "where", label: "위치", type: "text", required: true, maxLength: 60,
+    placeholder: "시장통 입구 ~ 중앙 무대 양쪽" },
+  { key: "count", label: "규모", type: "text", width: 150, maxLength: 20, placeholder: "20여 곳" },
 ];
 
 /* ══ 3장 공공시설 (M10) ════════════════════════════════════════════════════
@@ -298,12 +312,21 @@ const COMMON_TAIL = [
   { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch" },
 ];
 
-/* AED·대피소에는 **명칭 항목이 없다** (명세서 3-2 · 3-5 에 항목이 없다).
-   화면이 도로명주소에서 만든다 (U-FC-10). 폼에서는 만들어질 이름을 미리 보여준다 —
-   규칙으로 생기는 값이라는 것이 입력하는 사람에게도 보여야 한다. */
-const DERIVED_NAME = { key: "name", spec: "—", label: "명칭 (도로명주소에서 자동 생성)",
-  required: "auto", type: "readonly", span: 2,
-  hint: "원본 자료에 명칭 항목이 없어 화면이 만듭니다" };
+/* AED·대피소에는 원천 자료에 **명칭 항목이 없다** (명세서 3-2 · 3-5 에 항목이 없다).
+   그래서 도로명주소에서 만든다 — "둔전로 42 AED" (facilities.js 의 facilityName).
+
+   ── 만들어 주되 고칠 수 있게 둔다 (2026-08-20, 사용자 요청) ──────────────────
+   전에는 읽기 전용(⚙)이었다. 규칙이 만드는 값이니 손대지 못하게 한 것인데, **그 규칙이
+   틀리는 경우가 있다.** 도로명주소가 부정확하거나("둔전로 42"가 실제로는 뒷건물이다),
+   현장에 이미 통용되는 이름이 있거나("둔전마을회관 AED"), 한 주소에 두 대가 있으면
+   같은 이름이 둘 생긴다. 그때 담당자가 고칠 자리가 없으면 이름을 바로잡는 유일한 길이
+   주소를 틀리게 적는 것이 된다 — 고치라고 만든 화면에서 나올 수 없는 결말이다.
+
+   그래서 주소를 고르면 자동으로 채워지되, 그 뒤로는 보통 입력칸이다. **손으로 고친
+   이름은 주소를 다시 골라도 덮이지 않는다** (Facilities.jsx 의 onAddress). */
+const DERIVED_NAME = { key: "name", spec: "—", label: "명칭", required: true, type: "text",
+  range: "2~60자", minLength: 2, maxLength: 60, span: 2, example: "둔전로 42 AED",
+  hint: "도로명주소를 고르면 자동으로 채워집니다. 현장에서 달리 부르거나 자동 생성된 이름이 맞지 않으면 고쳐 주세요" };
 
 export const FACILITY_FIELDS = {
   aed: [
@@ -552,9 +575,7 @@ export function validate(fields, values, extra) {
   return bad;
 }
 
-/* 폼 아래 한 줄. 열 화면이 같은 문장을 쓴다 — 담당자는 자기가 비운 칸이
-   시민 화면에서 어떻게 보이는지 확인할 방법이 지금 없다. */
-export const EMPTY_NOTE =
-  "선택 항목을 비워두면 시민용 화면에 \"-\" 로 표시됩니다. 항목을 감추지 않는 것은 "
-  + "\"원천에 값이 없음\"과 \"우리가 빠뜨림\"을 구분하기 위해서입니다. "
-  + "데이터 기준일은 여기서 입력하지 않고 카테고리 단위로 관리합니다 (데이터 기준일 관리).";
+/* ── 여기 있던 `EMPTY_NOTE` 를 뺐다 (2026-08-20, 사용자 요청) ────────────────
+   여섯 폼 밑에 늘 붙던 세 문장이었다 ("선택 항목을 비워두면 시민용 화면에 - 로
+   표시됩니다 …"). 폼을 여는 이유는 값을 넣는 것이지 원칙을 다시 읽는 것이 아니다.
+   폼마다 꼭 필요한 말은 화면이 `note` 로 직접 넘긴다 (계정 폼의 비밀번호 규칙). */

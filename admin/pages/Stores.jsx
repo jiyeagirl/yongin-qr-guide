@@ -142,21 +142,21 @@ export function Stores({ onToast }) {
         columns={[
           { key: "name", label: "상호명", sortable: true },
           { key: "branch", label: "지점명", width: 110, render: s => s.branch || EMPTY_MARK },
-          { key: "cat", label: "업종 칩", width: 130, hint: "화면 분류", sortable: true,
+          { key: "cat", label: "업종 칩", width: 130, sortable: true,
             render: s => (
               <Cell>
                 <CategoryIcon type={s.cat} size={16} />{CATEGORY_LABELS[s.cat] || "기타"}
                 {s.chipManual ? <Badge tone="info" size="sm">수기</Badge> : null}
               </Cell>
             ) },
-          { key: "bizL", label: "상권업종대분류명", width: 150, sortable: true, hint: "원천 분류" },
+          { key: "bizL", label: "상권업종대분류명", width: 150, sortable: true },
           { key: "bizS", label: "상권업종소분류명", width: 150, render: s => s.bizS || EMPTY_MARK },
           { key: "onnuri", label: "온누리", width: 110, align: "center", sortable: true,
             render: s => (s.onnuri
               ? <OnnuriBadge size="sm">{(s.onnuriType || []).length ? (s.onnuriType || []).map(t => (t === "paper" ? "지류" : "디지털")).join("·") : "가맹"}</OnnuriBadge>
               : <span style={{ color: "var(--text-muted)" }}>{EMPTY_MARK}</span>) },
           { key: "addr", label: "도로명주소", sortable: true },
-          { key: "views", label: "조회", width: 90, align: "right", sortable: true, hint: "인기순 원천",
+          { key: "views", label: "조회", width: 90, align: "right", sortable: true,
             render: s => <span style={{ fontVariantNumeric: "tabular-nums" }}>{Number(s.views || 0).toLocaleString("ko-KR")}</span> },
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: s => (

@@ -1,7 +1,7 @@
 import React from "react";
-import { AdminShell, Button, Toast } from "../design-systems/admin.js";
+import { AdminShell, Toast } from "../design-systems/admin.js";
 import { useSession, can } from "./data/account.js";
-import { resetAll, hasChanges, subscribe, setActor, readCollection } from "./data/store.js";
+import { subscribe, setActor, readCollection } from "./data/store.js";
 import { useHashPage, replace, go } from "./router.js";
 import { REPORTS, isOpen } from "./data/reports.js";
 
@@ -17,7 +17,7 @@ import { DataAsOf } from "./pages/DataAsOf.jsx";
 import { Settings } from "./pages/Settings.jsx";
 import { Accounts } from "./pages/Accounts.jsx";
 
-/* 관리자 웹 진입점 (/admin/) — 기능명세서 v1.0 의 M01 ~ M16.
+/* 관리자 웹 진입점 (/admin/) — 관리자 웹 기능명세서 v1.1 의 M01 ~ M16.
  *
  * ── 이 화면이 하는 일은 좁다 (2026-08-20, 명세서 개정) ──────────────────────
  * 명세서 범위 문단이 그것을 못 박았다: "개별 건의 조회·수정·신규 등록과 오류신고 기반
@@ -94,9 +94,13 @@ export function AdminApp() {
   const [toast, setToast] = React.useState(null);
   const [, bump] = React.useReducer(n => n + 1, 0);
 
-  /* 덮개가 바뀌면 상단바와 내비 배지를 다시 그린다. [데모 데이터 초기화]는 고친 것이
-     있을 때만 서는데 그 판단(hasChanges)이 아래 화면이 아니라 여기서 이루어지고,
-     내비 배지의 숫자도 화면 밖에서 바뀐다 (신고 하나를 처리하면 배지가 줄어야 한다) */
+  /* 덮개가 바뀌면 내비 배지를 다시 그린다 — 배지의 숫자가 화면 밖에서 바뀌기 때문이다
+     (신고 하나를 처리하면 배지가 줄어야 한다).
+
+     상단바에 있던 [데모 데이터 초기화]는 뺐다 (2026-08-20, 사용자 요청). 화면 맨 위,
+     모든 화면에서 보이는 자리에 **되돌리는 버튼**이 서 있을 이유가 없다 — 담당자가
+     날마다 여는 화면에서 그것은 언젠가 잘못 눌리는 버튼이다. 세션 저장이라 탭을 닫으면
+     어차피 처음 상태로 돌아간다. 되돌리는 통로 자체는 `store.js` 의 `resetAll` 로 남아 있다. */
   React.useEffect(() => subscribe(bump), []);
 
   /* 변경 이력에 적히는 "주체" (명세서 10장). 저장하는 쪽(useCollection)이 지금 누가
@@ -147,15 +151,7 @@ export function AdminApp() {
              열면 애초에 닿지 않는다. 그것을 적어두지 않으면 검수하는 사람이 시설 하나를
              고쳐놓고 시민 화면에서 찾다가 "반영이 안 된다"를 결함으로 적게 된다.
              실연동 때는 양쪽이 같은 서버를 보므로 이 줄을 지운다. */
-        note="서버 연동 전입니다. 여기서 고친 내용은 이 브라우저 탭 안에서만 유지되며, 시민용 화면(/screens/main/)에는 반영되지 않습니다."
-        actions={hasChanges() ? (
-          /* 고친 것이 있을 때만 선다. 아무 것도 안 고쳤는데 [초기화]가 서 있으면
-             무엇을 되돌리는 버튼인지 알 수 없다 */
-          <Button variant="ghost" size="sm" icon="rotate-ccw"
-            onClick={() => { resetAll(); notify("데모 데이터를 처음 상태로 되돌렸습니다."); }}>
-            데모 데이터 초기화
-          </Button>
-        ) : null}>
+        note="서버 연동 전입니다. 여기서 고친 내용은 이 브라우저 탭 안에서만 유지되며, 시민용 화면(/screens/main/)에는 반영되지 않습니다.">
         {Page ? <Page account={account} onToast={notify} onNavigate={go} /> : null}
       </AdminShell>
 

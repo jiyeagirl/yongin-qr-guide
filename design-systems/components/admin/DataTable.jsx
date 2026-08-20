@@ -5,7 +5,14 @@ import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
 /* 관리자 데이터 표 — 목록 화면 여섯 개가 전부 이것을 쓴다.
  *
  * 열은 배열로 선언한다:
- *   { key, label, width, align, render(row), sortable, sortValue(row), hint }
+ *   { key, label, width, align, render(row), sortable, sortValue(row) }
+ *
+ * ── 열 이름 아래에 설명을 달지 않는다 (2026-08-20) ──────────────────────────
+ * `hint` 를 두어 열 이름 밑에 작은 글씨를 한 줄 붙일 수 있었다 ("원천 분류" · "노출 상태
+ * 기준" · "자동 판정"). 없앴다 — 목록의 머리줄은 **어느 칸이 무엇인지 가리키는 자리**이지
+ * 그 값이 어디서 왔는지 설명하는 자리가 아니다. 열 여덟에 설명이 여덟이면 머리줄이 두 배로
+ * 두꺼워지고, 정작 훑어야 하는 것은 그 아래 스무 줄이다. 설명이 꼭 필요한 값이면 열 이름을
+ * 그렇게 짓는다 (「업종 칩」 · 「상권업종대분류명」).
  *
  * ── 진짜 <table> 을 쓴다 ────────────────────────────────────────────────────
  * div + grid 로 흉내내면 스크린리더에게 그냥 글자 더미가 된다. 표는 "이 값이 어느 열의
@@ -169,10 +176,6 @@ export function DataTable({
                     fontSize: "var(--fs-label)", fontWeight: "var(--fw-bold)", color: "var(--text-heading)",
                     borderBottom: "var(--stroke-hairline) solid var(--border-default)" }}>
                   {col.sortable ? <SortButton col={col} sort={sort} onSort={toggleSort} /> : col.label}
-                  {col.hint ? (
-                    <span style={{ display: "block", marginTop: 2, fontSize: "var(--fs-micro)",
-                      fontWeight: "var(--fw-regular)", color: "var(--text-muted)" }}>{col.hint}</span>
-                  ) : null}
                 </th>
               ))}
             </tr>

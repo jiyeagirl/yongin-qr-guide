@@ -29,11 +29,21 @@ import { EMPTY_MARK } from "../core/InfoList.jsx";
  * 하면 담당자는 글자가 더 안 써지는 이유를 모른 채 지우게 된다. 명세서가
  * "DB 컬럼 길이와 프론트 maxlength 를 동일하게 맞춘다"고 적은 그 값이다.
  *
- * ── 예시값을 힌트로 적는다 ──────────────────────────────────────────────────
- * 명세서의 "예)" 열이 여기로 온다. 개방시간처럼 형식이 자유로운 칸은 예시가 없으면
- * 담당자마다 다르게 적고("24시간" / "상시" / "00:00~24:00"), 그 흔들림이 그대로
- * 시민 화면에 나온다. placeholder 가 아니라 칸 아래 힌트로 적는 이유는
- * placeholder 가 입력을 시작하는 순간 사라지기 때문이다.
+ * ── 예시와 범위는 칸 안에 적는다 (2026-08-20 변경) ──────────────────────────
+ * 명세서의 "예)" 열과 "범위" 열이 여기로 온다. 개방시간처럼 형식이 자유로운 칸은 예시가
+ * 없으면 담당자마다 다르게 적고("24시간" / "상시" / "00:00~24:00"), 그 흔들림이 그대로
+ * 시민 화면에 나온다.
+ *
+ * 전에는 칸 **아래** 회색 한 줄로 적었다 ("예) 둔전 골목축제 · 2~40자"). 그러면 칸마다
+ * 설명 줄이 하나씩 붙어 여덟 칸짜리 폼이 열여섯 줄이 되고, 값을 넣는 칸보다 설명이 더
+ * 눈에 띈다. 지금은 칸 안 흐린 글씨로 적는다 — "둔전 골목축제 (2~40자)".
+ *
+ * 대신 placeholder 는 **입력을 시작하면 사라진다.** 그래서 아래 한 줄에는 사라지면 안 되는
+ * 것만 남긴다: 오류와 hint(그 칸이 시민 화면에서 무엇을 바꾸는지). 글자 수 상한은
+ * maxLength 가 실제로 막으므로 사라져도 되는 값이다.
+ *
+ * **고르는 칸(select · date · switch)에는 예시를 두지 않는다.** 무엇을 넣을지 칸 자체가
+ * 이미 말하고 있고(선택지 목록, 날짜 위젯, 켜짐/꺼짐), 예시가 보탤 것이 없다.
  *
  * ── 두 열이다 ───────────────────────────────────────────────────────────────
  * 한 열로 늘어놓으면 화장실 폼이 10칸이라 스크롤이 생기고, 스크롤이 생기면 아래
@@ -65,6 +75,20 @@ export function FormField({
   const set = v => { if (onChange) onChange(v); };
   const badge = REQUIRED_BADGE[requiredKey(required)];
   const readOnly = type === "readonly" || required === "auto";
+
+  /* 칸 안에 적을 수 있는 타입인가 — 위 머리말 참조 */
+  const inline = !readOnly && !["select", "multiselect", "switch", "date"].includes(type);
+  /* 예시에는 **「예)」를 붙인다** (2026-08-20). 칸 안 흐린 글씨는 이미 값이 들어 있는 것처럼
+     보이는데, 「둔전 골목축제」처럼 그럴듯한 이름이면 정말 그렇게 읽힌다 — 담당자가 그 칸을
+     건너뛰고 저장하면 빈 값으로 걸린다. 「예)」 두 글자가 그것을 막는다.
+
+     범위는 괄호로 뒤에 붙인다 ("예) 둔전 골목축제 (2~40자)"). 예시가 없으면 범위만 적고
+     「예)」를 붙이지 않는다 — 「최대 40자」는 예시가 아니라 제한이다. */
+  const ph = placeholder
+    || (inline
+      ? (example ? `예) ${example}${range ? ` (${range})` : ""}` : range)
+      : null)
+    || undefined;
 
   let control = children;
   if (!control) {
@@ -105,21 +129,24 @@ export function FormField({
         </div>
       );
     } else if (type === "textarea") {
-      control = <Textarea value={value == null ? "" : value} rows={rows || 3} placeholder={placeholder}
+      control = <Textarea value={value == null ? "" : value} rows={rows || 3} placeholder={ph}
         maxLength={maxLength} disabled={disabled} onChange={e => set(e.target.value)} />;
     } else if (type === "switch") {
-      /* 가부 항목. 저장되는 값은 불리언이고 표시(○·×)는 읽는 쪽이 정한다 —
-         여기서 글자로 굳히면 시민 화면과 표기가 갈린다 */
+      /* 가부 항목. 토글 하나만 둔다 (2026-08-20).
+         옆에 상태 글자("있음 · 예")를 세우던 것을 뺐다 — 항목 이름이 바로 위에 「노출 여부」로
+         적혀 있으므로 켜짐/꺼짐이 곧 그 값이고, 같은 것을 두 번 적으면 둘이 어긋나 보일
+         자리만 생긴다. 목록 표의 토글이 먼저 그렇게 바뀌었고 폼이 따라간 것이다.
+         읽어주는 도구에는 항목 이름이 그대로 간다 (aria-label). */
       control = (
         <div style={{ minHeight: "var(--tap-min)", display: "flex", alignItems: "center" }}>
-          <Switch checked={!!value} disabled={disabled}
-            label={value ? "있음 · 예" : "없음 · 아니오"} onChange={() => set(!value)} />
+          <Switch checked={!!value} disabled={disabled} aria-label={label}
+            onChange={() => set(!value)} />
         </div>
       );
     } else {
       const input = (
         <Input type={type === "number" ? "number" : type} value={value == null ? "" : value}
-          placeholder={placeholder} disabled={disabled}
+          placeholder={ph} disabled={disabled}
           onChange={e => set(e.target.value)}
           min={min} max={max} maxLength={maxLength} />
       );
@@ -134,10 +161,11 @@ export function FormField({
     }
   }
 
-  /* 아래 한 줄에 무엇을 적는가 — 오류가 있으면 오류만, 없으면 범위와 예시를 이어 붙인다.
-     오류가 났을 때 예시까지 함께 남기면 빨간 줄과 회색 줄이 나란히 서서 어느 쪽이
+  /* 아래 한 줄에 무엇을 적는가 — 오류가 있으면 오류만, 없으면 hint 만이다.
+     예시와 범위는 칸 안으로 갔고(위 머리말), 고르는 칸에서는 아예 적지 않는다.
+     오류가 났을 때 안내까지 함께 남기면 빨간 줄과 회색 줄이 나란히 서서 어느 쪽이
      지금 일어난 일인지 알 수 없다. */
-  const foot = error || [range, example ? `예) ${example}` : null, hint].filter(Boolean).join(" · ");
+  const foot = error || hint;
 
   return (
     <div style={{ gridColumn: span === 2 ? "1 / -1" : "auto", minWidth: 0, ...style }} {...rest}>

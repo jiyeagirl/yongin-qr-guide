@@ -1,6 +1,4 @@
 import { TODAY } from "../../screens/main/config.js";
-import { STORES } from "../../screens/main/data/dunjeon.js";
-import { FACILITIES } from "../../screens/main/data/facilities.js";
 
 /* 대시보드 수치 (명세서 6장 · M02) — 스캔·조회 계열은 전부 생성값이다.
  *
@@ -18,8 +16,8 @@ import { FACILITIES } from "../../screens/main/data/facilities.js";
  * 수준(약 5,800건)이 되게 낮췄다. 평일 62 · 주말 108 이 그 크기다.
  *
  * 여기서 낮추면 조회수도 함께 낮춰야 한다. 스캔이 5,800인데 점포 한 곳의 조회가
- * 1,900이면 앞뒤가 맞지 않는다 — 점포 조회수(dunjeon.js)와 시설 조회수(아래)를
- * 같은 크기로 맞춰 두었다.
+ * 1,900이면 앞뒤가 맞지 않는다 — 점포 조회수(dunjeon.js 의 `views`)를 같은 크기로
+ * 맞춰 두었다.
  *
  * 그래도 세 가지 결은 그대로다:
  *   1. 주말이 평일보다 높다 (골목 상점가를 찾는 때가 그때다)
@@ -143,30 +141,19 @@ export const FACILITY_SHARE = [
   { key: "shelter", label: "대피소", value: 9 },
 ];
 
-/* 인기 시설·점포 상위 **10**. 점포는 시민 화면의 인기순(views)과 **같은 값**을 쓴다 —
-   관리자 대시보드의 1위와 둘러보기 탭의 "이번 주 조회 1위"가 다른 가게이면
-   둘 중 하나는 틀린 것이 된다. */
-export const TOP_N = 10;
+/* ── 여기 있던 「조회수 상위 점포 10 · 조회수 상위 공공시설 10」을 걷어냈다 (2026-08-20) ──
+   시민 화면에는 **그런 목록이 없다.** 둘러보기 탭이 실제로 보여주는 것은 상점가마다
+   「신규 매장 6곳 · 인기 매장 6곳」이고, 시설에는 순위 화면 자체가 없다. 관리자 화면이
+   시민 화면에 없는 순위표를 만들어 보여주면, 그 수치를 보고 판단한 일이 정작 시민이 보는
+   화면에서는 아무 데도 닿지 않는다.
 
-export const TOP_STORES = [...STORES]
-  .sort((a, b) => b.views - a.views)
-  .slice(0, TOP_N)
-  .map((s, i) => ({ rank: i + 1, id: s.id, name: s.name, biz: s.biz, cat: s.cat, views: s.views }));
+   그래서 대시보드는 **상점가를 고르면 그 상점가의 둘러보기 두 레일을 그대로 보여주는**
+   방식으로 바꿨다. 뽑는 규칙은 시민 화면과 한 곳(dunjeon.js 의 `discoverPicks`)에서
+   가져오므로 관리자 1위와 둘러보기 「이번 주 조회 1위」가 갈릴 수 없다.
 
-export const TOP_FACILITIES = (() => {
-  const rand = seeded(4242);
-  return [...FACILITIES]
-    .map(f => ({ id: f.id, name: f.name, type: f.type,
-      /* 가까운 시설일수록 많이 열린다. 거리와 반비례하게 만들되 난수로 흔든다.
-         크기는 스캔 수에 맞춰 잡았다 — 60일 스캔이 5,800건이고 그중 34%가 공공시설
-         탭으로 가므로(TAB_SHARE), 시설 하나의 조회가 수백 건을 넘으면 앞뒤가 맞지 않는다 */
-      views: Math.round((190 / (1 + f.dist / 300)) * (0.7 + rand() * 0.6)) }))
-    .sort((a, b) => b.views - a.views)
-    .slice(0, TOP_N)
-    /* 유형 이름표(FACILITY_LABELS)는 붙이지 않는다 — 그것은 디자인 시스템의 것이고,
-       데이터 파일이 디자인 시스템을 끌어오면 서버 응답으로 갈아끼울 때 같이 딸려온다 */
-    .map((f, i) => ({ ...f, rank: i + 1 }));
-})();
+   공공시설 쪽은 「시설 유형별 조회 비중」 카드가 남아 있다 — 유형별 비중은 안내판 문구와
+   등록 우선순위를 정하는 데 쓰이고, 시설 하나의 순위와 달리 시민 화면의 무엇을 흉내 낸
+   값이 아니다. */
 
 /* 지점별 스캔. 지점이 둘뿐이라 표가 두 줄이다 — 그것을 감추지 않는다.
    **끈 지점에도 스캔이 남는 것이 요점이다.** 2019년 안내판을 아직 찍는 사람이 있고,

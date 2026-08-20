@@ -13,6 +13,11 @@ dl,dt,dd{margin:0}
    글머리표가 필요한 목록을 새로 만들면 그 목록이 자기 padding-inline-start 를 적는다. */
 ul,ol{margin:0;padding:0}
 button{font-family:inherit}
+/* 칸 안 예시는 값보다 확실히 흐려야 한다. 브라우저 기본 placeholder 색은 본문 글자에
+   투명도를 씌운 것이라 짙은 편이고, 그래서 "예) 둔전 골목축제"가 이미 입력된 값처럼
+   보였다. opacity:1 은 파이어폭스가 기본으로 얹는 투명도를 걷어내는 것이다 —
+   그것을 두면 색을 정해도 브라우저마다 다르게 나온다. */
+input::placeholder,textarea::placeholder{color:var(--text-placeholder);opacity:1}
 a{color:var(--text-link);text-decoration:none;font-weight:var(--fw-semibold)}
 a:hover{color:var(--yong-teal-500);text-decoration:underline}
 svg{display:block}

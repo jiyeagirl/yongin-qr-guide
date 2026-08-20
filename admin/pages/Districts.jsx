@@ -143,8 +143,9 @@ export function Districts({ onToast }) {
             ) },
           { key: "gu", label: "구", width: 80, sortable: true },
           { key: "area", label: "소재지", sortable: true },
+          /* 「노출 상태 기준」이라고 적어 두었던 열 밑 설명을 뺐다 (2026-08-20) —
+             머리줄은 어느 칸이 무엇인지만 가리킨다. 세는 규칙은 명세서 2-1 이 갖는다. */
           { key: "stores", label: "점포수", width: 110, align: "right", sortable: true,
-            hint: "노출 상태 기준",
             sortValue: d => countOf(d).stores,
             render: d => (
               <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
@@ -158,9 +159,9 @@ export function Districts({ onToast }) {
                 {countOf(d).onnuri.toLocaleString("ko-KR")}곳
               </span>
             ) },
-          /* 「온누리 원본 표기명」 열은 목록에서 뺐다 (2026-08-20, 사용자 요청) —
-             온누리 자료와 상점가를 잇는 매칭 키라 담당자가 목록에서 훑을 값이 아니다.
-             항목 자체는 그대로 있고 등록·수정 폼에서 보고 고친다 (data/fields.js). */
+          /* 「온누리 원본 표기명」은 목록에도 폼에도 없다 (2026-08-20, 사용자 요청) —
+             온누리 자료와 상점가를 잇는 매칭 키라 담당자가 훑을 값도, 고칠 값도 아니다.
+             왜 폼에서 뺐는지는 data/fields.js 의 DISTRICT_FIELDS 주석에 적혀 있다. */
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: d => (
               <Switch checked={d.visible !== false} aria-label={`${d.name} 노출 여부`}

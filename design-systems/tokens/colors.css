@@ -42,6 +42,10 @@
 --brand-secondary:var(--yong-teal-700);--brand-secondary-soft:var(--yong-teal-50);
 --brand-accent:var(--yong-cream-300);--brand-accent-soft:var(--yong-cream-100);
 --text-heading:var(--yong-ink-900);--text-body:var(--yong-ink-700);--text-muted:var(--yong-ink-500);--text-disabled:var(--yong-ink-300);--text-on-brand:var(--yong-white);--text-on-dark:var(--yong-white);--text-link:var(--yong-teal-700);
+/* 칸 안 흐린 글씨(예시·형식 안내). --text-muted 보다 한 단 더 옅다 — 아직 값이 아닌 것이
+   값처럼 보이면 담당자가 그 칸을 채운 것으로 착각한다. 값을 넣는 순간 사라지므로 본문
+   대비를 요구하지 않는 자리이고, 그래서 본문에는 쓰지 않는다 (base.css 의 ::placeholder). */
+--text-placeholder:var(--yong-ink-300);
 --surface-page:var(--yong-mist);--surface-card:var(--yong-white);--surface-sunken:var(--yong-ink-50);--surface-brand:var(--yong-green-700);--surface-brand-soft:var(--yong-green-50);--surface-accent:var(--yong-cream-500);--surface-dark:var(--yong-teal-900);
 --border-outline:var(--yong-ink-900);--border-default:var(--yong-ink-100);--border-strong:var(--yong-ink-200);--border-brand:var(--yong-green-700);
 --state-success:var(--yong-green-700);--state-success-soft:var(--yong-green-100);--state-info:var(--yong-teal-500);--state-info-soft:var(--yong-teal-100);--state-warning:var(--yong-amber-500);--state-warning-soft:var(--yong-amber-100);--state-danger:var(--yong-red-500);--state-danger-soft:var(--yong-red-100);

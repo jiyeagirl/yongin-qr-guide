@@ -1,7 +1,7 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, ConfirmDialog, Button, Select, Badge, Notice, Switch,
-  Pagination, AssetPicker, Repeater, ConditionalBadge, Mascot,
+  PageHeader, Toolbar, DataTable, ConfirmDialog, Button, Select, Badge, Switch,
+  Pagination, AssetPicker, Repeater, Mascot,
   FESTIVAL_STATES, festivalBadge, EMPTY_MARK,
 } from "../../design-systems/admin.js";
 import { FESTIVALS, DISTRICTS } from "../../screens/main/data/districts.js";
@@ -13,7 +13,6 @@ import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
-import { ImageField } from "./ImageField.jsx";
 
 /* M07 축제 목록 · M08 축제 등록·수정 — 6건.
  *
@@ -34,11 +33,15 @@ import { ImageField } from "./ImageField.jsx";
  * 다른 축제가 이미 쓰는 그림에는 표시가 붙는다 — 6건이 모두 같은 그림이면 둘러보기 탭이
  * 단조로워지는데, 등록하는 사람은 자기 축제 하나만 보고 있어 그 사실을 알 방법이 없다.
  *
- * ── 프로그램·부스는 조건부다 (명세서 2-4 · 2-5, 우선순위 `C`) ───────────────
- * "용인시 자료 제공 범위 확정 후 반영 여부 결정". 칸은 만들되 **조건부라고 적어 둔다** —
- * 표시가 없으면 담당자는 반드시 채워야 하는 것으로 읽고, 채운 값의 출처는 아무도 모른다.
- * 부스가 두 가지 위치 지정 방식을 다 받는 것도 같은 이유다. 제공 자료가 좌표 목록일지
- * 배치도 이미지일지 확정되지 않았다.
+ * ── 프로그램·부스는 그냥 선택 항목이다 (2026-08-20 변경) ────────────────────
+ * 명세서에서 이 둘의 우선순위는 `C`(자료 확보 시)인데, 화면에서는 그 사실을 적지 않는다.
+ * 자료를 받을지 아직 모른다는 것은 **우리 쪽 사정**이고, 이 폼을 채우는 사람에게 그것은
+ * "있으면 넣고 없으면 비운다"와 똑같이 행동한다 — 즉 선택 항목이다. 「조건부 · 자료 확보 시」
+ * 배지와 「아래 두 항목은 조건부입니다」 띠를 걷어냈다.
+ *
+ * 부스 배치도 이미지(V-06)도 함께 뺐다. 배치도 없이 좌표만으로 부스 목록은 그대로 서고,
+ * 이미지 한 장 올리는 일이 이 폼에서 가장 무거운 칸이었는데 정작 그 그림이 시민 화면
+ * 어디에 어떻게 놓이는지가 아직 정해지지 않았다.
  */
 
 const STATE_OPTIONS = [{ value: "", label: "전체 상태" }]
@@ -82,14 +85,12 @@ export function Festivals({ onToast }) {
     extraValidate: v => {
       const bad = {};
       /* V-07 — 종료일 ≥ 시작일 (같은 날 허용) */
-      if (v.start && v.end && v.end < v.start) bad.end = "종료일은 시작일과 같거나 뒤여야 합니다 (V-07).";
+      if (v.start && v.end && v.end < v.start) bad.end = "종료일은 시작일과 같거나 이후여야 합니다.";
       if (!v.pose) bad.pose = "조아용 이미지를 골라 주세요.";
-      /* 배치도 방식 부스가 하나라도 있으면 배치도 이미지가 필수다 (명세서 2-5) */
-      const needsMap = (v.booths || []).some(b => b.posType === "plan");
-      if (needsMap && !v.boothMap) bad.boothMap = "배치도 상대좌표를 쓰는 부스가 있어 배치도 이미지가 필요합니다.";
-      /* 부스 번호는 축제 안에서 유일해야 한다 */
-      const nos = (v.booths || []).map(b => b.no).filter(Boolean);
-      if (new Set(nos).size !== nos.length) bad.booths = "부스 번호가 겹칩니다. 축제 안에서 유일해야 합니다.";
+      /* 「배치도 이미지가 필요합니다」 검사는 뺐다 (2026-08-20) — 배치도 칸 자체가
+         없어져, 고칠 수 없는 것을 이유로 저장을 막는 검사가 되기 때문이다 */
+      /* 「부스 번호 겹침」 검사도 함께 뺐다 (2026-08-20) — 번호 칸 자체가 없다.
+         번호는 배치도 위의 점과 목록을 잇는 열쇠였고, 그 지도가 1차에 없다 */
       return bad;
     },
   });
@@ -131,7 +132,7 @@ export function Festivals({ onToast }) {
         empty={{ title: "해당 상태의 축제가 없습니다." }}
         columns={[
           { key: "name", label: "축제명", sortable: true },
-          { key: "pose", label: "조아용", width: 88, align: "center", hint: "카드 그림",
+          { key: "pose", label: "조아용", width: 88, align: "center",
             render: f => (f.pose
               ? <Mascot pose={f.pose} size={32} base={ASSET_BASE} alt="" />
               : <Badge tone="danger" size="sm">없음</Badge>) },
@@ -139,10 +140,10 @@ export function Festivals({ onToast }) {
             render: f => DISTRICT_NAME[f.districtId] || EMPTY_MARK },
           { key: "period", label: "기간", width: 150, render: periodOf, sortValue: f => f.start || "" },
           { key: "time", label: "시간", width: 120, render: f => f.time || EMPTY_MARK },
-          { key: "state", label: "상태", width: 90, align: "center", hint: "자동 판정",
+          { key: "state", label: "상태", width: 90, align: "center",
             render: f => <Badge size="sm" {...festivalBadge(stateOf(f))}>{stateOf(f)}</Badge>,
             sortValue: f => FESTIVAL_STATES.indexOf(stateOf(f)) },
-          { key: "category", label: "노출 카테고리", width: 120, align: "center", hint: "시민 화면",
+          { key: "category", label: "노출 카테고리", width: 120, align: "center",
             render: f => <Badge tone="neutral" size="sm">{categoryOf(f)}</Badge> },
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: f => (
@@ -171,39 +172,27 @@ export function Festivals({ onToast }) {
                 <AssetPicker value={ed.draft.values.pose} onChange={v => ed.set("pose", v)}
                   assets={CHARACTER_ASSETS} usedBy={usedBy} base={ASSET_BASE} error={ed.errors.pose} />
 
-                <div style={{ gridColumn: "1 / -1", paddingTop: "var(--space-4)",
-                  borderTop: "var(--stroke-hairline) solid var(--border-default)" }}>
-                  <Notice tone="warning" size="sm" title="아래 두 항목은 조건부입니다">
-                    용인시가 제공하는 자료의 범위가 확정되지 않아 반영 여부가 정해지지 않았습니다.
-                    자료를 받기 전에는 비워 두세요 — 지금 채운 값의 출처를 나중에 아무도 알 수 없습니다.
-                  </Notice>
-                </div>
-
+                {/* ── 조건부 표시를 걷어냈다 (2026-08-20, 사용자 요청) ────────────
+                       전에는 두 목록 위에 「아래 두 항목은 조건부입니다」 띠가 서고 제목마다
+                       「조건부 · 자료 확보 시」 배지가 붙었다. 자료를 받을지 아직 모른다는
+                       것은 **우리 쪽 사정**이지 이 칸을 채우는 사람이 알아야 할 일이 아니다.
+                       담당자에게 이 둘은 그냥 "있으면 넣고 없으면 비우는" 선택 항목이다. */}
                 <Repeater
                   title="프로그램 일정"
-                  badge={<ConditionalBadge />}
                   columns={PROGRAM_COLUMNS} rows={ed.draft.values.programs || []}
                   onChange={p => ed.set("programs", p)}
                   addLabel="프로그램 추가"
-                  empty="프로그램 일정이 없으면 시민 화면의 축제 상세에 그 구획이 그려지지 않습니다."
-                  note="시작 일시는 축제 기간 안이어야 합니다. 노출 순서는 적은 차례를 따릅니다." />
+                  note="작성하신 순서에 따라 사용자 화면에 노출됩니다." />
 
+                {/* 부스는 **글로 안내한다** (2026-08-20). 좌표 칸 둘과 배치도 이미지(V-06),
+                    그리고 지도 시절의 「번호」·「유형」까지 뺐다 — 세 칸이 그대로 시민 화면의
+                    한 줄이 된다. 자세한 사정은 data/fields.js 의 BOOTH_COLUMNS 주석. */}
                 <Repeater
                   title="부스 위치"
-                  badge={<ConditionalBadge />}
                   columns={BOOTH_COLUMNS} rows={ed.draft.values.booths || []}
                   onChange={b => ed.set("booths", b)}
                   addLabel="부스 추가" error={ed.errors.booths}
-                  newRow={() => ({ posType: "coord", type: "먹거리" })}
-                  empty="부스 목록이 없으면 시민 화면에 부스 안내가 나오지 않습니다."
-                  note={"위치 지정이 「실제 좌표」면 위도, 경도를 쉼표로 적습니다 (37.2887, 127.1993). "
-                    + "「배치도 상대좌표」면 배치도 안에서의 위치를 백분율로 적습니다 (48, 62). "
-                    + "부스 번호는 이 축제 안에서 유일해야 합니다."} />
-
-                <ImageField label="부스 배치도" value={ed.draft.values.boothMap}
-                  onChange={v => ed.set("boothMap", v)} error={ed.errors.boothMap}
-                  badge={<ConditionalBadge />}
-                  note="배치도 상대좌표를 쓰는 부스가 하나라도 있으면 필수입니다." />
+                  note="작성하신 순서에 따라 사용자 화면에 노출됩니다." />
               </>
             } />
         ) : null}

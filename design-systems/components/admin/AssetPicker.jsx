@@ -67,7 +67,7 @@ export function AssetPicker({
           <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-caption)",
             color: "var(--state-warning)", lineHeight: 1.55 }}>
             이 그림은 이미 {(usedBy[value] || []).join(" · ")} 이(가) 쓰고 있습니다.
-            둘러보기 탭에서 카드가 같은 그림으로 나란히 서게 됩니다 — 다른 그림을 고르는 편이 좋습니다.
+            둘러보기 탭에서 카드가 같은 그림으로 나란히 서게 됩니다 - 다른 그림을 고르는 편이 좋습니다.
           </p>
         ) : null}
       </div>

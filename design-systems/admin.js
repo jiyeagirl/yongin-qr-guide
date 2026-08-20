@@ -37,7 +37,7 @@ export { MiniChart } from "./components/admin/MiniChart.jsx";
 /* ── 관리자 전용: 명세서의 특수 입력 항목 ────────────────────────────────── */
 export { AddressField } from "./components/admin/AddressField.jsx";
 export { CoordField, COORD_BOUNDS, outOfBounds, fixCoord } from "./components/admin/CoordField.jsx";
-export { Repeater, ConditionalBadge } from "./components/admin/Repeater.jsx";
+export { Repeater } from "./components/admin/Repeater.jsx";
 export { AssetPicker } from "./components/admin/AssetPicker.jsx";
 
 /* ── 공용: 기본 부품 ─────────────────────────────────────────────────────── */

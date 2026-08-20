@@ -1,6 +1,5 @@
 import React from "react";
 import { FormGrid, FormField, AddressField } from "../../design-systems/admin.js";
-import { EMPTY_NOTE } from "../data/fields.js";
 import { KAKAO_APP_KEY } from "../../screens/main/config.js";
 
 /* 항목표 한 줄 → 입력 칸 하나. 열두 화면의 폼이 전부 이 몇 줄로 끝난다.
@@ -13,6 +12,12 @@ import { KAKAO_APP_KEY } from "../../screens/main/config.js";
  *   before  어느 항목표를 쓸지 정하는 선택 (공공시설의 시설 유형)
  *   slots   항목표의 **한 칸을 통째로 갈아끼운다** (조아용 그리드, 좌표 지도)
  *   extra   항목표 뒤에 붙는 것 (1:N 목록, 안내)
+ *
+ * ── 폼 아래 설명 문단을 기본으로 달지 않는다 (2026-08-20) ───────────────────
+ * 여섯 폼이 전부 같은 세 문장을 밑에 달고 있었다 ("선택 항목을 비워두면 …"). 담당자는
+ * 그 문장을 첫날 한 번 읽고 그 뒤로는 매번 넘긴다 — 폼을 여는 이유는 값을 넣는 것이지
+ * 원칙을 다시 읽는 것이 아니다. 그 자리에 **이 폼에서만 필요한 말**이 있을 때는 화면이
+ * `note` 로 직접 넘긴다 (계정 폼의 비밀번호 규칙처럼).
  *
  * slots 가 필요한 이유: 조아용 이미지(character_id)와 좌표는 명세서의 **항목표에 있는
  * 항목**이라 뒤에 따로 붙이면 차례가 어긋난다. 그렇다고 FormField 에 그 그림들을
@@ -27,7 +32,7 @@ import { KAKAO_APP_KEY } from "../../screens/main/config.js";
  */
 export function RecordForm({
   fields = [], values = {}, errors = {}, onChange, onAddress,
-  before, extra, slots = {}, note = EMPTY_NOTE, columns = 2,
+  before, extra, slots = {}, note, columns = 2,
 }) {
   return (
     <FormGrid note={note} columns={columns}>

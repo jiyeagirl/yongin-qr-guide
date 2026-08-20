@@ -252,15 +252,38 @@ const openedLabel = ago => {
   return `${Math.floor(t / 12)}.${String((t % 12) + 1).padStart(2, "0")} 등록`;
 };
 
-export const POPULAR = [...STORES]
-  .sort((a, b) => b.views - a.views)
-  .slice(0, 6)
-  .map((s, i) => ({ ...s, note: i === 0 ? "이번 주 조회 1위" : `조회 ${s.views.toLocaleString()}회` }));
+/* 몇 곳을 뽑나. 화면 셋(둘러보기 두 레일 · 관리자 대시보드 미리보기)이 같은 수를 써야 한다 */
+export const DISCOVER_PICK = 6;
 
-export const NEW_STORES = [...STORES]
-  .sort((a, b) => a.agoMonths - b.agoMonths || a.dist - b.dist)
-  .slice(0, 6)
-  .map(s => ({ ...s, note: openedLabel(s.agoMonths) }));
+/* ── 뽑는 규칙을 함수로 둔다 (2026-08-20) ──────────────────────────────────
+   관리자 대시보드가 **상점가를 골라 같은 두 목록을 미리 본다.** 규칙을 그쪽에 한 벌 더
+   적으면 정렬 기준이 언젠가 갈리고, 그때 관리자 화면과 시민 화면이 서로 다른 여섯 곳을
+   "신규 매장"이라 부른다. 어느 쪽이 틀렸는지는 화면만 보고 알 수 없다.
+
+   `visible === false` 를 빼는 것은 **관리자에서 숨긴 점포가 이 목록에도 안 나온다**는
+   뜻이다. 씨앗 데이터에는 `visible` 키가 아예 없어 시민 화면의 결과는 지금과 같다.
+
+   값이 없는 점포도 견딘다 — 관리자에서 새로 등록한 점포에는 조회수도 등록 시점도 없다.
+   그때 `agoMonths` 를 0(=이번 달 등록)으로 읽는 것은 실제로 맞는 해석이다. */
+const viewsOf = s => Number(s.views || 0);
+const agoOf = s => Number(s.agoMonths || 0);
+
+export function discoverPicks(stores) {
+  const live = (stores || []).filter(s => s.visible !== false);
+  return {
+    popular: [...live]
+      .sort((a, b) => viewsOf(b) - viewsOf(a))
+      .slice(0, DISCOVER_PICK)
+      .map((s, i) => ({ ...s, note: i === 0 ? "이번 주 조회 1위" : `조회 ${viewsOf(s).toLocaleString()}회` })),
+    fresh: [...live]
+      .sort((a, b) => agoOf(a) - agoOf(b) || (a.dist || 0) - (b.dist || 0))
+      .slice(0, DISCOVER_PICK)
+      .map(s => ({ ...s, note: openedLabel(agoOf(s)) })),
+  };
+}
+
+export const POPULAR = discoverPicks(STORES).popular;
+export const NEW_STORES = discoverPicks(STORES).fresh;
 
 /* ── 골목 한바퀴 추천 코스 (U-DC-03) ─────────────────────────────────────────
    "반경 300~500m 내 매장을 묶은 코스". 300~500m 는 **내부 로직 값이며 사용자 필터가 아니다**

@@ -1,15 +1,16 @@
 import React from "react";
 import {
   PageHeader, StatTile, MiniChart, DataTable, Cell, Card, Badge, Notice, SegmentedTabs,
-  FacilityIcon, FACILITY_LABELS, CategoryIcon, CATEGORY_LABELS,
+  Select, CategoryIcon, CATEGORY_LABELS, OnnuriBadge,
 } from "../../design-systems/admin.js";
 import {
   PERIODS, DEFAULT_PERIOD, statsFor, TOTAL_SCANS, TAB_SHARE, FACILITY_SHARE,
-  TOP_STORES, TOP_FACILITIES, SCANS_BY_POINT, API_USED_TODAY, TOP_N,
+  SCANS_BY_POINT, API_USED_TODAY,
 } from "../data/stats.js";
 import { REPORTS } from "../data/reports.js";
 import { QR_POINTS } from "../../screens/main/data/qr.js";
-import { STORES } from "../../screens/main/data/dunjeon.js";
+import { STORES, discoverPicks, DISCOVER_PICK } from "../../screens/main/data/dunjeon.js";
+import { DISTRICTS, CURRENT_DISTRICT_ID, GU_ORDER } from "../../screens/main/data/districts.js";
 import { FACILITIES } from "../../screens/main/data/facilities.js";
 import { QUOTA_DEFAULTS } from "../data/settings.js";
 import { readCollection } from "../data/store.js";
@@ -34,17 +35,33 @@ import { readCollection } from "../data/store.js";
  * 명세서: "배지는 0건이 아닐 때만 노출하고 클릭 시 해당 화면으로 이동한다."
  * 없는 일에 표시를 붙이면 신호가 죽는다 — 늘 켜져 있는 빨간 점은 며칠 뒤 아무도 안 본다.
  *
+ * ── 순위표 대신 시민 화면을 그대로 미리 본다 (2026-08-20) ───────────────────
+ * 전에는 「조회수 상위 점포 10 · 조회수 상위 공공시설 10」 두 표가 있었다. 그런데 시민
+ * 화면에는 그런 목록이 없다 — 둘러보기 탭이 실제로 보여주는 것은 상점가마다 「신규 매장
+ * 6곳 · 인기 매장 6곳」이고, 공공시설에는 순위 화면 자체가 없다. 관리자만 보는 순위표는
+ * 보고 나서 할 일이 없다: 3위 가게를 알아도 그 사실이 닿는 시민 화면이 없다.
+ *
+ * 지금은 **상점가를 고르면 그 상점가의 둘러보기 두 레일이 그대로 나온다.** 담당자가 보는
+ * 여섯 곳이 시민이 보는 여섯 곳이고, 점포 관리에서 한 곳을 숨기면 여기서도 빠진다.
+ * 뽑는 규칙은 시민 화면과 한 곳(`discoverPicks`)에서 가져온다.
+ *
  * ── 수치의 출처를 아래에 적는다 ─────────────────────────────────────────────
  * 시민 화면이 하단 고지로 기준일을 밝히는 것과 같은 이유인데, 여기서는 더 중요하다 —
  * 이 숫자가 대외 보고로 나가기 때문이다. 어느 값이 실제 자료의 건수이고 어느 값이
  * 서버 연동 전 예시인지 구분되어야 한다.
  */
 
-function Section({ title, note, children, style }) {
+/* 절 제목. `variant` 는 **품는 절**과 **품긴 절**을 가른다 —
+     lead  다른 절들을 안에 두는 절 (상점가별 둘러보기 매장). 한 단 크게 적는다
+     sub   그 안에 든 절. 크기는 그대로 두고 제목 단계만 h3 으로 내린다
+   둘이 같은 크기면 무엇이 무엇을 품는지가 화면에서 사라진다. */
+function Section({ title, note, children, style, variant }) {
+  const H = variant === "sub" ? "h3" : "h2";
   return (
     <section style={style}>
-      <h2 style={{ marginBottom: note ? 2 : "var(--space-3)", font: "var(--type-title-3)",
-        color: "var(--text-heading)", letterSpacing: "var(--ls-snug)" }}>{title}</h2>
+      <H style={{ marginBottom: note ? 2 : "var(--space-3)",
+        font: variant === "lead" ? "var(--type-title-2)" : "var(--type-title-3)",
+        color: "var(--text-heading)", letterSpacing: "var(--ls-snug)" }}>{title}</H>
       {note ? (
         <p style={{ marginBottom: "var(--space-3)", fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
           {note}
@@ -78,6 +95,19 @@ function ShareList({ items }) {
   );
 }
 
+/* 점포 한 줄. 업종 아이콘 · 상호명 · 지점명 · 온누리 — **시민 카드에 적히는 것과 같은 것들**이다.
+   담당자가 두 화면을 나란히 놓고 "이 가게가 맞나"를 확인하는 자리라 표기가 갈리면 안 된다. */
+function StoreName({ store }) {
+  return (
+    <Cell>
+      <CategoryIcon type={store.cat} size={16} />
+      <span style={{ fontWeight: "var(--fw-semibold)", color: "var(--text-heading)" }}>{store.name}</span>
+      {store.branch ? <span style={{ color: "var(--text-muted)" }}>{store.branch}</span> : null}
+      {store.onnuri ? <OnnuriBadge size="sm" /> : null}
+    </Cell>
+  );
+}
+
 export function Dashboard({ onNavigate }) {
   const [periodKey, setPeriodKey] = React.useState(DEFAULT_PERIOD);
   const s = statsFor(periodKey);
@@ -89,6 +119,7 @@ export function Dashboard({ onNavigate }) {
   const qr = readCollection("qr", QR_POINTS.map(p => ({ ...p, id: p.code })));
   const stores = readCollection("stores", STORES);
   const facilities = readCollection("facilities", FACILITIES);
+  const districtRows = readCollection("districts", DISTRICTS);
 
   /* 기간 안에 새로 들어온 신고 (명세서 6장 요약 카드 넷째) */
   const newReports = reports.filter(r => r.at >= s.from && r.at <= s.to).length;
@@ -113,6 +144,38 @@ export function Dashboard({ onNavigate }) {
       count: stores.filter(x => x.lat == null || x.lng == null).length
         + facilities.filter(x => x.lat == null || x.lng == null).length },
   ].filter(b => b.count > 0);
+
+  /* ── 상점가별 둘러보기 미리보기 ───────────────────────────────────────────
+     씨앗 점포에는 `districtId` 가 없다. 둔전 소속으로 읽는 것은 상점가 관리와 같은
+     규칙이다 (Districts.jsx) — 더미 세계의 점포 335곳이 전부 둔전 것이라서다. */
+  const [districtId, setDistrictId] = React.useState(CURRENT_DISTRICT_ID);
+
+  const storesByDistrict = React.useMemo(() => {
+    const o = {};
+    for (const s of stores) {
+      const id = s.districtId || CURRENT_DISTRICT_ID;
+      (o[id] = o[id] || []).push(s);
+    }
+    return o;
+  }, [stores]);
+
+  /* 고르는 차례는 거리순이 아니라 **구 → 이름**이다. 거리순(DISTRICTS 의 기본)은 시민
+     화면의 축이고, 여기서 상점가를 찾는 사람은 QR 지점에서 몇 km 인지로 찾지 않는다.
+
+     점포 자료가 없는 곳을 목록에서 빼지 않는다. 32곳이 다 있어야 어디가 비어 있는지
+     보이고, 지금 31곳이 비어 있다는 사실 자체가 담당자가 알아야 할 상태다. */
+  const districtOptions = React.useMemo(() =>
+    [...districtRows]
+      .sort((a, b) => GU_ORDER.indexOf(a.gu) - GU_ORDER.indexOf(b.gu)
+        || a.name.localeCompare(b.name, "ko"))
+      .map(d => {
+        const cnt = (storesByDistrict[d.id] || []).filter(s => s.visible !== false).length;
+        return { value: d.id, label: `${d.gu} · ${d.name} ${cnt ? `(점포 ${n(cnt)}곳)` : "(점포 자료 없음)"}` };
+      }), [districtRows, storesByDistrict]);
+
+  const district = districtRows.find(d => d.id === districtId) || null;
+  const districtStores = storesByDistrict[districtId] || [];
+  const picks = discoverPicks(districtStores);
 
   /* 한도와 경고 임계치는 화면에서 정하지 않는다 — 카카오 쪽 계약과 서버가 정하는 값이라
      관리자 화면의 [환경 설정]에서 쿼터 구획을 뺐다 (2026-08-20). 여기서는 읽기만 한다. */
@@ -198,7 +261,7 @@ export function Dashboard({ onNavigate }) {
       {/* ── 운영: 카카오맵 API 사용량 ───────────────────────────────────── */}
       <Card style={{ marginBottom: "var(--space-7)" }}>
         <Section title="카카오맵 API 일일 사용량"
-          note={`길찾기 호출의 하루 한도 ${n(limit)}건 대비 사용량입니다 (${warnAt}% 를 넘으면 경고).`}>
+          note={`길찾기 호출의 하루 한도 ${n(limit)}건 대비 사용량입니다.`}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline",
             marginBottom: 6 }}>
             <span style={{ fontSize: "var(--fs-body)", fontWeight: "var(--fw-semibold)",
@@ -222,50 +285,70 @@ export function Dashboard({ onNavigate }) {
         </Section>
       </Card>
 
-      {/* ── 순위 3종, 각 상위 10 (명세서 6장) ───────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-        gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
-        <Section title="조회수 상위 점포">
-          <DataTable
-            caption={`조회수 상위 점포 ${TOP_N}곳`}
-            rows={TOP_STORES} rowKey="id"
-            columns={[
-              { key: "rank", label: "순위", width: 60, align: "center",
-                render: r => <Badge tone={r.rank === 1 ? "brand" : "neutral"} size="sm">{r.rank}</Badge> },
-              { key: "name", label: "상호명",
-                render: r => (
-                  <Cell>
-                    <CategoryIcon type={r.cat} size={16} />{r.name}
-                  </Cell>
-                ) },
-              { key: "biz", label: "업종", render: r => r.biz || CATEGORY_LABELS[r.cat] },
-              { key: "views", label: "조회", align: "right",
-                render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{n(r.views)}</span> },
-            ]} />
-        </Section>
+      {/* ── 상점가별 둘러보기 매장 (명세서 6장) ─────────────────────────
+             시민 화면의 둘러보기 탭을 그대로 미리 보는 자리다. 머리말 참조. */}
+      <Section title="상점가별 둘러보기 매장" variant="lead"
+        note="둘러보기 탭이 상점가마다 보여주는 목록입니다. 상점가를 고르면 그곳의 시민 화면에 실제로 걸리는 매장이 나옵니다."
+        style={{ marginBottom: "var(--space-4)" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "var(--space-4)",
+          marginBottom: "var(--space-4)" }}>
+          <Select label="상점가" options={districtOptions} value={districtId}
+            onChange={e => setDistrictId(e.target.value)} style={{ width: 420 }} />
+          {district ? (
+            <p style={{ paddingBottom: 10, fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
+              {district.gu} {district.area} · 노출 점포 {n(districtStores.filter(x => x.visible !== false).length)}곳
+            </p>
+          ) : null}
+        </div>
 
-        <Section title="조회수 상위 공공시설">
-          <DataTable
-            caption={`조회수 상위 공공시설 ${TOP_N}곳`}
-            rows={TOP_FACILITIES} rowKey="id"
-            columns={[
-              { key: "rank", label: "순위", width: 60, align: "center",
-                render: r => <Badge tone={r.rank === 1 ? "brand" : "neutral"} size="sm">{r.rank}</Badge> },
-              { key: "name", label: "명칭",
-                render: r => (
-                  <Cell>
-                    <FacilityIcon type={r.type} size={16} />{r.name}
-                  </Cell>
-                ) },
-              { key: "type", label: "유형", width: 90, render: r => FACILITY_LABELS[r.type] || "공공시설" },
-              { key: "views", label: "조회", align: "right",
-                render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{n(r.views)}</span> },
-            ]} />
-        </Section>
-      </div>
+        {picks.popular.length ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gap: "var(--space-4)" }}>
+            <Card>
+              <Section title="조회수 상위 점포" variant="sub"
+                note={`둘러보기 탭의 「인기 매장」 ${DISCOVER_PICK}곳`}>
+                <DataTable
+                  caption={`${district ? district.name : ""} 인기 매장 ${DISCOVER_PICK}곳`}
+                  rows={picks.popular.map((s, i) => ({ ...s, rank: i + 1 }))} rowKey="id"
+                  columns={[
+                    { key: "rank", label: "순위", width: 60, align: "center",
+                      render: r => <Badge tone={r.rank === 1 ? "brand" : "neutral"} size="sm">{r.rank}</Badge> },
+                    { key: "name", label: "상호명", render: r => <StoreName store={r} /> },
+                    { key: "biz", label: "업종", width: 110, render: r => r.biz || CATEGORY_LABELS[r.cat] },
+                    { key: "views", label: "조회", width: 80, align: "right",
+                      render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{n(r.views)}</span> },
+                  ]} />
+              </Section>
+            </Card>
 
-      <Section title="지점별 스캔"
-        note="끈 지점에도 스캔이 남습니다 — 옛 안내판을 아직 찍는 사람이 있다는 뜻이라, 코드를 지우면 그 사람들이 「등록되지 않은 코드」를 만납니다.">
+            <Card>
+              <Section title="신규 점포" variant="sub"
+                note={`둘러보기 탭의 「신규 매장」 ${DISCOVER_PICK}곳`}>
+                <DataTable
+                  caption={`${district ? district.name : ""} 신규 매장 ${DISCOVER_PICK}곳`}
+                  rows={picks.fresh} rowKey="id"
+                  columns={[
+                    { key: "name", label: "상호명", render: r => <StoreName store={r} /> },
+                    { key: "biz", label: "업종", width: 110, render: r => r.biz || CATEGORY_LABELS[r.cat] },
+                    /* 등록 시점 — 카드에 적히는 문구 그대로다 ("2026.04 등록") */
+                    { key: "note", label: "등록", width: 110, align: "right",
+                      render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.note}</span> },
+                  ]} />
+              </Section>
+            </Card>
+          </div>
+        ) : (
+          /* 점포 자료가 없는 31곳. 빈 표를 세우는 대신 왜 비었는지 적는다 —
+             시 안내의 점포수는 알고 있으므로 그 수도 함께 적어 "0곳"과 구별한다 */
+          <Notice tone="info" title="점포 목록이 아직 들어오지 않았습니다">
+            {district ? `${district.name}${district.stores ? `는 시 안내 기준 점포 ${n(district.stores)}곳이지만,` : "는"}` : ""}
+            점포 목록이 아직 적재되지 않아 신규·인기 매장을 뽑을 수 없습니다.
+            시민 화면에서도 이 상점가에서는 두 레일이 나오지 않습니다.
+          </Notice>
+        )}
+      </Section>
+
+      <Section title="지점별 스캔 횟수">
         <DataTable
           caption="QR 지점별 스캔 수"
           rows={SCANS_BY_POINT} rowKey="code"
@@ -281,9 +364,9 @@ export function Dashboard({ onNavigate }) {
 
       <p style={{ marginTop: "var(--space-6)", fontSize: "var(--fs-caption)",
         color: "var(--text-muted)", lineHeight: 1.6 }}>
-        스캔 수 · 길찾기 실행 수 · 조회 비중 · API 사용량은 서버 로그에서 나오는 값이라
-        서버 연동 전 예시입니다. <b>처리 대기 배지와 오류신고 건수는 실제 자료를 센 값</b>이며,
-        이 브라우저 탭에서 고친 내용이 바로 반영됩니다.
+        스캔 수 · 길찾기 실행 수 · 조회 비중 · 점포 조회수 · API 사용량은 서버 로그에서 나오는
+        값이라 서버 연동 전 예시입니다. <b>처리 대기 배지와 오류신고 건수, 상점가별 매장 목록은
+        실제 자료로 뽑은 값</b>이며, 이 브라우저 탭에서 고친 내용이 바로 반영됩니다.
         이 화면은 조회 전용이며 내보내기 기능을 두지 않습니다.
       </p>
     </>
