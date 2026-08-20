@@ -246,10 +246,13 @@ export const DISTRICT = {
    두 줄로 나눈 이유: "신규"와 "인기"는 겹치지 않는다. 새로 생긴 가게는 아직 조회수가 낮고,
    조회수 상위는 대개 오래된 가게다. 한 줄에 섞으면 어느 쪽 근거로 뽑힌 카드인지 알 수 없다.
    각 카드의 note 가 그 카드가 거기 있는 이유를 적는다. */
-const MONTHS_AS_OF = [2026, 6]; /* 데이터 기준월 — agoMonths 를 연월로 되돌릴 때 쓴다 */
-const openedLabel = ago => {
+/* 등록 시점을 연월로 되돌린다. **연월만** 돌려주고 「등록」은 붙이지 않는다 (2026-08-20) —
+   카드에는 "2026.06 등록"이 맞지만 관리자 표의 「등록」 열에서는 열 이름이 이미 그 말을
+   하고 있어 줄마다 같은 글자가 여섯 번 반복된다. 말을 붙이는 쪽이 그것을 붙인다. */
+const MONTHS_AS_OF = [2026, 6]; /* 데이터 기준월 */
+const openedMonth = ago => {
   const t = MONTHS_AS_OF[0] * 12 + (MONTHS_AS_OF[1] - 1) - ago;
-  return `${Math.floor(t / 12)}.${String((t % 12) + 1).padStart(2, "0")} 등록`;
+  return `${Math.floor(t / 12)}.${String((t % 12) + 1).padStart(2, "0")}`;
 };
 
 /* 몇 곳을 뽑나. 화면 셋(둘러보기 두 레일 · 관리자 대시보드 미리보기)이 같은 수를 써야 한다 */
@@ -275,10 +278,15 @@ export function discoverPicks(stores) {
       .sort((a, b) => viewsOf(b) - viewsOf(a))
       .slice(0, DISCOVER_PICK)
       .map((s, i) => ({ ...s, note: i === 0 ? "이번 주 조회 1위" : `조회 ${viewsOf(s).toLocaleString()}회` })),
+    /* `opened` 는 연월만("2026.06"), `note` 는 카드에 적히는 문장("2026.06 등록").
+       열 이름이 「등록」인 표는 앞쪽을, 이름표가 없는 카드는 뒤쪽을 쓴다 */
     fresh: [...live]
       .sort((a, b) => agoOf(a) - agoOf(b) || (a.dist || 0) - (b.dist || 0))
       .slice(0, DISCOVER_PICK)
-      .map(s => ({ ...s, note: openedLabel(agoOf(s)) })),
+      .map(s => {
+        const opened = openedMonth(agoOf(s));
+        return { ...s, opened, note: `${opened} 등록` };
+      }),
   };
 }
 

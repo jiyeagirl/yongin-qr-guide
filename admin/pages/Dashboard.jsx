@@ -311,11 +311,13 @@ export function Dashboard({ onNavigate }) {
                   caption={`${district ? district.name : ""} 인기 매장 ${DISCOVER_PICK}곳`}
                   rows={picks.popular.map((s, i) => ({ ...s, rank: i + 1 }))} rowKey="id"
                   columns={[
+                    /* 두 표는 **같은 뼈대**를 쓴다 — 번호 60 · 상호명 · 업종 110 · 값 90.
+                       나란히 선 표라 열 폭이 어긋나면 여섯 줄이 서로 밀려 보인다 */
                     { key: "rank", label: "순위", width: 60, align: "center",
                       render: r => <Badge tone={r.rank === 1 ? "brand" : "neutral"} size="sm">{r.rank}</Badge> },
                     { key: "name", label: "상호명", render: r => <StoreName store={r} /> },
                     { key: "biz", label: "업종", width: 110, render: r => r.biz || CATEGORY_LABELS[r.cat] },
-                    { key: "views", label: "조회", width: 80, align: "right",
+                    { key: "views", label: "조회", width: 90, align: "right",
                       render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{n(r.views)}</span> },
                   ]} />
               </Section>
@@ -326,13 +328,21 @@ export function Dashboard({ onNavigate }) {
                 note={`둘러보기 탭의 「신규 매장」 ${DISCOVER_PICK}곳`}>
                 <DataTable
                   caption={`${district ? district.name : ""} 신규 매장 ${DISCOVER_PICK}곳`}
-                  rows={picks.fresh} rowKey="id"
+                  rows={picks.fresh.map((s, i) => ({ ...s, order: i + 1 }))} rowKey="id"
                   columns={[
+                    /* 옆 표와 같은 뼈대다. 번호 칸이 없으면 배지가 든 줄과 글자만 든 줄의
+                       높이가 갈려 나란히 선 두 표의 여섯 줄이 서로 밀린다.
+
+                       색은 배지 하나만 다르다 — 여기 1번은 **가장 최근에 등록된 곳**이지
+                       1위가 아니다. 브랜드색을 주면 순위표로 읽힌다. */
+                    { key: "order", label: "순서", width: 60, align: "center",
+                      render: r => <Badge tone="neutral" size="sm">{r.order}</Badge> },
                     { key: "name", label: "상호명", render: r => <StoreName store={r} /> },
                     { key: "biz", label: "업종", width: 110, render: r => r.biz || CATEGORY_LABELS[r.cat] },
-                    /* 등록 시점 — 카드에 적히는 문구 그대로다 ("2026.04 등록") */
-                    { key: "note", label: "등록", width: 110, align: "right",
-                      render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.note}</span> },
+                    /* 열 이름이 「등록」이라 값은 연월만 적는다 ("2026.04").
+                       카드 쪽은 이름표가 없어 "2026.04 등록"을 그대로 쓴다 (dunjeon.js) */
+                    { key: "opened", label: "등록", width: 90, align: "right",
+                      render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.opened}</span> },
                   ]} />
               </Section>
             </Card>
