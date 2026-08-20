@@ -134,8 +134,10 @@ export function DistrictSheet({
       </div>
 
       {/* ── 주변 공공시설 (U-ST-07) ─────────────────────────────
-             점포 상세(S06)도 같은 것을 요구하므로 디자인 시스템으로 옮겼다.
-             인라인으로 두 벌 두면 한쪽만 고쳐져 두 화면이 같은 시설을 다르게 말하게 된다. */}
+             **U-ST-07 이 남아 있는 유일한 자리다** (2026-08-20). 한때 점포 상세(S06)에도
+             같은 블록이 있었으나 거기서는 뺐다 — 한 가게를 묻고 들어온 화면에 그 가게와
+             무관한 시설 목록이 끼는 자리였다 (StoreDetail 머리말). 여기서는 상점가 전체를
+             내려다보는 목록의 끝이라 성격이 다르다. */}
       <div style={{ padding: "var(--space-5) var(--gutter-screen) 0" }}>
         <NearbyFacilities items={data.nearby} onPick={onPickFacility} />
       </div>

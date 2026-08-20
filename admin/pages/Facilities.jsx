@@ -6,8 +6,7 @@ import {
 import { FACILITIES, facilityName } from "../../screens/main/data/facilities.js";
 import { KAKAO_APP_KEY } from "../../screens/main/config.js";
 import { FACILITY_FIELDS } from "../data/fields.js";
-import { AS_OF_CATEGORIES, AS_OF_DEFAULTS, asOfPhrase } from "../data/settings.js";
-import { useCollection, useSettings } from "../data/store.js";
+import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
@@ -73,7 +72,6 @@ function derive(row) {
 
 export function Facilities({ onToast }) {
   const { rows, upsert, remove, patch, patchMany } = useCollection("facilities", FACILITIES, derive, "공공시설");
-  const asOf = useSettings("asOf", AS_OF_DEFAULTS, "데이터 기준일");
   const [type, setType] = React.useState("");
   const list0 = useListState([type]);
 
@@ -112,24 +110,17 @@ export function Facilities({ onToast }) {
         options={FACILITY_TYPES.map(t => ({ value: t, label: FACILITY_LABELS[t] }))}
         onChange={e => ed.set("type", e.target.value)} />
       <p style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.5 }}>
-        유형에 따라 입력 항목이 달라집니다 (명세서 3-2 ~ 3-5). 등록 후에는 바꿀 수 없습니다.
+        유형에 따라 입력 항목이 달라집니다. 등록 후에는 바꿀 수 없습니다.
       </p>
     </div>
   ) : null;
 
-  /* 유형별 기준월을 머리에 적는다. 전체 탭에서는 넷을 다 적으면 줄이 길어지므로
-     "유형별로 다름"만 알린다 */
-  const asOfNote = (() => {
-    if (!type) return "데이터 기준일은 유형마다 다릅니다 ([데이터 기준일 관리]에서 봅니다).";
-    const cat = AS_OF_CATEGORIES.find(c => c.key === type);
-    const v = asOf.value[type];
-    return cat && v ? `시민 화면 고지 — ${asOfPhrase(cat, v)}` : null;
-  })();
-
   return (
     <>
+      {/* 제목 아래 설명을 두지 않는다 (2026-08-20, 사용자 요청) — 명세서 장 번호와
+          시민 화면 기준일 고지가 적혀 있었다. 기준일은 [데이터 기준일 관리]가 정하는
+          값이고, 다루는 네 유형은 바로 아래 탭이 이미 늘어놓는다. */}
       <PageHeader title="공공시설 정보 관리" count={`${filtered.length}곳`}
-        note={`AED · 공중화장실 · 쉼터 · 대피소. 입력 항목은 명세서 3장을 따릅니다.${asOfNote ? ` ${asOfNote}` : ""}`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>시설 등록</Button>} />
 
       <div style={{ marginBottom: "var(--space-4)" }}>

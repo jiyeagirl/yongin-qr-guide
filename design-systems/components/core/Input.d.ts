@@ -8,6 +8,8 @@ export interface InputProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   type?: string;
+  /** md(기본, 44px) — 시민용. sm(36px) — 관리자 표 안에서만 (데스크톱 전용). */
+  size?: "md" | "sm";
   disabled?: boolean;
   style?: React.CSSProperties;
 }

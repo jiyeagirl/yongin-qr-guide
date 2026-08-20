@@ -37,7 +37,12 @@ export function PageHeader({ title, note, count, action, style, ...rest }) {
           </p>
         ) : null}
       </div>
-      {action ? <div style={{ flex: "0 0 auto" }}>{action}</div> : null}
+      {/* 행동이 둘 이상 올 수 있다 ([취소]+[제출] 처럼). 붙어 서지 않게 여기서 간격을 준다 */}
+      {action ? (
+        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          {action}
+        </div>
+      ) : null}
     </header>
   );
 }

@@ -150,7 +150,7 @@ export function AdminShell({
           </span>
           <span style={{ fontSize: "var(--fs-body)", fontWeight: "var(--fw-bold)",
             color: "var(--text-heading)", letterSpacing: "var(--ls-snug)", whiteSpace: "nowrap" }}>
-            용인시 QR 위치안내 <span style={{ color: "var(--text-muted)", fontWeight: "var(--fw-medium)" }}>관리자</span>
+            용인시 QR 위치안내 <span style={{ color: "var(--text-muted)", fontWeight: "var(--fw-medium)" }}>관리자 페이지</span>
           </span>
         </div>
 

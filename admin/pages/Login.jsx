@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Input, Icon, Notice, Modal, Textarea } from "../../design-systems/admin.js";
-import { SEED_ACCOUNTS, ROLE_LABEL, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES, SESSION_HOURS }
+import { SEED_ACCOUNTS, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES, SESSION_HOURS }
   from "../data/account.js";
 
 /* M01 로그인 — 로그인, 비밀번호 초기화 요청.
@@ -10,11 +10,10 @@ import { SEED_ACCOUNTS, ROLE_LABEL, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES, SESS
  * 화면보다 먼저 사라지고, 그러면 이 화면 뒤를 아무도 못 본다. 감출 가치가 있는 비밀이
  * 아니라 검수용 열쇠이므로 안내 상자에 적어 두고, **이것이 임시라는 사실도 함께 적는다.**
  *
- * ── 두 계정을 나란히 적는 이유 ──────────────────────────────────────────────
- * 명세서 9장의 권한 분리는 계정이 하나면 화면에서 보이지 않는다. 두 계정으로 각각
- * 들어가 보면 좌측 메뉴가 열둘과 열로 갈리는 것이 바로 확인된다 — 개발자 전용 셋 중
- * 화면인 것이 둘(계정 관리 · 공공데이터 동기화)이고, 나머지 하나(API 쿼터)는
- * 설정 화면 안에서 구획째 사라진다.
+ * ── 계정이 하나다 (2026-08-20) ─────────────────────────────────────────────
+ * 전에는 권한이 다른 두 계정(시청 담당자 · 개발자)을 나란히 적었다. 권한 구분을
+ * 없애면서 검수용 계정도 하나가 됐다 — 화면이 계정에 따라 달라지지 않으므로
+ * 두 벌을 두면 "이 계정으로는 무엇이 다른가"를 확인하는 데 시간만 쓴다.
  *
  * ── 잠금을 화면에 적는다 ────────────────────────────────────────────────────
  * 명세서 9장: "로그인 5회 실패 시 10분 잠금". 잠긴 뒤에야 그 사실을 알려주면 담당자는
@@ -24,8 +23,8 @@ import { SEED_ACCOUNTS, ROLE_LABEL, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES, SESS
  *
  * ── 비밀번호 초기화가 "요청"인 이유 ─────────────────────────────────────────
  * 메일로 재설정 링크를 보내려면 서버가 필요하고, 계정이 시청·운영사 몇 명뿐이라
- * 자동 재설정을 만들 만한 규모가 아니다. 명세서도 "비밀번호 초기화 **요청**"이라고
- * 적었다 — 개발자 계정 담당자가 M17 에서 새 비밀번호를 넣어 주는 흐름이다.
+ * 자동 재설정을 만들 만한 규모가 아니다. 그래서 "비밀번호 초기화 **요청**"이고 —
+ * 다른 계정을 가진 담당자가 [계정 관리]에서 새 비밀번호를 넣어 주는 흐름이다.
  *
  * ── 조아용을 쓰지 않는다 ────────────────────────────────────────────────────
  * 캐릭터는 시민을 맞이하는 자리의 것이다 (디자인 시스템 7번 규칙). 업무 화면의 로그인은
@@ -60,7 +59,7 @@ export function Login({ onSignIn }) {
             <h1 style={{ font: "var(--type-title-2)", color: "var(--text-heading)", letterSpacing: "var(--ls-snug)" }}>
               용인시 QR 위치안내
             </h1>
-            <p style={{ fontSize: "var(--fs-label)", color: "var(--text-muted)" }}>관리자 웹</p>
+            <p style={{ fontSize: "var(--fs-label)", color: "var(--text-muted)" }}>관리자 페이지</p>
           </div>
         </div>
 
@@ -103,19 +102,19 @@ export function Login({ onSignIn }) {
         <Notice tone="neutral" size="sm" title="검수용 계정" style={{ marginTop: "var(--space-4)" }}>
           {SEED_ACCOUNTS.map(a => (
             <span key={a.id} style={{ display: "block", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
-              <b>{ROLE_LABEL[a.role]}</b> — {a.id} / {a.pw}
+              <b>{a.name}</b> — {a.id} / {a.pw}
             </span>
           ))}
           <span style={{ display: "block", marginTop: "var(--space-2)" }}>
             서버 연동 전이라 화면 안에서만 확인하는 임시 계정입니다.
-            개발자 계정에만 [계정 관리]와 [공공데이터 동기화]가 보입니다.
+            계정을 더 만들려면 들어간 뒤 [계정 관리]에서 등록합니다.
           </span>
         </Notice>
       </div>
 
       {/* ── 비밀번호 초기화 요청 (M01) ──────────────────────────────────── */}
       <Modal open={reset} size="md" title="비밀번호 초기화 요청"
-        description={resetSent ? undefined : "개발자 계정 담당자에게 초기화를 요청합니다."}
+        description={resetSent ? undefined : "다른 계정을 가진 담당자에게 초기화를 요청합니다."}
         onClose={() => setReset(false)}
         footer={resetSent ? (
           <Button variant="primary" onClick={() => setReset(false)}>닫기</Button>
@@ -128,11 +127,11 @@ export function Login({ onSignIn }) {
         {resetSent ? (
           <>
             <p style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: 1.65 }}>
-              요청을 접수했습니다. 개발자 계정 담당자가 확인한 뒤 새 비밀번호를 알려 드립니다.
+              요청을 접수했습니다. 담당자가 확인한 뒤 새 비밀번호를 알려 드립니다.
             </p>
             <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-4)" }}>
               서버 연동 전이라 실제로 전달되지는 않습니다. 지금은 [계정 관리] 화면에서
-              개발자 계정이 비밀번호를 직접 바꿔 주는 흐름입니다.
+              다른 계정이 비밀번호를 직접 바꿔 주는 흐름입니다.
             </Notice>
           </>
         ) : (

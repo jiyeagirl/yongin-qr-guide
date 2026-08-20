@@ -124,7 +124,7 @@ export function Reports({ onToast, onNavigate }) {
   return (
     <>
       <PageHeader title="오류신고 관리" count={`${filtered.length}건`}
-        note={`시민용 오류 신고(S10)로 접수된 건입니다. 미처리 ${openCount}건 · 처리 항목은 명세서 5-2 를 따릅니다.`} />
+        note={`시민용 오류 신고 화면으로 접수된 건입니다. 미처리 ${openCount}건.`} />
 
       <Toolbar>
         <ListSearch state={list0} placeholder="내용 · 대상 · 접수번호 검색" width={260} />
@@ -151,7 +151,12 @@ export function Reports({ onToast, onNavigate }) {
         empty={{ title: "조건에 맞는 접수 건이 없습니다." }}
         columns={[
           { key: "id", label: "접수번호", width: 104, sortable: true },
-          { key: "at", label: "접수일", width: 104, sortable: true },
+          /* 접수일은 통째로만 읽힌다. 104px 에서는 「2026-」 / 「10-15」 로 갈렸다 —
+             `.admin-web` 의 overflow-wrap:break-word 가 붙임표를 끊을 자리로 보기 때문이다.
+             날짜가 들어갈 만큼 넓히고 그 칸에서는 줄바꿈을 막는다 (열 하나가 두 줄이 되면
+             그 행 전체가 두 줄이 되어 목록을 훑는 눈이 걸린다) */
+          { key: "at", label: "접수일", width: 124, sortable: true,
+            render: r => <span style={{ whiteSpace: "nowrap" }}>{r.at}</span> },
           { key: "targetType", label: "대상 유형", width: 100, sortable: true },
           { key: "target", label: "대상", width: 200,
             render: r => (
@@ -223,7 +228,7 @@ export function Reports({ onToast, onNavigate }) {
             {open.contact ? (
               <p style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
                 회신처는 개인정보입니다. 처리 완료 후 {CONTACT_KEEP_DAYS}일이 지나면 자동으로 파기되며,
-                목록 표에는 표시하지 않습니다 (명세서 5장).
+                목록 표에는 표시하지 않습니다.
               </p>
             ) : null}
 
@@ -249,7 +254,7 @@ export function Reports({ onToast, onNavigate }) {
                 error={error || undefined}
                 onChange={e => { setDraft(d => ({ ...d, reply: e.target.value })); setError(null); }}
                 placeholder="확인 결과와 조치 내용을 적습니다."
-                hint={`「${REPORT_NEEDS_REPLY.join("」 · 「")}」(으)로 옮기려면 반드시 적어야 합니다 (명세서 5-2).`} />
+                hint={`「${REPORT_NEEDS_REPLY.join("」 · 「")}」(으)로 옮기려면 반드시 적어야 합니다.`} />
             </div>
 
             <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-4)" }}>

@@ -241,7 +241,7 @@ export function useCollection(name, source, derive, label) {
 }
 
 /* ── 설정값처럼 "행이 아니라 한 벌"인 것 ──────────────────────────────────────
-   운영 설정(8-1) · API 쿼터(8-2) · 데이터 기준일(7장)은 목록이 아니라 값 한 벌이다.
+   운영 설정과 데이터 기준일은 목록이 아니라 값 한 벌이다.
    useCollection 에 억지로 태우면 id 가 없는 행 하나를 만들게 되고, 그 행을 지우는
    갈래가 생긴다 — 지울 수 없는 것에 삭제 버튼이 생기는 구조는 만들지 않는다. */
 export function useSettings(name, defaults, label) {

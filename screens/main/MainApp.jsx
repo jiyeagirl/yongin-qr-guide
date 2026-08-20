@@ -7,7 +7,7 @@ import {
 import { DUNJEON } from "./data/dunjeon.js";
 import { FACILITIES, NEARBY, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.js";
 import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalNear,
-  HAS_LIVE_FESTIVAL, CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT,
+  CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT,
   byDistrictNear, GU_ORDER } from "./data/districts.js";
 import { DistrictSheet } from "./DistrictSheet.jsx";
 import { FacilitySheet } from "./FacilitySheet.jsx";
@@ -77,7 +77,14 @@ import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
 const SNAP_LABEL = { collapsed: "접힘", half: "절반", full: "전체" };
 
 /* 하단 탭 3개 (U-CM-03). 아이콘은 기능명세서 5-2 확정값.
-   진행 중 축제가 있으면 둘러보기에 점을 찍는다 (U-CM-18).
+
+   **둘러보기 탭의 빨간 점을 뺐다** (2026-08-20. 종전 U-CM-18 — 진행 중 축제가 있으면
+   아이콘 오른쪽 위에 점을 찍었다). 알림 점은 "네가 아직 안 본 것이 있다"는 신호인데,
+   이 서비스에는 본 것과 안 본 것을 가릴 수단이 없다 — 로그인도 저장소도 없어서 둘러보기를
+   열어 축제를 다 읽고 나와도 점은 그대로 켜져 있고, 축제 기간 내내 모든 방문자에게 같은
+   점이 뜬다. 끌 수 없는 알림은 신호가 아니라 장식이고, 빨간색은 이 화면에서 AED·대피소가
+   쓰는 색이라 급하지 않은 것에 쓸 자리가 아니다. 진행 중 축제는 상점가 탭 배너(U-FT-03)와
+   둘러보기 탭 첫 섹션이 이미 말한다.
 
    공공시설 탭은 `shield-plus` 와 `life-buoy` 중 택일이 남아 있었다 (6장 남은 확인사항 #6).
    **`life-buoy` 로 확정한다** — 대피소가 이미 `shield` 를 쓰고 있어, 방패 계열을 탭에도 쓰면
@@ -339,11 +346,10 @@ export function MainApp({ qr = null, noDistrict = false }) {
      changeTab 이 선택을 비우고 카메라를 QR 지점으로 되돌린 **뒤에** pickFacility 가 다시
      고른다. 상태 갱신은 한 번에 묶여 마지막 값이 남고, 카메라는 pickOnMap 이 두 프레임
      뒤에 옮기므로 순서가 어긋나지 않는다. */
-  const showFacilityOnMap = (f, { fromOverlay = false } = {}) => {
-    /* 상세 오버레이 안에서 불렸다면 쌓인 것을 전부 걷어내고 셸로 내려온다.
-       history.go 는 다음 틱에 처리되지만 셸은 언마운트되지 않으므로, 아래 상태 갱신이
-       그대로 살아남아 지도가 열릴 때 이미 그 시설이 켜져 있다 (U-CM-16). */
-    if (fromOverlay) closeAll();
+  /* 부르는 곳은 이제 상점가 탭 시트 하나뿐이다 (2026-08-20). 점포 상세(S06)에서
+     주변 공공시설 블록을 빼면서 오버레이에서 들어오는 경로가 사라져, 쌓인 오버레이를
+     걷어내던 `fromOverlay` 갈래도 함께 걷어냈다. */
+  const showFacilityOnMap = f => {
     if (tab !== "facility") changeTab("facility");
     /* 유형 필터가 그 시설을 걸러내고 있으면 **그 유형을 더한다** (2026-08-20).
        여럿 고르기가 되면서 "그 유형으로 바꾸기"보다 나은 길이 생겼다 — 걸어둔 조건을
@@ -621,21 +627,15 @@ export function MainApp({ qr = null, noDistrict = false }) {
         onReport={() => goReport(target)}
         onCopied={copied} />
     ) : (
+      /* 주변 공공시설을 넘기지 않는다 (2026-08-20). 점포 상세에서 그 블록을 뺐다 —
+         이유는 StoreDetail 머리말. 상점가 탭 하단(DistrictSheet)의 같은 블록은
+         그대로이고, 거기서 고른 시설은 여전히 지도로 간다 (onPickFacility 아래쪽). */
       <StoreDetail
         store={target}
         district={d.district}
-        nearby={d.nearby}
         onBack={back}
         onRoute={() => goRoute(target)}
         onReport={() => goReport(target)}
-        /* 주변 공공시설도 지도로 보낸다 (2026-08-18). 한때 여기만 시설 상세로 보냈는데 —
-           오버레이를 닫고 탭까지 옮기는 것이 과하다고 봤다 — 같은 목록을 어디서 눌렀느냐에
-           따라 다른 곳으로 가는 것이 더 나빴다. 목록에서 고른 것은 지도에서 보여준다는
-           규칙에 예외를 두지 않는다.
-
-           상세가 필요하면 지도에 뜨는 카드의 [상세 보기]가 한 번에 데려간다.
-           그 카드에는 [길찾기]도 함께 있어, 여기서 상세로 곧장 갔을 때보다 갈 곳이 많다. */
-        onPickFacility={f => showFacilityOnMap(f, { fromOverlay: true })}
         onCopied={copied} />
     );
 
@@ -894,11 +894,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
 
       {/* 하단 탭바 (U-CM-03) — 지도 영역의 **형제**다. 시트 안이나 위가 아니라 밖에 있으므로
           전체 스냅(100%)에서도 덮이지 않는다. 기능명세서 5-3 #5 의 답.
-          U-CM-18 — 진행 중 축제가 있으면 둘러보기 탭에 점을 찍는다 */}
-      <TabBar
-        items={TABS.map(t => (t.id === "discover" && HAS_LIVE_FESTIVAL ? { ...t, badge: true } : t))}
-        value={tab}
-        onChange={changeTab} />
+          알림 점은 찍지 않는다 (2026-08-20. 종전 U-CM-18) — 아래 TABS 머리말 참조 */}
+      <TabBar items={TABS} value={tab} onChange={changeTab} />
 
       {/* ── 상세 오버레이 (S05 / S06) — z-modal 600 ──────────────────────────
              지도 영역이 아니라 **루트의 자식**이다. 지도 영역 안에 두면 탭바(형제, z 450)를

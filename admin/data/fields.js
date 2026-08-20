@@ -303,7 +303,7 @@ const COMMON_TAIL = [
    규칙으로 생기는 값이라는 것이 입력하는 사람에게도 보여야 한다. */
 const DERIVED_NAME = { key: "name", spec: "—", label: "명칭 (도로명주소에서 자동 생성)",
   required: "auto", type: "readonly", span: 2,
-  hint: "명세서에 명칭 항목이 없어 화면이 만듭니다 (U-FC-10)" };
+  hint: "원본 자료에 명칭 항목이 없어 화면이 만듭니다" };
 
 export const FACILITY_FIELDS = {
   aed: [
@@ -396,7 +396,7 @@ export const QR_FIELDS = [
     when: v => v.installStatus === "설치완료", type: "date", example: "2026-03-14",
     hint: "설치완료를 고르면 필수가 됩니다" },
   { key: "active", spec: "is_active", label: "활성 여부", required: true, type: "switch",
-    hint: "끄면 이 코드로 들어온 시민에게 교체 안내(S11)가 뜹니다. 기본값은 꺼짐입니다" },
+    hint: "끄면 이 코드로 들어온 시민에게 교체 안내가 뜹니다. 기본값은 꺼짐입니다" },
 
   { key: "locationDetail", spec: "location_detail", label: "설치 상세 위치", required: false,
     type: "textarea", rows: 2, range: "최대 100자", maxLength: 100,
@@ -412,16 +412,9 @@ export function qrEntryUrl(code) {
   return `${origin}/s/${code || ""}`;
 }
 
-/* 자동생성 버튼이 쓰는 규칙. 영문 소문자+숫자 4~12자를 지켜야 하고, 사람이 읽어
-   어느 지점인지 짐작할 수 있어야 종이에 인쇄된 뒤에도 관리가 된다. */
-export function suggestQrCode(existing = []) {
-  const used = new Set(existing);
-  for (let n = 1; n < 1000; n += 1) {
-    const c = `yq${String(n).padStart(4, "0")}`;
-    if (!used.has(c)) return c;
-  }
-  return "yq0000";
-}
+/* 식별자 자동생성은 뺐다 (2026-08-20) — 관리자 화면에서 QR 지점을 새로 만들지 않는다.
+   코드는 안내판에 인쇄되어 현장에 붙는 값이라, 화면에서 만들 수 있게 두면 인쇄물 없는
+   코드가 표에 남는다. QR 지점 관리는 붙어 있는 지점의 **현황**만 다룬다. */
 
 /* ══ 5장 오류신고 (M13) ════════════════════════════════════════════════════ */
 export const REPORT_TARGET_TYPES = ["공공시설", "점포", "상점가", "축제", "기타"];
@@ -480,28 +473,16 @@ export const OPERATION_FIELDS = [
     required: true, type: "number", range: "1~14", min: 1, max: 14, example: "7" },
 ];
 
-/* ══ 8-2 API 쿼터 설정 (M15 · DEVELOPER 전용) ══════════════════════════════ */
-export const FALLBACK_OPTIONS = [
-  { value: "straight", label: "직선거리 안내로 폴백" },
-  { value: "external", label: "외부 지도앱 연결" },
-];
+/* ══ 8-2 API 쿼터 — 입력 항목이 없다 (2026-08-20, 사용자 요청) ═════════════
+   일일 호출 한도 · 경고 임계치 · 경고 수신 이메일 · 한도 초과 시 동작 넷을 [환경 설정]의
+   개발자 전용 구획에서 고칠 수 있었는데, 그 구획째 뺐다. 카카오 쪽 계약과 서버가 정하는
+   값이라 관리자 화면에서 손댈 자리가 아니다. 값 자체(한도 · 임계치 · 폴백 방식)는
+   `data/settings.js` 의 QUOTA_DEFAULTS 에 남아 대시보드의 사용량 카드가 읽는다 —
+   빠진 것은 **고치는 자리**이지 값이 아니다. (노출 순서 · 공공시설 source 와 같은 경우다) */
 
-export const QUOTA_FIELDS = [
-  { key: "dailyQuota", spec: "daily_quota", label: "일일 호출 한도", required: true, type: "number",
-    range: "100~100000", min: 100, max: 100000, unit: "건", example: "1000" },
-  { key: "warnThresholdPct", spec: "warn_threshold_pct", label: "쿼터 경고 임계치", required: true,
-    type: "number", range: "50~95", min: 50, max: 95, unit: "%", example: "80" },
-  { key: "warnEmail", spec: "warn_email", label: "경고 수신 이메일", required: false, type: "text",
-    range: "최대 100자", maxLength: 100, pattern: V.email, example: "gis@yongin.go.kr", span: 2 },
-  { key: "fallbackOnExceed", spec: "fallback_on_exceed", label: "한도 초과 시 동작", required: true,
-    type: "select", options: FALLBACK_OPTIONS, span: 2 },
-];
-
-/* ══ 9장 계정 및 권한 (M16 · DEVELOPER 전용) ═══════════════════════════════ */
-export const ROLE_OPTIONS = [
-  { value: "CITY", label: "시청 담당자" },
-  { value: "DEVELOPER", label: "개발자" },
-];
+/* ══ 9장 계정 (M16) ════════════════════════════════════════════════════════
+   `role`(권한) 항목이 빠졌다 (2026-08-20). 관리자 화면을 쓰는 사람이 용인시 담당자
+   하나뿐이라 나눌 권한이 없다 — 모든 계정이 같은 일을 할 수 있다. */
 
 export const ACCOUNT_FIELDS = [
   { key: "id", spec: "login_id", label: "아이디", required: true, type: "text",
@@ -512,8 +493,6 @@ export const ACCOUNT_FIELDS = [
   { key: "pw", spec: "password", label: "비밀번호", required: true, type: "text",
     range: "10~64자 · 영문·숫자·특수문자 중 2종 이상", span: 2,
     hint: "수정할 때 비우면 기존 비밀번호를 그대로 둡니다" },
-  { key: "role", spec: "role", label: "권한", required: true, type: "select", options: ROLE_OPTIONS,
-    hint: "개발자 전용은 계정 관리와 API 쿼터 설정 두 가지뿐입니다" },
   { key: "active", spec: "is_active", label: "사용 여부", required: true, type: "switch" },
   { key: "email", spec: "email", label: "이메일", required: true, type: "text",
     range: "최대 100자", maxLength: 100, pattern: V.email, example: "gis@yongin.go.kr" },

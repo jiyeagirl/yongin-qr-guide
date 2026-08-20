@@ -1,19 +1,29 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, ConfirmDialog, Button, Select, Badge, Notice, Pagination,
-  CoordField, fixCoord, CopyField, EMPTY_MARK,
+  PageHeader, Toolbar, DataTable, Select, Badge, Notice, Pagination,
+  CopyField, InfoList, EMPTY_MARK,
 } from "../../design-systems/admin.js";
 import { QR_POINTS } from "../../screens/main/data/qr.js";
 import { DISTRICTS } from "../../screens/main/data/districts.js";
-import { KAKAO_APP_KEY } from "../../screens/main/config.js";
-import { QR_FIELDS, INSTALL_STATUS, qrEntryUrl, suggestQrCode } from "../data/fields.js";
+import { QR_FIELDS, INSTALL_STATUS, qrEntryUrl } from "../data/fields.js";
 import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
 
-/* M11 QR 지점 목록 · M12 QR 지점 등록·수정.
+/* M11 QR 지점 목록 · M12 QR 지점 현황 수정.
+ *
+ * ── 지점을 만들지도 지우지도 않는다 (2026-08-20, 사용자 요청) ───────────────
+ * 이 화면은 **말 그대로 지점 관리**다 — 어디에 무엇이 붙어 있고 지금 어떤 상태인지를 보고,
+ * 그 현황을 갱신한다. QR 지점이 새로 생기는 일은 화면에서 값을 하나 만드는 일이 아니라
+ * **안내판을 제작해 현장에 붙이는 일**이고, 그 코드는 종이에 인쇄되어 나간다.
+ * 화면에서 코드를 만들 수 있게 두면 인쇄물 없는 코드가 표에 남는다.
+ *
+ * 그래서 고칠 수 있는 것은 현장에서 달라지는 값뿐이다:
+ *   설치 상태 · 설치일자 · 활성 여부 · 설치 상세 위치 · 관리 메모
+ * 지점을 가리키는 값(QR 식별자 · 지점명 · 주소 · 좌표 · 소속 상점가)은 **읽기 전용**으로
+ * 다이얼로그 위쪽에 적기만 한다. 삭제도 없다 — 아래 「끄는 것과 지우는 것은 다르다」 참조.
  *
  * ── 이 화면이 시민용의 시작점을 정한다 ──────────────────────────────────────
  * 시민이 보는 모든 거리("약 320m")가 여기 등록된 좌표 한 점에 매달려 있다. 좌표가 100m
@@ -38,7 +48,11 @@ import { EditorModal } from "./EditorModal.jsx";
  * "등록된 적 없는 코드"로 안내받는데, 실제로는 예전에 우리가 붙였던 코드다. 그 둘은
  * 할 말이 다르다 (U-CM-02 · S11 의 두 갈래). 대시보드의 지점별 스캔을 보면 철거한
  * 2019년 안내판을 아직 찍는 사람이 있다 — 그것이 지우면 안 되는 이유의 증거다.
+ * 삭제 버튼을 아예 두지 않는 것이 이 원칙을 지키는 가장 짧은 방법이다.
  */
+
+/* 현장에서 달라지는 값만 고친다. 나머지는 위쪽에 읽기 전용으로 적는다 */
+const STATUS_KEYS = ["installStatus", "installedAt", "active", "locationDetail", "memo"];
 
 const DISTRICT_NAME = DISTRICTS.reduce((o, d) => { o[d.id] = d.name; return o; }, {});
 
@@ -58,28 +72,17 @@ const ACTIVE_OPTIONS = [
 const STATUS_TONE = { 설치예정: "warning", 설치완료: "success", 훼손: "danger", 철거: "neutral" };
 
 export function QrPoints({ onToast }) {
-  const { rows, upsert, remove } = useCollection("qr", SOURCE, null, "QR 지점");
+  const { rows, upsert } = useCollection("qr", SOURCE, null, "QR 지점");
   const [status, setStatus] = React.useState("");
   const [active, setActive] = React.useState("");
   const list0 = useListState([status, active]);
 
   const ed = useRecordEditor({
-    fieldsFor: () => QR_FIELDS,
-    /* 활성 기본값이 꺼짐이다 (명세서 4장). 설치 상태도 「설치예정」에서 시작한다 —
-       등록하는 시점에 이미 붙어 있는 경우가 오히려 드물다 */
-    initial: () => ({ active: false, installStatus: "설치예정", districtId: "", code: suggestQrCode(rows.map(r => r.code)) }),
-    /* code 가 곧 id 다. 새로 등록할 때도 담당자가 적은 코드를 그대로 쓴다 —
-       QR 스티커에 인쇄될 값이라 우리가 만든 일련번호로 두면 안 된다 */
+    /* 현황 항목만 폼에 세운다. 지점을 가리키는 값은 폼 위 요약에 읽기 전용으로 적는다 */
+    fieldsFor: () => QR_FIELDS.filter(f => STATUS_KEYS.includes(f.key)),
+    /* 넘어온 행에 고친 값만 덮는다 — 폼에 없는 값(코드 · 좌표 …)은 그대로 간다 */
     onSave: values => upsert({ ...values, id: values.id || values.code }),
-    onRemove: remove,
     onToast, label: "QR 지점",
-    extraValidate: v => {
-      const bad = {};
-      /* 전역 유일 (명세서 4장). 겹치면 같은 코드가 두 지점을 가리켜 조회 결과가 뒤집힌다 */
-      const dup = rows.find(p => p.code === v.code && p.id !== v.id);
-      if (dup) bad.code = `이미 쓰는 코드입니다 (${dup.name}).`;
-      return bad;
-    },
   });
 
   const filtered = rows.filter(p => {
@@ -94,8 +97,7 @@ export function QrPoints({ onToast }) {
   return (
     <>
       <PageHeader title="QR 지점 관리" count={`${filtered.length}곳`}
-        note="설치 지점의 좌표가 시민용 화면의 모든 거리 표기의 기준점이 됩니다. 입력 항목은 명세서 4장을 따릅니다."
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>지점 등록</Button>} />
+        note="설치된 지점의 현황을 보고 설치 상태와 활성 여부를 갱신합니다. 지점을 새로 만들거나 지우지는 않습니다." />
 
       <Toolbar>
         <ListSearch state={list0} placeholder="식별자 · 지점명 · 주소 검색" />
@@ -131,11 +133,7 @@ export function QrPoints({ onToast }) {
           { key: "active", label: "활성", width: 90, align: "center", sortable: true,
             render: p => <Badge tone={p.active ? "success" : "neutral"} size="sm">{p.active ? "활성" : "비활성"}</Badge>,
             sortValue: p => (p.active ? 0 : 1) },
-          { key: "manage", label: "관리", width: 96, align: "center",
-            render: p => (
-              <Button variant="ghost" size="sm" icon="trash-2"
-                onClick={() => ed.askRemove(p)} style={{ color: "var(--state-danger)" }}>삭제</Button>
-            ) },
+          /* 「관리」 열(삭제 버튼)이 없다 — 옛 코드는 지우지 않고 끈다 (머리말 참조) */
         ]} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
@@ -143,36 +141,29 @@ export function QrPoints({ onToast }) {
       </div>
 
       <EditorModal ed={ed} size="lg"
-        title={ed.draft && ed.draft.isNew ? "QR 지점 등록" : "QR 지점 수정"}
-        description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}>
+        title="QR 지점 현황 수정"
+        description={ed.draft ? ed.draft.values.name : undefined}>
         {ed.draft ? (
           <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors} onChange={ed.set}
-            onAddress={(key, picked) => ed.setMany({ [key]: picked.addr, lat: picked.lat, lng: picked.lng })}
-            slots={{
-              coord: (
-                <CoordField key="coord" lat={ed.draft.values.lat} lng={ed.draft.values.lng}
-                  name={ed.draft.values.name} appKey={KAKAO_APP_KEY} height={260}
-                  note="이 한 점이 시민 화면의 모든 거리 표기의 기준입니다. 안내판이 실제로 붙는 자리에 맞춰 주세요."
-                  onChange={c => ed.setMany({ lat: fixCoord(c.lat), lng: fixCoord(c.lng) })} />
-              ),
-            }}
             before={
-              /* 자동생성은 항목표의 값이 아니라 그 칸을 채우는 도구다. 폼 위에 둔다 —
-                 칸 옆에 붙이면 「QR 식별자」 항목이 두 부분으로 보인다 */
-              ed.draft.isNew ? (
-                <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center",
-                  gap: "var(--space-3)", paddingBottom: "var(--space-4)",
-                  borderBottom: "var(--stroke-hairline) solid var(--border-default)" }}>
-                  <Button variant="outline" size="sm" icon="wand"
-                    onClick={() => ed.set("code", suggestQrCode(rows.map(r => r.code)))}>
-                    식별자 자동생성
-                  </Button>
-                  <span style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-                    영문 소문자와 숫자 4~12자, 전역에서 유일해야 합니다. 종이에 인쇄되는 값이라
-                    나중에 바꾸려면 안내판을 다시 만들어야 합니다.
-                  </span>
-                </div>
-              ) : null
+              /* 지점을 가리키는 값 — 여기서 고치지 않으므로 입력칸 대신 글로 적는다.
+                 그래도 보여는 준다: 지금 어느 지점의 현황을 고치는 중인지 알아야 한다 */
+              <div style={{ gridColumn: "1 / -1", paddingBottom: "var(--space-4)",
+                borderBottom: "var(--stroke-hairline) solid var(--border-default)" }}>
+                <InfoList items={[
+                  { label: "QR 식별자", value: ed.draft.values.code },
+                  { label: "지점명", value: ed.draft.values.name },
+                  { label: "도로명주소", value: ed.draft.values.addr || ed.draft.values.dong },
+                  { label: "좌표", value: ed.draft.values.lat != null && ed.draft.values.lng != null
+                    ? `${ed.draft.values.lat}, ${ed.draft.values.lng}` : null },
+                  { label: "소속 상점가", value: DISTRICT_NAME[ed.draft.values.districtId] || "지정 안 함" },
+                ]} />
+                <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-caption)",
+                  color: "var(--text-muted)", lineHeight: 1.55 }}>
+                  위 다섯 값은 안내판에 인쇄되어 현장에 붙은 것이라 이 화면에서 바꾸지 않습니다.
+                  아래 현황만 고칠 수 있습니다.
+                </p>
+              </div>
             }
             extra={
               <div style={{ gridColumn: "1 / -1" }}>
@@ -191,7 +182,7 @@ export function QrPoints({ onToast }) {
                 {ed.draft.values.installStatus === "설치완료" && !ed.draft.values.active ? (
                   <Notice tone="warning" size="sm" style={{ marginTop: "var(--space-4)" }}>
                     설치는 완료인데 활성이 꺼져 있습니다. 지금 이 안내판을 찍으면 시민에게
-                    「지금은 쓰지 않는 코드」 안내(S11)가 뜹니다. 열 준비가 되었으면 활성을 켜 주세요.
+                    「지금은 쓰지 않는 코드」 안내가 뜹니다. 열 준비가 되었으면 활성을 켜 주세요.
                   </Notice>
                 ) : null}
 
@@ -206,17 +197,8 @@ export function QrPoints({ onToast }) {
         ) : null}
       </EditorModal>
 
-      <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
-        title="지점을 삭제할까요?"
-        description="지점을 삭제합니다."
-        footnote="안내판을 교체한 경우라면 삭제 대신 설치 상태를 「철거」로 두고 활성을 끄세요. 지우면 그 코드로 들어온 시민에게 「등록되지 않은 코드」로 안내되는데, 실제로는 예전에 우리가 붙였던 코드입니다."
-        onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
-
-      <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-6)" }}>
-        더미 데이터(점포 335곳 · 공공시설 18곳 · 모든 거리)가 둔전 시장 입구 한 지점을 기준으로
-        계산되어 있어, 새 지점을 등록해도 그 지점으로 시민용 화면을 열어볼 수는 없습니다.
-        실데이터 연동 후에 열립니다.
-      </Notice>
+      {/* 삭제 확인 다이얼로그가 없다 — 삭제하는 길 자체를 두지 않았다.
+          안내판을 교체했으면 설치 상태를 「철거」로 두고 활성을 끈다. */}
     </>
   );
 }

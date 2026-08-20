@@ -7,12 +7,12 @@ import {
   PERIODS, DEFAULT_PERIOD, statsFor, TOTAL_SCANS, TAB_SHARE, FACILITY_SHARE,
   TOP_STORES, TOP_FACILITIES, SCANS_BY_POINT, API_USED_TODAY, TOP_N,
 } from "../data/stats.js";
-import { REPORTS, isOpen } from "../data/reports.js";
+import { REPORTS } from "../data/reports.js";
 import { QR_POINTS } from "../../screens/main/data/qr.js";
 import { STORES } from "../../screens/main/data/dunjeon.js";
 import { FACILITIES } from "../../screens/main/data/facilities.js";
 import { QUOTA_DEFAULTS } from "../data/settings.js";
-import { readCollection, useSettings } from "../data/store.js";
+import { readCollection } from "../data/store.js";
 
 /* M02 대시보드 (명세서 6장).
  *
@@ -80,7 +80,6 @@ function ShareList({ items }) {
 
 export function Dashboard({ onNavigate }) {
   const [periodKey, setPeriodKey] = React.useState(DEFAULT_PERIOD);
-  const quota = useSettings("quota", QUOTA_DEFAULTS, "API 쿼터 설정");
   const s = statsFor(periodKey);
   const n = v => Number(v || 0).toLocaleString("ko-KR");
 
@@ -95,10 +94,15 @@ export function Dashboard({ onNavigate }) {
   const newReports = reports.filter(r => r.at >= s.from && r.at <= s.to).length;
 
   /* 명세서 6장이 배지 셋을 적는다. 전에는 「매칭 검수 대기」가 넷째였는데 그 화면이
-     개발 쪽으로 가면서 함께 빠졌다 — 누를 곳이 없는 배지는 숫자만 있고 할 일이 없다. */
+     개발 쪽으로 가면서 함께 빠졌다 — 누를 곳이 없는 배지는 숫자만 있고 할 일이 없다.
+
+     「미처리 오류신고」도 뺐다 (2026-08-20, 사용자 요청). 같은 숫자가 **좌측 메뉴의
+     [오류신고 관리] 옆에 늘 붙어 있고**, 그쪽은 어느 화면에 있든 보인다. 같은 수를 한
+     화면에 두 번 적으면 둘이 다를 때(한쪽만 늦게 갱신될 때)를 의심하게 되고, 대시보드를
+     떠나면 사라지는 쪽이 아니라 늘 보이는 쪽이 남는 것이 맞다.
+     **명세서 6장은 이 배지를 셋으로 적고 있다** — 그 목록에서 하나를 뺀 것이라
+     명세서를 고칠 때 함께 반영해야 한다 (숫자가 사라진 것이 아니라 자리를 옮긴 것이다). */
   const pending = [
-    { key: "reports", page: "reports", label: "미처리 오류신고", tone: "danger",
-      count: reports.filter(isOpen).length },
     /* 설치 미완료 = 아직 안 붙었거나, 붙었는데 아직 안 켠 것. 둘 다 "열리지 않은 안내판"이다 */
     { key: "qr", page: "qr", label: "설치 미완료 QR", tone: "warning",
       count: qr.filter(p => p.installStatus !== "철거"
@@ -110,8 +114,10 @@ export function Dashboard({ onNavigate }) {
         + facilities.filter(x => x.lat == null || x.lng == null).length },
   ].filter(b => b.count > 0);
 
-  const limit = Number(quota.value.dailyQuota) || 1;
-  const warnAt = Number(quota.value.warnThresholdPct) || 80;
+  /* 한도와 경고 임계치는 화면에서 정하지 않는다 — 카카오 쪽 계약과 서버가 정하는 값이라
+     관리자 화면의 [환경 설정]에서 쿼터 구획을 뺐다 (2026-08-20). 여기서는 읽기만 한다. */
+  const limit = Number(QUOTA_DEFAULTS.dailyQuota) || 1;
+  const warnAt = Number(QUOTA_DEFAULTS.warnThresholdPct) || 80;
   const usedPct = Math.round(API_USED_TODAY / limit * 100);
   const overWarn = usedPct >= warnAt;
 
@@ -126,7 +132,12 @@ export function Dashboard({ onNavigate }) {
         } />
 
       {/* ── 처리 대기 배지 (명세서 6장) ─────────────────────────────────
-             수치가 아니라 **할 일**이라 맨 위다. 0 건이면 아예 뜨지 않는다 */}
+             수치가 아니라 **할 일**이라 맨 위다. 0 건이면 아예 뜨지 않는다.
+
+             할 일이 없을 때 「처리 대기 중인 일이 없습니다」 띠를 세우던 것도 뺐다
+             (2026-08-20, 사용자 요청). 없는 일을 굳이 적으면 대시보드를 열 때마다
+             통계보다 먼저 읽히는 줄이 하나 생기는데, 이 화면을 여는 이유는 수치를
+             보려는 것이다. 할 일이 생기면 그때 배지가 서서 스스로를 알린다. */}
       {pending.length ? (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)",
           marginBottom: "var(--space-6)" }}>
@@ -143,11 +154,7 @@ export function Dashboard({ onNavigate }) {
             </button>
           ))}
         </div>
-      ) : (
-        <Notice tone="success" size="sm" style={{ marginBottom: "var(--space-6)" }}>
-          처리 대기 중인 일이 없습니다.
-        </Notice>
-      )}
+      ) : null}
 
       {/* ── 요약 카드 4종 (명세서 6장) ──────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -176,22 +183,22 @@ export function Dashboard({ onNavigate }) {
         </Card>
 
         <Card>
-          <Section title="탭별 조회 비중" note="스캔 뒤 처음 간 탭">
+          <Section title="탭별 조회 비중" note="QR 스캔 이후 처음으로 진입한 탭">
             <ShareList items={TAB_SHARE} />
           </Section>
         </Card>
 
         <Card>
-          <Section title="시설 유형별 조회 비중" note="공공시설 탭 안에서">
+          <Section title="시설 유형별 조회 비중" note="공공시설 탭에서 열어 본 시설의 유형">
             <ShareList items={FACILITY_SHARE} />
           </Section>
         </Card>
       </div>
 
-      {/* ── 운영: 카카오맵 API 사용량 (명세서 6장) ──────────────────────── */}
+      {/* ── 운영: 카카오맵 API 사용량 ───────────────────────────────────── */}
       <Card style={{ marginBottom: "var(--space-7)" }}>
         <Section title="카카오맵 API 일일 사용량"
-          note={`한도와 경고 임계치는 [설정 > API 쿼터]에서 정합니다 (지금 ${warnAt}% 초과 시 경고).`}>
+          note={`길찾기 호출의 하루 한도 ${n(limit)}건 대비 사용량입니다 (${warnAt}% 를 넘으면 경고).`}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline",
             marginBottom: 6 }}>
             <span style={{ fontSize: "var(--fs-body)", fontWeight: "var(--fw-semibold)",
@@ -209,7 +216,7 @@ export function Dashboard({ onNavigate }) {
           {overWarn ? (
             <Notice tone="danger" size="sm" style={{ marginTop: "var(--space-3)" }}>
               경고 임계치({warnAt}%)를 넘었습니다. 한도를 넘기면 길찾기가
-              「{quota.value.fallbackOnExceed === "external" ? "외부 지도앱 연결" : "직선거리 안내"}」로 폴백합니다.
+              「{QUOTA_DEFAULTS.fallbackOnExceed === "external" ? "외부 지도앱 연결" : "직선거리 안내"}」로 폴백합니다.
             </Notice>
           ) : null}
         </Section>
@@ -218,7 +225,7 @@ export function Dashboard({ onNavigate }) {
       {/* ── 순위 3종, 각 상위 10 (명세서 6장) ───────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
         gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
-        <Section title={`조회 상위 점포 ${TOP_N}`}>
+        <Section title="조회수 상위 점포">
           <DataTable
             caption={`조회수 상위 점포 ${TOP_N}곳`}
             rows={TOP_STORES} rowKey="id"
@@ -237,7 +244,7 @@ export function Dashboard({ onNavigate }) {
             ]} />
         </Section>
 
-        <Section title={`조회 상위 공공시설 ${TOP_N}`}>
+        <Section title="조회수 상위 공공시설">
           <DataTable
             caption={`조회수 상위 공공시설 ${TOP_N}곳`}
             rows={TOP_FACILITIES} rowKey="id"
@@ -277,7 +284,7 @@ export function Dashboard({ onNavigate }) {
         스캔 수 · 길찾기 실행 수 · 조회 비중 · API 사용량은 서버 로그에서 나오는 값이라
         서버 연동 전 예시입니다. <b>처리 대기 배지와 오류신고 건수는 실제 자료를 센 값</b>이며,
         이 브라우저 탭에서 고친 내용이 바로 반영됩니다.
-        이 화면은 조회 전용이며 내보내기 기능을 두지 않습니다 (명세서 6장).
+        이 화면은 조회 전용이며 내보내기 기능을 두지 않습니다.
       </p>
     </>
   );

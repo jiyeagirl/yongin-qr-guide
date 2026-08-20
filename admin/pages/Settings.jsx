@@ -1,23 +1,18 @@
 import React from "react";
 import {
-  PageHeader, Card, Button, Badge, Notice, DataTable, FormGrid, FormField, EMPTY_MARK,
+  PageHeader, Card, Button, Badge, Notice, Modal, DataTable, FormGrid, FormField, EMPTY_MARK,
 } from "../../design-systems/admin.js";
-import { OPERATION_FIELDS, QUOTA_FIELDS, validate } from "../data/fields.js";
-import { OPERATION_DEFAULTS, QUOTA_DEFAULTS, OPERATION_FROM_CONFIG } from "../data/settings.js";
-import { canQuota } from "../data/account.js";
+import { OPERATION_FIELDS, validate } from "../data/fields.js";
+import { OPERATION_DEFAULTS, OPERATION_FROM_CONFIG } from "../data/settings.js";
 import { useSettings, readHistory } from "../data/store.js";
-import { API_USED_TODAY } from "../data/stats.js";
 
-/* M15 설정 (명세서 8장) — 운영 설정 · API 쿼터 · 변경 이력.
+/* M15 설정 — 운영 설정 · 변경 이력.
  *
- * ── 한 화면인데 권한이 둘이다 ───────────────────────────────────────────────
- * 8-1 운영 설정은 시청 담당자의 일이고, 8-2 API 쿼터는 **개발자 전용**이다 (명세서 9장).
- * 화면 단위로 나누면 시청 담당자에게 [설정]이 아예 안 보이는데, 그건 틀렸다 —
- * 임계 거리와 신규 매장 판정 기간은 서비스 운영의 핵심 값이고 그것을 정하는 사람이 시청이다.
- * 그래서 화면은 열되 **쿼터 구획만 구획째 사라진다.**
- *
- * 쿼터가 개발자 전용인 이유는 권한의 크기가 아니라 **잘못 건드렸을 때 벌어지는 일**이다 —
- * 한도를 잘못 올리면 비용이 나가고, 잘못 내리면 길찾기가 하루 종일 폴백으로 돈다.
+ * ── API 쿼터 구획이 빠졌다 (2026-08-20) ────────────────────────────────────
+ * 하루 한도와 경고 임계치를 여기서 고칠 수 있었고 개발자 계정에만 보였다. 그 값은
+ * 카카오 쪽 계약과 서버가 정하는 것이라 관리자 화면에서 손댈 자리가 아니고, 덕분에
+ * 이 화면은 이제 **권한에 따라 모습이 갈리지 않는다** — 시청 담당자와 개발자가 같은
+ * 화면을 본다. 오늘 사용량은 대시보드가 그대로 보여준다.
  *
  * ── 여기서 고쳐도 시민 화면은 바뀌지 않는다 ─────────────────────────────────
  * config.js 는 모듈 상수라 관리자가 밀어 넣을 수 없고, 애초에 두 화면이 다른 탭에서 뜬다.
@@ -32,7 +27,7 @@ import { API_USED_TODAY } from "../data/stats.js";
  * 대개 설정을 확인하러 온 김에 나온다. 내비에 열한 번째 항목을 더할 만한 무게가 아니다.
  */
 
-function Section({ title, badge, note, action, children }) {
+function Section({ title, note, action, children }) {
   return (
     <Card style={{ marginBottom: "var(--space-6)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)",
@@ -40,7 +35,7 @@ function Section({ title, badge, note, action, children }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2 style={{ display: "flex", alignItems: "center", gap: "var(--space-2)",
             font: "var(--type-title-3)", color: "var(--text-heading)", letterSpacing: "var(--ls-snug)" }}>
-            {title}{badge}
+            {title}
           </h2>
           {note ? (
             <p style={{ marginTop: 4, fontSize: "var(--fs-label)", color: "var(--text-muted)", lineHeight: 1.55 }}>
@@ -55,24 +50,75 @@ function Section({ title, badge, note, action, children }) {
   );
 }
 
-/* 설정 한 벌을 편집하는 공통 껍데기. 두 구획이 같은 방식으로 동작해야
-   담당자가 "여기는 자동 저장인가"를 두 번 묻지 않는다 — 둘 다 [저장]을 눌러야 반영된다. */
+/* 고를 수 있는 항목이면 저장값이 아니라 **보이는 이름**으로 적는다 (`straight` 가 아니라
+   「직선거리 안내로 폴백」). 지금은 select 항목이 없지만, 값과 이름이 다른 항목이 하나라도
+   생기면 확인 화면이 저장값을 그대로 보여주는 순간 무슨 말인지 알 수 없게 된다. */
+function shownValue(f, v) {
+  if (f.options) {
+    const hit = f.options.find(o => String(o.value == null ? o : o.value) === String(v));
+    if (hit) return hit.label == null ? String(v) : hit.label;
+  }
+  return v == null || v === "" ? EMPTY_MARK : String(v);
+}
+
+/* 읽기 상태의 값 한 칸. 입력칸 모양을 흉내내지 않는다 —
+   못 고치는 입력칸은 고장으로 읽힌다 (FormGrid 의 readonly 주석과 같은 이유다). */
+function ReadValue({ field, value }) {
+  return (
+    <div style={{ minHeight: 36, display: "flex", alignItems: "baseline", gap: 6,
+      fontSize: "var(--fs-body-lg)", fontWeight: "var(--fw-bold)", color: "var(--text-heading)",
+      fontVariantNumeric: "tabular-nums" }}>
+      {shownValue(field, value)}
+      {field.unit ? (
+        <span style={{ fontSize: "var(--fs-label)", fontWeight: "var(--fw-regular)",
+          color: "var(--text-muted)" }}>{field.unit}</span>
+      ) : null}
+    </div>
+  );
+}
+
+/* 설정 한 벌 — **기본은 잠겨 있다** (2026-08-20).
+ *
+ * 전에는 화면을 열면 입력칸이 바로 서 있었고 [저장]을 눌러야 반영됐다. 저장을 눌러야 하는
+ * 것과 **고칠 수 있는 상태로 열려 있는 것**은 다른 문제다 — 여기 있는 값은 시민 화면의
+ * 목록 범위와 안내 문구를 바꾸는 값이라, 지나가다 숫자 한 칸이 바뀌어도 담당자는 그것을
+ * 알아차릴 방법이 없다 (틀린 반경은 화면 어디에도 빨갛게 뜨지 않는다).
+ *
+ * 그래서 데이터 기준일 관리(M14)와 **같은 세 걸음**을 쓴다: 읽기 → [설정 수정] → [제출].
+ * 제출은 바뀐 줄만 모아 「무엇이 무엇으로」를 보여주고 한 번 더 묻는다. 두 화면이 같은
+ * 방식으로 움직여야 담당자가 "여기는 어떻게 저장하더라"를 화면마다 다시 익히지 않는다.
+ */
 function SettingsBlock({ fields, store, label, onToast, extra, tag }) {
+  const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(store.value);
   const [errors, setErrors] = React.useState({});
+  const [asking, setAsking] = React.useState(null);   /* 제출 확인 — 바뀐 줄의 목록 */
 
-  React.useEffect(() => { setDraft(store.value); setErrors({}); },
+  /* 저장값이 밖에서 바뀌면(데모 데이터 초기화) 따라가고, 고치던 중이었다면 그 상태도 끝낸다 */
+  React.useEffect(() => { setDraft(store.value); setErrors({}); setEditing(false); setAsking(null); },
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
     [JSON.stringify(store.value)]);
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(store.value);
+  const changes = fields
+    .map(f => ({ field: f, from: store.value[f.key], to: draft[f.key] }))
+    .filter(x => String(x.from == null ? "" : x.from) !== String(x.to == null ? "" : x.to));
 
-  const save = () => {
+  const startEdit = () => { setDraft(store.value); setErrors({}); setEditing(true); };
+  const cancel = () => { setDraft(store.value); setErrors({}); setEditing(false); };
+
+  const submit = () => {
     const bad = validate(fields, draft);
     if (Object.keys(bad).length) { setErrors(bad); onToast("입력 범위를 확인해 주세요."); return; }
+    if (!changes.length) { setEditing(false); return; }   /* 고친 것이 없으면 조용히 닫는다 */
+    setAsking(changes);
+  };
+
+  const confirmSubmit = () => {
     store.save(draft);
+    setAsking(null);
+    setEditing(false);
     setErrors({});
-    onToast(`${label}을(를) 저장했습니다.`);
+    onToast(`${label}을(를) 바꿨습니다.`);
   };
 
   const set = (key, value) => {
@@ -84,41 +130,79 @@ function SettingsBlock({ fields, store, label, onToast, extra, tag }) {
     <>
       <FormGrid columns={3} note={null}>
         {fields.map(f => (
-          <FormField key={f.key} label={f.label} required={f.required} range={f.range}
-            hint={tag ? tag(f) : f.hint} error={errors[f.key]}
+          <FormField key={f.key} label={f.label} required={f.required}
+            /* 범위(`500~5000`)는 고칠 때만 적는다 — 읽을 때는 지금 값이 답이다 */
+            range={editing ? f.range : undefined}
+            hint={tag ? tag(f) : f.hint} error={editing ? errors[f.key] : undefined}
             type={f.type} options={f.options} unit={f.unit} span={f.span}
             min={f.min} max={f.max} maxLength={f.maxLength}
-            value={draft[f.key]} onChange={v => set(f.key, v)} />
+            value={draft[f.key]} onChange={v => set(f.key, v)}>
+            {editing ? undefined : <ReadValue field={f} value={store.value[f.key]} />}
+          </FormField>
         ))}
       </FormGrid>
-      {extra}
+
+      {/* 긴 설명은 고르는 동안에만 세운다 */}
+      {editing ? extra : null}
+
       <div style={{ marginTop: "var(--space-5)", display: "flex", gap: "var(--space-2)" }}>
-        <Button variant="primary" icon="check" onClick={save} disabled={!dirty}>
-          {dirty ? "저장" : "저장됨"}
-        </Button>
-        {dirty ? (
-          <Button variant="ghost" onClick={() => { setDraft(store.value); setErrors({}); }}>되돌리기</Button>
-        ) : null}
+        {editing ? (
+          <>
+            <Button variant="primary" size="sm" icon="check" onClick={submit}>제출</Button>
+            <Button variant="ghost" size="sm" onClick={cancel}>취소</Button>
+          </>
+        ) : (
+          <Button variant="outline" size="sm" icon="pencil" onClick={startEdit}>설정 수정</Button>
+        )}
       </div>
+
+      {/* 제출 확인 — 바뀐 줄만, 「무엇이 무엇으로」 */}
+      <Modal open={!!asking} size="md" title={`${label}을(를) 바꿉니다`}
+        description="아래 값이 시민용 화면의 안내 범위와 문구를 바꿉니다."
+        onClose={() => setAsking(null)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setAsking(null)}>취소</Button>
+            <Button variant="primary" icon="check" onClick={confirmSubmit}>제출</Button>
+          </>
+        }>
+        {asking ? (
+          <ul style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            {asking.map(x => (
+              <li key={x.field.key} style={{ display: "flex", alignItems: "baseline", gap: "var(--space-3)",
+                fontSize: "var(--fs-body)", color: "var(--text-body)" }}>
+                <span style={{ minWidth: 170, fontWeight: "var(--fw-semibold)", color: "var(--text-heading)" }}>
+                  {x.field.label}
+                </span>
+                <span style={{ fontVariantNumeric: "tabular-nums", color: "var(--text-muted)",
+                  textDecorationLine: "line-through" }}>
+                  {shownValue(x.field, x.from)}{x.field.unit || ""}
+                </span>
+                <span aria-hidden="true" style={{ color: "var(--text-muted)" }}>→</span>
+                <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: "var(--fw-bold)",
+                  color: "var(--brand-primary)" }}>
+                  {shownValue(x.field, x.to)}{x.field.unit || ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </Modal>
     </>
   );
 }
 
-export function Settings({ account, onToast }) {
+export function Settings({ onToast }) {
   const ops = useSettings("operation", OPERATION_DEFAULTS, "운영 설정");
-  const quota = useSettings("quota", QUOTA_DEFAULTS, "API 쿼터 설정");
   const history = readHistory();
-
-  const usedPct = Math.round(API_USED_TODAY / (Number(quota.value.dailyQuota) || 1) * 100);
-  const overWarn = usedPct >= Number(quota.value.warnThresholdPct || 80);
 
   return (
     <>
-      <PageHeader title="환경 설정"
-        note="서비스 운영 값과 API 쿼터. 입력 항목은 명세서 8장을 따릅니다." />
+      <PageHeader title="환경 설정" note="시민용 화면에 적용되는 운영 값을 정합니다." />
 
+      {/* 구획 배지에 명세서 절 번호(8-1 · 8-2 · 10장)를 달아 두었는데 뺐다
+          (2026-08-20, 사용자 요청) — 화면을 쓰는 사람에게 그 번호는 아무것도 가리키지 않는다. */}
       <Section title="서비스 운영 설정"
-        badge={<Badge tone="neutral" size="sm">8-1</Badge>}
         note="시민용 화면의 거리 임계값과 기본 줌입니다. 여기서 정한 값이 화면의 안내 문구와 목록 범위를 바꿉니다.">
         <SettingsBlock fields={OPERATION_FIELDS} store={ops} label="운영 설정" onToast={onToast}
           /* 어느 값이 이미 시민 화면에 연결되어 있는지 항목마다 적는다 */
@@ -131,47 +215,18 @@ export function Settings({ account, onToast }) {
               배너 기준은 <b>「가깝다」고 말할 수 있는</b> 선입니다(도보 약 12~15분).
               1.4km 대피소는 목록에 나오되 「가까운 곳에 대피소가 없습니다」 배너와 함께 뜹니다.
               배너는 <b>안전시설(AED · 대피소 · 쉼터)에만</b> 붙습니다 — 근거가 긴급 상황의 접근성이라
-              화장실에는 성립하지 않습니다. 시설 유형별 검색 상한은 두지 않고 안내 범위 하나로 4종을 처리합니다 (명세서 8-1).
+              화장실에는 성립하지 않습니다. 시설 유형별 검색 상한은 두지 않고 안내 범위 하나로 4종을 처리합니다.
             </Notice>
           } />
       </Section>
 
-      {/* ── 8-2 API 쿼터 — 개발자 전용 (명세서 9장) ────────────────────── */}
-      {canQuota(account) ? (
-        <Section title="API 쿼터 설정"
-          badge={<Badge tone="warning" size="sm">8-2 · 개발자 전용</Badge>}
-          note="카카오맵 길찾기 호출의 하루 한도입니다. 잘못 올리면 비용이 나가고, 잘못 내리면 길찾기가 하루 종일 폴백으로 돕니다.">
-          <SettingsBlock fields={QUOTA_FIELDS} store={quota} label="API 쿼터 설정" onToast={onToast}
-            extra={
-              <div style={{ marginTop: "var(--space-5)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline",
-                  marginBottom: 6 }}>
-                  <span style={{ fontSize: "var(--fs-label)", fontWeight: "var(--fw-semibold)",
-                    color: "var(--text-heading)" }}>오늘 사용량</span>
-                  <span style={{ fontSize: "var(--fs-label)", fontVariantNumeric: "tabular-nums",
-                    color: overWarn ? "var(--state-danger)" : "var(--text-body)" }}>
-                    {API_USED_TODAY.toLocaleString("ko-KR")} / {Number(quota.value.dailyQuota).toLocaleString("ko-KR")}건 ({usedPct}%)
-                  </span>
-                </div>
-                <div aria-hidden="true" style={{ height: 8, borderRadius: "var(--radius-pill)",
-                  background: "var(--surface-sunken)", overflow: "hidden" }}>
-                  <div style={{ width: `${Math.min(100, usedPct)}%`, height: "100%",
-                    background: overWarn ? "var(--state-danger)" : "var(--brand-primary)" }} />
-                </div>
-              </div>
-            } />
-        </Section>
-      ) : (
-        <Notice tone="neutral" size="sm" style={{ marginBottom: "var(--space-6)" }}>
-          API 쿼터 설정(8-2)은 개발자 계정만 볼 수 있습니다. 잘못 건드리면 비용이 발생하거나
-          길찾기가 멈추는 항목이라 분리했습니다 (명세서 9장). 8-1 운영 설정은 시청 담당자의 일이라
-          이 화면 자체는 열려 있습니다.
-        </Notice>
-      )}
+      {/* API 쿼터 설정 구획을 뺐다 (2026-08-20, 사용자 요청). 하루 한도와 경고 임계치는
+          카카오 쪽 계약과 서버가 정하는 값이라 화면에서 손댈 자리가 아니고, 담당자가
+          이 화면에서 할 일도 아니었다 (개발자 계정에만 보이던 유일한 구획이기도 했다).
+          오늘 얼마나 썼는지는 대시보드의 「카카오맵 API 일일 사용량」이 그대로 보여준다. */}
 
-      {/* ── 변경 이력 (명세서 10장) ─────────────────────────────────────── */}
+      {/* ── 변경 이력 ──────────────────────────────────────────────────── */}
       <Section title="변경 이력"
-        badge={<Badge tone="neutral" size="sm">10장</Badge>}
         note="이 브라우저 탭에서 일어난 등록·수정·삭제입니다. 실서비스에서는 서버가 영구 보관합니다.">
         <DataTable
           caption="변경 이력"

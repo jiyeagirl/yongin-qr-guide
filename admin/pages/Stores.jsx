@@ -6,8 +6,7 @@ import {
 import { STORES } from "../../screens/main/data/dunjeon.js";
 import { CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
 import { STORE_FIELDS, BIZ_MAJOR, DISTRICT_OPTIONS, deriveChip } from "../data/fields.js";
-import { AS_OF_DEFAULTS, AS_OF_CATEGORIES, asOfPhrase } from "../data/settings.js";
-import { useCollection, useSettings } from "../data/store.js";
+import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
@@ -66,7 +65,6 @@ export function createdAtOf(s) {
 
 export function Stores({ onToast }) {
   const { rows, upsert, remove, patch, patchMany } = useCollection("stores", STORES, null, "점포");
-  const asOf = useSettings("asOf", AS_OF_DEFAULTS, "데이터 기준일");
   const [major, setMajor] = React.useState("");
   const [onnuri, setOnnuri] = React.useState("");
   const [district, setDistrict] = React.useState("");
@@ -110,12 +108,13 @@ export function Stores({ onToast }) {
     list0.setSelected([]);
   };
 
-  const storeCat = AS_OF_CATEGORIES.find(c => c.key === "store");
-
   return (
     <>
+      {/* 제목 아래 설명을 두지 않는다 (2026-08-20, 사용자 요청). 적혀 있던 것은
+          「입력 항목은 명세서 2-2 를 따릅니다」와 시민 화면 기준일 고지였는데, 둘 다
+          이 화면에서 할 일을 돕는 말이 아니다 — 명세서 번호는 만드는 쪽의 사정이고,
+          기준일은 [데이터 기준일 관리]가 다루는 값이라 여기서는 읽기만 하던 줄이었다. */}
       <PageHeader title="점포 정보 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`}
-        note={`입력 항목은 명세서 2-2 를 따릅니다. 시민 화면 고지 — ${asOfPhrase(storeCat, asOf.value.store) || "기준일 미설정"}`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>점포 등록</Button>} />
 
       <Toolbar actions={list0.selected.length ? (
@@ -187,7 +186,7 @@ export function Stores({ onToast }) {
                 <Notice tone="neutral" size="sm">
                   업종 칩은 대·중·소분류에서 자동으로 정해집니다. 위에서 직접 고르면 그때부터
                   분류를 고쳐도 따라가지 않습니다 — 손으로 정한 값을 규칙이 덮지 않기 위해서입니다.
-                  폐업을 확인했다면 삭제하지 말고 [노출 여부]를 꺼 주세요 (명세서 10장).
+                  폐업을 확인했다면 삭제하지 말고 [노출 여부]를 꺼 주세요.
                 </Notice>
               </div>
             } />

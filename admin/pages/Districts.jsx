@@ -1,7 +1,7 @@
 import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Cell, Modal, ConfirmDialog, Button, Select, Pagination,
-  Badge, Notice, Switch,
+  Badge, Switch,
 } from "../../design-systems/admin.js";
 import { DISTRICTS, GU_ORDER, FESTIVALS, CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
 import { STORES } from "../../screens/main/data/dunjeon.js";
@@ -117,7 +117,6 @@ export function Districts({ onToast }) {
   return (
     <>
       <PageHeader title="상점가 정보 관리" count={`${filtered.length}곳`}
-        note="용인시 골목형 상점가. 입력 항목은 명세서 2-1 을 따르며 데이터 기준일을 갖지 않습니다 (7장)."
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>상점가 등록</Button>} />
 
       <Toolbar>
@@ -178,11 +177,10 @@ export function Districts({ onToast }) {
         <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />
       </div>
 
-      <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-5)" }}>
-        구역 주소 목록과 점포 매칭은 이 화면에서 다루지 않습니다 — 주소를 손보는 일이 곧
-        매칭을 다시 돌리는 일이라 개발 쪽에서 처리합니다 (명세서 범위).
-        점포수는 그 매칭 결과 중 <b>노출 상태인 건수</b>이며 여기서는 읽기만 합니다.
-      </Notice>
+      {/* 「구역 주소 매칭은 개발 쪽에서 처리합니다」 안내를 뺐다 (2026-08-20, 사용자 요청).
+          담당자는 이 사업이 어떻게 굴러가는지 이미 알고 있다 — 화면이 할 말은 여기서
+          무엇을 할 수 있는가이지, 무엇이 우리 쪽 사정으로 여기에 없는가가 아니다.
+          점포수가 읽기 전용이라는 사실은 열 머리말의 「노출 상태 기준」이 이미 말한다. */}
 
       <EditorModal ed={ed} size="lg"
         title={ed.draft && ed.draft.isNew ? "상점가 등록" : "상점가 수정"}
@@ -227,7 +225,7 @@ export function Districts({ onToast }) {
             </p>
             <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-label)",
               color: "var(--text-muted)", lineHeight: 1.6 }}>
-              연결을 먼저 정리한 뒤에 삭제할 수 있습니다 (명세서 10장). 당장 목록에서 내리려면
+              연결을 먼저 정리한 뒤에 삭제할 수 있습니다. 당장 목록에서 내리려면
               삭제 대신 [노출 여부] 토글을 꺼 주세요.
             </p>
           </>

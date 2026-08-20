@@ -159,12 +159,18 @@ export function FacilityDetail({ facility, onBack, onRoute, onReport, onCopied }
              달라서, 한 값으로 묶으면 어느 한쪽에는 반드시 틀린 날짜가 붙는다. */}
         <DetailNotice asOf={`공공시설 정보 ${FACILITY_AS_OF[f.type] || ""} 기준`} />
 
+        {/* "이 화면보다"를 뺐다 (2026-08-20). 기본 글자 크기에서도 줄이 넘어가 「119 신고」가
+             홀로 다음 줄에 떨어졌는데, 이 문장에서 가장 먼저 읽혀야 할 넉 자가 문장 밖으로
+             밀려나 보였다. 뺀 말은 급한 사람에게 보탬이 없다 — "119 가 먼저"라고 하면
+             무엇보다 먼저인지는 이미 들린다.
+             `keep-all` 과 `nowrap` 은 글자를 키웠을 때를 위한 것이다. 줄이 넘어가더라도
+             낱말 가운데나 「119」와 「신고」 사이에서 끊기지 않는다. */}
         {urgent ? (
           <p style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)",
             fontSize: "var(--fs-caption)", color: "var(--yong-red-500)", fontWeight: "var(--fw-semibold)",
-            lineHeight: 1.55 }}>
+            lineHeight: 1.55, wordBreak: "keep-all" }}>
             <Icon name="phone" size={16} style={{ flex: "0 0 auto", marginTop: 2 }} />
-            심정지나 재난 상황이라면 이 화면보다 <b>119 신고</b>가 먼저입니다.
+            <span>심정지나 재난 상황이라면 <b style={{ whiteSpace: "nowrap" }}>119 신고</b>가 먼저입니다.</span>
           </p>
         ) : null}
       </DetailBody>

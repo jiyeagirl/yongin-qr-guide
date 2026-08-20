@@ -115,7 +115,7 @@ export function Festivals({ onToast }) {
   return (
     <>
       <PageHeader title="축제 정보 관리" count={`${filtered.length}건`}
-        note={`입력 항목은 명세서 2-3 을 따릅니다. 상태는 오늘(${TODAY}) 기준으로 자동 판정되며 직접 고를 수 없습니다.`}
+        note={`상태는 오늘(${TODAY}) 기준으로 자동 판정되며 직접 고를 수 없습니다.`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>축제 등록</Button>} />
 
       <Toolbar>
@@ -173,7 +173,7 @@ export function Festivals({ onToast }) {
 
                 <div style={{ gridColumn: "1 / -1", paddingTop: "var(--space-4)",
                   borderTop: "var(--stroke-hairline) solid var(--border-default)" }}>
-                  <Notice tone="warning" size="sm" title="아래 두 항목은 조건부입니다 (명세서 2-4 · 2-5)">
+                  <Notice tone="warning" size="sm" title="아래 두 항목은 조건부입니다">
                     용인시가 제공하는 자료의 범위가 확정되지 않아 반영 여부가 정해지지 않았습니다.
                     자료를 받기 전에는 비워 두세요 — 지금 채운 값의 출처를 나중에 아무도 알 수 없습니다.
                   </Notice>
@@ -203,7 +203,7 @@ export function Festivals({ onToast }) {
                 <ImageField label="부스 배치도" value={ed.draft.values.boothMap}
                   onChange={v => ed.set("boothMap", v)} error={ed.errors.boothMap}
                   badge={<ConditionalBadge />}
-                  note="배치도 상대좌표를 쓰는 부스가 하나라도 있으면 필수입니다 (명세서 2-5)." />
+                  note="배치도 상대좌표를 쓰는 부스가 하나라도 있으면 필수입니다." />
               </>
             } />
         ) : null}
@@ -211,7 +211,7 @@ export function Festivals({ onToast }) {
 
       <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
         description="축제를 삭제합니다."
-        footnote="종료된 축제는 삭제하지 않고 그대로 두는 것이 원칙입니다 (명세서 2-3) — 완료 카테고리로 옮겨 계속 노출됩니다. 잘못 등록한 건만 지웁니다."
+        footnote="종료된 축제는 삭제하지 않고 그대로 두는 것이 원칙입니다 — 완료 카테고리로 옮겨 계속 노출됩니다. 잘못 등록한 건만 지웁니다."
         onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
     </>
   );

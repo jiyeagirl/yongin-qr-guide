@@ -134,7 +134,11 @@ export function DataTable({
     onSelectedChange(selected.includes(k) ? selected.filter(x => x !== k) : selected.concat(k));
   };
 
-  const TONE_BG = { danger: "var(--state-danger-soft)", warning: "var(--state-warning-soft)" };
+  /* 행 강조는 **tint(50단)** 를 쓴다. soft(100단)는 상자 하나가 쓰는 값이라, 표의 한 줄
+     전체에 깔면 같은 색이 화면 폭만큼 늘어나 훨씬 진해 보인다 — 세 줄이 걸리면 표가
+     통째로 붉어진다 (2026-08-20). 강조의 목적은 그 줄을 **찾게** 하는 것이지
+     경고를 지르는 것이 아니다. 「3건 누적」 배지가 이유를 글자로 따로 적는다. */
+  const TONE_BG = { danger: "var(--state-danger-tint)", warning: "var(--state-warning-tint)" };
 
   return (
     <div style={{ background: "var(--surface-card)", border: "var(--stroke-hairline) solid var(--border-default)",

@@ -365,9 +365,8 @@ export const FESTIVALS = DISTRICTS
    U-FT-01 이 요구하는 세 상태 구분은 거기서 지킨다. */
 export const FESTIVALS_OPEN = FESTIVALS.filter(f => f.state !== "종료");
 
-/* U-CM-18 — 진행 중 축제가 있으면 둘러보기 탭 아이콘에 점을 찍는다.
-   "예정"으로는 찍지 않는다. 6건이 모두 예정인 기간에는 점이 상시 켜져 있어 신호가 죽는다. */
-export const HAS_LIVE_FESTIVAL = FESTIVALS.some(f => f.state === "진행중");
+/* 여기 있던 `HAS_LIVE_FESTIVAL`(U-CM-18 탭 알림 점)은 뺐다 (2026-08-20).
+   점 자체가 없어져 쓰는 곳이 사라졌다 — 이유는 MainApp 의 TABS 머리말. */
 
 /* U-FT-03 우리 상점가 축제 배너 — 현재 상점가 1건. 종료된 축제는 배너에 걸지 않는다. */
 const own = FESTIVAL_BY_DISTRICT[CURRENT_DISTRICT_ID];
