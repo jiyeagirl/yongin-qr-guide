@@ -9,7 +9,7 @@ import {
 } from "../data/account.js";
 import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
-import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
+import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
 
@@ -109,7 +109,6 @@ export function Accounts({ account, onToast }) {
 
       <Toolbar>
         <ListSearch state={list0} placeholder="아이디 · 이름 · 이메일 검색" />
-        <PageSizeSelect state={list0} />
         <SearchHint state={list0} />
       </Toolbar>
 

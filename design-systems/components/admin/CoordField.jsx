@@ -54,8 +54,11 @@ export function CoordField({
   }, [onChange]);
 
   return (
+    /* 「주소를 고르면 자동으로 들어옵니다」를 뺐다 (2026-08-20) — 빈 지도 자리가 이미
+       같은 말을 하고 있고, 주소를 고르고 나면 그 말이 필요 없다. 남긴 한 줄은 설명이 아니라
+       **보이지 않는 조작**이다: 지도를 눌러 옮기거나 핀을 끌 수 있다는 것은 화면만 봐서는 모른다. */
     <FormField label={label} required="auto" span={span}
-      hint={note || "주소를 고르면 자동으로 들어옵니다. 자리가 틀리면 지도를 눌러 옮기거나 핀을 끌어 맞춥니다."}>
+      hint={note || "자리가 틀리면 지도를 눌러 옮기거나 핀을 끌어 맞춥니다."}>
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: 6 }}>
           <span style={{ fontSize: "var(--fs-label)", fontVariantNumeric: "tabular-nums",
@@ -89,7 +92,7 @@ export function CoordField({
         {off ? (
           <p style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--state-warning)", lineHeight: 1.55 }}>
             용인시 범위(위도 {COORD_BOUNDS.latMin}~{COORD_BOUNDS.latMax} ·
-            경도 {COORD_BOUNDS.lngMin}~{COORD_BOUNDS.lngMax}) 밖입니다 (V-01).
+            경도 {COORD_BOUNDS.lngMin}~{COORD_BOUNDS.lngMax}) 밖입니다.
             저장은 되지만 맞는 자리인지 한 번 더 확인해 주세요.
           </p>
         ) : null}

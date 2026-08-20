@@ -1,15 +1,15 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, Cell, Modal, Button, Select, Input, Badge, Notice, Pagination,
+  PageHeader, Toolbar, DataTable, Cell, Modal, Button, Select, Badge, Notice, Pagination,
   InfoList, Textarea, EMPTY_MARK,
 } from "../../design-systems/admin.js";
-import { REPORTS, isOpen, CONTACT_KEEP_DAYS } from "../data/reports.js";
+import { REPORTS, CONTACT_KEEP_DAYS } from "../data/reports.js";
 import {
   REPORT_STATES, REPORT_TYPES, REPORT_TARGET_TYPES, REPORT_NEEDS_REPLY,
 } from "../data/fields.js";
 import { readAccounts } from "../data/account.js";
 import { useCollection } from "../data/store.js";
-import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
+import { useListState, ListSearch, SearchHint } from "./useListState.js";
 
 /* M13 오류신고 관리 (명세서 5장).
  *
@@ -56,17 +56,13 @@ export function Reports({ onToast, onNavigate }) {
   const [state, setState] = React.useState("");
   const [kind, setKind] = React.useState("");
   const [targetType, setTargetType] = React.useState("");
-  const [assignee, setAssignee] = React.useState("");
-  const [from, setFrom] = React.useState("");
-  const [to, setTo] = React.useState("");
-  const list0 = useListState([state, kind, targetType, assignee, from, to]);
+  const list0 = useListState([state, kind, targetType]);
   const [open, setOpen] = React.useState(null);
   const [draft, setDraft] = React.useState({});
   const [error, setError] = React.useState(null);
 
+  /* 담당자는 **상세에서 지정하는 값**으로만 남는다. 목록 필터에서는 뺐다 (위 Toolbar 주석) */
   const accounts = readAccounts().filter(a => a.active !== false);
-  const ASSIGNEE_FILTER = [{ value: "", label: "전체 담당자" }, { value: "-", label: "담당자 없음" }]
-    .concat(accounts.map(a => ({ value: a.name, label: a.name })));
   const ASSIGNEE_OPTIONS = [{ value: "", label: "— 담당자 없음 —" }]
     .concat(accounts.map(a => ({ value: a.name, label: a.name })));
 
@@ -83,18 +79,13 @@ export function Reports({ onToast, onNavigate }) {
       if (state && r.state !== state) return false;
       if (kind && r.kind !== kind) return false;
       if (targetType && r.targetType !== targetType) return false;
-      if (assignee === "-" && r.assignee) return false;
-      if (assignee && assignee !== "-" && r.assignee !== assignee) return false;
-      if (from && r.at < from) return false;
-      if (to && r.at > to) return false;
       if (!list0.term) return true;
       return `${r.body} ${r.target || ""} ${r.id}`.includes(list0.term);
     })
     .sort((a, b) => (STATE_ORDER[a.state] - STATE_ORDER[b.state]) || b.at.localeCompare(a.at)),
-  [rows, state, kind, targetType, assignee, from, to, list0.term]);
+  [rows, state, kind, targetType, list0.term]);
 
   const paged = list0.paginate(filtered);
-  const openCount = rows.filter(isOpen).length;
 
   const openOne = r => { setOpen(r); setDraft({ ...r }); setError(null); };
   const close = () => { setOpen(null); setDraft({}); setError(null); };
@@ -123,23 +114,27 @@ export function Reports({ onToast, onNavigate }) {
 
   return (
     <>
-      <PageHeader title="오류신고 관리" count={`${filtered.length}건`}
-        note={`시민용 오류 신고 화면으로 접수된 건입니다. 미처리 ${openCount}건.`} />
+      {/* 제목 아래 설명을 두지 않는다 (2026-08-20, 사용자 요청). 「시민용 오류 신고 화면으로
+          접수된 건입니다」는 이 화면을 여는 사람이 이미 아는 말이고, 뒤에 붙던 「미처리 N건」은
+          **좌측 메뉴 [오류신고 관리] 옆 배지가 늘 적는 같은 숫자**다 — 한 화면에 두 번 적으면
+          둘이 다를 때를 의심하게 된다 (대시보드에서 같은 이유로 뺐다). */}
+      <PageHeader title="오류신고 관리" count={`${filtered.length}건`} />
 
       <Toolbar>
-        <ListSearch state={list0} placeholder="내용 · 대상 · 접수번호 검색" width={260} />
         <Select value={state} options={opt(REPORT_STATES, "전체 상태")} onChange={e => setState(e.target.value)} />
         <Select value={kind} options={opt(REPORT_TYPES, "전체 신고 유형")} onChange={e => setKind(e.target.value)} />
         <Select value={targetType} options={opt(REPORT_TARGET_TYPES, "전체 대상 유형")}
           onChange={e => setTargetType(e.target.value)} />
-        <Select value={assignee} options={ASSIGNEE_FILTER} onChange={e => setAssignee(e.target.value)} />
-        {/* 접수 기간 (명세서 5장 목록 필터). 두 칸을 붙여 하나의 조건으로 보이게 둔다 */}
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <Input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 156 }} />
-          <span style={{ color: "var(--text-muted)" }}>~</span>
-          <Input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ width: 156 }} />
-        </span>
-        <PageSizeSelect state={list0} />
+        <ListSearch state={list0} placeholder="내용 · 대상 · 접수번호 검색" />
+        {/* ── 필터를 셋으로 줄였다 (2026-08-20, 사용자 요청) ──────────────────
+               고르개가 여섯이라 필터 줄이 두 줄로 접혔고, 그 두 줄이 표보다 먼저 읽혔다.
+               뺀 둘은 이 화면에서 짚어낼 것이 없는 축이다:
+
+               담당자     계정이 하나뿐이라(9장) 고를 것이 사실상 없다. 담당자를 나눠 맡는
+                          날이 오면 그때 세운다
+               접수 기간   날짜 두 칸이 필터 줄에서 가장 넓은데, 담당자가 이 화면을 여는
+                          이유는 "언제 것"이 아니라 "남은 일"이다. 차례가 이미 미처리 먼저이고,
+                          특정 날짜는 접수번호(YYYYMMDD-n) 검색으로 바로 닿는다 */}
         <SearchHint state={list0} />
       </Toolbar>
 

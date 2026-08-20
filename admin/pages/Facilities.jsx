@@ -8,7 +8,7 @@ import { KAKAO_APP_KEY } from "../../screens/main/config.js";
 import { FACILITY_FIELDS } from "../data/fields.js";
 import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
-import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
+import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
 
@@ -128,12 +128,11 @@ export function Facilities({ onToast }) {
       {/* 제목 아래 설명을 두지 않는다 (2026-08-20, 사용자 요청) — 명세서 장 번호와
           시민 화면 기준일 고지가 적혀 있었다. 기준일은 [데이터 기준일 관리]가 정하는
           값이고, 다루는 네 유형은 바로 아래 탭이 이미 늘어놓는다. */}
+      {/* 유형 탭은 머리의 일부다 — 「지금 무엇을 보여주는 목록인가」를 정하는 줄이라
+          제목 바로 아래 붙는다 (PageHeader 의 tabs 머리말) */}
       <PageHeader title="공공시설 정보 관리" count={`${filtered.length}곳`}
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>시설 등록</Button>} />
-
-      <div style={{ marginBottom: "var(--space-4)" }}>
-        <SegmentedTabs items={TYPE_TABS} value={type} onChange={setType} />
-      </div>
+        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>시설 등록</Button>}
+        tabs={<SegmentedTabs items={TYPE_TABS} value={type} onChange={setType} />} />
 
       <Toolbar actions={list0.selected.length ? (
         <>
@@ -145,7 +144,6 @@ export function Facilities({ onToast }) {
         </>
       ) : null}>
         <ListSearch state={list0} placeholder="명칭 · 주소 · 설치 위치 검색" />
-        <PageSizeSelect state={list0} />
         <SearchHint state={list0} />
       </Toolbar>
 

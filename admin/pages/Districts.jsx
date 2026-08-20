@@ -9,7 +9,7 @@ import { QR_POINTS } from "../../screens/main/data/qr.js";
 import { DISTRICT_FIELDS, govLink } from "../data/fields.js";
 import { useCollection, readCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
-import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
+import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
 
@@ -120,9 +120,8 @@ export function Districts({ onToast }) {
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>상점가 등록</Button>} />
 
       <Toolbar>
-        <ListSearch state={list0} placeholder="상점가명 · 소재지 검색" />
         <Select value={gu} options={GU_OPTIONS} onChange={e => setGu(e.target.value)} />
-        <PageSizeSelect state={list0} />
+        <ListSearch state={list0} placeholder="상점가명 · 소재지 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 

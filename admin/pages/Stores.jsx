@@ -2,13 +2,15 @@ import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Cell, ConfirmDialog, Button, Select, Switch, Badge,
   Pagination, CategoryIcon, CATEGORY_LABELS, Notice, EMPTY_MARK, OnnuriBadge,
+  CoordField, fixCoord,
 } from "../../design-systems/admin.js";
+import { KAKAO_APP_KEY } from "../../screens/main/config.js";
 import { STORES } from "../../screens/main/data/dunjeon.js";
 import { CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
 import { STORE_FIELDS, BIZ_MAJOR, DISTRICT_OPTIONS, deriveChip } from "../data/fields.js";
 import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
-import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
+import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
 
@@ -126,11 +128,10 @@ export function Stores({ onToast }) {
           <Button variant="outline" size="sm" icon="eye-off" onClick={() => bulkVisible(false)}>숨김</Button>
         </>
       ) : null}>
-        <ListSearch state={list0} placeholder="상호명 · 주소 · 업종 검색" />
         <Select value={district} options={DISTRICT_FILTER} onChange={e => setDistrict(e.target.value)} />
         <Select value={major} options={MAJOR_OPTIONS} onChange={e => setMajor(e.target.value)} />
         <Select value={onnuri} options={ONNURI_OPTIONS} onChange={e => setOnnuri(e.target.value)} />
-        <PageSizeSelect state={list0} />
+        <ListSearch state={list0} placeholder="상호명 · 주소 · 업종 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
@@ -181,6 +182,15 @@ export function Stores({ onToast }) {
           <RecordForm fields={ed.fields} values={{ ...ed.draft.values, createdAt: createdAtOf(ed.draft.values) }}
             errors={ed.errors} onChange={setField}
             onAddress={(key, picked) => ed.setMany({ [key]: picked.addr, lat: picked.lat, lng: picked.lng })}
+            /* 점포도 지도에 핀으로 찍힌다 — 상점가 탭의 335개 마커가 이 좌표다.
+               공공시설 폼과 같은 부품, 같은 자리(주소 바로 아래)를 쓴다 */
+            slots={{
+              coord: (
+                <CoordField key="coord" lat={ed.draft.values.lat} lng={ed.draft.values.lng}
+                  name={ed.draft.values.name} appKey={KAKAO_APP_KEY}
+                  onChange={c => ed.setMany({ lat: fixCoord(c.lat), lng: fixCoord(c.lng) })} />
+              ),
+            }}
             extra={
               <div style={{ gridColumn: "1 / -1" }}>
                 <Notice tone="neutral" size="sm">

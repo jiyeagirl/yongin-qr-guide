@@ -150,7 +150,12 @@ export function AdminShell({
           </span>
           <span style={{ fontSize: "var(--fs-body)", fontWeight: "var(--fw-bold)",
             color: "var(--text-heading)", letterSpacing: "var(--ls-snug)", whiteSpace: "nowrap" }}>
-            용인시 QR 위치안내 <span style={{ color: "var(--text-muted)", fontWeight: "var(--fw-medium)" }}>관리자 페이지</span>
+            {/* 서비스 이름과 「관리자 페이지」 사이를 한 칸 이상 벌린다 (2026-08-20).
+                굵기와 색이 갈려 있어도 띄어쓰기 하나로는 한 덩이의 긴 이름으로 읽혔다 —
+                뒤 두 글자는 **여기가 어디인지**를 말하는 다른 마디다. */}
+            용인시 QR 위치안내
+            <span style={{ marginLeft: "var(--space-3)", color: "var(--text-muted)",
+              fontWeight: "var(--fw-medium)" }}>관리자 페이지</span>
           </span>
         </div>
 

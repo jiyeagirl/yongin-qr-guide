@@ -10,7 +10,7 @@ import { FESTIVAL_FIELDS, PROGRAM_COLUMNS, BOOTH_COLUMNS } from "../data/fields.
 import { CHARACTER_ASSETS, CHARACTER_DEFAULT, ASSET_BASE } from "../data/assets.js";
 import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
-import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
+import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
 
@@ -115,14 +115,15 @@ export function Festivals({ onToast }) {
 
   return (
     <>
+      {/* 제목 아래 설명을 두지 않는다 (2026-08-20, 사용자 요청) — 「상태는 오늘 기준으로
+          자동 판정되며 직접 고를 수 없습니다」가 있었다. 고를 수 없다는 것은 **고르는 칸이
+          없다는 사실**이 이미 말하고 있고, 없는 기능을 설명하는 줄이 목록보다 먼저 읽힌다. */}
       <PageHeader title="축제 정보 관리" count={`${filtered.length}건`}
-        note={`상태는 오늘(${TODAY}) 기준으로 자동 판정되며 직접 고를 수 없습니다.`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>축제 등록</Button>} />
 
       <Toolbar>
-        <ListSearch state={list0} placeholder="축제명 · 상점가 검색" />
         <Select value={state} options={STATE_OPTIONS} onChange={e => setState(e.target.value)} />
-        <PageSizeSelect state={list0} />
+        <ListSearch state={list0} placeholder="축제명 · 상점가 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 

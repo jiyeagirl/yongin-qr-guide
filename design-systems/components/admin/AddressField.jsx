@@ -156,6 +156,10 @@ export function AddressField({
               <Button variant="primary" onClick={search} disabled={busy}>{busy ? "찾는 중" : "찾기"}</Button>
             </div>
 
+            {/* 찾기 전에는 아무것도 적지 않는다 (2026-08-20). 여기 「고른 주소의 좌표가
+                함께 들어옵니다 (V-02). 좌표는 따로 입력하지 않습니다.」가 있었는데, 담당자가
+                이 자리에서 하려는 일은 검색어를 치는 것 하나다. 좌표가 함께 들어온다는 사실은
+                고르고 나면 아래 지도가 바로 보여준다 — 미리 말할 필요가 없다. */}
             {results ? (
               results.length ? (
                 <ul style={{ listStyle: "none", marginTop: "var(--space-3)", display: "flex",
@@ -187,12 +191,7 @@ export function AddressField({
                     : "검색 결과가 없습니다. 건물명이나 도로명 일부로 다시 찾아 보세요."}
                 </p>
               )
-            ) : (
-              <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-caption)",
-                color: "var(--text-muted)", lineHeight: 1.55 }}>
-                고른 주소의 좌표가 함께 들어옵니다 (V-02). 좌표는 따로 입력하지 않습니다.
-              </p>
-            )}
+            ) : null}
 
             {/* SDK 가 죽었을 때만 열리는 문. 열려 있다는 사실을 화면에 적는다 —
                 이렇게 들어온 주소는 표기가 흔들릴 수 있고 좌표가 비어 있다 */}

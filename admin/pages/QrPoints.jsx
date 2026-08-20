@@ -1,14 +1,14 @@
 import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Select, Badge, Notice, Pagination,
-  CopyField, InfoList, EMPTY_MARK,
+  InfoList, EMPTY_MARK,
 } from "../../design-systems/admin.js";
 import { QR_POINTS } from "../../screens/main/data/qr.js";
 import { DISTRICTS } from "../../screens/main/data/districts.js";
-import { QR_FIELDS, INSTALL_STATUS, qrEntryUrl } from "../data/fields.js";
+import { QR_FIELDS, INSTALL_STATUS } from "../data/fields.js";
 import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
-import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
+import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
 
@@ -100,10 +100,9 @@ export function QrPoints({ onToast }) {
         note="설치된 지점의 현황을 보고 설치 상태와 활성 여부를 갱신합니다. 지점을 새로 만들거나 지우지는 않습니다." />
 
       <Toolbar>
-        <ListSearch state={list0} placeholder="식별자 · 지점명 · 주소 검색" />
         <Select value={status} options={STATUS_OPTIONS} onChange={e => setStatus(e.target.value)} />
         <Select value={active} options={ACTIVE_OPTIONS} onChange={e => setActive(e.target.value)} />
-        <PageSizeSelect state={list0} />
+        <ListSearch state={list0} placeholder="식별자 · 지점명 · 주소 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
@@ -163,22 +162,11 @@ export function QrPoints({ onToast }) {
                   위 다섯 값은 안내판에 인쇄되어 현장에 붙은 것이라 이 화면에서 바꾸지 않습니다.
                   아래 현황만 고칠 수 있습니다.
                 </p>
-              </div>
-            }
-            extra={
-              <div style={{ gridColumn: "1 / -1" }}>
-                {/* 진입 URL (명세서 4장) — QR 이미지는 이 값으로 외부 도구에서 만든다 */}
-                <p style={{ marginBottom: 6, fontSize: "var(--fs-label)",
-                  fontWeight: "var(--fw-semibold)", color: "var(--text-heading)" }}>
-                  진입 URL
-                </p>
-                <CopyField label="이 주소로 QR 이미지를 만듭니다" value={qrEntryUrl(ed.draft.values.code)}
-                  onCopied={ok => onToast(ok ? "진입 URL 을 복사했습니다." : "복사하지 못했습니다.")} />
-                <p style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-                  QR 이미지 생성은 이 화면에서 하지 않습니다. 인쇄 규격(크기 · 여백 · 오류정정 수준)이
-                  안내판 제작처마다 달라, 주소만 정확히 넘기고 이미지는 그쪽 도구로 만드는 편이 낫습니다.
-                </p>
 
+                {/* ── 경고는 폼 **위**다 (2026-08-20) ────────────────────────
+                       전에는 폼 아래(extra)에 진입 URL 과 함께 있었다. 진입 URL 을 빼면서
+                       이 둘도 위로 올렸다 — 폼이 「관리 메모」로 끝나야 하고(마지막 칸이
+                       마지막에 보인다), 무엇보다 경고는 값을 고치기 **전에** 읽어야 한다. */}
                 {ed.draft.values.installStatus === "설치완료" && !ed.draft.values.active ? (
                   <Notice tone="warning" size="sm" style={{ marginTop: "var(--space-4)" }}>
                     설치는 완료인데 활성이 꺼져 있습니다. 지금 이 안내판을 찍으면 시민에게
@@ -188,7 +176,7 @@ export function QrPoints({ onToast }) {
 
                 {!ed.draft.values.districtId ? (
                   <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-3)" }}>
-                    소속 상점가를 비워 두면 이 지점으로 들어온 시민의 상점가 탭이 안내 상태(S03-E)로 뜹니다.
+                    소속 상점가를 비워 두면 이 지점으로 들어온 시민의 상점가 탭이 안내 상태로 뜹니다.
                     근처에 상점가가 없는 자리(공원 · 관공서 앞)에서는 그것이 맞는 화면입니다.
                   </Notice>
                 ) : null}

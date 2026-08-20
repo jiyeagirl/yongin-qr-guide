@@ -163,6 +163,16 @@ export const ONNURI_TYPE_OPTIONS = [
   { value: "digital", label: "디지털" },
 ];
 
+/* ── 좌표는 입력칸이 아니라 지도다 (입력 원칙 3번) ──────────────────────────
+   항목표에 자리를 남겨 두는 이유는 명세서에 `lat · lng` 가 항목으로 적혀 있어서다 —
+   표에서 빼면 그 항목이 어디로 갔는지 알 수 없다. 화면이 이 자리에 CoordField 를
+   끼워 넣는다 (RecordForm 의 slots).
+
+   **점포와 공공시설이 같은 항목을 쓰므로 여기 한 번만 적는다.** 주소 바로 아래인 것도
+   이유가 있다: 좌표는 주소에서 나온 값이라 둘이 떨어져 있으면 지도가 왜 저기 있는지
+   알 수 없다. */
+const COORD = { key: "coord", spec: "lat · lng", label: "좌표", required: "auto", type: "coord", span: 2 };
+
 export const STORE_FIELDS = [
   { key: "name", spec: "name", label: "상호명", required: true, type: "text",
     range: "1~60자", minLength: 1, maxLength: 60, example: "은행나무곱창" },
@@ -173,6 +183,11 @@ export const STORE_FIELDS = [
     options: DISTRICT_OPTIONS, example: "둔전골목형상점가" },
   { key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
     range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 },
+  /* 지도를 여기에도 둔다 (2026-08-20). 점포도 **지도에 핀으로 찍히는 자료**다 — 상점가 탭의
+     335개 마커가 이 좌표다. 공공시설 폼에만 지도가 있으면 담당자는 점포 좌표가 어디서
+     정해지는지 알 수 없고, 주소가 애매해 핀이 뒷골목에 박혀도 확인할 자리가 없다.
+     명세서 1장의 M06 기능란도 「폼, 지도 좌표 확인」이라고 적고 있다. */
+  COORD,
 
   { key: "bizL", spec: "category_large", label: "상권업종대분류명", required: true, type: "select",
     options: opts(BIZ_MAJOR), range: "최대 30자", example: "음식", hint: "원본값 그대로" },
@@ -198,8 +213,17 @@ export const STORE_FIELDS = [
     example: "폐업 확인 시 삭제 대신 이것을 끕니다" },
   { key: "views", spec: "view_count", label: "조회수", required: "auto", type: "number", unit: "회",
     hint: "인기순 정렬의 원천" },
-  { key: "createdAt", spec: "created_at", label: "등록일시", required: "auto", type: "text",
-    hint: "신규 매장 판정 기준 (M16 의 신규 매장 판정 기간)", span: 2 },
+  /* ── 등록 시점은 자동으로 채우되 고칠 수 있다 (2026-08-20, 사용자 요청) ──────
+     전에는 읽기 전용(⚙)이었다. 원천의 `created_at` 을 그대로 보여주는 값이니 손댈 이유가
+     없다고 본 것인데, **관리자가 점포를 새로 등록하는 경우가 실제로 있다.** 그때 이 값은
+     "오늘 화면에 넣은 날"이 되지 원천에 가게가 등록된 달이 아니다. 작년에 문을 연 가게를
+     오늘 등록하면 둘러보기 탭의 「신규 매장」에 그 가게가 올라간다.
+
+     고친 값은 실제로 목록을 바꾼다 — 신규 매장을 뽑는 쪽(dunjeon.js 의 discoverPicks)이
+     이 값을 먼저 본다. 화면에서 고쳤는데 목록이 그대로면 고친 것이 아니다. */
+  { key: "createdAt", spec: "created_at", label: "등록 시점", required: false, type: "month",
+    example: "2026-06", span: 2,
+    hint: "둘러보기 탭의 「신규 매장」을 뽑는 기준입니다" },
 ];
 
 /* 업종 칩 자동 산출 (chip_category ⚙).
@@ -301,12 +325,7 @@ export const BOOTH_COLUMNS = [
 const ADDR ={ key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
   range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 };
 
-/* 좌표는 **입력칸이 아니라 지도**다 (입력 원칙 3번). 항목표에 자리를 남겨두는 이유는
-   명세서 3-1 과 4장에 `lat · lng` 가 항목으로 적혀 있어서다 — 표에서 빼면 그 항목이
-   어디로 갔는지 알 수 없다. 화면이 이 자리에 CoordField 를 끼워 넣는다 (RecordForm 의 slots).
-   주소 바로 아래인 것도 이유가 있다: 좌표는 주소에서 나온 값이라 둘이 떨어져 있으면
-   지도가 왜 저기 있는지 알 수 없다. */
-const COORD = { key: "coord", spec: "lat · lng", label: "좌표", required: "auto", type: "coord", span: 2 };
+/* 좌표(COORD)는 점포와 함께 쓰므로 2-2 위쪽에 한 번만 선언해 두었다 */
 
 const COMMON_TAIL = [
   { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch" },

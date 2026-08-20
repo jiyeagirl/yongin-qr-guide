@@ -13,36 +13,47 @@ import React from "react";
  * 주 행동은 **하나뿐이다.** 목록 화면에서 할 일은 [등록]이고, 나머지(내보내기·일괄
  * 업로드 등)는 표 위 Toolbar 의 오른쪽에 붙는다. 둘을 같은 자리에 놓으면 무게가 같아져
  * 담당자가 매번 읽고 고르게 된다.
+ *
+ * ── `tabs` 는 머리의 일부다 (2026-08-20) ────────────────────────────────────
+ * 공공시설의 유형 탭(전체 · AED · 화장실 · 쉼터 · 대피소)처럼 **이 화면이 지금 무엇을
+ * 보여주는지**를 정하는 줄이다. 화면 쪽에서 머리 아래에 따로 놓았더니 제목과 20px,
+ * 필터 줄과 16px 로 떠서 어디에도 속하지 않는 줄처럼 보였다. 여기서 받아 제목 바로
+ * 아래(12px)에 붙인다 — 제목의 뒷말이지 필터의 앞말이 아니다.
+ *
+ * 좁히는 조건(업종 ▾ · 온누리 ▾)과는 다르다. 저것들은 표 위 Toolbar 의 것이다.
  */
-export function PageHeader({ title, note, count, action, style, ...rest }) {
+export function PageHeader({ title, note, count, action, tabs, style, ...rest }) {
   return (
-    <header style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-4)",
-      marginBottom: "var(--space-5)", ...style }} {...rest}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <h1 style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)",
-          font: "var(--type-title-1)", letterSpacing: "var(--ls-snug)", color: "var(--text-heading)" }}>
-          {title}
-          {/* 건수는 제목 옆에 붙는다. 표 위에 따로 한 줄을 내주면 그 줄이 필터 결과가
-              바뀔 때마다 혼자 깜빡여 화면이 들썩인다 */}
-          {count != null ? (
-            <span style={{ fontSize: "var(--fs-body)", fontWeight: "var(--fw-semibold)",
-              color: "var(--brand-primary)", fontVariantNumeric: "tabular-nums" }}>
-              {count}
-            </span>
+    <header style={{ marginBottom: "var(--space-5)", ...style }} {...rest}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-4)" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)",
+            font: "var(--type-title-1)", letterSpacing: "var(--ls-snug)", color: "var(--text-heading)" }}>
+            {title}
+            {/* 건수는 제목 옆에 붙는다. 표 위에 따로 한 줄을 내주면 그 줄이 필터 결과가
+                바뀔 때마다 혼자 깜빡여 화면이 들썩인다 */}
+            {count != null ? (
+              <span style={{ fontSize: "var(--fs-body)", fontWeight: "var(--fw-semibold)",
+                color: "var(--brand-primary)", fontVariantNumeric: "tabular-nums" }}>
+                {count}
+              </span>
+            ) : null}
+          </h1>
+          {note ? (
+            <p style={{ marginTop: 6, fontSize: "var(--fs-label)", color: "var(--text-muted)", lineHeight: 1.55 }}>
+              {note}
+            </p>
           ) : null}
-        </h1>
-        {note ? (
-          <p style={{ marginTop: 6, fontSize: "var(--fs-label)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-            {note}
-          </p>
+        </div>
+        {/* 행동이 둘 이상 올 수 있다 ([취소]+[제출] 처럼). 붙어 서지 않게 여기서 간격을 준다 */}
+        {action ? (
+          <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            {action}
+          </div>
         ) : null}
       </div>
-      {/* 행동이 둘 이상 올 수 있다 ([취소]+[제출] 처럼). 붙어 서지 않게 여기서 간격을 준다 */}
-      {action ? (
-        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-          {action}
-        </div>
-      ) : null}
+
+      {tabs ? <div style={{ marginTop: "var(--space-3)" }}>{tabs}</div> : null}
     </header>
   );
 }

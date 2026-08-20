@@ -1,9 +1,9 @@
 import React from "react";
-import { Select, SearchField } from "../../design-systems/admin.js";
+import { SearchField } from "../../design-systems/admin.js";
 
 /* 목록 화면 공통 규격 (명세서 1장) — 열 개 목록 화면이 같은 것을 쓴다.
  *
- *   "페이지당 20·50·100행(기본 20), 열 헤더 클릭 정렬, 통합 검색(최소 2자),
+ *   "페이지당 20행, 열 헤더 클릭 정렬, 통합 검색(최소 2자),
  *    상세 복귀 시 필터·스크롤 유지, 체크박스 다중 선택 후 일괄 처리,
  *    삭제 시 대상 명칭 포함 확인 모달, 수정 중 이탈 시 확인"
  *
@@ -25,12 +25,22 @@ import { Select, SearchField } from "../../design-systems/admin.js";
  * 필터도 쪽 번호도 스크롤 위치도 그대로 남는다 — 지키려고 애쓸 것이 없다.
  */
 
-export const PAGE_SIZES = [20, 50, 100];
+/* ── 한 쪽에 20행. 고르개를 두지 않는다 (2026-08-20, 사용자 요청) ────────────
+   전에는 필터 줄 끝에 [20행씩 ▾] 고르개가 서서 50·100을 고를 수 있었다. 뺀 이유:
+
+   - **필터 줄의 자리를 먹는다.** 오류신고는 고르개가 여섯이라 줄이 두 줄로 접혔고,
+     그중 하나가 "무엇을 볼지"가 아니라 "몇 줄씩 볼지"였다.
+   - **거의 쓰이지 않는다.** 목록이 긴 화면은 점포(335곳) 하나뿐이고, 거기서도 담당자가
+     오는 이유는 한 곳을 찾는 것이라 검색으로 좁힌다. 100행을 펼쳐 훑을 일이 아니다.
+   - 100행을 골라 둔 채 다른 화면으로 가면 6건짜리 목록에도 그 값이 남아, 쪽 번호가
+     사라진 이유를 화면이 설명하지 못했다.
+
+   더 보려면 쪽을 넘긴다. 값이 하나라 화면마다 다르게 보일 일도 없다. */
+export const PAGE_SIZE = 20;
 export const MIN_SEARCH = 2;
 
-export function useListState(deps = [], initialSize = PAGE_SIZES[0]) {
+export function useListState(deps = []) {
   const [q, setQ] = React.useState("");
-  const [size, setSize] = React.useState(initialSize);
   const [page, setPage] = React.useState(1);
   const [selected, setSelected] = React.useState([]);
 
@@ -41,36 +51,35 @@ export function useListState(deps = [], initialSize = PAGE_SIZES[0]) {
     setPage(1);
     setSelected([]);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [q, size, ...deps]);
+  }, [q, ...deps]);
 
   /* 두 글자 미만이면 검색어가 없는 것으로 친다. 화면은 "치고 있는 글자"를 그대로
      보여주되(q), 거르는 데 쓰는 값은 이것이다 */
   const term = q.trim().length >= MIN_SEARCH ? q.trim() : "";
 
   const paginate = React.useCallback((list) => {
-    const pageCount = Math.max(1, Math.ceil(list.length / size));
+    const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
     const safe = Math.min(page, pageCount);
-    return { pageCount, page: safe, rows: list.slice((safe - 1) * size, safe * size) };
-  }, [page, size]);
+    return { pageCount, page: safe, rows: list.slice((safe - 1) * PAGE_SIZE, safe * PAGE_SIZE) };
+  }, [page]);
 
-  return { q, setQ, term, size, setSize, page, setPage, selected, setSelected, paginate };
+  return { q, setQ, term, page, setPage, selected, setSelected, paginate };
 }
 
-/* 필터 줄의 왼쪽 — 어느 화면에서나 같은 자리, 같은 폭이다.
-   화면마다 SearchField 를 다시 놓으면 placeholder 만 다른 것이 아니라 폭도 조금씩 달라진다. */
-export function ListSearch({ state, placeholder, width = 320 }) {
+/* 필터 줄의 왼쪽 — 어느 화면에서나 같은 자리다.
+   화면마다 SearchField 를 다시 놓으면 placeholder 만 다른 것이 아니라 폭도 조금씩 달라진다.
+
+   ── 폭을 고정하지 않고 남는 자리를 채운다 (2026-08-20, 사용자 요청) ─────────
+   320px 로 박아 두었더니 1,440px 화면에서 검색창이 필터 줄의 4분의 1도 안 됐다. 고르개
+   두엇만 있는 화면에서는 오른쪽이 통째로 비는데, 정작 이 줄에서 가장 많이 쓰는 칸이
+   가장 좁았다 — 담당자가 목록에 오는 이유의 대부분이 **한 곳을 찾는 것**이다.
+
+   `flex: 1 1 360px` 이라 고르개가 적으면 넓게 펴지고 많으면 360px 까지 물러선다.
+   280px 밑으로는 줄이지 않는다 — 「내용 · 대상 · 접수번호 검색」이 잘리는 폭이다. */
+export function ListSearch({ state, placeholder }) {
   return (
     <SearchField value={state.q} onChange={e => state.setQ(e.target.value)} onClear={() => state.setQ("")}
-      placeholder={placeholder} style={{ width }} />
-  );
-}
-
-/* 쪽 크기 고르개. 오른쪽 끝(Toolbar 의 actions)이 아니라 왼쪽 필터들과 같은 줄에 둔다 —
-   이것도 "무엇을 보여줄지"를 정하는 값이지 목록을 가지고 하는 일이 아니다. */
-export function PageSizeSelect({ state }) {
-  return (
-    <Select value={state.size} onChange={e => state.setSize(Number(e.target.value))}
-      options={PAGE_SIZES.map(n => ({ value: n, label: `${n}행씩` }))} />
+      placeholder={placeholder} style={{ flex: "1 1 360px", minWidth: 280 }} />
   );
 }
 

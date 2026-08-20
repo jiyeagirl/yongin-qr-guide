@@ -269,7 +269,19 @@ export const DISCOVER_PICK = 6;
    값이 없는 점포도 견딘다 — 관리자에서 새로 등록한 점포에는 조회수도 등록 시점도 없다.
    그때 `agoMonths` 를 0(=이번 달 등록)으로 읽는 것은 실제로 맞는 해석이다. */
 const viewsOf = s => Number(s.views || 0);
-const agoOf = s => Number(s.agoMonths || 0);
+
+/* 기준월에서 뺀 개월 수. **관리자가 고친 「등록 시점」이 있으면 그것이 이긴다** (2026-08-20) —
+   `createdAt` 은 "YYYY-MM" 이다. 이 한 줄이 없으면 관리자 폼에서 등록 시점을 고쳐도
+   신규 매장 목록이 그대로여서, 고친 것이 아무 일도 하지 않는다.
+   씨앗 점포에는 `createdAt` 이 없어 지금까지와 같이 `agoMonths` 로 떨어진다. */
+const agoOf = s => {
+  const m = String(s.createdAt || "").match(/^(\d{4})[-.](\d{1,2})/);
+  if (m) {
+    const months = MONTHS_AS_OF[0] * 12 + (MONTHS_AS_OF[1] - 1) - (Number(m[1]) * 12 + (Number(m[2]) - 1));
+    return Math.max(0, months);
+  }
+  return Number(s.agoMonths || 0);
+};
 
 export function discoverPicks(stores) {
   const live = (stores || []).filter(s => s.visible !== false);
