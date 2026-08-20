@@ -7,7 +7,7 @@ import { Icon } from "./Icon.jsx";
    기능명세서 5-3 #4 에서 정해야 했던 "상단 필터 바의 고정 범위"의 답:
 
      고정하는 것   업종 칩 한 줄 (+ 켜져 있을 때만 나타나는 활성 필터 pill 줄)
-     고정하지 않는 것  검색창, 온누리 토글, 축제 배너, 신규·인기 매장
+     고정하지 않는 것  검색창, 온누리 칩, 축제 배너, 신규·인기 매장
 
    셋 다 고정하면 시트 자체 헤더까지 더해 화면 상단 40% 가 필터로 찬다. 칩만 고정하면
    68px(2차 확대에도 min-height 로만 늘어난다)이고, 검색·토글은 시트를 조금만 내리면 다시 나온다.
@@ -56,7 +56,9 @@ export function FilterBar({ chips = [], value, onChange, active = [], sticky = t
       backdropFilter: floating ? "none" : "var(--blur-glass)",
       borderBottom: floating ? "none" : "var(--stroke-hairline) solid var(--border-default)", ...style }} {...rest}>
       {/* 칩이 위아래 5px 씩 히트 여백을 이미 갖고 있으므로 바깥 여백은 최소로 둔다.
-          leading 은 칩과 함께 흐르면 안 되는 컨트롤(온누리 토글) 자리 — 스크롤 바깥에 고정된다 */}
+          leading 은 칩과 함께 흐르면 안 되는 것의 자리 — 스크롤 바깥에 고정된다.
+          지금 여기 서는 것은 조아용 한 마리다 (MainApp). 한때 온누리 컨트롤이 이 자리를
+          썼는데, 그것은 목록 위 제어 줄로 내려갔다 (ListControls · OnnuriChip) */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: `2px ${gutter} var(--space-1)` }}>
         {leading ? <span style={{ flex: "0 0 auto", display: "inline-flex", paddingRight: 2 }}>{leading}</span> : null}
         <div role={multi ? "group" : "tablist"} aria-label={label}

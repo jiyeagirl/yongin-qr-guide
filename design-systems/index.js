@@ -23,7 +23,7 @@ export { Radio } from "./components/core/Radio.jsx";
 export { RadioGroup } from "./components/core/RadioGroup.jsx";
 export { Switch } from "./components/core/Switch.jsx";
 export { OnnuriBadge } from "./components/core/OnnuriBadge.jsx";
-export { OnnuriToggle } from "./components/core/OnnuriToggle.jsx";
+export { OnnuriChip } from "./components/core/OnnuriChip.jsx";
 export { SearchField } from "./components/core/SearchField.jsx";
 export { InfoList, yesNoMark, EMPTY_MARK } from "./components/core/InfoList.jsx";
 export { CopyField } from "./components/core/CopyField.jsx";

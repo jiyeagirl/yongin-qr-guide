@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  NearbyFacilities, ListControls, OnnuriToggle, Pagination,
+  NearbyFacilities, ListControls, OnnuriChip, Pagination,
   Notice, StoreRow, FestivalBanner, CATEGORY_LABELS,
 } from "../../design-systems/index.js";
 import { PAGE_SIZE, STORE_AS_OF } from "./config.js";
@@ -13,9 +13,8 @@ import { PAGE_SIZE, STORE_AS_OF } from "./config.js";
  *   ─────────────────────────────────────────────
  *   우리 상점가 축제 배너 (U-FT-03) [X]                       ← 닫을 수 있다. 스크롤로 올라간다
  *   ─────────────────────────────────────────────
- *   전체 335곳                          ⇅ 거리순              ← 여기부터 sticky
- *   🎫 온누리 가맹점만 139곳                    ●—            │  (ListControls)
- *   ─────────────────────────────────────────────
+ *   전체 335곳  (🎫 온누리 가맹점)        ⇅ 거리순              ← 여기부터 sticky
+ *   ─────────────────────────────────────────────     (ListControls 한 줄)
  *   점포 목록 20곳
  *   335곳 중 1–20   ‹  1  …  17  ›                           ← 쪽 나누기
  *   주변 공공시설 / 기준일자·고지
@@ -100,9 +99,16 @@ export function DistrictSheet({
         title={`${catTitle(cats, CATEGORY_LABELS)} ${rows.length}곳`}
         sort={sort}
         onSortChange={setSort}
-        sortOptions={[{ id: "distance", label: "거리순" }, { id: "popular", label: "인기순" }]}>
-        <OnnuriToggle checked={onnuriOnly} onChange={setOnnuriOnly} count={data.district.onnuri} />
-      </ListControls>
+        sortOptions={[{ id: "distance", label: "거리순" }, { id: "popular", label: "인기순" }]}
+        /* 온누리는 칩이고, **결과 수 옆에 선다** (2026-08-20. 종전 스위치 → 칩 → 같은 줄).
+           제 줄을 주면 알약 하나가 44px 을 쓰면서 오른쪽 3분의 2가 빈다 — 절반 스냅에서
+           그 44px 은 점포 한 줄이다. 이 줄은 이제 "얼마나 · 무엇이 걸렸나 · 어떤 차례로"를
+           한 줄로 말한다.
+
+           **가맹 수(139)를 칩에 적지 않는다** (OnnuriChip 머리말). 칩을 켜면 왼쪽 제목이
+           곧 그 수다 — `rows` 가 온누리로 걸러진 배열이라 "전체 139곳"이 된다. 같은 수를
+           한 줄에 두 번 적을 이유가 없고, 이 줄에는 그럴 가로도 없다. */
+        aside={<OnnuriChip checked={onnuriOnly} onChange={setOnnuriOnly} />} />
 
       {/* ── 점포 목록 ─────────────────────────────────────────── */}
       <div style={{ padding: "var(--space-2) var(--gutter-screen) 0" }}>
