@@ -1,4 +1,5 @@
 import React from "react";
+import { ALL_PAGES } from "./data/account.js";
 
 /* 관리자 해시 라우터 — screens/main/router.js 의 축소판이다.
  *
@@ -9,11 +10,16 @@ import React from "react";
  * 경로가 해시인 이유는 같다 — 정적 호스팅이라 /admin/stores 같은 주소는 새로고침할 때
  * 서버가 404 를 낸다. 해시는 서버로 가지 않는다.
  *
- *   #/dashboard   #/facilities   #/districts   #/stores
- *   #/festivals   #/qr           #/inquiries
+ * ── 화면 목록을 여기에 다시 적지 않는다 ─────────────────────────────────────
+ * 권한 표(data/account.js 의 ALL_PAGES)가 유일한 목록이다. 라우터가 따로 배열을 들고
+ * 있으면 화면을 하나 더할 때 고칠 곳이 둘이 되고, 그중 라우터를 빠뜨리면 내비에는
+ * 보이는데 눌러도 아무 일이 안 일어난다.
+ *
+ *   #/dashboard  #/districts  #/stores    #/festivals  #/facilities
+ *   #/qr         #/reports    #/asof      #/settings   #/accounts
  */
 
-export const PAGES = ["dashboard", "facilities", "districts", "stores", "festivals", "qr", "inquiries"];
+export const PAGES = ALL_PAGES;
 
 export function parseHash(hash) {
   const raw = String(hash || "").replace(/^#\/?/, "").split("/").filter(Boolean)[0];

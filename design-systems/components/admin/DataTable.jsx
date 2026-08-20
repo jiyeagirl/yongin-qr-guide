@@ -27,6 +27,28 @@ import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
  * 2차 글자 확대에서는 모든 행이 그렇게 된다 (U-CM-14).
  */
 
+/* ── 칸 안에 여럿을 나란히 놓을 때 ───────────────────────────────────────────
+   이름 옆에 배지, 유형 앞에 아이콘 — 목록 화면 여섯 곳이 전부 같은 줄을 손으로 적고
+   있었고(`display:inline-flex, gap:6`), 그러다 보니 두 화면에만 whiteSpace:nowrap 이
+   붙는 식으로 조금씩 갈렸다. Toolbar 를 나눈 이유와 같다.
+
+   여기서 정하는 것은 **감싼다**는 사실 하나다. 배지는 통째로만 서므로(Badge 가 nowrap),
+   "둔전 프레시마트 본점 [현재][숨김]" 이 200px 칸에 안 들어가면 감싸지 않는 한 배지가
+   옆 칸 위로 넘어간다. 감싸면 배지가 아랫줄로 내려갈 뿐 아무것도 잘리지 않는다 —
+   표의 행 높이는 min-height 라 한 줄 늘어나는 것을 이미 받아들인다 (U-CM-14).
+
+   rowGap 이 gap 보다 좁은 것은 일부러다. 두 줄이 된 것이 **한 칸의 내용**으로 보여야지
+   위아래로 벌어지면 다른 행처럼 읽힌다. */
+export function Cell({ children, align, style, ...rest }) {
+  return (
+    <span style={{ display: "inline-flex", flexWrap: "wrap", alignItems: "center",
+      justifyContent: align === "center" ? "center" : align === "right" ? "flex-end" : undefined,
+      gap: 6, rowGap: 3, ...style }} {...rest}>
+      {children}
+    </span>
+  );
+}
+
 /* 기본 비교 — 숫자는 숫자로, 글자는 한국어 사전 순.
    섞여 있으면(값이 비었을 때) 빈 값을 언제나 뒤로 보낸다. 정렬을 눌렀을 때
    "값 없음"이 맨 위를 차지하면 정렬한 이유가 사라진다. */
@@ -57,14 +79,22 @@ function SortButton({ col, sort, onSort }) {
   );
 }
 
-/* 행 선택(체크박스 열)은 두지 않았다. 지금 여섯 화면 중 여러 행을 한꺼번에 다루는 곳이
-   하나도 없고 — 점포의 일괄 작업은 선택이 아니라 CSV 업로드다 — 쓰이지 않는 갈래는
-   아무도 눌러보지 않은 채 남는다. 필요해지면 그때 이 파일에 더한다. */
+/* ── 행 선택 (목록 화면 공통 규격) ────────────────────────────────────────────
+   명세서 1장: "체크박스 다중 선택 후 일괄 처리". 선택은 표가 갖지 않고 **화면이 갖는다** —
+   무엇을 일괄로 할 수 있는지는 화면마다 다르고(검수 큐는 상태 변경, 점포는 노출 토글),
+   선택한 것을 가지고 무엇을 할지 아는 것도 화면이다. 표는 켜고 끄는 자리만 낸다.
+
+   selectable 을 주지 않은 표에는 체크박스 열이 아예 생기지 않는다 — 대시보드의 순위표처럼
+   고를 이유가 없는 표에 빈 열이 서면 담당자는 그것이 고장인지 묻는다. */
 export function DataTable({
   columns = [], rows = [], rowKey = "id",
   onRowClick,
+  selectable = false,
+  selected = [],                       /* 선택된 행의 key 배열 */
+  onSelectedChange,
   empty,                               /* { title, description } 또는 노드 */
   caption,                             /* 스크린리더용 표 이름 — 화면에는 안 보인다 */
+  rowTone,                             /* row => "danger" | "warning" | null. 강조가 필요한 줄 */
   style, ...rest
 }) {
   const [sort, setSort] = React.useState(null);
@@ -89,6 +119,23 @@ export function DataTable({
 
   const cellPad = "var(--space-3) var(--space-4)";
 
+  /* 머리 체크박스는 **지금 화면에 보이는 행**만 다룬다. 필터가 걸린 상태에서 전체를 켜면
+     보이지 않는 행까지 선택되어, 그 다음 [일괄 처리]가 담당자가 못 본 것에 손을 댄다. */
+  const shownKeys = ordered.map(keyOf);
+  const allOn = shownKeys.length > 0 && shownKeys.every(k => selected.includes(k));
+  const someOn = !allOn && shownKeys.some(k => selected.includes(k));
+  const toggleAll = () => {
+    if (!onSelectedChange) return;
+    onSelectedChange(allOn ? selected.filter(k => !shownKeys.includes(k))
+      : [...new Set(selected.concat(shownKeys))]);
+  };
+  const toggleOne = k => {
+    if (!onSelectedChange) return;
+    onSelectedChange(selected.includes(k) ? selected.filter(x => x !== k) : selected.concat(k));
+  };
+
+  const TONE_BG = { danger: "var(--state-danger-soft)", warning: "var(--state-warning-soft)" };
+
   return (
     <div style={{ background: "var(--surface-card)", border: "var(--stroke-hairline) solid var(--border-default)",
       borderRadius: "var(--radius-lg)", overflow: "hidden", ...style }} {...rest}>
@@ -100,6 +147,15 @@ export function DataTable({
             clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>{caption}</caption> : null}
           <thead>
             <tr style={{ background: "var(--surface-sunken)" }}>
+              {selectable ? (
+                <th scope="col" style={{ width: 44, padding: cellPad, textAlign: "center",
+                  borderBottom: "var(--stroke-hairline) solid var(--border-default)" }}>
+                  <input type="checkbox" checked={allOn}
+                    ref={el => { if (el) el.indeterminate = someOn; }}
+                    onChange={toggleAll} aria-label="보이는 행 모두 선택"
+                    style={{ width: 18, height: 18, accentColor: "var(--brand-primary)", cursor: "pointer" }} />
+                </th>
+              ) : null}
               {columns.map(col => (
                 <th key={col.key} scope="col"
                   aria-sort={sort && sort.key === col.key
@@ -121,9 +177,18 @@ export function DataTable({
           <tbody>
             {ordered.map((row, i) => {
               const k = keyOf(row);
+              const tone = rowTone ? rowTone(row) : null;
               return (
                 <tr key={k} style={{
+                  background: tone && TONE_BG[tone] ? TONE_BG[tone] : undefined,
                   borderTop: i === 0 ? "none" : "var(--stroke-hairline) solid var(--border-default)" }}>
+                  {selectable ? (
+                    <td style={{ padding: cellPad, textAlign: "center", verticalAlign: "middle" }}>
+                      <input type="checkbox" checked={selected.includes(k)} onChange={() => toggleOne(k)}
+                        aria-label={`${k} 선택`}
+                        style={{ width: 18, height: 18, accentColor: "var(--brand-primary)", cursor: "pointer" }} />
+                    </td>
+                  ) : null}
                   {columns.map((col, ci) => {
                     const content = col.render ? col.render(row) : row[col.key];
                     /* 첫 열만 버튼이 된다 — 위 머리말의 "행 전체를 누르게 만들지 않는다" 참조 */

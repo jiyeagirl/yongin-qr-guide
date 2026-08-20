@@ -1,36 +1,45 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, Modal, ConfirmDialog, Button, Select, SearchField,
-  Pagination, CategoryIcon, CATEGORY_LABELS, yesNoMark, EMPTY_MARK, Notice,
+  PageHeader, Toolbar, DataTable, Cell, ConfirmDialog, Button, Select, Switch, Badge,
+  Pagination, CategoryIcon, CATEGORY_LABELS, Notice, EMPTY_MARK, OnnuriBadge,
 } from "../../design-systems/admin.js";
 import { STORES } from "../../screens/main/data/dunjeon.js";
-import { PAGE_SIZE, STORE_AS_OF } from "../../screens/main/config.js";
-import { STORE_FIELDS, BIZ_MAJOR } from "../data/fields.js";
-import { useCollection } from "../data/store.js";
+import { CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
+import { STORE_FIELDS, BIZ_MAJOR, DISTRICT_OPTIONS, deriveChip } from "../data/fields.js";
+import { AS_OF_DEFAULTS, AS_OF_CATEGORIES, asOfPhrase } from "../data/settings.js";
+import { useCollection, useSettings } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
+import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
+import { EditorModal } from "./EditorModal.jsx";
 
-/* A-ST-02 점포 관리.
+/* M05 점포 목록 · M06 점포 등록·수정.
  *
  * ── 335곳이 이 화면의 전제다 ────────────────────────────────────────────────
  * 다른 관리 화면은 목록이 짧아(시설 18, 상점가 32, 축제 6) 필터가 편의 기능이지만,
  * 여기서는 필터가 없으면 화면이 쓸모없다. 담당자가 오는 이유는 대개 **한 곳**을 고치기
- * 위해서이고(문의가 들어온 그 가게), 335줄에서 그것을 찾는 방법이 검색뿐이다.
+ * 위해서이고(신고가 들어온 그 가게), 335줄에서 그것을 찾는 방법이 검색뿐이다.
  *
- * ── 쪽 나누기를 시민용과 같은 20으로 둔다 ───────────────────────────────────
- * config.PAGE_SIZE 를 그대로 쓴다. 관리자라고 100개씩 뿌리면 브라우저가 버티기는 하지만,
- * 담당자가 Ctrl+F 로 찾게 되어 우리가 만든 검색이 무시된다. 무엇보다 두 화면의 쪽 수가
- * 다르면 "17쪽 중 3쪽"을 말로 주고받을 때 서로 다른 것을 가리킨다.
+ * ── 중분류 열이 돌아왔다 ────────────────────────────────────────────────────
+ * 한때 뺐던 항목인데 명세서 2-2 가 이유를 들어 되살렸다 — 업종 칩의 카페/디저트가
+ * "음식 대분류 중 비알코올 **중분류**"로 정의되어 있어, 중분류가 없으면 카페와 음식점을
+ * 가를 수 없다. 폼에는 넣되 **표에는 여전히 적지 않는다** — 소분류와 글자까지 같은 값이
+ * 45종 중 13종이라 두 열이 나란히 같은 글자를 반복한다. 저장하는 것과 보여주는 것은 다르다.
  *
- * ── 중분류 열이 없다 ────────────────────────────────────────────────────────
- * 정의서 1-2 에서 뺐다 (2026-08-19). 데이터에는 `biz` 로 남아 있고 검색은 그것도 훑지만,
- * 표에도 폼에도 적지 않는다 — 소분류와 겹치는 자리가 너무 많다(45종 중 13종이 글자까지 같다).
+ * ── 업종 칩은 자동 산출이지만 고칠 수 있다 ──────────────────────────────────
+ * 명세서 2-2 의 `chip_category` 는 ⚙ 이면서 "자동 산출 후 수기 변경 가능"이다. 그래서
+ * 폼에서 읽기 전용으로 두지 않고, **산출값을 미리 넣어 둔 채 고칠 수 있게** 한다.
+ * 대·중·소분류를 고치면 산출값이 따라 바뀌되, 담당자가 직접 고른 뒤에는 따라가지 않는다 —
+ * 손으로 정한 값을 자동 규칙이 덮으면 그 화면은 못 믿을 화면이 된다.
  *
- * ── 일괄 업로드는 서버가 필요하다 ───────────────────────────────────────────
- * 버튼을 감추지 않고, 눌렀을 때 **어떤 열을 기대하는지**를 보여준다. 담당자가 준비할 것을
- * 지금 알 수 있고, 연동 때 그 화면에 파일 선택만 붙으면 된다. 비활성 버튼을 두지 않는
- * 규칙(확정 결정사항 3)은 시민 화면의 것이지만 취지는 여기서도 같다 — 눌리는 것은
- * 무엇이든 해야 한다.
+ * ── 일괄 업로드가 빠졌다 (2026-08-20, 명세서 개정) ──────────────────────────
+ * 명세서 범위 문단이 "데이터 일괄 적재, 매칭, 갱신, 검수는 개발 쪽에서 처리한다"로 바뀌면서
+ * M05 의 기능란에서 일괄 업로드가 사라졌다. 5,000행을 한 번에 넣는 일은 결과를 화면에서
+ * 되돌릴 수 없고, 실패한 행을 손보는 일도 결국 매칭이라 여기서 끝나지 않았다.
+ *
+ * 남은 것은 **한 곳씩 고치는 일**이다 — 신고가 들어온 그 가게를 찾아 상호를 고치거나,
+ * 폐업을 확인해 노출을 끄거나, 빠진 가게를 하나 등록하는 것. 335곳에서 그 한 곳을
+ * 찾는 방법이 검색이라 필터가 이 화면의 전부다.
  */
 
 const MAJOR_OPTIONS = [{ value: "", label: "전체 대분류" }]
@@ -42,71 +51,122 @@ const ONNURI_OPTIONS = [
   { value: "n", label: "미가맹" },
 ];
 
+const DISTRICT_FILTER = [{ value: "", label: "전체 상점가" }].concat(DISTRICT_OPTIONS);
+
+/* 등록일시 (⚙). 더미는 "기준월에서 뺀 개월 수"(agoMonths)만 갖고 있어 여기서 날짜로 편다.
+   실데이터에서는 서버가 준 created_at 이 그대로 들어온다. */
+const BASE_YEAR = 2026, BASE_MONTH = 6;
+export function createdAtOf(s) {
+  if (s.createdAt) return s.createdAt;
+  if (s.agoMonths == null) return null;
+  let y = BASE_YEAR, m = BASE_MONTH - Number(s.agoMonths);
+  while (m < 1) { m += 12; y -= 1; }
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
 export function Stores({ onToast }) {
-  const { rows, upsert, remove } = useCollection("stores", STORES);
-  const [q, setQ] = React.useState("");
+  const { rows, upsert, remove, patch, patchMany } = useCollection("stores", STORES, null, "점포");
+  const asOf = useSettings("asOf", AS_OF_DEFAULTS, "데이터 기준일");
   const [major, setMajor] = React.useState("");
   const [onnuri, setOnnuri] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  const [bulk, setBulk] = React.useState(false);
+  const [district, setDistrict] = React.useState("");
+  const list0 = useListState([major, onnuri, district]);
 
   const ed = useRecordEditor({
     fieldsFor: () => STORE_FIELDS,
-    initial: () => ({ onnuri: false }),
+    initial: () => ({ onnuri: false, onnuriType: [], visible: true, districtId: CURRENT_DISTRICT_ID }),
     onSave: values => upsert(values),
     onRemove: remove,
     onToast, label: "점포",
   });
 
-  const list = React.useMemo(() => rows.filter(s => {
+  /* 분류를 고치면 업종 칩 산출값이 따라간다. **담당자가 칩을 직접 고른 뒤에는 멈춘다** —
+     chipManual 플래그가 그 기억이다 */
+  const setField = (key, value) => {
+    if (key === "cat") { ed.setMany({ cat: value, chipManual: true }); return; }
+    if (["bizL", "biz", "bizS"].includes(key) && !ed.draft.values.chipManual) {
+      const next = { ...ed.draft.values, [key]: value };
+      ed.setMany({ [key]: value, cat: deriveChip(next) });
+      return;
+    }
+    ed.set(key, value);
+  };
+
+  const filtered = React.useMemo(() => rows.filter(s => {
     if (major && s.bizL !== major) return false;
+    if (district && (s.districtId || CURRENT_DISTRICT_ID) !== district) return false;
     if (onnuri === "y" && !s.onnuri) return false;
     if (onnuri === "n" && s.onnuri) return false;
-    if (!q.trim()) return true;
+    if (!list0.term) return true;
     /* 중분류(biz)도 훑는다. 표에는 안 적지만 담당자가 "노래방"으로 찾을 수 있어야 한다 */
-    return `${s.name} ${s.branch || ""} ${s.addr} ${s.biz || ""} ${s.bizS || ""}`.includes(q.trim());
-  }), [rows, q, major, onnuri]);
+    return `${s.name} ${s.branch || ""} ${s.addr} ${s.biz || ""} ${s.bizS || ""}`.includes(list0.term);
+  }), [rows, list0.term, major, onnuri, district]);
 
-  /* 조건이 바뀌면 첫 쪽으로. 그러지 않으면 12쪽을 보다 검색어를 넣었을 때
-     결과가 3쪽뿐이라 빈 화면이 뜬다 */
-  React.useEffect(() => { setPage(1); }, [q, major, onnuri]);
+  const paged = list0.paginate(filtered);
 
-  const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
-  const shown = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const bulkVisible = on => {
+    patchMany(list0.selected.map(id => [id, { visible: on }]), `점포 ${on ? "노출" : "숨김"}`);
+    onToast(`${list0.selected.length}건을 ${on ? "노출" : "숨김"}으로 바꿨습니다.`);
+    list0.setSelected([]);
+  };
+
+  const storeCat = AS_OF_CATEGORIES.find(c => c.key === "store");
 
   return (
     <>
-      <PageHeader title="점포 관리" count={`${list.length.toLocaleString("ko-KR")}곳`}
-        note={`둔전골목형상점가 · 상가(상권)정보 ${STORE_AS_OF} 기준 · 입력 항목은 정의서 1-2 를 따릅니다.`}
+      <PageHeader title="점포 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`}
+        note={`입력 항목은 명세서 2-2 를 따릅니다. 시민 화면 고지 — ${asOfPhrase(storeCat, asOf.value.store) || "기준일 미설정"}`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>점포 등록</Button>} />
 
-      <Toolbar actions={
-        <Button variant="outline" size="sm" icon="upload" onClick={() => setBulk(true)}>일괄 업로드</Button>
-      }>
-        <SearchField value={q} onChange={e => setQ(e.target.value)} onClear={() => setQ("")}
-          placeholder="상호명 · 주소 · 업종 검색" style={{ width: 320 }} />
+      <Toolbar actions={list0.selected.length ? (
+        <>
+          <span style={{ fontSize: "var(--fs-label)", color: "var(--text-body)", whiteSpace: "nowrap" }}>
+            {list0.selected.length}건 선택
+          </span>
+          <Button variant="outline" size="sm" icon="eye" onClick={() => bulkVisible(true)}>노출</Button>
+          <Button variant="outline" size="sm" icon="eye-off" onClick={() => bulkVisible(false)}>숨김</Button>
+        </>
+      ) : null}>
+        <ListSearch state={list0} placeholder="상호명 · 주소 · 업종 검색" />
+        <Select value={district} options={DISTRICT_FILTER} onChange={e => setDistrict(e.target.value)} />
         <Select value={major} options={MAJOR_OPTIONS} onChange={e => setMajor(e.target.value)} />
         <Select value={onnuri} options={ONNURI_OPTIONS} onChange={e => setOnnuri(e.target.value)} />
+        <PageSizeSelect state={list0} />
+        <SearchHint state={list0} />
       </Toolbar>
 
       <DataTable
         caption="등록된 점포 목록"
-        rows={shown} rowKey="id" onRowClick={ed.openEdit}
+        rows={paged.rows} rowKey="id" onRowClick={ed.openEdit}
+        selectable selected={list0.selected} onSelectedChange={list0.setSelected}
         empty={{ title: "조건에 맞는 점포가 없습니다.", description: "검색어나 업종 필터를 지워 보세요." }}
         columns={[
           { key: "name", label: "상호명", sortable: true },
           { key: "branch", label: "지점명", width: 110, render: s => s.branch || EMPTY_MARK },
-          { key: "cat", label: "업종 칩", width: 120, hint: "화면 분류",
+          { key: "cat", label: "업종 칩", width: 130, hint: "화면 분류", sortable: true,
             render: s => (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+              <Cell>
                 <CategoryIcon type={s.cat} size={16} />{CATEGORY_LABELS[s.cat] || "기타"}
-              </span>
+                {s.chipManual ? <Badge tone="info" size="sm">수기</Badge> : null}
+              </Cell>
             ) },
           { key: "bizL", label: "상권업종대분류명", width: 150, sortable: true, hint: "원천 분류" },
           { key: "bizS", label: "상권업종소분류명", width: 150, render: s => s.bizS || EMPTY_MARK },
-          { key: "onnuri", label: "온누리", width: 80, align: "center", sortable: true,
-            render: s => yesNoMark(s.onnuri, "가맹", "미가맹") },
+          { key: "onnuri", label: "온누리", width: 110, align: "center", sortable: true,
+            render: s => (s.onnuri
+              ? <OnnuriBadge size="sm">{(s.onnuriType || []).length ? (s.onnuriType || []).map(t => (t === "paper" ? "지류" : "디지털")).join("·") : "가맹"}</OnnuriBadge>
+              : <span style={{ color: "var(--text-muted)" }}>{EMPTY_MARK}</span>) },
           { key: "addr", label: "도로명주소", sortable: true },
+          { key: "views", label: "조회", width: 90, align: "right", sortable: true, hint: "인기순 원천",
+            render: s => <span style={{ fontVariantNumeric: "tabular-nums" }}>{Number(s.views || 0).toLocaleString("ko-KR")}</span> },
+          { key: "visible", label: "노출", width: 92, align: "center",
+            render: s => (
+              <Switch checked={s.visible !== false}
+                label={<span style={{ fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
+                  {s.visible === false ? "숨김" : "노출"}
+                </span>}
+                onChange={() => patch(s.id, { visible: s.visible === false }, s.name)} />
+            ) },
           { key: "manage", label: "관리", width: 96, align: "right",
             render: s => (
               <Button variant="ghost" size="sm" icon="trash-2"
@@ -114,51 +174,31 @@ export function Stores({ onToast }) {
             ) },
         ]} />
 
-      {pageCount > 1 ? (
-        <div style={{ marginTop: "var(--space-5)" }}>
-          <Pagination page={page} pageCount={pageCount} onChange={setPage} />
-        </div>
-      ) : null}
+      <div style={{ marginTop: "var(--space-5)" }}>
+        <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />
+      </div>
 
-      <Modal open={!!ed.draft} size="lg" onClose={ed.close}
+      <EditorModal ed={ed} size="lg"
         title={ed.draft && ed.draft.isNew ? "점포 등록" : "점포 수정"}
-        description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}
-        footer={
-          <>
-            <Button variant="ghost" onClick={ed.close}>취소</Button>
-            <Button variant="primary" onClick={ed.save}>저장</Button>
-          </>
-        }>
+        description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}>
         {ed.draft ? (
-          <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors} onChange={ed.set} />
+          <RecordForm fields={ed.fields} values={{ ...ed.draft.values, createdAt: createdAtOf(ed.draft.values) }}
+            errors={ed.errors} onChange={setField}
+            onAddress={(key, picked) => ed.setMany({ [key]: picked.addr, lat: picked.lat, lng: picked.lng })}
+            extra={
+              <div style={{ gridColumn: "1 / -1" }}>
+                <Notice tone="neutral" size="sm">
+                  업종 칩은 대·중·소분류에서 자동으로 정해집니다. 위에서 직접 고르면 그때부터
+                  분류를 고쳐도 따라가지 않습니다 — 손으로 정한 값을 규칙이 덮지 않기 위해서입니다.
+                  폐업을 확인했다면 삭제하지 말고 [노출 여부]를 꺼 주세요 (명세서 10장).
+                </Notice>
+              </div>
+            } />
         ) : null}
-      </Modal>
+      </EditorModal>
 
       <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
         description="점포를 삭제합니다." onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
-
-      {/* ── 일괄 업로드 (A-ST-02) ────────────────────────────────────────
-             지금 할 수 있는 일은 **열 규격을 알려주는 것**이다. 파일을 받아도 보낼 곳이 없다. */}
-      <Modal open={bulk} title="점포 일괄 업로드" size="md" onClose={() => setBulk(false)}
-        description="상가(상권)정보 원본에서 아래 열만 남겨 CSV 로 저장해 주세요."
-        footer={<Button variant="ghost" onClick={() => setBulk(false)}>닫기</Button>}>
-        <ol style={{ paddingLeft: "1.2em", display: "flex", flexDirection: "column", gap: 6,
-          fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: 1.6 }}>
-          {STORE_FIELDS.map(f => (
-            <li key={f.key}>
-              {f.label}
-              <span style={{ marginLeft: 6, fontSize: "var(--fs-caption)",
-                color: f.required ? "var(--state-danger)" : "var(--text-muted)" }}>
-                {f.required ? "필수" : "선택"}
-              </span>
-            </li>
-          ))}
-        </ol>
-        <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-4)" }}>
-          업로드 실행은 서버 연동 후 열립니다. 자동 매칭에 실패한 주소는 검수 큐(A-ST-03)로
-          넘어가며, 그 화면은 후속 과제입니다.
-        </Notice>
-      </Modal>
     </>
   );
 }

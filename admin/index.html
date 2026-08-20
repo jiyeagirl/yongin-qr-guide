@@ -24,9 +24,11 @@
      저것은 모바일 화면을 데스크톱에서 검수하기 위한 미리보기 틀인데,
      관리자는 데스크톱이 실제 환경이다. 여기서 틀을 씌우면 그게 곧 버그다.
      좁은 화면 안내는 AdminShell 이 직접 그린다 (--admin-min 1024px). */
+  /* 줄바꿈 규칙은 아래 body 의 class="admin-web" 이 켠다 —
+     값은 design-systems/tokens/admin.css 에 있다 (여기서 다시 적지 않는다). */
 </style>
 </head>
-<body>
+<body class="admin-web">
 <div id="root"></div>
 <script>
 /* 부트스트랩 — screens/main/index.html 과 **같은 규칙**이다.

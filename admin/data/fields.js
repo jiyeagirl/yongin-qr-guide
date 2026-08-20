@@ -1,175 +1,581 @@
 import { STORES } from "../../screens/main/data/dunjeon.js";
-import { DISTRICTS } from "../../screens/main/data/districts.js";
+import { DISTRICTS, GU_ORDER } from "../../screens/main/data/districts.js";
+/* 이 파일만 디자인 시스템을 끌어온다. 다른 data/ 파일은 그러지 않는다 (stats.js 머리말) —
+   그것들은 서버 응답으로 통째로 갈아끼울 자리라 이름표가 딸려 오면 안 되지만, 이 표는
+   **항목명·예시·범위**로 이루어진 화면의 것이고 서버로 옮겨갈 물건이 아니다.
+   업종 칩의 이름표를 여기에 다시 적으면 시민 화면의 칩 이름과 갈린다. */
+import { CATEGORY_LABELS } from "../../design-systems/admin.js";
 
-/* 입력 항목 정의서(2026-08-19)의 항목표 — **관리자 폼 여덟 개의 유일한 출처다.**
+/* 관리자 웹 기능명세서 v1.0 의 항목표 — **폼 열둘의 유일한 출처다.**
  *
  * ── 왜 표를 코드에 두는가 ───────────────────────────────────────────────────
- * 폼을 화면마다 JSX 로 적으면 항목이 여덟 군데에 흩어진다. 정의서가 한 줄 바뀌었을 때
- * 고칠 곳을 여덟 번 찾아야 하고, 그중 하나는 반드시 빠진다. 여기 한 표만 고치면
- * 폼과 표 머리글이 함께 따라온다.
- *
- * ── 시민 화면의 반대편이다 ─────────────────────────────────────────────────
- * 같은 정의서에서 나온 표가 저쪽에도 있다:
- *
- *   읽기: screens/detail/FacilityDetail.jsx 의 FIELDS   (2-1 ~ 2-4)
- *   읽기: screens/detail/StoreDetail.jsx 의 InfoList     (1-2)
- *   읽기: screens/detail/FestivalDetail.jsx 의 InfoList  (1-3)
- *   쓰기: 이 파일
- *
- * 지금 합치지 않은 것은 의도다. 잘 돌고 있는 시민 화면 세 개를 아직 검증되지 않은
- * 관리자 폼을 위해 뜯을 이유가 없다. 대신 **양쪽이 어긋나면 정의서를 따른다**는 규칙이
- * 명세서 참조 문서에 적혀 있고, 저쪽 파일 머리말도 이 파일을 가리킨다.
+ * 폼을 화면마다 JSX 로 적으면 항목이 열두 군데에 흩어진다. 명세서가 한 줄 바뀌었을 때
+ * 고칠 곳을 열두 번 찾아야 하고, 그중 하나는 반드시 빠진다. 여기 한 표만 고치면
+ * 폼과 저장 검사와 표 머리글이 함께 따라온다.
  *
  * ── 필드 한 줄이 갖는 것 ────────────────────────────────────────────────────
- *   key       데이터의 필드명
- *   label     정의서의 항목명 그대로. 줄여 쓰지 않는다
- *   required  정의서의 필수/선택. **이 값이 폼의 배지가 되고, 저장 검사가 된다**
- *   type      text | number | textarea | select | switch | readonly
- *   example   정의서의 "예)" 열. 형식이 자유로운 칸에서 담당자마다 다르게 적는 것을 막는다
- *   span      2 면 두 열을 다 쓴다 (주소·부가정보처럼 긴 값)
- *   unit      표에 값을 찍을 때 붙이는 단위 ("칸", "명")
+ *   key        **우리 데이터의 필드명**. 시민 화면이 이미 읽고 있는 이름이다
+ *   spec       **명세서의 필드명**. 아래 "이름이 둘인 이유" 참조
+ *   label      명세서의 항목명 그대로. 줄여 쓰지 않는다
+ *   required   true(●) · false(○) · "cond"(◐) · "auto"(⚙). 명세서 필수 열 그대로
+ *   when       required "cond" 일 때 필수가 되는 조건 (values => boolean)
+ *   type       text | number | date | textarea | select | multiselect | switch | readonly
+ *   options    select · multiselect 의 선택지
+ *   range      명세서 범위 열. **화면에 그대로 적고**, 아래 검사도 이것과 같은 값을 본다
+ *   minLength · maxLength · min · max · pattern   실제 검사 값
+ *   example    명세서의 "예)" 열
+ *   span       2 면 두 열을 다 쓴다 (주소·부가정보처럼 긴 값)
+ *   unit       숫자 칸 옆에 붙는 글자 ("칸", "명"). 저장값에는 들어가지 않는다
+ *
+ * ── 이름이 둘인 이유 ────────────────────────────────────────────────────────
+ * 명세서는 `address_road` · `ref_store_count` 처럼 **DB 컬럼명**으로 항목을 부른다.
+ * 그런데 시민용 화면 열둘이 이미 `addr` · `stores` 를 읽고 있고, 그 이름을 바꾸면
+ * 잘 돌고 있는 화면 열둘을 아직 검증되지 않은 관리자 폼을 위해 뜯게 된다.
+ *
+ * 그래서 **키는 우리 것을 쓰고 명세서 이름을 `spec` 에 적어 둔다.** 서버 연동 때
+ * 이 한 표가 곧 매핑표가 된다 — 어느 칸이 어느 컬럼인지 찾아 헤맬 곳이 없다.
+ * 명세서가 "원천 필드명을 그대로 사용해 후속 갱신 시 정합성을 유지한다"(입력 원칙 2)고
+ * 요구하는 것은 **저장되는 값의 컬럼명**이고, 그것은 서버가 지키는 규칙이다.
+ *
+ * ── 시민 화면의 반대편이다 ─────────────────────────────────────────────────
+ *   읽기: screens/detail/FacilityDetail.jsx 의 FIELDS   (3장)
+ *   읽기: screens/detail/StoreDetail.jsx 의 InfoList     (2-2)
+ *   읽기: screens/detail/FestivalDetail.jsx 의 InfoList  (2-3)
+ *   쓰기: 이 파일
+ * 어긋나면 명세서를 따른다.
  */
 
 /* 원천 분류 목록은 실제 데이터에서 뽑는다. 손으로 적어두면 데이터가 늘 때 따라오지 않고,
    목록에 없는 값을 가진 점포가 폼에서 빈 칸으로 보인다. */
 const uniq = (arr) => [...new Set(arr.filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
 export const BIZ_MAJOR = uniq(STORES.map(s => s.bizL));
+export const BIZ_MID = uniq(STORES.map(s => s.biz));
 export const BIZ_MINOR = uniq(STORES.map(s => s.bizS));
 export const KSIC = uniq(STORES.map(s => s.ksic));
+
 export const DISTRICT_OPTIONS = DISTRICTS.map(d => ({ value: d.id, label: d.name }));
+export const GU_OPTIONS = GU_ORDER.map(g => ({ value: g, label: g }));
 
 const opts = list => list.map(v => ({ value: v, label: v }));
+const withBlank = (list, label) => [{ value: "", label }].concat(list);
 
-/* ── 1-1 상점가 정보 ────────────────────────────────────────────────────────
-   네 항목이 전부다. **기준일자를 갖지 않는다** (정의서 3-2 미표기 대상) —
-   그래서 폼에도 기준일 칸이 없다. 화면에 없는 것은 입력에도 없어야 한다. */
+/* ── 부록. 검증 규칙 ────────────────────────────────────────────────────────
+   V-01 은 좌표라 CoordField 가 지도에서 본다 (숫자 칸이 없으므로 여기서 검사할 것이 없다).
+   V-02 도 AddressField 가 본다 — 검색으로만 들어오므로 형식이 어긋날 길이 없다.
+   나머지 넷이 문자열 검사이고, 여기 한 곳에 모아 둔다. */
+export const V = {
+  phone: { re: /^[0-9-]{9,13}$/, msg: "숫자와 하이픈만, 9~13자입니다 (V-03)." },
+  email: { re: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, msg: "이메일 형식이 아닙니다 (V-04)." },
+  url: { re: /^https?:\/\/.{1,493}$/, msg: "http:// 또는 https:// 로 시작해야 합니다 (V-05)." },
+  qrCode: { re: /^[a-z0-9]{4,12}$/, msg: "영문 소문자와 숫자만, 4~12자입니다." },
+  loginId: { re: /^[a-z][a-z0-9]{3,19}$/, msg: "영문 소문자로 시작하는 영문 소문자·숫자 4~20자입니다." },
+  yearMonth: { re: /^\d{4}\.(0[1-9]|1[0-2])$/, msg: "YYYY.MM 형식으로 적습니다 (예: 2026.03)." },
+};
+
+/* 비밀번호 — 영문·숫자·특수문자 중 2종 이상, 10~64자 (명세서 9장).
+   정규식 하나로 적을 수 있지만 읽을 수 없는 줄이 되므로 세어서 판정한다. */
+export function checkPassword(pw) {
+  const s = String(pw || "");
+  if (s.length < 10 || s.length > 64) return "10~64자로 정합니다.";
+  const kinds = [/[a-zA-Z]/, /[0-9]/, /[^a-zA-Z0-9]/].filter(re => re.test(s)).length;
+  if (kinds < 2) return "영문 · 숫자 · 특수문자 중 두 종류 이상을 섞습니다.";
+  return null;
+}
+
+/* ══ 2-1 상점가 정보 (M04) ═════════════════════════════════════════════════
+   출처: 구역 주소는 상권활성화 홈페이지, 점포수는 공공데이터 매칭 결과 · 기준일 미표기 대상
+
+   ── 점포수를 입력받지 않는다 (2026-08-20, 명세서 개정) ──────────────────────
+   전에는 홈페이지 게시값(340 · 139)을 손으로 옮겨 적게 하고, 그것을 매칭 산출값(335 · 132)과
+   견주어 10% 넘게 벌어지면 경고를 세웠다. 명세서가 그 검사를 **없앴고 이유를 적었다**:
+
+     "홈페이지 게시 총계와 매칭 결과를 비교하는 검사는 두지 않는다. 둔전 기준 340 대
+      335처럼 차이를 알아도 **어느 5곳인지 모르면 고칠 수 없기 때문**이다."
+
+   맞는 판단이다. 그 경고가 담당자에게 주는 것은 "5곳이 빈다"까지이고, 거기서 할 수 있는
+   일이 없다. 누락 지점을 집어내는 일은 주소 단위 대조라 개발 쪽 몫이 되었다.
+
+   그래서 이제 점포수는 **읽기만 하는 값 두 개**뿐이다. 관리자가 32개소 숫자를 옮겨 적을
+   일도, 두 숫자를 견줄 일도 없다.
+
+   `sort_order` 도 함께 빠졌다 — 명세서 항목표에 없다. 32곳의 차례는 시민 화면이 거리로
+   정한다 (districts.js 의 byDistrictNear). */
 export const DISTRICT_FIELDS = [
-  { key: "name", label: "상점가명", required: true, type: "text", example: "둔전골목형상점가", span: 2 },
-  { key: "addr", label: "주소", required: true, type: "text", example: "처인구 포곡읍 포곡로124번길 2 일원", span: 2 },
-  { key: "stores", label: "전체 점포수", required: true, type: "number", example: "335", unit: "곳" },
-  { key: "onnuri", label: "온누리상품권 가맹 점포수", required: true, type: "number", example: "139", unit: "곳" },
+  { key: "name", spec: "name", label: "상점가명", required: true, type: "text",
+    range: "2~40자 · 전역 유일", minLength: 2, maxLength: 40,
+    example: "둔전골목형상점가", span: 2 },
+  { key: "gu", spec: "gu", label: "소속 구", required: true, type: "select", options: GU_OPTIONS,
+    example: "처인구" },
+  { key: "govSeq", spec: "gov_seq", label: "상권센터 페이지 번호", required: false, type: "text",
+    range: "최대 10자", maxLength: 10, example: "114",
+    hint: "비우면 시민용 카드의 바로가기 화살표가 사라집니다" },
+  { key: "addr", spec: "address", label: "주소", required: true, type: "text",
+    range: "최대 100자", maxLength: 100,
+    example: "처인구 김량장동 133-37번지 일원", span: 2 },
+
+  { key: "storeCount", spec: "store_count", label: "점포수", required: "auto",
+    type: "number", unit: "곳",
+    hint: "구역 주소 매칭 결과 중 노출 상태인 건수. 시민용 헤더에 표시됩니다" },
+  { key: "onnuriCount", spec: "onnuri_count", label: "온누리 가맹 점포수", required: "auto",
+    type: "number", unit: "곳", hint: "위 중 온누리 가맹 건수" },
+
+  /* 온누리 가맹점은 주소가 아니라 원본의 `소속 시장명` 컬럼으로 걸러낸다. 그 표기가
+     우리 상점가명과 다를 수 있어("둔전 골목형 상점가" ↔ "둔전시장") 원본 표기를 그대로
+     옮겨 적는 칸이 따로 필요하다. 같으면 같게 적는다.
+     조건은 **산출된 가맹 건수**다 — 게시값 입력칸이 없어졌으므로 견줄 것은 그것뿐이다. */
+  { key: "onnuriMarket", spec: "onnuri_market_name", label: "온누리 원본 표기명", required: "cond",
+    when: v => Number(v.onnuriCount) > 0, type: "text", range: "최대 60자", maxLength: 60,
+    example: "둔전시장", span: 2,
+    hint: "온누리 데이터 필터링에 쓰는 매칭 키입니다. 이름이 안 맞으면 가맹 0건이 나옵니다" },
+
+  { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch",
+    example: "끄면 시민용 목록에서 사라집니다" },
 ];
 
-/* ── 1-2 개별 점포 정보 ─────────────────────────────────────────────────────
-   **상권업종중분류명이 없다** (2026-08-19). 소분류와 겹치는 자리가 너무 많아 뺐다 —
-   중분류 45종 중 13종이 소분류와 글자까지 같고, 335곳 중 88곳(26%)이 두 줄에 같은 값을
-   적게 된다 (StoreDetail.jsx 머리말). 데이터에는 `biz` 로 남아 목록과 검색이 쓴다.
+/* 상권활성화센터 외부 링크 (명세서 2-1) */
+export function govLink(d) {
+  if (!d || !d.govSeq) return null;
+  return "https://www.yongin.go.kr/yimr/www/marketGuide.do?key=114"
+    + `&searchGu=${encodeURIComponent(d.gu || "")}&seq=${encodeURIComponent(d.govSeq)}`;
+}
 
-   지점명이 선택인 것은 골목상점가의 실제 사정이다 — 단독 점포가 대부분이라 열에 아홉은
-   원천에 값이 없다. 필수로 두면 담당자가 상호명을 한 번 더 적게 된다. */
+/* ══ 2-2 개별 점포 정보 (M06) ══════════════════════════════════════════════
+   출처: 공공데이터 · **데이터 기준일 표기 대상** (기준일은 개별 화면이 아니라 M14 에서 정한다)
+
+   ── 중분류가 돌아왔다 (명세서 2-2 의 주석) ──────────────────────────────────
+   한때 뺐던 항목인데(소분류와 글자까지 같은 값이 45종 중 13종이라 상세 정보 표가
+   같은 줄을 두 번 적게 된다), 명세서가 이유를 들어 되살렸다: 시민용 업종 칩의
+   카페/디저트가 "음식 대분류 중 **비알코올 중분류**, 빵/도넛 소분류"로 정의되어 있어
+   중분류가 없으면 카페와 음식점을 가를 수 없다. 둔전 기준 음식 132 대 카페 18 을
+   가르는 기준이 그것이다.
+
+   되살리는 비용은 없다 — 원천에 이미 있고 우리 데이터에도 `biz` 로 남아 있었다.
+   **상세 화면의 정보 표에 적지 않는 것은 그대로다.** 저장하는 것과 보여주는 것은 다르다. */
+export const CHIP_OPTIONS = ["food", "cafe", "shop", "beauty", "culture", "etc"]
+  .map(v => ({ value: v, label: CATEGORY_LABELS[v] }));
+
+export const ONNURI_TYPE_OPTIONS = [
+  { value: "paper", label: "지류" },
+  { value: "digital", label: "디지털" },
+];
+
 export const STORE_FIELDS = [
-  { key: "name", label: "상호명", required: true, type: "text", example: "은행나무곱창" },
-  { key: "branch", label: "지점명", required: false, type: "text", example: "에버랜드점" },
-  { key: "addr", label: "도로명주소", required: true, type: "text", example: "처인구 포곡읍 둔전로 42", span: 2 },
-  { key: "bizL", label: "상권업종대분류명", required: true, type: "select", options: opts(BIZ_MAJOR), example: "음식" },
-  { key: "bizS", label: "상권업종소분류명", required: false, type: "select", options: opts(BIZ_MINOR), example: "곱창전골/구이" },
-  { key: "ksic", label: "표준산업분류명", required: false, type: "select", options: opts(KSIC), example: "기타 주점업", span: 2 },
-  { key: "onnuri", label: "온누리상품권 가맹 여부", required: false, type: "switch", example: "가맹이면 켭니다" },
+  { key: "name", spec: "name", label: "상호명", required: true, type: "text",
+    range: "1~60자", minLength: 1, maxLength: 60, example: "은행나무곱창" },
+  { key: "branch", spec: "branch_name", label: "지점명", required: false, type: "text",
+    range: "최대 40자", maxLength: 40, example: "에버랜드점",
+    hint: "골목상점가는 단독 점포가 대부분이라 열에 아홉은 원천에 값이 없습니다" },
+  { key: "districtId", spec: "market_id", label: "소속 상점가", required: true, type: "select",
+    options: DISTRICT_OPTIONS, example: "둔전골목형상점가" },
+  { key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
+    range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 },
+
+  { key: "bizL", spec: "category_large", label: "상권업종대분류명", required: true, type: "select",
+    options: opts(BIZ_MAJOR), range: "최대 30자", example: "음식", hint: "원본값 그대로" },
+  { key: "biz", spec: "category_mid", label: "상권업종중분류명", required: false, type: "select",
+    options: withBlank(opts(BIZ_MID), "— 없음 —"), range: "최대 30자", example: "한식",
+    hint: "업종 칩 매핑이 이 값을 씁니다 (카페/디저트 분리)" },
+  { key: "bizS", spec: "category_small", label: "상권업종소분류명", required: false, type: "select",
+    options: withBlank(opts(BIZ_MINOR), "— 없음 —"), range: "최대 30자", example: "곱창전골/구이" },
+  { key: "ksic", spec: "industry_std", label: "표준산업분류명", required: false, type: "select",
+    options: withBlank(opts(KSIC), "— 없음 —"), range: "최대 40자", example: "기타 주점업" },
+
+  { key: "onnuri", spec: "is_onnuri", label: "온누리 가맹여부", required: false, type: "switch",
+    hint: "시장명 매칭으로 자동 설정되며 수기로 바꿀 수 있습니다" },
+  { key: "onnuriType", spec: "onnuri_type", label: "온누리 상품권 종류", required: false,
+    type: "multiselect", options: ONNURI_TYPE_OPTIONS,
+    hint: "가맹인데 종류를 모르면 비워 둡니다 — 비운 것과 「둘 다 안 됨」은 다릅니다" },
+
+  { key: "cat", spec: "chip_category", label: "표시 업종 칩", required: "auto", type: "select",
+    options: CHIP_OPTIONS, span: 2,
+    hint: "대·중·소분류에서 자동 산출됩니다. 아래에서 수기로 바꿀 수 있습니다" },
+
+  { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch",
+    example: "폐업 확인 시 삭제 대신 이것을 끕니다" },
+  { key: "views", spec: "view_count", label: "조회수", required: "auto", type: "number", unit: "회",
+    hint: "인기순 정렬의 원천" },
+  { key: "createdAt", spec: "created_at", label: "등록일시", required: "auto", type: "text",
+    hint: "신규 매장 판정 기준 (M16 의 신규 매장 판정 기간)", span: 2 },
 ];
 
-/* ── 1-3 축제 정보 ──────────────────────────────────────────────────────────
-   부스·임시시설은 정의서에 없다 (자료 확보가 협의 대상이라 명세서에서 `C` 다).
-   있는 축제만 시민 화면이 그 섹션을 그리므로, 폼에도 두지 않는다 — 여기에 빈 칸을
-   만들어 두면 담당자는 채워야 하는 것으로 읽고, 채운 값의 출처는 아무도 모른다. */
+/* 업종 칩 자동 산출 (chip_category ⚙).
+   명세서가 "자동 산출 후 수기 변경 가능"이라고만 적고 규칙은 시민용 매핑 규칙에 있다.
+   여기서는 그 규칙을 한 곳에만 적는다 — 화면마다 다시 적으면 목록의 칩과 폼의 칩이 갈린다. */
+export function deriveChip(v) {
+  const L = v.bizL || "";
+  const M = v.biz || "";
+  const S = v.bizS || "";
+  if (L === "음식") {
+    /* 카페/디저트 — 명세서가 든 예시 그대로다. **중분류가 있어야 갈린다** */
+    if (/비알코올|커피|음료/.test(M) || /제과|빵|도넛|디저트|빙수|아이스크림|커피/.test(S)) return "cafe";
+    return "food";
+  }
+  if (/소매|도매|유통/.test(L)) return "shop";
+  if (/생활서비스|수리|개인/.test(L)) return "beauty";
+  if (/여가|스포츠|예술|학문|교육/.test(L)) return "culture";
+  if (/숙박|음료/.test(L)) return "cafe";
+  return "etc";
+}
+
+/* ══ 2-3 축제 정보 (M08) ═══════════════════════════════════════════════════
+   출처: 용인시 제공 · 데이터 기준일 미표기 대상 · 이미지 파일로 제공되므로 수기 입력 전제
+
+   ── 상태를 입력받지 않는다 ──────────────────────────────────────────────────
+   진행 예정 · 진행 중 · 완료는 기간에서 나오는 값이다 (명세서 2-3 의 표).
+   담당자가 고르게 하면 축제가 끝나도 「진행 중」이 남고, 그것을 내리는 일이 또 하나의
+   할 일이 된다. 종료일이 지나도 **숨기지 않고 완료 카테고리로 옮겨** 계속 노출한다. */
 export const FESTIVAL_FIELDS = [
-  { key: "name", label: "축제명", required: true, type: "text", example: "둔전 골목축제", span: 2 },
-  { key: "districtId", label: "주최 상점가", required: true, type: "select", options: DISTRICT_OPTIONS, example: "둔전골목형상점가", span: 2 },
-  { key: "start", label: "시작일", required: true, type: "text", example: "2026-10-17" },
-  { key: "end", label: "종료일", required: true, type: "text", example: "2026-10-17" },
-  { key: "time", label: "시간", required: false, type: "text", example: "15:00~21:00" },
-  /* 예시값은 담당자가 보고 그대로 따라 적는 자리다. 시민 화면의 표기 규칙과 어긋나면
-     어긋난 값이 그대로 들어온다 — 프로그램 이름 사이는 쉼표다 (districts.js 주석) */
-  { key: "program", label: "주요 프로그램", required: false, type: "textarea", rows: 3,
-    example: "먹거리 장터, 상인 경품행사, 어르신 한마당", span: 2 },
+  { key: "name", spec: "name", label: "축제명", required: true, type: "text",
+    range: "2~40자", minLength: 2, maxLength: 40, example: "둔전 골목축제", span: 2 },
+  { key: "districtId", spec: "market_id", label: "상권명", required: true, type: "select",
+    options: DISTRICT_OPTIONS, example: "둔전골목형상점가", span: 2,
+    hint: "주최 상점가" },
+  { key: "start", spec: "date_from", label: "시작일", required: true, type: "date", example: "2026-10-17" },
+  { key: "end", spec: "date_to", label: "종료일", required: true, type: "date", example: "2026-10-17",
+    hint: "종료일은 시작일과 같거나 뒤여야 합니다 (V-07)" },
+  { key: "time", spec: "time_text", label: "시간", required: false, type: "text",
+    range: "최대 50자", maxLength: 50, example: "10:00~18:00" },
+  { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch" },
+  { key: "program", spec: "program_text", label: "주요 프로그램", required: false, type: "textarea",
+    rows: 3, range: "최대 500자", maxLength: 500,
+    example: "먹거리 장터, 상인 경품행사, 어르신 한마당", span: 2,
+    hint: "이름 사이는 쉼표로 나눕니다 — 시민 화면이 그 기준으로 줄을 나눕니다" },
 ];
 
-/* ── 2-1 ~ 2-4 공공시설 ─────────────────────────────────────────────────────
+/* 2-4 프로그램 일정 (1:N) `C` — 자료 제공 범위 확정 후 반영 여부 결정 */
+export const PROGRAM_COLUMNS = [
+  { key: "at", label: "시작 일시", type: "text", required: true, width: 150, placeholder: "10.17 11:00" },
+  { key: "title", label: "프로그램명", type: "text", required: true, maxLength: 40, placeholder: "개막 풍물놀이" },
+  { key: "place", label: "장소", type: "text", maxLength: 60, width: 180, placeholder: "시장통 무대" },
+  { key: "desc", label: "설명", type: "text", maxLength: 300, placeholder: "포곡농악보존회" },
+];
+
+/* 2-5 부스 위치 (1:N) `C` — 제공 자료가 좌표 목록일지 배치도 이미지일지 확정되지 않아
+   두 방식을 모두 받는다. 방식에 따라 어느 좌표 칸이 필수인지가 갈린다. */
+export const BOOTH_TYPES = ["먹거리", "판매", "체험", "전시", "공연", "안내"];
+export const BOOTH_POSITION_TYPES = [
+  { value: "coord", label: "실제 좌표" },
+  { value: "plan", label: "배치도 상대좌표" },
+];
+export const BOOTH_COLUMNS = [
+  { key: "no", label: "번호", type: "text", required: true, width: 84, maxLength: 10, placeholder: "A-01" },
+  { key: "name", label: "부스명", type: "text", required: true, maxLength: 40, placeholder: "포곡 떡집" },
+  { key: "type", label: "유형", type: "select", required: true, width: 120,
+    options: BOOTH_TYPES.map(v => ({ value: v, label: v })) },
+  { key: "posType", label: "위치 지정", type: "select", required: true, width: 150,
+    options: BOOTH_POSITION_TYPES },
+  { key: "pos", label: "좌표 / 배치도 %", type: "text", width: 160, placeholder: "37.2887, 127.1993" },
+];
+
+/* ══ 3장 공공시설 (M10) ════════════════════════════════════════════════════
+   출처: 공공데이터 · **데이터 기준일 표기 대상** (유형별 개별 설정 — M14)
+
    유형마다 항목이 다르다. 한 폼에 다 펼쳐놓고 "해당 없으면 비우세요"로 두면
-   AED 를 등록하는 담당자가 기저귀 교환대 칸을 보게 된다.
+   AED 를 등록하는 담당자가 기저귀 교환대 칸을 보게 되고, 그 칸을 비운 것이 "없음"인지
+   "해당 없음"인지 데이터로는 구분되지 않는다. */
 
-   **AED 와 대피소에는 명칭 칸이 없다** (정의서 2-1 · 2-4 에 항목이 없다).
-   화면이 도로명주소에서 만든다 (U-FC-10). 폼에서는 readonly 로 만들어질 이름을
-   미리 보여준다 — 규칙으로 생기는 값이라는 것이 입력하는 사람에게도 보여야 한다. */
-const ADDR = { key: "addr", label: "도로명주소", required: true, type: "text",
-  example: "처인구 포곡읍 둔전로 42", span: 2 };
+/* 3-1 공통 필드 — 넷뿐이다 (유형 · 도로명주소 · 좌표 · 노출 여부).
 
-const DERIVED_NAME = { key: "name", label: "명칭 (도로명주소에서 자동 생성)", required: false,
-  type: "readonly", span: 2,
-  example: "정의서에 명칭 항목이 없어 화면이 만듭니다 (U-FC-10)" };
+   ── `source`(원본 · 원본수정 · 직접등록)가 빠졌다 (2026-08-20, 명세서 개정) ────
+   그 값은 **동기화가 어느 필드를 덮어쓸지** 정하는 값이었다. 동기화 화면이 개발 쪽으로
+   가면서 그것을 읽는 곳이 없어졌다 — 명세서 3-1 이 "공공데이터 적재와 갱신은 개발 쪽에서
+   처리하며, 관리자 화면에서는 개별 건의 조회·수정·신규 등록만 제공한다"고 다시 적었다.
+
+   읽는 곳이 없는 값을 폼에 남겨 두면 담당자는 그것이 무엇을 바꾸는지 모른 채 고르게 된다.
+   덮어쓰기 규칙은 서버가 자기 기준으로 판단한다. */
+
+const ADDR ={ key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
+  range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 };
+
+/* 좌표는 **입력칸이 아니라 지도**다 (입력 원칙 3번). 항목표에 자리를 남겨두는 이유는
+   명세서 3-1 과 4장에 `lat · lng` 가 항목으로 적혀 있어서다 — 표에서 빼면 그 항목이
+   어디로 갔는지 알 수 없다. 화면이 이 자리에 CoordField 를 끼워 넣는다 (RecordForm 의 slots).
+   주소 바로 아래인 것도 이유가 있다: 좌표는 주소에서 나온 값이라 둘이 떨어져 있으면
+   지도가 왜 저기 있는지 알 수 없다. */
+const COORD = { key: "coord", spec: "lat · lng", label: "좌표", required: "auto", type: "coord", span: 2 };
+
+const COMMON_TAIL = [
+  { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch" },
+];
+
+/* AED·대피소에는 **명칭 항목이 없다** (명세서 3-2 · 3-5 에 항목이 없다).
+   화면이 도로명주소에서 만든다 (U-FC-10). 폼에서는 만들어질 이름을 미리 보여준다 —
+   규칙으로 생기는 값이라는 것이 입력하는 사람에게도 보여야 한다. */
+const DERIVED_NAME = { key: "name", spec: "—", label: "명칭 (도로명주소에서 자동 생성)",
+  required: "auto", type: "readonly", span: 2,
+  hint: "명세서에 명칭 항목이 없어 화면이 만듭니다 (U-FC-10)" };
 
 export const FACILITY_FIELDS = {
   aed: [
     ADDR,
+    COORD,
     DERIVED_NAME,
-    { key: "place", label: "설치 위치", required: true, type: "text",
-      example: "1층 로비 자동심장충격기함", span: 2 },
+    { key: "place", spec: "aed_place_detail", label: "설치 위치", required: true, type: "text",
+      range: "최대 100자", maxLength: 100, span: 2,
+      example: "관리사무소 건물 1층 출입구",
+      hint: "응급 상황에서 결정적인 정보이므로 필수입니다. 층 정보도 이 문장에 포함합니다" },
+    ...COMMON_TAIL,
   ],
   toilet: [
-    { key: "name", label: "화장실명", required: true, type: "text", example: "둔전시장 공중화장실", span: 2 },
+    { key: "name", spec: "name", label: "화장실명", required: true, type: "text",
+      range: "2~60자", minLength: 2, maxLength: 60, example: "둔전시장 공중화장실", span: 2 },
     ADDR,
+    COORD,
     /* 개방시간이 칸수보다 위인 이유: 나머지 일곱은 "가서 쓸 만한가"를 말하는데
        이것은 **가도 되는가**를 말한다. 잠긴 화장실 앞에서 칸수는 소용이 없다 */
-    { key: "hours", label: "개방시간", required: false, type: "text", example: "상시 개방 / 05:00~24:00", span: 2 },
-    { key: "menToilet", label: "남성용 대변기수", required: false, type: "number", example: "2", unit: "칸" },
-    { key: "menUrinal", label: "남성용 소변기수", required: false, type: "number", example: "3", unit: "칸" },
-    { key: "womenToilet", label: "여성용 대변기수", required: false, type: "number", example: "3", unit: "칸" },
-    { key: "womenUrinal", label: "여성용 소변기수", required: false, type: "number", example: "2", unit: "칸" },
-    { key: "emergencyBell", label: "비상벨 설치 여부", required: false, type: "switch", example: "있으면 켭니다" },
-    { key: "diaperTable", label: "기저귀 교환대", required: false, type: "switch", example: "있으면 켭니다" },
-    { key: "entranceCctv", label: "입구 CCTV", required: false, type: "switch", example: "있으면 켭니다", span: 2 },
+    { key: "hours", spec: "open_hours", label: "개방시간", required: false, type: "text",
+      range: "최대 50자", maxLength: 50, example: "상시 개방 / 05:00~24:00", span: 2 },
+    { key: "menToilet", spec: "m_toilet", label: "남성용 대변기수", required: false, type: "number",
+      range: "0~99", min: 0, max: 99, unit: "칸", example: "2" },
+    { key: "menUrinal", spec: "m_urinal", label: "남성용 소변기수", required: false, type: "number",
+      range: "0~99", min: 0, max: 99, unit: "칸", example: "3" },
+    { key: "womenToilet", spec: "f_toilet", label: "여성용 대변기수", required: false, type: "number",
+      range: "0~99", min: 0, max: 99, unit: "칸", example: "3" },
+    { key: "womenUrinal", spec: "f_urinal", label: "여성용 소변기수", required: false, type: "number",
+      range: "0~99", min: 0, max: 99, unit: "칸", example: "2" },
+    { key: "emergencyBell", spec: "emergency_bell", label: "비상벨 설치 여부", required: false, type: "switch" },
+    { key: "diaperTable", spec: "diaper_table", label: "기저귀 교환대 유무", required: false, type: "switch" },
+    { key: "entranceCctv", spec: "entrance_cctv", label: "입구 CCTV 유무", required: false, type: "switch", span: 2 },
+    ...COMMON_TAIL,
   ],
   rest: [
-    { key: "name", label: "쉼터명칭", required: true, type: "text", example: "둔전마을회관 무더위쉼터", span: 2 },
+    { key: "name", spec: "name", label: "쉼터명칭", required: true, type: "text",
+      range: "2~60자", minLength: 2, maxLength: 60, example: "둔전마을회관 무더위쉼터", span: 2 },
     ADDR,
-    { key: "hours", label: "운영시간", required: false, type: "text", example: "평일 09:00~18:00 / 24시간 개방" },
-    { key: "capacity", label: "이용가능 인원", required: false, type: "number", example: "40", unit: "명" },
-    { key: "extra", label: "부가정보", required: false, type: "textarea", rows: 2,
-      example: "실내 무더위쉼터 · 냉방기 있음 · 정수기 있음", span: 2 },
+    COORD,
+    { key: "hours", spec: "open_hours", label: "운영시간", required: false, type: "text",
+      range: "최대 50자", maxLength: 50, example: "평일 09:00~18:00 / 24시간 개방" },
+    { key: "capacity", spec: "capacity", label: "이용가능 인원", required: false, type: "number",
+      range: "0~9999", min: 0, max: 9999, unit: "명", example: "40" },
+    { key: "extra", spec: "extra_info", label: "부가정보", required: false, type: "text",
+      range: "최대 100자", maxLength: 100, example: "냉방기 있음", span: 2 },
+    ...COMMON_TAIL,
   ],
   shelter: [
     ADDR,
+    COORD,
     DERIVED_NAME,
-    { key: "place", label: "실제 위치", required: true, type: "text",
-      example: "포곡중학교 운동장 전체 (지진 옥외대피장소)", span: 2 },
-    { key: "capacity", label: "최대 수용 인원", required: false, type: "number", example: "1200", unit: "명" },
+    { key: "place", spec: "place_name", label: "실제 위치 (시설명)", required: true, type: "text",
+      range: "최대 100자", maxLength: 100, span: 2,
+      example: "백현마을 2단지 208동 지하 1층 주차장" },
+    { key: "capacity", spec: "capacity", label: "최대 수용 인원", required: false, type: "number",
+      range: "0~99999", min: 0, max: 99999, unit: "명", example: "1200" },
+    ...COMMON_TAIL,
   ],
 };
 
-/* ── QR 지점 (A-QR-01) ──────────────────────────────────────────────────────
-   **정의서에 없는 표다.** 정의서는 공공데이터에서 받는 항목을 정하는 문서인데,
-   QR 지점은 우리가 만들어 붙이는 것이라 원천이 없다. 그래서 여기 있는 항목은
-   시민 화면이 실제로 쓰는 값(screens/main/data/qr.js)에서 거꾸로 뽑았다.
+/* ══ 4장 QR 지점 (M13) ═════════════════════════════════════════════════════
+   ── 활성 여부의 기본값이 꺼짐인 것은 의도다 ─────────────────────────────────
+   설치가 끝나기 전에 누군가 시험 삼아 스캔하면 오류 화면이 뜬다. 기본을 꺼짐으로 두면
+   설치를 마치고 담당자가 켜는 순간부터만 살아 있다.
 
-   소속 상점가를 관리자가 직접 고르는 것이 핵심이다 (U-ST-01) — 앱은 이것을
-   계산하지 않는다. QR 지점이 50개소뿐이라 사람이 정하는 편이 정확하다. */
+   ── 활성 여부를 끄는 것과 지우는 것은 다르다 ────────────────────────────────
+   안내판을 교체했을 때 옛 코드는 **남겨두고 끈다**. 지우면 그 코드로 들어온 시민이
+   "등록된 적 없는 코드"로 안내받는데, 실제로는 예전에 우리가 붙였던 코드다.
+   그 둘은 할 말이 다르다 (U-CM-02 · S11 의 두 갈래). */
+export const INSTALL_STATUS = ["설치예정", "설치완료", "훼손", "철거"];
+export const INSTALL_STATUS_OPTIONS = INSTALL_STATUS.map(v => ({ value: v, label: v }));
+
 export const QR_FIELDS = [
-  { key: "code", label: "QR 코드", required: true, type: "text", example: "dunjeon-01" },
-  { key: "name", label: "지점 명칭", required: true, type: "text", example: "둔전 시장 입구 버스정류장" },
-  { key: "dong", label: "행정동", required: true, type: "text", example: "처인구 포곡읍 둔전리", span: 2 },
-  { key: "lat", label: "위도", required: true, type: "text", example: "37.28874" },
-  { key: "lng", label: "경도", required: true, type: "text", example: "127.19931" },
-  { key: "districtId", label: "소속 상점가", required: true, type: "select", options: DISTRICT_OPTIONS,
-    example: "관리자가 직접 지정합니다 — 앱이 계산하지 않습니다", span: 2 },
-  { key: "installedAt", label: "설치 시점", required: false, type: "text", example: "2026.03" },
-  { key: "active", label: "활성 여부", required: true, type: "switch",
-    example: "끄면 이 코드로 들어온 시민에게 S11 안내가 뜹니다" },
+  { key: "code", spec: "qr_code", label: "QR 식별자", required: true, type: "text",
+    range: "4~12자 · 영문 소문자+숫자 · 전역 유일", pattern: V.qrCode,
+    minLength: 4, maxLength: 12, example: "dunjeon01" },
+  { key: "name", spec: "name", label: "지점명", required: true, type: "text",
+    range: "2~40자", minLength: 2, maxLength: 40, example: "둔전 시장 입구 버스정류장",
+    hint: "시민용 상단에 상시 노출되므로 40자를 넘기지 않습니다" },
+  { key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
+    range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 },
+  COORD,
+  { key: "districtId", spec: "market_id", label: "소속 상점가", required: false, type: "select",
+    options: withBlank(DISTRICT_OPTIONS, "— 지정 안 함 —"), span: 2,
+    hint: "비우면 시민용 상점가 탭이 안내 상태(S03-E)로 진입합니다. 앱이 계산하지 않습니다" },
+
+  { key: "installStatus", spec: "install_status", label: "설치 상태", required: true, type: "select",
+    options: INSTALL_STATUS_OPTIONS, example: "설치완료" },
+  { key: "installedAt", spec: "installed_at", label: "설치일자", required: "cond",
+    when: v => v.installStatus === "설치완료", type: "date", example: "2026-03-14",
+    hint: "설치완료를 고르면 필수가 됩니다" },
+  { key: "active", spec: "is_active", label: "활성 여부", required: true, type: "switch",
+    hint: "끄면 이 코드로 들어온 시민에게 교체 안내(S11)가 뜹니다. 기본값은 꺼짐입니다" },
+
+  { key: "locationDetail", spec: "location_detail", label: "설치 상세 위치", required: false,
+    type: "textarea", rows: 2, range: "최대 100자", maxLength: 100,
+    example: "정류장 승차대 오른쪽 기둥, 눈높이", span: 2,
+    hint: "설치·점검용입니다. 시민용에는 나오지 않습니다" },
+  { key: "memo", spec: "memo", label: "관리 메모", required: false, type: "textarea", rows: 2,
+    range: "최대 500자", maxLength: 500, span: 2 },
 ];
 
-/* 폼 아래 한 줄. 여덟 화면이 같은 문장을 쓴다 — 담당자는 자기가 비운 칸이
-   시민 화면에서 어떻게 보이는지 확인할 방법이 지금 없다. */
-export const EMPTY_NOTE =
-  "선택 항목을 비워두면 시민용 화면에 \"-\" 로 표시됩니다. 항목을 감추지 않는 것은 "
-  + "\"원천에 값이 없음\"과 \"우리가 빠뜨림\"을 구분하기 위해서입니다.";
+/* 진입 URL — QR 이미지는 이 값으로 외부 도구에서 만든다 (명세서 4장) */
+export function qrEntryUrl(code) {
+  const origin = typeof location !== "undefined" ? location.origin : "";
+  return `${origin}/s/${code || ""}`;
+}
 
-/* 필수 항목이 비었는지 본다. 정의서의 required 가 그대로 저장 검사가 되므로,
-   표를 고치면 검사도 따라온다 — 검사 규칙을 화면에 따로 적지 않는다. */
-export function validate(fields, values) {
+/* 자동생성 버튼이 쓰는 규칙. 영문 소문자+숫자 4~12자를 지켜야 하고, 사람이 읽어
+   어느 지점인지 짐작할 수 있어야 종이에 인쇄된 뒤에도 관리가 된다. */
+export function suggestQrCode(existing = []) {
+  const used = new Set(existing);
+  for (let n = 1; n < 1000; n += 1) {
+    const c = `yq${String(n).padStart(4, "0")}`;
+    if (!used.has(c)) return c;
+  }
+  return "yq0000";
+}
+
+/* ══ 5장 오류신고 (M13) ════════════════════════════════════════════════════ */
+export const REPORT_TARGET_TYPES = ["공공시설", "점포", "상점가", "축제", "기타"];
+export const REPORT_TYPES = ["정보 오류", "없어진 시설", "위치 부정확", "추가 제안", "기타"];
+export const REPORT_STATES = ["접수", "확인중", "처리완료", "반려", "중복"];
+
+/* 회신이 필요한 상태 둘. 회신 없이 닫힌 신고는 시민 쪽에서 보면 무시된 것과 구별되지 않는다 */
+export const REPORT_NEEDS_REPLY = ["처리완료", "반려"];
+
+export const REPORT_FIELDS = [
+  { key: "state", spec: "status", label: "처리 상태", required: true, type: "select",
+    options: REPORT_STATES.map(v => ({ value: v, label: v })) },
+  { key: "assignee", spec: "assignee", label: "담당자", required: false, type: "select" },
+  { key: "memo", spec: "internal_memo", label: "내부 메모", required: false, type: "textarea", rows: 3,
+    range: "최대 500자", maxLength: 500, span: 2,
+    hint: "시민에게 공개되지 않습니다" },
+  { key: "reply", spec: "reply_content", label: "회신 내용", required: "cond",
+    when: v => REPORT_NEEDS_REPLY.includes(v.state), type: "textarea", rows: 3,
+    range: "최대 500자", maxLength: 500, span: 2,
+    hint: "처리완료 또는 반려로 옮기려면 반드시 적어야 합니다" },
+];
+
+/* ══ 8-1 서비스 운영 설정 (M15) ════════════════════════════════════════════
+   ── 유형별 검색 상한 셋이 두 값으로 바뀌었다 (2026-08-20, 명세서 개정) ──────
+   전에는 화장실 상한 · 쉼터 상한 · 원거리 배너 기준 셋이었고, AED 와 대피소만 상한이
+   없었다. 명세서가 그것을 **역할이 다른 두 값**으로 정리했다:
+
+     안내 범위 2km       주변 공공시설로 간주해 목록에 담는 범위. 4종 전체에 하나로 적용
+     배너 기준 1km       이 안에 없으면 원거리 안내 배너를 띄우는 기준. **안전시설에만**
+
+   시민 화면은 이미 그렇게 돌고 있다 — `facilities.js` 의 `NEAR_LIMIT`(2000) ·
+   `NEAR_ENOUGH`(1000) 가 정확히 이 두 값이고, 유형별 상한은 2026-08-19 에 통일됐다.
+   **바뀐 것은 명세서가 화면을 따라온 것이지 그 반대가 아니다.**
+
+   배너를 안전시설(AED · 대피소 · 쉼터)에만 붙이는 이유는 배너의 근거가 긴급 상황에서의
+   접근성이라서다. 화장실이 1.2km 떨어져 있다고 경고할 일은 아니므로 거리만 적는다. */
+export const OPERATION_FIELDS = [
+  { key: "facilityRadiusM", spec: "facility_radius_m", label: "주변 공공시설 안내 범위",
+    required: true, type: "number", range: "500~5000", min: 500, max: 5000, unit: "m", example: "2000",
+    hint: "이 안의 시설을 목록에 담습니다. 도보 약 30분 — 4종 전체에 하나로 적용됩니다" },
+  { key: "safetyFarBannerM", spec: "safety_far_banner_m", label: "안전시설 원거리 배너 기준",
+    required: true, type: "number", range: "500~5000", min: 500, max: 5000, unit: "m", example: "1000",
+    hint: "AED · 대피소 · 쉼터가 이보다 멀면 배너가 뜹니다. 화장실은 제외입니다" },
+  { key: "marketThresholdM", spec: "market_threshold_m", label: "상점가 임계 거리",
+    required: true, type: "number", range: "100~5000", min: 100, max: 5000, unit: "m", example: "1000",
+    hint: "이 거리 안에 지정 상점가가 없으면 상점가 탭이 안내 상태(S03-E)로 갑니다" },
+  { key: "newStoreDays", spec: "new_store_days", label: "신규 매장 판정 기간",
+    required: true, type: "number", range: "7~180", min: 7, max: 180, unit: "일", example: "30" },
+  { key: "courseRadiusM", spec: "course_radius_m", label: "골목 한바퀴 반경",
+    required: true, type: "number", range: "100~1000", min: 100, max: 1000, unit: "m", example: "500" },
+  { key: "zoomFacility", spec: "zoom_facility", label: "공공시설 탭 기본 줌",
+    required: true, type: "number", range: "1~14", min: 1, max: 14, example: "4" },
+  { key: "zoomMarket", spec: "zoom_market", label: "상점가 탭 기본 줌",
+    required: true, type: "number", range: "1~14", min: 1, max: 14, example: "4" },
+  { key: "zoomDiscover", spec: "zoom_discover", label: "둘러보기 탭 기본 줌",
+    required: true, type: "number", range: "1~14", min: 1, max: 14, example: "7" },
+];
+
+/* ══ 8-2 API 쿼터 설정 (M15 · DEVELOPER 전용) ══════════════════════════════ */
+export const FALLBACK_OPTIONS = [
+  { value: "straight", label: "직선거리 안내로 폴백" },
+  { value: "external", label: "외부 지도앱 연결" },
+];
+
+export const QUOTA_FIELDS = [
+  { key: "dailyQuota", spec: "daily_quota", label: "일일 호출 한도", required: true, type: "number",
+    range: "100~100000", min: 100, max: 100000, unit: "건", example: "1000" },
+  { key: "warnThresholdPct", spec: "warn_threshold_pct", label: "쿼터 경고 임계치", required: true,
+    type: "number", range: "50~95", min: 50, max: 95, unit: "%", example: "80" },
+  { key: "warnEmail", spec: "warn_email", label: "경고 수신 이메일", required: false, type: "text",
+    range: "최대 100자", maxLength: 100, pattern: V.email, example: "gis@yongin.go.kr", span: 2 },
+  { key: "fallbackOnExceed", spec: "fallback_on_exceed", label: "한도 초과 시 동작", required: true,
+    type: "select", options: FALLBACK_OPTIONS, span: 2 },
+];
+
+/* ══ 9장 계정 및 권한 (M16 · DEVELOPER 전용) ═══════════════════════════════ */
+export const ROLE_OPTIONS = [
+  { value: "CITY", label: "시청 담당자" },
+  { value: "DEVELOPER", label: "개발자" },
+];
+
+export const ACCOUNT_FIELDS = [
+  { key: "id", spec: "login_id", label: "아이디", required: true, type: "text",
+    range: "4~20자 · 영문 소문자+숫자 · 첫 글자 영문 · 등록 후 수정 불가",
+    pattern: V.loginId, minLength: 4, maxLength: 20, example: "yongin01" },
+  { key: "name", spec: "name", label: "이름", required: true, type: "text",
+    range: "2~20자", minLength: 2, maxLength: 20, example: "김담당" },
+  { key: "pw", spec: "password", label: "비밀번호", required: true, type: "text",
+    range: "10~64자 · 영문·숫자·특수문자 중 2종 이상", span: 2,
+    hint: "수정할 때 비우면 기존 비밀번호를 그대로 둡니다" },
+  { key: "role", spec: "role", label: "권한", required: true, type: "select", options: ROLE_OPTIONS,
+    hint: "개발자 전용은 계정 관리와 API 쿼터 설정 두 가지뿐입니다" },
+  { key: "active", spec: "is_active", label: "사용 여부", required: true, type: "switch" },
+  { key: "email", spec: "email", label: "이메일", required: true, type: "text",
+    range: "최대 100자", maxLength: 100, pattern: V.email, example: "gis@yongin.go.kr" },
+  { key: "phone", spec: "phone", label: "연락처", required: false, type: "text",
+    range: "최대 13자 · 숫자와 하이픈만", maxLength: 13, pattern: V.phone, example: "031-324-0000" },
+];
+
+/* ══ 저장 검사 ═════════════════════════════════════════════════════════════
+   명세서의 required · range 열이 그대로 검사가 되므로, 표를 고치면 검사도 따라온다 —
+   검사 규칙을 화면에 따로 적지 않는다. */
+export function isRequired(field, values) {
+  if (field.required === "auto") return false;
+  if (field.required === "cond") return typeof field.when === "function" ? !!field.when(values) : false;
+  return !!field.required;
+}
+
+export function validate(fields, values, extra) {
   const bad = {};
   for (const f of fields) {
-    if (!f.required || f.type === "readonly") continue;
-    const v = values[f.key];
-    if (f.type === "switch") continue;                     /* 켜짐/꺼짐 둘 다 값이다 */
-    if (v == null || String(v).trim() === "") bad[f.key] = "필수 항목입니다.";
+    if (f.required === "auto" || f.type === "readonly") continue;
+    const raw = values[f.key];
+    const empty = f.type === "multiselect"
+      ? !(Array.isArray(raw) && raw.length)
+      : (raw == null || String(raw).trim() === "");
+
+    /* 가부 항목은 켜짐과 꺼짐이 둘 다 값이다 — 비어 있을 수가 없다 */
+    if (f.type === "switch") continue;
+
+    if (empty) {
+      if (isRequired(f, values)) {
+        bad[f.key] = f.required === "cond" ? "이 조건에서는 필수 항목입니다." : "필수 항목입니다.";
+      }
+      continue;   /* 비어 있으면 길이·형식을 볼 것이 없다 */
+    }
+
+    const s = String(raw).trim();
+    if (f.minLength && s.length < f.minLength) { bad[f.key] = `${f.minLength}자 이상 적습니다.`; continue; }
+    if (f.maxLength && s.length > f.maxLength) { bad[f.key] = `${f.maxLength}자까지 적을 수 있습니다.`; continue; }
+    if (f.pattern && !f.pattern.re.test(s)) { bad[f.key] = f.pattern.msg; continue; }
+    if (f.type === "number") {
+      const n = Number(s);
+      if (!Number.isFinite(n)) { bad[f.key] = "숫자로 적습니다."; continue; }
+      if (f.min != null && n < f.min) { bad[f.key] = `${f.min} 이상이어야 합니다.`; continue; }
+      if (f.max != null && n > f.max) { bad[f.key] = `${f.max} 이하여야 합니다.`; continue; }
+    }
+  }
+  /* 화면이 아는 검사는 화면이 넘긴다 — 기간 역전(V-07), 아이디 중복 같은 것들은
+     항목 하나만 봐서는 알 수 없어 표에 적을 수가 없다.
+
+     **이미 잡힌 칸은 덮지 않는다.** 형식이 틀린 값은 중복인지 아닌지를 따질 것도 없는데,
+     덮어쓰면 "dunjeon-01"을 넣었을 때 「이미 쓰는 코드입니다」가 떠서 담당자가 하이픈을
+     빼면 통과할 것처럼 읽힌다. 더 근본적인 오류가 먼저다. */
+  if (typeof extra === "function") {
+    const more = extra(values) || {};
+    for (const k of Object.keys(more)) if (!bad[k]) bad[k] = more[k];
   }
   return bad;
 }
+
+/* 폼 아래 한 줄. 열 화면이 같은 문장을 쓴다 — 담당자는 자기가 비운 칸이
+   시민 화면에서 어떻게 보이는지 확인할 방법이 지금 없다. */
+export const EMPTY_NOTE =
+  "선택 항목을 비워두면 시민용 화면에 \"-\" 로 표시됩니다. 항목을 감추지 않는 것은 "
+  + "\"원천에 값이 없음\"과 \"우리가 빠뜨림\"을 구분하기 위해서입니다. "
+  + "데이터 기준일은 여기서 입력하지 않고 카테고리 단위로 관리합니다 (데이터 기준일 관리).";

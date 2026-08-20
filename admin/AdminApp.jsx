@@ -1,55 +1,86 @@
 import React from "react";
 import { AdminShell, Button, Toast } from "../design-systems/admin.js";
 import { useSession, can } from "./data/account.js";
-import { resetAll, hasChanges, subscribe } from "./data/store.js";
+import { resetAll, hasChanges, subscribe, setActor, readCollection } from "./data/store.js";
 import { useHashPage, replace, go } from "./router.js";
-import { OPEN_COUNT } from "./data/inquiries.js";
+import { REPORTS, isOpen } from "./data/reports.js";
 
 import { Login } from "./pages/Login.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
-import { Facilities } from "./pages/Facilities.jsx";
 import { Districts } from "./pages/Districts.jsx";
 import { Stores } from "./pages/Stores.jsx";
 import { Festivals } from "./pages/Festivals.jsx";
+import { Facilities } from "./pages/Facilities.jsx";
 import { QrPoints } from "./pages/QrPoints.jsx";
-import { Inquiries } from "./pages/Inquiries.jsx";
+import { Reports } from "./pages/Reports.jsx";
+import { DataAsOf } from "./pages/DataAsOf.jsx";
+import { Settings } from "./pages/Settings.jsx";
+import { Accounts } from "./pages/Accounts.jsx";
 
-/* 관리자 웹 진입점 (/admin/).
+/* 관리자 웹 진입점 (/admin/) — 기능명세서 v1.0 의 M01 ~ M16.
+ *
+ * ── 이 화면이 하는 일은 좁다 (2026-08-20, 명세서 개정) ──────────────────────
+ * 명세서 범위 문단이 그것을 못 박았다: "개별 건의 조회·수정·신규 등록과 오류신고 기반
+ * 보정. **데이터 일괄 적재, 매칭, 갱신, 검수는 개발 쪽에서 처리하며 별도 문서로 분리한다.**"
+ *
+ * 그래서 화면 둘이 빠졌다 — 매칭 검수 큐와 공공데이터 동기화. 함께 빠진 것들:
+ * 점포 일괄 업로드 · 상점가 구역 주소 편집과 재매칭 · 게시값 대비 산출값 비교 ·
+ * 공공시설의 `source`(덮어쓰기 기준) · 노출 순서. 전부 **데이터를 무리로 다루는 일**이고,
+ * 그 일의 결과를 담당자가 화면에서 확인할 수는 있어도 화면에서 고칠 수는 없었다.
+ *
+ * 남은 것은 한 건씩 고치는 일이다. 그래서 화면 열이 전부 목록 + 폼 한 벌로 같은 모양이다.
  *
  * ── 시민용 App.jsx 와 같은 자리에 있다 ──────────────────────────────────────
  * 저쪽은 QR 코드를 조회해 셸로 보낼지 안내 화면으로 보낼지 **셸보다 앞에서** 갈랐다.
  * 여기도 같다 — 로그인하지 않았으면 셸을 세우지 않는다. 셸이 서는 순간 데이터 파일
- * 네 개(점포 335곳 포함)를 읽고 표를 그리는데, 들어올 자격이 확인되지 않은 사람에게
+ * 다섯 개(점포 335곳 포함)를 읽고 표를 그리는데, 들어올 자격이 확인되지 않은 사람에게
  * 그 일을 할 이유가 없다.
  *
  * ── 권한은 두 겹으로 막는다 ─────────────────────────────────────────────────
  * 1. 내비에서 감춘다 (갈 수 없는 곳을 보여주지 않는다)
  * 2. 주소로 직접 들어와도 되돌린다 (아래 useEffect)
  *
- * 하나만으로는 부족하다. 감추기만 하면 `#/inquiries` 를 주소창에 치는 것으로 들어와지고,
+ * 하나만으로는 부족하다. 감추기만 하면 `#/accounts` 를 주소창에 치는 것으로 들어와지고,
  * 되돌리기만 하면 눌러보고 튕겨나는 메뉴가 남는다. **다만 이것은 UI 수준의 분리일 뿐이다** —
  * 실서비스의 권한은 서버가 막는다. 화면이 막는 것은 실수를 줄이는 장치이지 보안이 아니다.
  */
 
+/* 내비 — 명세서의 장 구성이 그대로 구획이 된다. `{ section }` 한 줄이 제목이고,
+   뒤에 오는 항목들이 그 구획에 속한다 (AdminShell 이 빈 구획을 걷어낸다). */
 const NAV = [
   { key: "dashboard", label: "대시보드", icon: "layout-dashboard" },
-  { key: "facilities", label: "공공시설", icon: "life-buoy" },
+
+  { section: "골목형 상점가" },
   { key: "districts", label: "상점가", icon: "store" },
   { key: "stores", label: "점포", icon: "shopping-bag" },
   { key: "festivals", label: "축제", icon: "party-popper" },
+
+  { section: "공공시설" },
+  { key: "facilities", label: "공공시설", icon: "life-buoy" },
+
+  { section: "안내 지점" },
   { key: "qr", label: "QR 지점", icon: "qr-code" },
-  /* 미처리 건수를 배지로 단다. 0 이면 달지 않는다 — 없는 일에 표시를 붙이지 않는다 */
-  { key: "inquiries", label: "문의·오류신고", icon: "inbox", badge: OPEN_COUNT || null },
+
+  { section: "시민 접수" },
+  { key: "reports", label: "오류신고", icon: "inbox" },
+
+  { section: "운영" },
+  { key: "asof", label: "데이터 기준일", icon: "calendar-clock" },
+  { key: "settings", label: "설정", icon: "settings" },
+  { key: "accounts", label: "계정 관리", icon: "users" },
 ];
 
 const PAGES = {
   dashboard: Dashboard,
-  facilities: Facilities,
   districts: Districts,
   stores: Stores,
   festivals: Festivals,
+  facilities: Facilities,
   qr: QrPoints,
-  inquiries: Inquiries,
+  reports: Reports,
+  asof: DataAsOf,
+  settings: Settings,
+  accounts: Accounts,
 };
 
 export function AdminApp() {
@@ -58,12 +89,17 @@ export function AdminApp() {
   const [toast, setToast] = React.useState(null);
   const [, bump] = React.useReducer(n => n + 1, 0);
 
-  /* 덮개가 바뀌면 상단바를 다시 그린다. [데모 데이터 초기화]는 고친 것이 있을 때만 서는데,
-     그 판단(hasChanges)이 아래 화면이 아니라 여기서 이루어지기 때문이다 */
+  /* 덮개가 바뀌면 상단바와 내비 배지를 다시 그린다. [데모 데이터 초기화]는 고친 것이
+     있을 때만 서는데 그 판단(hasChanges)이 아래 화면이 아니라 여기서 이루어지고,
+     내비 배지의 숫자도 화면 밖에서 바뀐다 (신고 하나를 처리하면 배지가 줄어야 한다) */
   React.useEffect(() => subscribe(bump), []);
 
-  /* 저장·삭제 알림. 화면 여덟 개가 같은 통로를 쓴다 — 화면마다 토스트를 들고 있으면
-     같은 "저장되었습니다"가 여덟 벌 생기고 위치도 제각각이 된다 */
+  /* 변경 이력에 적히는 "주체" (명세서 10장). 저장하는 쪽(useCollection)이 지금 누가
+     로그인해 있는지 알 방법이 없어, 여기서 한 번 넣어 둔다 */
+  React.useEffect(() => { setActor(account); }, [account]);
+
+  /* 저장·삭제 알림. 화면 열이 같은 통로를 쓴다 — 화면마다 토스트를 들고 있으면
+     같은 "저장되었습니다"가 열 벌 생기고 위치도 제각각이 된다 */
   const notify = React.useCallback(msg => setToast({ msg, at: Date.now() }), []);
   React.useEffect(() => {
     if (!toast) return undefined;
@@ -71,10 +107,21 @@ export function AdminApp() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  /* 내비 배지는 **지금 값**이어야 한다. 원본을 세면 검수 중에 신고 하나를 처리해도
+     배지가 그대로 남아, 눌러도 아무 일이 없는 숫자가 된다.
+     배지를 다는 곳은 오류신고 하나뿐이다 — 관리자가 **답해야 하는 것**이 그것뿐이다. */
+  const openReports = readCollection("reports", REPORTS).filter(isOpen).length;
+  const badges = { reports: openReports || null };
+
   /* 갈 수 없는 곳(권한 없음)이거나 알 수 없는 경로면 갈 수 있는 첫 화면으로 되돌린다.
      로그인 전에는 아무 것도 하지 않는다 — 그때는 셸 자체가 없다. */
-  const allowed = account ? NAV.filter(n => can(account, n.key)) : [];
-  const current = account && page && can(account, page) ? page : (allowed[0] ? allowed[0].key : null);
+  const allowed = account
+    ? NAV.filter(n => n.section || can(account, n.key))
+      .map(n => (n.section ? n : { ...n, badge: badges[n.key] || null }))
+    : [];
+  const firstPage = allowed.find(n => !n.section);
+  const current = account && page && can(account, page)
+    ? page : (firstPage ? firstPage.key : null);
 
   React.useEffect(() => {
     if (account && current && current !== page) replace(current);
@@ -104,7 +151,7 @@ export function AdminApp() {
             데모 데이터 초기화
           </Button>
         ) : null}>
-        {Page ? <Page account={account} onToast={notify} /> : null}
+        {Page ? <Page account={account} onToast={notify} onNavigate={go} /> : null}
       </AdminShell>
 
       {/* 토스트는 셸 **밖**이다. 셸 안에 두면 좌측 내비 폭만큼 밀려 화면 가운데가 아니게 된다 */}

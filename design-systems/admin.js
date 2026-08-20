@@ -27,12 +27,18 @@
 /* ── 관리자 전용 ─────────────────────────────────────────────────────────── */
 export { AdminShell } from "./components/admin/AdminShell.jsx";
 export { PageHeader } from "./components/admin/PageHeader.jsx";
-export { DataTable } from "./components/admin/DataTable.jsx";
+export { DataTable, Cell } from "./components/admin/DataTable.jsx";
 export { Toolbar } from "./components/admin/Toolbar.jsx";
 export { Modal } from "./components/admin/Modal.jsx";
 export { ConfirmDialog } from "./components/admin/ConfirmDialog.jsx";
-export { FormGrid, FormField } from "./components/admin/FormGrid.jsx";
+export { FormGrid, FormField, FormSection, requiredKey } from "./components/admin/FormGrid.jsx";
 export { MiniChart } from "./components/admin/MiniChart.jsx";
+
+/* ── 관리자 전용: 명세서의 특수 입력 항목 ────────────────────────────────── */
+export { AddressField } from "./components/admin/AddressField.jsx";
+export { CoordField, COORD_BOUNDS, outOfBounds, fixCoord } from "./components/admin/CoordField.jsx";
+export { Repeater, ConditionalBadge } from "./components/admin/Repeater.jsx";
+export { AssetPicker } from "./components/admin/AssetPicker.jsx";
 
 /* ── 공용: 기본 부품 ─────────────────────────────────────────────────────── */
 export { Icon, Button, TextButton, IconButton, Card, Badge, Chip } from "./index.js";
@@ -55,6 +61,11 @@ export { Notice, Toast, EmptyState, LoadingBar, ProgressBar } from "./index.js";
 
 /* ── 공용: 그 밖 ─────────────────────────────────────────────────────────── */
 export { SegmentedTabs, StatTile, token, josa } from "./index.js";
+
+/* 조아용은 시민을 맞이하는 자리의 것이지만(디자인 시스템 7번 규칙), 관리자에서도
+   **고르는 대상**으로는 나온다 — 축제 카드에 쓸 그림을 여기서 정하기 때문이다.
+   맞이하는 데 쓰지 않고 썸네일로만 쓴다 (AssetPicker). */
+export { Mascot, MASCOT_POSES, MASCOT_FULL, MASCOT_BUST } from "./index.js";
 
 /* ── 공용: 지도 (QR 지점 관리의 좌표 미리보기) ───────────────────────────── */
 export { KakaoMap, MapCanvas } from "./index.js";

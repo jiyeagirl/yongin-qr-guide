@@ -92,6 +92,17 @@ export function KakaoMap({
   activeTurn = -1,            /* 안내 목록에서 고른 지점. 지도의 꺾임 표시와 목록이 같은 것을 가리킨다 */
   onSelectTurn,
   selectedId = null,
+  /* ── 좌표 지정 (관리자 전용) ───────────────────────────────────────────────
+     시민 화면은 좌표를 **읽기만** 한다. 관리자는 명세서 입력 원칙 3번에 따라
+     "주소에서 자동 변환된 좌표가 부정확할 때 지도에서 수정"해야 하고, 그 한 가지를
+     위해 지도 컴포넌트를 하나 더 만들 이유가 없다.
+
+       pick    {lat, lng} — 끌어 옮길 수 있는 핀 하나를 그린다
+       onPick  (lat, lng) — 지도를 누르거나 핀을 놓았을 때 부른다
+
+     시민 쪽 화면은 둘 다 넘기지 않으므로 동작이 달라지지 않는다. */
+  pick = null,
+  onPick,
   topPad = 0,                 /* px. 상단 필터 바에 가려지는 높이 */
   bottomPad = 0,              /* px. 시트에 가려지는 높이 */
   onSelectStore,
@@ -137,7 +148,8 @@ export function KakaoMap({
 
   /* 콜백은 ref 로 — 부모가 인라인 함수를 넘겨도 지도를 다시 만들지 않는다 */
   const cb = React.useRef({});
-  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onSelectCourseStop, onSelectDest, onSelectTurn, onReady, onError };
+  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onSelectCourseStop, onSelectDest, onSelectTurn, onReady, onError, onPick };
+  const pickMarker = React.useRef(null);
 
   /* 실제로 보이는 띠 = 상단 필터 바 아래 ~ 시트 위. 그 한가운데로 마커를 옮긴다.
      지도 중심을 화면 좌표 P 의 좌표로 옮기면 P 는 지도 정중앙으로 간다. 따라서
@@ -249,6 +261,15 @@ export function KakaoMap({
         + `border-bottom:var(--stroke-hairline) solid var(--border-default);`
         + `transform:rotate(45deg)"></span>`;
       new kakao.maps.CustomOverlay({ map: m, position: anchorPos, content: bubble, yAnchor: 1, zIndex: 4 });
+
+      /* 좌표 지정 — 지도를 누르면 그 자리가 새 좌표가 된다. 리스너를 여기(생성 1회)에
+         두는 이유는 onPick 이 인라인 함수로 들어와도 지도를 다시 만들지 않기 위해서다.
+         onPick 을 넘기지 않은 화면에서는 아무 일도 일어나지 않는다. */
+      kakao.maps.event.addListener(m, "click", e => {
+        if (!cb.current.onPick) return;
+        const ll = e.latLng;
+        cb.current.onPick(+ll.getLat().toFixed(6), +ll.getLng().toFixed(6));
+      });
 
       const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => m.relayout()) : null;
       if (ro) ro.observe(host.current);
@@ -475,6 +496,36 @@ export function KakaoMap({
       k.maps.event.addListener(mk, "click", () => cb.current.onSelectDest && cb.current.onSelectDest(dest));
     }
   }, [route, ready]);
+
+  /* ── 좌표 지정 핀 (관리자) ────────────────────────────────────────────────
+     끌어 옮길 수 있는 마커 하나. 누르는 것(위 지도 click)과 끄는 것 둘 다 같은 값을 낸다 —
+     정확한 자리를 찍기 어려울 때 대충 누른 뒤 끌어 맞추는 것이 실제 사용 순서다.
+     핀 색은 도착지(--pin-dest)와 같다. "여기다"를 말하는 자리라 성격이 같고,
+     둘이 한 화면에 함께 나오는 경우는 없다. */
+  /* 의존성을 `pick` 객체가 아니라 **좌표 두 값**으로 잡는다. 부모가 {lat, lng} 를 인라인으로
+     만들어 넘기면 객체는 렌더마다 새것이라, 객체를 의존성에 두면 핀을 끄는 도중에도
+     이펙트가 다시 돌아 마커가 지워졌다 다시 생긴다 — 끌기가 손에서 놓친다. */
+  const pickLat = pick ? pick.lat : null;
+  const pickLng = pick ? pick.lng : null;
+  const pickLabel = pick ? pick.label : null;
+  React.useEffect(() => {
+    const k = kakaoRef.current, m = map.current;
+    if (!k || !m) return;
+    if (pickMarker.current) { pickMarker.current.setMap(null); pickMarker.current = null; }
+    if (pickLat == null || pickLng == null) return;
+
+    const mk = new k.maps.Marker({
+      map: m, position: new k.maps.LatLng(pickLat, pickLng),
+      image: images.current && images.current.dest,
+      draggable: true, zIndex: 9, title: pickLabel || "지정 좌표",
+    });
+    k.maps.event.addListener(mk, "dragend", () => {
+      if (!cb.current.onPick) return;
+      const ll = mk.getPosition();
+      cb.current.onPick(+ll.getLat().toFixed(6), +ll.getLng().toFixed(6));
+    });
+    pickMarker.current = mk;
+  }, [pickLat, pickLng, pickLabel, ready]);
 
   /* 고른 안내 지점을 키운다 (목록 ↔ 지도). 위 이펙트를 다시 돌리지 않는다 —
      선을 지웠다 다시 그리면 항목을 누를 때마다 경로가 깜빡인다. */

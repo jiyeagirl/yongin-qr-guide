@@ -48,12 +48,23 @@ const TINTS = ["green", "teal", "cream", "amber", "red", "blue", "violet", "sand
    md 는 상세 화면처럼 배지가 홀로 서는 자리에 남긴다. */
 const SIZES = { md: "4px 9px", sm: "2px 7px" };
 
+/* 알약은 **낱말 하나처럼** 다룬다 (2026-08-20).
+   keep-all 은 한글 사이의 줄바꿈만 막지 띄어쓰기에서의 줄바꿈은 막지 않는다. 그래서
+   "3건 누적" · "좌표 없음" 처럼 띄어쓰기가 든 배지는 좁은 열에서 여전히 두 줄이 되는데,
+   알약이 두 줄이 되면 둥근 테두리가 글자를 감싸 놓은 모양이 무너져 **얼룩처럼 보인다.**
+   글자가 잘리는 것과 달리 이것은 읽는 문제가 아니라 그것이 하나의 표시라는 사실이
+   보이지 않게 되는 문제다.
+
+   대신 넘칠 위험을 배지가 아니라 **놓는 쪽**이 진다 — 배지를 곁들이는 자리(표의 이름 칸,
+   폼의 라벨 줄)는 flexWrap 으로 배지를 통째로 아랫줄에 내린다. 알약은 온전한 채로
+   줄만 바뀐다. */
+
 export function Badge({ children, tone = "neutral", size = "md", dot = false, style, ...rest }) {
   /* 이름표(success·ongoing·onnuri…)가 먼저고, 없으면 틴트 이름으로 떨어진다 */
   const [bg, fg] = TONES[tone]
     || (TINTS.includes(tone) ? [`var(--tint-${tone}-bg)`, `var(--tint-${tone}-fg)`] : TONES.neutral);
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: bg, color: fg, fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", fontWeight: "var(--fw-semibold)", lineHeight: 1.4, letterSpacing: "var(--ls-normal)", padding: SIZES[size] || SIZES.md, borderRadius: "var(--radius-pill)", ...style }} {...rest}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: bg, color: fg, fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", fontWeight: "var(--fw-semibold)", lineHeight: 1.4, letterSpacing: "var(--ls-normal)", whiteSpace: "nowrap", padding: SIZES[size] || SIZES.md, borderRadius: "var(--radius-pill)", ...style }} {...rest}>
       {/* 점은 글자색을 따라간다 — 톤이 무엇이든 알약 안에서 저절로 맞는다 (Design 프로젝트와 같다) */}
       {dot ? <span style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor", opacity: 0.9 }} /> : null}
       {children}

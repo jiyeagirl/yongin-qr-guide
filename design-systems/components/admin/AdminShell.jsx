@@ -18,9 +18,20 @@ import { token } from "../core/token.js";
  * DetailPage 는 **한 번에 한 화면**을 덮는 오버레이다. 뒤로가기가 유일한 출구이고,
  * 그래서 셸이 스스로를 언마운트하지 않는 것이 전부였다.
  *
- * 관리자는 반대다. 담당자는 시설을 고치다 문의를 확인하고 다시 점포로 간다 —
- * **여덟 화면 사이를 계속 오간다.** 그래서 목적지 목록(내비)이 항상 보여야 하고,
+ * 관리자는 반대다. 담당자는 시설을 고치다 신고를 확인하고 다시 점포로 간다 —
+ * **열두 화면 사이를 계속 오간다.** 그래서 목적지 목록(내비)이 항상 보여야 하고,
  * 그것이 화면을 덮지 않아야 한다. 좌측 고정 내비가 그 답이다.
+ *
+ * ── 열둘이 되면서 구획을 넣었다 (2026-08-20) ────────────────────────────────
+ * 여덟까지는 한 덩이로 늘어놓아도 눈으로 훑어졌는데, 열둘은 그렇지 않다. 명세서가
+ * 화면을 묶는 방식(2장 골목형 상점가 · 3장 공공시설 · 4장 QR · 5장 오류신고 · 7~9장 운영)이
+ * 그대로 구획이 된다 — 담당자가 명세서에서 본 차례와 화면의 차례가 같으면
+ * "그 화면 어디 있더라"를 두 번 묻지 않는다.
+ *
+ * nav 배열에 `{ section: "이름" }` 한 줄을 끼우면 그 자리에 구획 제목이 선다.
+ * 구획을 별도 배열로 감싸지 않은 이유: 권한 필터가 항목을 걸러낼 때 통째로 빈 구획이
+ * 남을 수 있고, 그러면 그 처리를 필터 쪽에도 넣어야 한다. 평평한 배열이면 빈 구획을
+ * 여기서 한 번에 걸러낸다 (아래 dropEmptySections).
  *
  * ── 좁은 화면에서는 그리지 않는다 ───────────────────────────────────────────
  * 1024px(--admin-min) 미만이면 안내 문구로 대신한다. 표를 카드로 접는 대응을
@@ -96,6 +107,20 @@ function NavItem({ item, active, onClick }) {
       </button>
     </li>
   );
+}
+
+/* 뒤에 항목이 하나도 없는 구획 제목을 걷어낸다. 권한 필터가 그 구획의 항목을 전부
+   지운 경우인데(시청 담당자에게 "공공데이터 동기화"가 없다), 제목만 남으면
+   그 아래가 비어 있는 것이 고장으로 읽힌다. */
+function dropEmptySections(nav) {
+  return nav.filter((item, i) => {
+    if (!item.section) return true;
+    for (let n = i + 1; n < nav.length; n += 1) {
+      if (nav[n].section) return false;
+      return true;
+    }
+    return false;
+  });
 }
 
 export function AdminShell({
@@ -181,10 +206,17 @@ export function AdminShell({
             overflowY: "auto", padding: "var(--space-4) var(--space-3)",
             background: "var(--surface-card)", borderRight: "var(--stroke-hairline) solid var(--border-default)" }}>
           <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 2 }}>
-            {nav.map(item => (
+            {dropEmptySections(nav).map((item, i) => (item.section ? (
+              <li key={`s-${item.section}`} aria-hidden="true"
+                style={{ padding: `${i === 0 ? 0 : "var(--space-4)"} var(--space-4) var(--space-1)`,
+                  fontSize: "var(--fs-micro)", fontWeight: "var(--fw-bold)",
+                  letterSpacing: "var(--ls-wide)", color: "var(--text-muted)" }}>
+                {item.section}
+              </li>
+            ) : (
               <NavItem key={item.key} item={item} active={item.key === current}
                 onClick={() => onNavigate && onNavigate(item.key)} />
-            ))}
+            )))}
           </ul>
         </nav>
 

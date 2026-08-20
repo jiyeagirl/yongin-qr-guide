@@ -13,6 +13,16 @@
  */
 import { ANCHOR } from "./dunjeon.js";
 
+/* ── 관리자 명세서 4장의 항목을 함께 갖는다 (2026-08-20) ────────────────────
+ * 시민 화면이 쓰는 것은 `code · active · name · lat · lng · districtId · replacedBy` 뿐이다.
+ * 나머지(`addr · installStatus · installedAt · locationDetail · memo`)는 **설치·점검용**이라
+ * 시민 화면에 나가지 않지만, 관리자 QR 지점 관리(M13)가 그것을 다룬다.
+ *
+ * 관리자 쪽에 표를 따로 만들지 않은 이유는 그러면 같은 지점이 두 벌 생기고, 좌표를 한쪽에서만
+ * 고치는 날이 반드시 오기 때문이다. 시민 화면이 안 읽는 필드가 여기 있는 것은 비용이 아니다.
+ *
+ * `dong`(행정동)은 명세서에 없다. 지우지 않고 두는 것은 관리자 목록이 지점을 훑을 때
+ * 도로명주소보다 짧고 알아보기 쉬운 이름이라서다 — 입력받지 않고 표시만 한다. */
 export const QR_POINTS = [
   {
     code: "dunjeon-01",
@@ -21,8 +31,12 @@ export const QR_POINTS = [
     lat: ANCHOR.lat,
     lng: ANCHOR.lng,
     dong: "처인구 포곡읍 둔전리",
+    addr: "처인구 포곡읍 둔전로 42",
     districtId: "dunjeon",          /* U-ST-01 — 관리자가 등록 시 직접 지정한다 (앱이 계산하지 않는다) */
-    installedAt: "2026.03",
+    installStatus: "설치완료",
+    installedAt: "2026-03-14",
+    locationDetail: "정류장 승차대 오른쪽 기둥, 눈높이(지면 1.4m)",
+    memo: null,
   },
   {
     /* 2019년에 붙였다가 안내판째 교체된 자리. 코드는 표에 남아 있지만 active 가 false 다 —
@@ -31,6 +45,15 @@ export const QR_POINTS = [
     active: false,
     name: "(구) 둔전 시장 안내판",
     replacedBy: "dunjeon-01",
+    dong: "처인구 포곡읍 둔전리",
+    addr: "처인구 포곡읍 둔전로 40",
+    lat: 37.28861,
+    lng: 127.19908,
+    districtId: "dunjeon",
+    installStatus: "철거",
+    installedAt: "2019-05-02",
+    locationDetail: "시장 입구 옛 안내판 하단. 2026.03 교체 시 철거",
+    memo: "철거했으나 코드는 남긴다 — 아직 이 코드를 찍는 사람이 있다 (대시보드 지점별 스캔 참조).",
   },
 ];
 

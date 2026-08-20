@@ -1,168 +1,243 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, Modal, ConfirmDialog, Button, Select, SearchField,
-  Textarea, IconButton, Badge, Notice,
+  PageHeader, Toolbar, DataTable, Cell, Modal, ConfirmDialog, Button, Select, Pagination,
+  Badge, Notice, Switch, EMPTY_MARK,
 } from "../../design-systems/admin.js";
-import { DISTRICTS, GU_ORDER, CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
-import { DISTRICT_FIELDS } from "../data/fields.js";
-import { useCollection } from "../data/store.js";
+import { DISTRICTS, GU_ORDER, FESTIVALS, CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
+import { STORES } from "../../screens/main/data/dunjeon.js";
+import { QR_POINTS } from "../../screens/main/data/qr.js";
+import { DISTRICT_FIELDS, govLink } from "../data/fields.js";
+import { useCollection, readCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
+import { useListState, ListSearch, PageSizeSelect, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
+import { EditorModal } from "./EditorModal.jsx";
 
-/* A-ST-01 상점가 관리 — 32개소.
+/* M03 상점가 목록 · M04 상점가 등록·수정 — 32개소.
  *
- * ── 정의서 항목과 운영 항목을 갈라 놓는다 ───────────────────────────────────
- * 정의서 1-1 이 정하는 것은 넷뿐이다 (상점가명 · 주소 · 전체 점포수 · 온누리 가맹 점포수).
- * 그런데 명세서 A-ST-01 은 여기에 두 가지를 더 요구한다 — **구역 주소 목록**과 **노출 순서**.
+ * ── 이 화면이 가벼워졌다 (2026-08-20, 명세서 개정) ──────────────────────────
+ * 전에는 여기서 네 가지를 더 했다. 넷 다 빠졌고, 이유가 각각 다르다:
  *
- * 둘은 공공데이터 항목이 아니다. 구역 주소는 상점가 xlsx 의 `구역 주소` 시트에서 오고
- * (명세서 3-2 — 폴리곤 대신 이 목록이 구역의 실질적 정의다), 노출 순서는 우리가 정하는
- * 운영값이다. 그래서 **항목표 아래 따로 둔다.** 섞어 놓으면 담당자가 "이것도 공공데이터에서
- * 오는 값인가"를 구분할 수 없고, 정의서를 고쳐야 하는 것으로 오해한다.
+ *   구역 주소 목록 편집 (1:N)   구역 주소를 손보는 일은 곧 **매칭을 다시 돌리는 일**이라
+ *                               개발 쪽으로 갔다 (명세서 범위 문단)
+ *   재매칭 실행                 위와 같다
+ *   게시값 대비 산출값 비교      명세서가 검사를 없앴다 — "340 대 335처럼 차이를 알아도
+ *                               **어느 5곳인지 모르면 고칠 수 없기 때문**이다"
+ *   노출 순서 ▲▼               항목표에서 `sort_order` 가 빠졌다. 32곳의 차례는 시민
+ *                               화면이 거리로 정한다 (districts.js 의 byDistrictNear)
  *
- * ── 노출 순서를 숫자로 입력받지 않는다 ──────────────────────────────────────
- * 32곳에 1~32 를 손으로 매기면 하나를 올릴 때마다 나머지를 다시 적어야 한다.
- * ▲▼ 로 한 칸씩 옮기고, 저장은 전체 순서를 한 번에 다시 매긴다.
+ * 남은 것은 상점가 한 곳의 기본 정보를 고치는 일이다. 명세서 M04 의 기능란도
+ * "기본 정보 입력" 한 줄로 줄었다.
  *
- * 기본 차례는 QR 지점에서 가까운 순이다 (data/districts.js 가 그렇게 정렬해 둔다).
- * 손대지 않은 상태에서는 시민 화면과 같은 차례로 보인다 — 관리자에서 본 순서와
- * 시민 화면의 순서가 처음부터 다르면, 순서를 바꿔도 무엇이 달라졌는지 알 수 없다.
+ * ── 점포수는 읽기만 한다 ────────────────────────────────────────────────────
+ * `store_count` · `onnuri_count` 는 ⚙ 다. 관리자가 32개소 숫자를 옮겨 적을 일이 없다.
+ * 점포 자료가 있는 상점가(지금은 둔전 하나)는 **노출 상태인 점포를 실제로 세어** 보여준다 —
+ * 명세서가 정의한 그대로("구역 주소 매칭 결과 중 노출 상태인 건수")이고, 점포 관리에서
+ * 한 곳을 숨기면 이 숫자가 줄어드는 것으로 그 정의가 화면에서 확인된다.
+ * 점포 자료가 없는 31곳은 세지 못하므로 상점가 레코드의 값을 그대로 보여주고
+ * **「점포 미등록」이라고 적는다** — 센 값과 받아 적은 값을 같은 얼굴로 두지 않는다.
  */
 
 const GU_OPTIONS = [{ value: "", label: "전체 구" }].concat(GU_ORDER.map(g => ({ value: g, label: g })));
 
-/* 노출 순서 값. 아직 손대지 않은 곳은 원본 배열의 자리를 그대로 쓴다 */
-const BASE_ORDER = DISTRICTS.reduce((o, d, i) => { o[d.id] = i; return o; }, {});
-const orderKey = d => (d.order != null ? d.order : (BASE_ORDER[d.id] != null ? BASE_ORDER[d.id] : 999));
+/* 삭제 차단 (명세서 10장) — 진행 중 축제 또는 활성 QR 이 걸린 상점가는 지울 수 없다.
+   지우면 시민 화면에서 그 축제와 QR 지점이 갈 곳을 잃는다. */
+function blockReason(d, festivals, qrPoints) {
+  const live = festivals.find(f => f.districtId === d.id && f.state !== "종료");
+  if (live) return `진행 중이거나 예정인 축제(${live.name})가 연결되어 있습니다.`;
+  const qr = qrPoints.find(p => p.districtId === d.id && p.active);
+  if (qr) return `활성 QR 지점(${qr.code})이 이 상점가를 가리키고 있습니다.`;
+  return null;
+}
 
 export function Districts({ onToast }) {
-  const { rows, upsert, remove, patchMany } = useCollection("districts", DISTRICTS);
-  const [q, setQ] = React.useState("");
+  const { rows, upsert, remove, patch } = useCollection("districts", DISTRICTS, null, "상점가");
+  const storeRows = readCollection("stores", STORES);
+  const qrRows = readCollection("qr", QR_POINTS.map(p => ({ ...p, id: p.code })));
   const [gu, setGu] = React.useState("");
-  const [zones, setZones] = React.useState("");   /* 다이얼로그 안 구역 주소 목록 */
+  const list0 = useListState([gu]);
+  const [blocked, setBlocked] = React.useState(null);
+
+  /* 노출 상태인 점포를 상점가별로 센다. 점포 자료가 없는 곳은 키가 아예 없어서
+     「미등록」과 「0곳」이 구분된다 */
+  const counts = React.useMemo(() => {
+    const o = {};
+    for (const s of storeRows) {
+      const id = s.districtId || CURRENT_DISTRICT_ID;
+      if (!o[id]) o[id] = { stores: 0, onnuri: 0 };
+      if (s.visible === false) continue;
+      o[id].stores += 1;
+      if (s.onnuri) o[id].onnuri += 1;
+    }
+    return o;
+  }, [storeRows]);
+
+  /* 화면에 적을 점포수 — 센 값이 있으면 그것, 없으면 레코드의 값 */
+  const countOf = d => {
+    const c = counts[d.id];
+    return {
+      stores: c ? c.stores : Number(d.stores || 0),
+      onnuri: c ? c.onnuri : Number(d.onnuri || 0),
+      counted: !!c,
+    };
+  };
 
   const ed = useRecordEditor({
     fieldsFor: () => DISTRICT_FIELDS,
-    initial: () => ({ gu: GU_ORDER[0] }),
-    onSave: values => upsert({ ...values, zones: zones.trim() || null }),
+    initial: () => ({ gu: GU_ORDER[0], visible: true }),
+    /* 산출값(⚙)은 저장하지 않는다. 폼에 보이라고 얹어 둔 값이라 그대로 저장하면
+       덮개에 계산 결과가 굳고, 변경 이력에도 고치지 않은 필드가 매번 올라온다. */
+    onSave: ({ storeCount, onnuriCount, ...values }) => upsert(values),
     onRemove: remove,
     onToast, label: "상점가",
   });
 
-  /* 다이얼로그가 열릴 때 구역 주소를 채운다. draft 안에 넣지 않는 이유는
-     그것이 정의서 항목표(RecordForm)를 통과하는 값이 아니기 때문이다 */
-  const openEdit = row => { setZones(row.zones || ""); ed.openEdit(row); };
-  const openNew = () => { setZones(""); ed.openNew(); };
+  /* 다이얼로그를 열 때 산출값을 채워 넣는다. ⚙ 라 저장되지 않고 화면에만 보이면 되지만,
+     폼이 values 에서 읽으므로 여기서 얹는다 */
+  const openEdit = row => {
+    const c = countOf(row);
+    ed.openEdit({ ...row, storeCount: c.stores, onnuriCount: c.onnuri });
+  };
 
-  const ordered = React.useMemo(() => [...rows].sort((a, b) => orderKey(a) - orderKey(b)), [rows]);
-
-  const list = ordered.filter(d => {
+  const filtered = rows.filter(d => {
     if (gu && d.gu !== gu) return false;
-    if (!q.trim()) return true;
-    return `${d.name} ${d.gu} ${d.area} ${d.addr}`.includes(q.trim());
+    if (!list0.term) return true;
+    return `${d.name} ${d.gu} ${d.area} ${d.addr}`.includes(list0.term);
   });
+  const paged = list0.paginate(filtered);
 
-  /* 한 칸 옮기고 전체 순서를 다시 매긴다. 필터가 걸린 상태에서는 옮기지 않는다 —
-     화면에 안 보이는 곳들 사이로 끼워 넣는 셈이라 결과를 예측할 수 없다 */
-  const filtered = !!(gu || q.trim());
-  const move = (id, delta) => {
-    const idx = ordered.findIndex(d => d.id === id);
-    const to = idx + delta;
-    if (idx < 0 || to < 0 || to >= ordered.length) return;
-    const next = ordered.slice();
-    const [it] = next.splice(idx, 1);
-    next.splice(to, 0, it);
-    patchMany(next.map((d, i) => [d.id, { order: i }]));
+  const askRemove = d => {
+    const why = blockReason(d, FESTIVALS, qrRows);
+    if (why) { setBlocked({ name: d.name, why }); return; }
+    ed.askRemove(d);
   };
 
   return (
     <>
-      <PageHeader title="상점가 관리" count={`${list.length}곳`}
-        note="용인시 골목형 상점가. 입력 항목은 정의서 1-1 을 따르며 기준일자를 갖지 않습니다(3-2)."
-        action={<Button variant="primary" icon="plus" onClick={openNew}>상점가 등록</Button>} />
+      <PageHeader title="상점가 관리" count={`${filtered.length}곳`}
+        note="용인시 골목형 상점가. 입력 항목은 명세서 2-1 을 따르며 데이터 기준일을 갖지 않습니다 (7장)."
+        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>상점가 등록</Button>} />
 
       <Toolbar>
-        <SearchField value={q} onChange={e => setQ(e.target.value)} onClear={() => setQ("")}
-          placeholder="상점가명 · 소재지 검색" style={{ width: 320 }} />
+        <ListSearch state={list0} placeholder="상점가명 · 소재지 검색" />
         <Select value={gu} options={GU_OPTIONS} onChange={e => setGu(e.target.value)} />
+        <PageSizeSelect state={list0} />
+        <SearchHint state={list0} />
       </Toolbar>
-
-      {filtered ? (
-        <Notice tone="neutral" size="sm" style={{ marginBottom: "var(--space-4)" }}>
-          검색이나 구 필터가 걸린 동안에는 노출 순서를 바꿀 수 없습니다. 보이지 않는 상점가 사이로
-          끼워 넣게 되어 결과를 예측할 수 없기 때문입니다.
-        </Notice>
-      ) : null}
 
       <DataTable
         caption="등록된 골목형 상점가 목록"
-        rows={list} rowKey="id" onRowClick={openEdit}
+        rows={paged.rows} rowKey="id" onRowClick={openEdit}
         empty={{ title: "조건에 맞는 상점가가 없습니다." }}
         columns={[
           { key: "name", label: "상점가명", sortable: true,
             render: d => (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Cell>
                 {d.name}
                 {d.id === CURRENT_DISTRICT_ID ? <Badge tone="brand" size="sm">현재</Badge> : null}
-              </span>
+                {d.visible === false ? <Badge tone="neutral" size="sm">숨김</Badge> : null}
+              </Cell>
             ) },
           { key: "gu", label: "구", width: 80, sortable: true },
           { key: "area", label: "소재지", sortable: true },
-          { key: "stores", label: "전체 점포수", width: 110, align: "right", sortable: true,
-            render: d => `${Number(d.stores).toLocaleString("ko-KR")}곳` },
-          { key: "onnuri", label: "온누리 가맹", width: 110, align: "right", sortable: true,
-            render: d => `${Number(d.onnuri).toLocaleString("ko-KR")}곳` },
-          { key: "order", label: "노출 순서", width: 110, align: "center",
+          { key: "stores", label: "점포수", width: 150, align: "right", sortable: true,
+            hint: "노출 상태 기준",
+            sortValue: d => countOf(d).stores,
+            render: d => {
+              const c = countOf(d);
+              return (
+                <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                  {c.stores.toLocaleString("ko-KR")}곳
+                  {c.counted ? null : (
+                    <Badge tone="neutral" size="sm" style={{ marginLeft: 6 }}>점포 미등록</Badge>
+                  )}
+                </span>
+              );
+            } },
+          { key: "onnuri", label: "온누리", width: 100, align: "right", sortable: true,
+            sortValue: d => countOf(d).onnuri,
             render: d => (
-              <span style={{ display: "inline-flex", gap: 2 }}>
-                <IconButton name="chevron-up" label={`${d.name} 위로`} size={32}
-                  onClick={() => move(d.id, -1)} style={{ opacity: filtered ? 0.35 : 1 }} />
-                <IconButton name="chevron-down" label={`${d.name} 아래로`} size={32}
-                  onClick={() => move(d.id, 1)} style={{ opacity: filtered ? 0.35 : 1 }} />
+              <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                {countOf(d).onnuri.toLocaleString("ko-KR")}곳
               </span>
+            ) },
+          { key: "onnuriMarket", label: "온누리 원본 표기명", width: 170,
+            hint: "매칭 키",
+            render: d => d.onnuriMarket || <span style={{ color: "var(--text-muted)" }}>{EMPTY_MARK}</span> },
+          { key: "visible", label: "노출", width: 92, align: "center",
+            render: d => (
+              <Switch checked={d.visible !== false}
+                label={<span style={{ fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
+                  {d.visible === false ? "숨김" : "노출"}
+                </span>}
+                onChange={() => patch(d.id, { visible: d.visible === false }, d.name)} />
             ) },
           { key: "manage", label: "관리", width: 96, align: "right",
             render: d => (
               <Button variant="ghost" size="sm" icon="trash-2"
-                onClick={() => ed.askRemove(d)} style={{ color: "var(--state-danger)" }}>삭제</Button>
+                onClick={() => askRemove(d)} style={{ color: "var(--state-danger)" }}>삭제</Button>
             ) },
         ]} />
 
-      <Modal open={!!ed.draft} size="lg" onClose={ed.close}
+      <div style={{ marginTop: "var(--space-5)" }}>
+        <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />
+      </div>
+
+      <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-5)" }}>
+        구역 주소 목록과 점포 매칭은 이 화면에서 다루지 않습니다 — 주소를 손보는 일이 곧
+        매칭을 다시 돌리는 일이라 개발 쪽에서 처리합니다 (명세서 범위).
+        점포수는 그 매칭 결과 중 <b>노출 상태인 건수</b>이며 여기서는 읽기만 합니다.
+      </Notice>
+
+      <EditorModal ed={ed} size="lg"
         title={ed.draft && ed.draft.isNew ? "상점가 등록" : "상점가 수정"}
-        description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}
-        footer={
-          <>
-            <Button variant="ghost" onClick={ed.close}>취소</Button>
-            <Button variant="primary" onClick={ed.save}>저장</Button>
-          </>
-        }>
+        description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}>
         {ed.draft ? (
           <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors} onChange={ed.set}
             extra={
-              /* 정의서 항목이 아니다. 항목표 아래에 선을 긋고 따로 둔다 */
-              <div style={{ gridColumn: "1 / -1", paddingTop: "var(--space-4)",
-                borderTop: "var(--stroke-hairline) solid var(--border-default)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: 6 }}>
-                  <span style={{ fontSize: "var(--fs-label)", fontWeight: "var(--fw-semibold)",
-                    color: "var(--text-heading)" }}>구역 주소 목록</span>
-                  <Badge tone="info" size="sm">운영 항목</Badge>
+              ed.draft.values.govSeq ? (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <p style={{ marginBottom: 6, fontSize: "var(--fs-label)",
+                    fontWeight: "var(--fw-semibold)", color: "var(--text-heading)" }}>
+                    상권센터 링크 미리보기
+                  </p>
+                  <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)",
+                    lineHeight: 1.6, wordBreak: "break-all" }}>
+                    {govLink(ed.draft.values)}
+                  </p>
+                  <p style={{ marginTop: 4, fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
+                    시민용 상점가 카드의 바로가기 화살표가 이 주소로 갑니다. 비우면 화살표가 사라집니다.
+                  </p>
                 </div>
-                <Textarea value={zones} rows={4} onChange={e => setZones(e.target.value)}
-                  placeholder={"처인구 포곡읍 둔전로 42\n처인구 포곡읍 둔전로 55\n처인구 포곡읍 둔전2로 8"} />
-                <p style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-                  한 줄에 하나씩. 점포의 소속 판정이 이 목록의 도로명주소 매칭으로 이루어집니다
-                  (명세서 3-2 — 구역 폴리곤을 쓰지 않습니다). 공공데이터 항목이 아니라
-                  상점가 xlsx 의 「구역 주소」 시트에서 옮겨 오는 값입니다.
-                </p>
-              </div>
+              ) : null
             } />
         ) : null}
-      </Modal>
+      </EditorModal>
 
       <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
-        description="상점가를 삭제합니다. 소속 점포는 함께 지워지지 않습니다."
+        description="상점가를 삭제합니다."
+        footnote="소속 점포는 함께 지워지지 않습니다. 당장 목록에서 내리려면 삭제 대신 [노출] 토글을 꺼 주세요 — 시민 화면에서는 사라지고 연결은 그대로 남습니다."
         onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
+
+      {/* 삭제 차단 (명세서 10장). 버튼을 감추지 않고 눌렀을 때 이유를 말한다 —
+          감추면 왜 이 줄만 삭제 버튼이 없는지 알 수 없다 */}
+      <Modal open={!!blocked} size="md" title="삭제할 수 없습니다"
+        description={blocked ? blocked.name : undefined}
+        onClose={() => setBlocked(null)}
+        footer={<Button variant="primary" onClick={() => setBlocked(null)}>확인</Button>}>
+        {blocked ? (
+          <>
+            <p style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: 1.65 }}>
+              {blocked.why}
+            </p>
+            <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-label)",
+              color: "var(--text-muted)", lineHeight: 1.6 }}>
+              연결을 먼저 정리한 뒤에 삭제할 수 있습니다 (명세서 10장). 당장 목록에서 내리려면
+              삭제 대신 [노출] 토글을 꺼 주세요.
+            </p>
+          </>
+        ) : null}
+      </Modal>
     </>
   );
 }
