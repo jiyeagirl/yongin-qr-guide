@@ -356,7 +356,10 @@ export function byFestivalNear(a, b) {
 
 export const FESTIVALS = DISTRICTS
   .filter(d => d.festival)
-  .map(d => ({ ...d.festival, districtName: d.name, dist: d.dist, homepage: d.homepage }))
+  /* `districtId` 도 함께 넘긴다 (2026-08-24) — 축제 상세의 「상권명」줄이 안내 주소가
+     없을 때 앱 안의 준비 중 화면(#/district/:id)으로 가야 하고, 이름만으로는 그 주소를
+     만들 수 없다 (S13-S). 이름을 id 로 되짚는 표를 화면에 두느니 여기서 들려 보낸다. */
+  .map(d => ({ ...d.festival, districtId: d.id, districtName: d.name, dist: d.dist, homepage: d.homepage }))
   .sort(byFestivalSoon);
 
 /* 둘러보기 탭의 기본 뷰에 나가는 목록 — **진행중과 예정만**이다 (2026-08-18).

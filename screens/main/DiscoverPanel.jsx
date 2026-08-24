@@ -38,6 +38,9 @@ export function DiscoverPanel({
   festivals = [], newStores = [], popular = [], courses = [], districts = [],
   currentDistrict,               /* 없으면(null) U-DC-06 축소 모드 */
   onOpenFestival, onOpenAllFestivals, onOpenStore, onOpenCourse, onOpenAllDistricts,
+  /* 안내 주소가 없는 상점가 줄만 쓴다 — 주소가 있으면 줄이 앵커라 앱 밖으로 나간다
+     (DistrictRow 의 external 주석). 2026-08-24 */
+  onOpenDistrict,
   base = "../../design-systems/",   /* 축제 카드의 조아용 PNG 경로 기준 */
 }) {
   /* 다른 상점가는 가까운 몇 곳만 깐다. 목록이 화면 밖으로 한참 이어지면 탭 최하단이라는
@@ -193,7 +196,8 @@ export function DiscoverPanel({
             /* [축제] 배지를 끈다 — 맨 위 섹션이 통째로 축제이고 [전체보기]까지 있어서,
                여기 배지는 같은 사실을 세 번째로 말한다 (DistrictRow 의 festivalTag 주석) */
             <DistrictRow key={d.id} district={d} festivalTag={false} external
-              divider={i < preview.length - 1} />
+              divider={i < preview.length - 1}
+              onClick={() => onOpenDistrict && onOpenDistrict(d)} />
           ))}
         </div>
       </section>

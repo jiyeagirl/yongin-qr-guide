@@ -33,6 +33,7 @@
 | S09 축제 상세 | **완료** | `detail/FestivalDetail.jsx` — `#/festival/:id` |
 | S12 축제 전체보기 | **완료** | `detail/FestivalList.jsx` — `#/festivals` (둘러보기 탭 [전체보기]) |
 | S13 상점가 전체보기 | **완료** | `detail/DistrictList.jsx` — `#/districts` (둘러보기 탭 [전체보기]) |
+| S13-S 상점가 안내 준비 중 | **완료** | `detail/DistrictSoon.jsx` — `#/district/:id` (안내 주소가 없을 때만) |
 | S03-E 상점가 없음 안내 | **완료** | `main/DistrictEmpty.jsx` — 상점가 탭의 한 상태 (`?district=none`) |
 | S01 QR 진입 및 로딩 | **완료** | `boot/QrEntry.jsx` — 진입 게이트 `main/App.jsx` 가 띄운다 |
 | S10 오류신고 및 문의 | **완료** | `detail/ReportForm.jsx` — `#/report` · `#/report/facility/:id` |
@@ -66,6 +67,13 @@ QR 지점 표는 `main/data/qr.js` 다. **유효한 코드가 하나뿐인 것�
 | S03-E 상점가 없음 | `/screens/main/?district=none` → 상점가 탭 |
 | S10 오류신고 (대상 지정) | `/screens/main/#/report/facility/fc-001` |
 | S10 오류신고 (대상 없음) | `/screens/main/#/report` |
+| S13-S 상점가 안내 준비 중 | `/screens/main/#/district/mohyeon` |
+
+**S13-S 는 목록에서 눌러서는 볼 수 없다.** 더미 데이터의 32곳 모두 안내 주소를 갖고 있어
+줄이 전부 바깥으로 나가기 때문이다 (그 편이 맞다 — 실제로 시 누리집에 32곳이 다 있다).
+주소를 직접 쳐서 화면만 확인한다. 목록에서 이 화면으로 가는 줄이 생기려면 관리자 화면의
+「상권 활성화 센터 페이지 링크」를 비워야 하는데, 관리자에서 고친 값은 시민용 화면에
+닿지 않는다 (서버가 없다).
 
 `?district=none` 은 **검수 플래그**다 (`config.js` 의 `TODAY` 와 같은 성격). 유효한 QR
 지점이 둔전 한 곳뿐이라 실제로는 U-ST-16 상태에 들어갈 수 없어서, 없는 지점을 지어내는

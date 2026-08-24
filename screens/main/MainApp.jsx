@@ -20,6 +20,7 @@ import { CourseDetail } from "../detail/CourseDetail.jsx";
 import { FestivalDetail } from "../detail/FestivalDetail.jsx";
 import { FestivalList } from "../detail/FestivalList.jsx";
 import { DistrictList } from "../detail/DistrictList.jsx";
+import { DistrictSoon } from "../detail/DistrictSoon.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, replace, back, closeAll } from "./router.js";
 import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
@@ -250,7 +251,11 @@ export function MainApp({ qr = null, noDistrict = false }) {
   /* ── 결정 2: 지도 가림 높이 ────────────────────────────────────
      위는 상단 필터 바, 아래는 시트(+미리보기 카드)가 가린다. 마커는 그 사이 띠의 중앙으로 온다 */
   const gap = React.useMemo(() => parseFloat(token("--map-pad-gap", "24px")) || 24, []);
-  /* 둘러보기에는 지도가 없으므로 미리보기 카드도 없다 — 가리킬 마커가 없다 */
+  /* 둘러보기에는 지도가 없으므로 미리보기 카드도 없다 — 가리킬 마커가 없다.
+     `snap !== "full"` 은 이제 뒷받침일 뿐이다: 전체로 올라가는 순간 selected 자체가
+     끊기므로(changeSnap) 전체 스냅에서 selected 가 남아 있는 상태는 오지 않는다.
+     그래도 남겨둔다 — 스냅과 선택을 잇는 길이 앞으로 하나 더 생겨도 카드가 지도를
+     다 덮은 시트 위로 새어나오지는 않게. */
   const showPreview = Boolean(selected) && snap !== "full" && !isDiscover;
   const mapPadBottom = sheetH + (showPreview ? previewH + gap : 0) + gap;
 
@@ -282,6 +287,25 @@ export function MainApp({ qr = null, noDistrict = false }) {
 
   const focus = React.useCallback((lat, lng) => {
     if (mapApi.current) mapApi.current.focus(lat, lng);
+  }, []);
+
+  /* ── 전체 스냅으로 올리면 미리보기 카드를 **감추는 게 아니라 버린다** (2026-08-24) ────
+     전에는 showPreview 의 `snap !== "full"` 만으로 감췄다. 그러면 selected 가 그대로 남아,
+     전체에서 다시 내려올 때 카드가 되살아난다 — 그 되살아남이 불안정했다:
+     카드는 `bottom={sheetH}` 로 시트에 얹혀 있는데, 내려오는 동안 sheetH 는 트랜지션을
+     프레임마다 따라 읽는 값이라(Sheet 의 report_ 루프) 카드가 그 뒤를 쫓아 흔들리고,
+     동시에 방금 다시 마운트된 카드가 제 높이를 재서 previewH 를 0 → 실측으로 올리면
+     지도 패딩까지 한 박자 늦게 따라와 카메라가 한 번 더 움직인다.
+
+     그래서 전체로 올린 시점에 선택을 끊는다. 전체 스냅은 "목록이 화면을 소유하는 상태"이고
+     (플로팅 컨트롤도 같은 이유로 그때 사라진다), 지도를 덮어버린 뒤의 선택은 가리킬 마커가
+     없는 선택이다. 다시 보고 싶으면 목록 행을 누르면 된다 — 그 행이 곧 마커다(pickOnMap).
+
+     previewH 도 함께 0 으로 되돌린다. 카드를 [x] 로 닫을 때와 같은 처리다 —
+     카드가 없는데 그 높이가 남아 있으면 다음 계산의 씨앗이 된다. */
+  const changeSnap = React.useCallback(next => {
+    setSnap(next);
+    if (next === "full") { setSelected(null); setPreviewH(0); }
   }, []);
 
   /* 마커 탭 — 카드를 띄우고 그 마커를 "보이는 지도 영역"의 중앙으로 올린다.
@@ -436,6 +460,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
     if (kind === "store") return d.stores.find(x => x.id === id) || null;
     if (kind === "course") return d.courses.find(x => x.id === id) || null;
     if (kind === "festival") return FESTIVALS.find(x => x.id === id) || null;
+    /* 상점가는 32곳 전부에서 찾는다 — 지금 서 있는 곳(둔전)도 S13 목록에는 들어간다 */
+    if (kind === "district") return DISTRICTS.find(x => x.id === id) || null;
     return null;
   }, [route, d.stores, d.courses]);
 
@@ -448,12 +474,34 @@ export function MainApp({ qr = null, noDistrict = false }) {
      ②를 건너뛰고 ③ 앞에 서 있는 사람에게 "②에서 출발"이라고 말하던 자리였다.
 
      URL 이 진실이라는 규칙은 여기서도 같다 — 출발지 id 를 해시에 담는다
-     (#/route/store/dj-042/dj-041). 화면 상태에 두면 새로고침이나 딥링크에서 사라진다. */
-  const originStop = React.useMemo(() => {
-    if (route.name !== "route") return null;
-    const id = route.parts[2];
+     (#/route/store/dj-042/dj-041). 화면 상태에 두면 새로고침이나 딥링크에서 사라진다.
+
+     ── 상세 화면도 출발지를 물고 다닌다 (2026-08-24) ─────────────────────────
+     코스 카드의 [상세 보기]로 들어간 점포 상세에서 [길찾기]를 누르면 QR 지점에서
+     출발했다. 코스 안에서 같은 곳으로 가는 길인데 **상세를 한 번 거쳤다는 이유만으로**
+     출발지가 달라진 것이다 — ① 앞에 선 사람에게 QR 지점으로 되돌아갔다 다시 나오라고
+     안내하는 셈이고, 그건 [길찾기]를 바로 누를 때 이미 하지 않기로 한 안내다.
+
+     상세는 코스를 떠나는 화면이 아니라 거쳐 가는 화면이므로, 해시에 조각 하나를 더 달아
+     그대로 물려준다 (#/store/dj-042/**dj-041**). 상태로 들지 않는 이유는 위와 같다 —
+     상세에서 새로고침해도, 그 주소를 그대로 열어도 출발지가 남는다. 대상을 찾는 쪽은
+     첫 조각만 보므로(target) 이 조각이 늘어도 아무 화면이 달라지지 않는다.
+
+     조각 자리가 길찾기만 하나 뒤다 — 거기만 도착지 종류가 앞에 붙기 때문이다
+     (#/route/ store /dj-042/dj-041 — 가운데 한 칸이 그것이다. router 머리말). 두 자리를 여기서 함께 읽어,
+     쓰는 쪽(originStop · goRoute · onOpenDest)이 경로 모양을 다시 알 필요가 없게 한다.
+     오류신고(#/report/store/dj-042)는 뺀다 — 같은 자리에 도착지 id 가 들어 있어 그대로
+     읽으면 자기 자신이 출발지가 된다. 신고 화면은 출발지를 쓰지도 않는다. */
+  const carriedOrigin = React.useMemo(() => {
+    const id = route.name === "route" ? route.parts[2]
+      : (route.name === "store" || route.name === "facility") ? route.parts[1]
+      : null;
+    /* 출발지 후보는 언제나 코스의 가게다 (routeOrigins 주석 — 그 밖에는 이름 댈 자리가 없다).
+       없는 id 면 null 이 되고, 그때 출발지는 조용히 QR 지점으로 돌아간다 */
     return id ? (d.stores.find(x => x.id === id) || null) : null;
   }, [route, d.stores]);
+
+  const originStop = route.name === "route" ? carriedOrigin : null;
 
   /* 고를 수 있는 출발지 = **QR 지점 + 같은 코스의 다른 지점들.**
 
@@ -487,10 +535,14 @@ export function MainApp({ qr = null, noDistrict = false }) {
   /* 길찾기로 보내는 길은 여기 하나다 (U-FC-07 / U-ST-05 → U-NV-01).
      시설 상세·점포 상세·지도 미리보기 카드가 모두 이 함수를 부른다 — 세 곳이 각자 해시를
      조립하면 한 곳만 형식이 어긋났을 때 그 진입점만 조용히 셸로 떨어진다. */
+  /* 지금 화면이 물고 있는 출발지가 있으면 그대로 넘긴다 (2026-08-24. 위 carriedOrigin 주석).
+     코스에서 상세로 들어온 점포·시설이 그 경우다 — 셸의 미리보기 카드에서 부를 때는
+     해시가 `#/` 라 물고 있는 것이 없고, 지금까지처럼 QR 지점에서 출발한다. */
   const goRoute = React.useCallback(item => {
     const kind = item.type && FACILITY_LABELS[item.type] ? "facility" : "store";
-    go(`#/route/${kind}/${encodeURIComponent(item.id)}`);
-  }, []);
+    const from = carriedOrigin && carriedOrigin.id !== item.id ? carriedOrigin : null;
+    go(`#/route/${kind}/${encodeURIComponent(item.id)}${from ? `/${encodeURIComponent(from.id)}` : ""}`);
+  }, [carriedOrigin]);
 
   /* 대상 없는 오류신고(#/report)는 정상이므로 되돌리지 않는다. 대상을 달고 왔는데
      못 찾은 경우(#/report/facility/없는id)는 다른 상세와 똑같이 되돌린다 —
@@ -578,7 +630,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
       guOrder={GU_ORDER}
       sortNear={byDistrictNear}
       pageSize={DISTRICT_LIST_PAGE_SIZE}
-      onBack={back} />
+      onBack={back}
+      onOpenDistrict={x => go(`#/district/${encodeURIComponent(x.id)}`)} />
 
   /* 여기서부터는 전부 대상 하나를 여는 화면이다 — 대상이 없으면 그릴 것이 없다.
      대상 없이 여는 화면을 새로 붙일 때는 이 줄 **위**에 둔다 (needsTarget 도 함께). */
@@ -597,7 +650,10 @@ export function MainApp({ qr = null, noDistrict = false }) {
         onOriginChange={setRouteOrigin}
         onBack={back}
         onClose={closeAll}
-        onOpenDest={() => go(`#/${route.parts[0]}/${encodeURIComponent(target.id)}`)}
+        /* 도착지 상세로 갈 때도 출발지를 물려준다 — 거기서 [길찾기]로 돌아오면
+           같은 출발지여야 한다. 사용자가 여기서 바꾼 값이면 바꾼 그대로다. */
+        onOpenDest={() => go(`#/${route.parts[0]}/${encodeURIComponent(target.id)}`
+          + (originStop ? `/${encodeURIComponent(originStop.id)}` : ""))}
         onReport={() => goReport(target)} />
     ) : route.name === "course" ? (
       <CourseDetail
@@ -612,13 +668,33 @@ export function MainApp({ qr = null, noDistrict = false }) {
            뒤로가기를 누르면 코스로 돌아온다. 다만 그때 고른 순번은 남지 않는다 —
            이 오버레이는 route 가 갈리면 언마운트되기 때문이다. 지도는 코스 전체로
            다시 맞춰지고, 방문 기록만 세션에 남는다 (data/courseVisits.js). */
-        onPickStore={s => go(`#/store/${s.id}`)}
+        /* 상세로 갈 때도 출발지를 해시에 실어 보낸다 (#/store/dj-042/dj-041, 2026-08-24) —
+           거기서 [길찾기]를 눌러도 코스 순서대로 안내된다 (위 carriedOrigin 주석) */
+        onPickStore={(s, from) => go(`#/store/${s.id}${from ? `/${from.id}` : ""}`)}
         /* 출발지는 코스 순서상 직전 가게다. 첫 곳(from 없음)만 QR 지점에서 출발한다 */
         onRouteStore={(s, from) => go(`#/route/store/${s.id}${from ? `/${from.id}` : ""}`)} />
     ) : route.name === "festival" ? (
       <FestivalDetail
         festival={target}
-        onBack={back} />
+        onBack={back}
+        /* 「상권명」줄에 안내 주소가 없을 때만 쓰인다 (2026-08-24) */
+        onOpenDistrict={f => go(`#/district/${encodeURIComponent(f.districtId)}`)} />
+
+    /* ── S13-S 상점가 상세 안내 준비 중 ──────────────────────────────────
+           상점가 줄의 [상세 페이지]는 보통 용인시 누리집으로 **나간다**. 여기로 오는
+           것은 그 주소가 아직 없는 곳뿐이다 (관리자의 링크 칸이 비어 있는 경우).
+           목록에서 그 줄만 갈 곳 없는 줄로 두지 않기 위한 화면이다. */
+    ) : route.name === "district" ? (
+      <DistrictSoon
+        district={target}
+        onBack={back}
+        onClose={closeAll}
+        /* 뒤로가 아니라 **옆으로** 나가는 길이다. 여기까지 온 사람이 보려던 것은 이
+           상점가이고, 그 다음으로 볼 만한 것은 나머지 서른한 곳이다.
+           `go` 가 아니라 `replace` 인 이유: 한 칸을 더 쌓으면 뒤로가기가 방금 나온
+           안내를 다시 연다 — 되돌아갈 자리는 여기 들어오기 전이지 이 안내가 아니다. */
+        onGoDistricts={() => replace("#/districts")} />
+
     ) : route.name === "facility" ? (
       <FacilityDetail
         facility={target}
@@ -777,7 +853,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
                (showStoreOnMap 주석). 상세는 거기 뜨는 카드의 [상세 보기]가 맡는다 */
             onOpenStore={showStoreOnMap}
             onOpenCourse={c => go(`#/course/${c.id}`)}
-            onOpenAllDistricts={() => go("#/districts")} />
+            onOpenAllDistricts={() => go("#/districts")}
+            onOpenDistrict={x => go(`#/district/${encodeURIComponent(x.id)}`)} />
         ) : null}
 
         {/* 결정 1 — 3단 스냅. 실측 높이를 위로 올려보내 지도 패딩과 미리보기 카드 앵커가 따라온다.
@@ -786,7 +863,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
         {isDiscover ? null : <Sheet
           title={sheetTitle}
           snap={snap}
-          onSnapChange={setSnap}
+          /* 전체 스냅으로 올라가면 선택 자체가 풀린다 (changeSnap 머리말) */
+          onSnapChange={changeSnap}
           onHeightChange={setSheetH}
           /* 전체 스냅에서는 지도가 완전히 가려지므로 돌아갈 길을 헤더에 명시한다.
              핸들을 아래로 끄는 방법만 남기면 지도로 못 돌아가는 사용자가 생긴다 */
@@ -850,7 +928,10 @@ export function MainApp({ qr = null, noDistrict = false }) {
               totalCount={DISTRICT_COUNT}
               anchorName={d.anchor.name}
               onGoDiscover={() => changeTab("discover")}
-              onGoFacility={() => changeTab("facility")} />
+              onGoFacility={() => changeTab("facility")}
+              /* 이 자리도 안내 주소가 없는 줄만 탄다 (2026-08-24). 지금까지는 아무도
+                 넘기지 않아 그런 줄이 눌러도 아무 일이 없었다 */
+              onPickDistrict={x => go(`#/district/${encodeURIComponent(x.id)}`)} />
           ) : isDistrict ? (
             <DistrictSheet
               data={d}

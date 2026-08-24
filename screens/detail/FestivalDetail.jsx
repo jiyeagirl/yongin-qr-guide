@@ -45,7 +45,43 @@ import {
  * 목록(U-FT-01)이 종료 상태도 노출하므로 상세에도 들어올 수 있다. 이때 프로그램을
  * 그대로 보여주면 아직 열리는 행사로 읽힌다. 맨 위에 끝났다는 사실을 먼저 적는다.
  */
-export function FestivalDetail({ festival, onBack }) {
+/* 「상권명」줄. 주소가 있으면 앵커로 새 창을 열고, 없으면 앱 안의 준비 중 안내로 가는
+   버튼이 된다 — **눈에 보이는 모양은 둘이 같다.** 나가는 것과 안 나가는 것의 차이는
+   보조기기에만 말한다 (aria-label): 새 창이 뜨는 쪽만 그 사실을 미리 알아야 한다. */
+function DistrictLink({ f, onOpenDistrict }) {
+  const look = { display: "inline-flex", alignItems: "center", gap: 4, minHeight: 44,
+    color: "var(--text-link)", fontWeight: "var(--fw-semibold)",
+    background: "none", border: "none", padding: 0, font: "inherit", textAlign: "left" };
+  const inner = <>
+    {f.districtName}
+    <span style={{ fontSize: "var(--fs-micro)", fontWeight: "var(--fw-regular)",
+      color: "var(--text-muted)" }}>상세 페이지</span>
+    <Icon name="chevron-right" size={16} />
+  </>;
+
+  if (f.homepage) {
+    return (
+      /* 보조기기에는 어디로 가는지 온전히 말한다. 눈으로 보는 "상세 페이지"만으로는
+         이 앱 안의 화면인지 바깥인지 구분되지 않는데, 화면에서는 꺾쇠와 링크색이
+         그 역할을 나눠 맡고 있어 글자를 길게 늘일 필요가 없다. */
+      <a href={f.homepage} target="_blank" rel="noopener noreferrer"
+        aria-label={`${f.districtName} 상세 페이지 — 용인시 누리집에서 새 창으로 열림`}
+        style={{ ...look, color: "var(--text-link)" }}>
+        {inner}
+      </a>
+    );
+  }
+  /* 열어줄 화면이 없으면(핸들러를 안 넘긴 화면) 평문으로 떨어진다 — 눌리지 않는 것을
+     눌리는 모양으로 두지 않는다 */
+  if (!onOpenDistrict) return f.districtName;
+  return (
+    <button type="button" onClick={() => onOpenDistrict(f)} style={{ ...look, cursor: "pointer" }}>
+      {inner}
+    </button>
+  );
+}
+
+export function FestivalDetail({ festival, onBack, onOpenDistrict }) {
   const f = festival;
   const ended = f.state === "종료";
   const live = f.state === "진행중";
@@ -125,20 +161,15 @@ export function FestivalDetail({ festival, onBack }) {
              어느 칸 이야기인지 맞춰봐야 한다. */}
         <InfoList items={[
           { label: "기간", value: f.period },
-          { label: "상권명", value: f.homepage ? (
-            <a href={f.homepage} target="_blank" rel="noopener noreferrer"
-              /* 보조기기에는 어디로 가는지 온전히 말한다. 눈으로 보는 "상세 페이지"만으로는
-                 이 앱 안의 화면인지 바깥인지 구분되지 않는데, 화면에서는 꺾쇠와 링크색이
-                 그 역할을 나눠 맡고 있어 글자를 길게 늘일 필요가 없다. */
-              aria-label={`${f.districtName} 상세 페이지 — 용인시 누리집에서 새 창으로 열림`}
-              style={{ display: "inline-flex", alignItems: "center", gap: 4, minHeight: 44,
-                color: "var(--text-link)", fontWeight: "var(--fw-semibold)" }}>
-              {f.districtName}
-              <span style={{ fontSize: "var(--fs-micro)", fontWeight: "var(--fw-regular)",
-                color: "var(--text-muted)" }}>상세 페이지</span>
-              <Icon name="chevron-right" size={16} />
-            </a>
-          ) : f.districtName },
+          /* ── 주소가 없어도 [상세 페이지]는 그대로다 (2026-08-24) ────────────
+                 전에는 `homepage` 가 비면 이 줄이 상점가 이름 한 글자짜리 평문으로 떨어졌다.
+                 상점가 목록의 같은 자리와 같은 이유로 고쳤다 (DistrictRow 의 external 주석):
+                 관리자가 그 칸을 비우는 이유는 대개 **아직 페이지가 없어서**이고, 그 사정이
+                 「이 축제만 링크가 없다」는 모양으로 나갈 이유가 없다.
+                 주소가 있으면 새 창으로 나가고, 없으면 앱 안의 준비 중 안내로 간다. */
+          { label: "상권명", value: (
+            <DistrictLink f={f} onOpenDistrict={onOpenDistrict} />
+          ) },
           { label: "시간", value: f.time },
           { label: "주요 프로그램", value: f.program },
         ]} />

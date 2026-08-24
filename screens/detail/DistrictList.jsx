@@ -56,8 +56,11 @@ import {
  * 열어봐야 이 줄에 이미 적힌 것을 한 번 더 보게 된다. 소개·연혁·연락처는 시가 이미
  * 관리하므로 그리로 보낸다 (`DistrictRow` 의 external 주석).
  */
+/* `onOpenDistrict` 는 **안내 주소가 없는 줄**만 쓴다 (2026-08-24). 주소가 있는 줄은
+   DistrictRow 가 앵커로 만들어 앱 밖으로 나가고, 그때는 이 핸들러가 달리지 않는다
+   (DistrictRow 의 external 주석). 없는 줄이 갈 곳 없는 줄이 되지 않게 하는 것이 전부다. */
 export function DistrictList({ districts = [], guOrder = [], sortNear, pageSize = 10,
-  onBack, base = "../../design-systems/" }) {
+  onBack, onOpenDistrict, base = "../../design-systems/" }) {
   const [gu, setGu] = React.useState("전체");
   const [page, setPage] = React.useState(1);
 
@@ -127,7 +130,8 @@ export function DistrictList({ districts = [], guOrder = [], sortNear, pageSize 
                  여섯에만 붙어 그 여섯 줄이 다른 종류처럼 보이게 할 뿐이고, 눌리지도 않는데
                  알약 모양이라 칩(구 선택)과 같은 것으로 읽히기까지 했다. */
               <DistrictRow key={d.id} district={d} festivalTag={false} external
-                divider={i < shown.length - 1} />
+                divider={i < shown.length - 1}
+                onClick={() => onOpenDistrict && onOpenDistrict(d)} />
             ))}
           </div>
         ) : (

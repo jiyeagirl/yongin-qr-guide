@@ -30,7 +30,19 @@ import { OnnuriBadge } from "../core/OnnuriBadge.jsx";
 
    **바깥으로 나간다는 것을 숨기지 않는다** — 새 창으로 열고, 꺾쇠 앞에 "상세 페이지"라고
    작게 적고, 보조기기에는 aria-label 로 한 번 더 말한다. 같은 앱 안의 화면인 줄 알고
-   눌렀다가 브라우저가 바뀌면 되돌아오는 길을 스스로 찾아야 한다. */
+   눌렀다가 브라우저가 바뀌면 되돌아오는 길을 스스로 찾아야 한다.
+
+   ── 주소가 없어도 줄은 그대로다 (2026-08-24) ────────────────────────────────
+   전에는 `homepage` 가 비면 [상세 페이지] 이름표가 사라지고 아무 데도 가지 않는 꺾쇠만
+   남았다. 그런데 **줄마다 갈 수 있고 없고가 다르면 목록이 고르지 않게 보인다** — 서른두
+   줄 중 하나만 이름표가 없으면 시민은 그 상점가에 무언가 빠졌다고 읽는다. 관리자가 그
+   칸을 비우는 이유는 대개 아직 페이지가 없어서인데, 그 사정이 이런 모양으로 나갈 이유가
+   없다.
+
+   그래서 external 이면 **이름표와 꺾쇠를 언제나** 세운다. 주소가 있으면 지금까지처럼
+   바깥으로 나가고, 없으면 `onClick` 으로 앱 안의 안내 화면을 연다 (S13-S 준비 중 안내).
+   나가는 줄에는 onClick 을 달지 않는다 — 앵커가 새 창을 여는데 해시까지 바뀌면 돌아왔을
+   때 열어본 적 없는 화면이 덮여 있다. */
 export function DistrictRow({ district, onClick, selected = false, divider = true,
   festivalTag = true, external = false, style, ...rest }) {
   const d = district;
@@ -43,7 +55,9 @@ export function DistrictRow({ district, onClick, selected = false, divider = tru
 
   return (
     <ListRow
-      onClick={onClick}
+      /* 나가는 줄에는 onClick 을 달지 않는다 (위 머리말) — ListRow 는 href 가 있어도
+         onClick 을 함께 붙이므로, 그대로 두면 새 창이 뜨는 동시에 해시가 바뀐다 */
+      onClick={href ? undefined : onClick}
       href={href}
       aria-label={href ? `${d.name} 상세 페이지 — 용인시 누리집에서 새 창으로 열림` : undefined}
       divider={divider}
@@ -64,9 +78,10 @@ export function DistrictRow({ district, onClick, selected = false, divider = tru
           </> : null}
         </span>
       </>}
-      /* 바깥 링크일 때만 꺾쇠 앞에 이름표를 붙인다. 꺾쇠 하나로는 앱 안의 다른 줄들과
-         구분되지 않아, 새 창이 뜨고 나서야 나갔다는 것을 알게 된다 */
-      trailing={href ? (
+      /* external 이면 꺾쇠 앞에 이름표를 붙인다. 꺾쇠 하나로는 앱 안의 다른 줄들과
+         구분되지 않아, 새 창이 뜨고 나서야 나갔다는 것을 알게 된다.
+         **주소가 없는 줄에도 붙인다** — 위 머리말 참조. 그 줄은 앱 안의 안내로 간다 */
+      trailing={external ? (
         <span style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", gap: 2, marginTop: 3 }}>
           <span style={{ fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>상세 페이지</span>
           <Icon name="chevron-right" size={20} color="var(--yong-ink-300)" />

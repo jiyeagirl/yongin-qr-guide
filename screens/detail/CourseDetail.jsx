@@ -248,6 +248,17 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
   const active = stops.find(s => s.id === activeId) || null;
   const activeIndex = stops.findIndex(s => s.id === activeId);
 
+  /* 고른 곳의 **코스 순서상 직전 가게** — 곧 그리로 가는 길의 출발지다.
+     첫 곳은 null 이고, 그때 출발지는 QR 지점이다 (아래 onRoute 주석).
+
+     카드의 두 단추가 **같은 값을 쥔다** (2026-08-24). [길찾기]에만 딸려 보내고
+     [상세 보기]에는 보내지 않았더니, 상세를 한 번 들렀다 나온 길찾기가 QR 지점에서
+     출발했다 — 같은 코스 안에서 같은 곳으로 가는 길인데 어느 단추를 먼저 눌렀는지에
+     따라 출발지가 달라졌다. 상세는 코스를 **떠나는 화면이 아니라 거쳐 가는 화면**이라
+     여기서 정한 출발지를 그대로 물고 가야 한다. 나르는 방법은 셸이 정한다
+     (MainApp 의 onPickStore — 해시에 실어 보낸다. URL 이 진실이라는 규칙 그대로다). */
+  const activeFrom = activeIndex > 0 ? stops[activeIndex - 1] : null;
+
   const doneCount = stops.filter(s => isDone(s.id)).length;
   const allDone = stops.length > 0 && doneCount === stops.length;
 
@@ -358,8 +369,10 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                  ③을 들르고 남은 곳으로 갈 때 출발지는 ③이다. 사용자가 실제로 서 있는
                  자리에서 안내하는 것이라, 예전처럼 추천안의 직전 순번을 붙들고 있는 것보다
                  맞다 (2026-08-18. 그 전 주석은 "방문 표시와 무관"이라고 적혀 있었다). */
-              onRoute={() => onRouteStore && onRouteStore(active, activeIndex > 0 ? stops[activeIndex - 1] : null)}
-              onDetail={() => onPickStore(active)} />
+              onRoute={() => onRouteStore && onRouteStore(active, activeFrom)}
+              /* 상세로 갈 때도 같은 출발지를 딸려 보낸다 — 거기서 [길찾기]를 눌러도
+                 코스 순서대로 안내되어야 한다 (위 activeFrom 주석) */
+              onDetail={() => onPickStore(active, activeFrom)} />
           ) : null}
         </div>
 

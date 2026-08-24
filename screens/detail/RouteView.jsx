@@ -4,8 +4,11 @@ import {
   Button, Badge, Notice, SectionHeader, Icon, EmptyState, FacilityIcon, CategoryIcon,
   InlineSelect, FACILITY_LABELS, CATEGORY_LABELS, OnnuriBadge, ro,
 } from "../../design-systems/index.js";
-import { KAKAO_APP_KEY, WALK_M_PER_MIN, FACILITY_AS_OF, STORE_AS_OF } from "../main/config.js";
-import { requestWalkRoute, distanceM } from "../main/data/walkRoute.js";
+/* WALK_M_PER_MIN(분당 걸음)과 distanceM(직선거리)이 여기 있었다. 고지를 두 줄로 줄이면서
+   둘 다 화면에 적지 않게 됐다 (2026-08-24. 아래 DetailNotice 주석). 도보 시간 자체는
+   walkRoute.js 가 같은 상수로 재므로 값이 달라진 것은 아무것도 없다. */
+import { KAKAO_APP_KEY, FACILITY_AS_OF, STORE_AS_OF } from "../main/config.js";
+import { requestWalkRoute } from "../main/data/walkRoute.js";
 
 /* S07 길찾기 (기능명세서 v1.1 4장 S07 행).
  * 관련 기능: U-NV-01(도보 경로 안내) · U-NV-02(경로 지도 표시) · U-NV-03(구간별 상세 안내)
@@ -136,13 +139,9 @@ export function RouteView({ dest, origin, fromAnchor = true,
     };
   }, [result, dest]);
 
-  /* 목록·상세가 쓰는 직선거리 (U-FC-06). 아래 고지에서 도보 거리와 나란히 적는다.
-     **목록이 실제로 보여준 값(dest.dist)을 그대로 인용한다.** 좌표에서 다시 재면 점포에서
-     어긋난다 — dunjeon.js 의 좌표 생성이 반지름에 이방성 배율을 먹여서 좌표상 거리가
-     dist 의 0.6~1.25 배다. 고지가 "목록에서 보신 약 nnn m" 라고 못박는 문장이라,
-     목록에 없던 숫자를 적으면 사용자가 본 적 없는 값을 인용하는 셈이 된다.
-     dist 를 갖지 않는 목적지(딥링크 등)에서만 좌표로 잰다. */
-  const straight = dest.dist != null ? dest.dist : Math.round(distanceM(origin, dest));
+  /* 목록의 직선거리(U-FC-06)를 여기서 다시 재던 자리였다. 고지가 그 수를 인용하지 않게
+     되면서(2026-08-24. 아래 DetailNotice 주석) 쓸 곳이 없어졌다 — 화면에 없는 수를
+     계산해 두면 다음 사람이 어디에 쓰이는지부터 찾게 된다. */
   /* 고를 것이 하나뿐이면 드롭다운을 그리지 않는다 (머리말) */
   const canPickOrigin = origins.length > 1 && Boolean(onOriginChange);
   const isFacility = Boolean(dest.type && FACILITY_LABELS[dest.type]);
@@ -322,36 +321,33 @@ export function RouteView({ dest, origin, fromAnchor = true,
 
         {/* ── 고지 (U-CM-07 · U-CM-08) ────────────────────────────────────
                목록의 직선거리와 여기 도보 거리가 왜 다른지 적는다 (위 머리말 참조).
-               "직선거리 · 도보 거리"라는 낱말만 던지면 그 말을 이미 아는 사람에게만 설명이 된다.
-               어느 쪽이 실제로 걷는 값인지 먼저 말하고, 나머지 하나가 왜 짧은지를 잇는다.
 
-               **출발지가 QR 지점이 아니면 그 문장을 적지 않는다.** 목록의 수는 QR 지점에서
-               잰 값이라 여기 거리와 견줄 대상이 아니고, 나란히 적으면 없던 오해를 만든다.
-               대신 어디서 잰 거리인지를 밝힌다 — 코스 ②의 "약 95m"가 QR 지점에서의 거리로
-               읽히면 그 수는 완전히 틀린 안내가 된다. 그리고 그 자리가 맞지 않는 사람에게
-               고칠 길이 있다는 것도 함께 적는다 (2026-08-19). [바꾸기]는 화면 위쪽 출발 줄에
-               있어 아래로 내려온 사람의 눈에는 이미 없다. */}
+               ── 두 줄로 줄였다 (2026-08-24) ─────────────────────────────────
+               전에는 두 수를 문장 안에 그대로 인용했다 — "위에 적힌 약 418m가 실제로
+               걸어가는 길을 따라 잰 거리입니다. 목록에서 보신 약 420m는 …". 화면 위에
+               이미 배지로 서 있는 수를 아래에서 다시 읽어주는 꼴이라, 고지 한 칸에
+               숫자가 넷(418 · 420 · 6분 · 67m)이 들어찼다. 고지는 **읽고 넘어가는 줄**이지
+               숫자를 대조하는 표가 아니다.
+
+               남긴 것은 두 문장이 하는 일 그 자체다: 어느 쪽이 실제로 걷는 값인지,
+               그리고 도보 시간이 무엇을 전제한 값인지. 분당 걸음 수(67m)까지 밝히던 자리는
+               "성인 걸음"으로 충분하다 — 그 수를 알아야 판단이 달라지는 사람은 없다.
+
+               **출발지가 QR 지점이 아니면 목록과 견주는 문장을 적지 않는다.** 목록의 수는
+               QR 지점에서 잰 값이라 여기 거리와 견줄 대상이 아니고, 나란히 적으면 없던
+               오해를 만든다. 대신 어디서 잰 거리인지만 밝힌다 — 코스 ②의 "약 95m"가
+               QR 지점에서의 거리로 읽히면 그 수는 완전히 틀린 안내가 된다. */}
         {/* 기준일은 카테고리 단위다 (정의서 3-2). 시설은 유형마다 값이 다르다 */}
         <DetailNotice asOf={isFacility ? `공공시설 정보 ${FACILITY_AS_OF[dest.type] || ""} 기준` : `점포 정보 ${STORE_AS_OF} 기준`}>
           {result && !failed ? (
             <>
               <span style={{ display: "block" }}>
-                {fromAnchor ? (
-                  <>
-                    위에 적힌 <b>약 {km(result.distance)}</b>가 실제로 걸어가는 길을 따라 잰 거리입니다.
-                    목록에서 보신 약 {km(straight)}는 두 지점을 곧게 이은 직선거리라 더 짧게 나옵니다.
-                  </>
-                ) : (
-                  <>
-                    위에 적힌 <b>약 {km(result.distance)}</b>는 QR 지점이 아니라 <b>{origin.name}</b>에서
-                    걸어가는 거리입니다.
-                    {canPickOrigin ? " 다른 곳에서 출발하신다면 위 [바꾸기]로 출발지를 고르실 수 있습니다." : ""}
-                  </>
-                )}
+                {fromAnchor
+                  ? "위 거리는 실제 보행 경로 기준입니다. 목록의 거리는 직선거리라 다를 수 있습니다."
+                  : `위 거리는 QR 지점이 아니라 ${origin.name}에서 걷는 실제 보행 경로 기준입니다.`}
               </span>
               <span style={{ display: "block", marginTop: 4 }}>
-                도보 {mins(result.duration)}분은 성인 걸음(분당 {WALK_M_PER_MIN}m) 기준이며,
-                신호 대기나 경사에 따라 달라질 수 있습니다.
+                도보 시간은 성인 걸음 기준이며 신호·경사에 따라 달라집니다.
               </span>
             </>
           ) : null}

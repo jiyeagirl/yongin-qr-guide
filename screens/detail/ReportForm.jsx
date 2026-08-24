@@ -184,7 +184,10 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
           <div data-field="body">
             <Textarea label="자세한 내용" required rows={5} maxLength={MAX_BODY}
               placeholder="예) 안내된 위치보다 한 블록 위, 주민센터 정문 옆에 있습니다."
-              hint="언제 보신 것인지 함께 적어주시면 확인이 빠릅니다."
+              /* 도움말 줄을 뺐다 (2026-08-24) — "언제 보신 것인지 함께 적어주시면
+                 확인이 빠릅니다." 였다. 아래 placeholder 가 이미 무엇을 적으면 되는지
+                 예로 보여주고 있어, 그 위에 요구가 한 줄 더 붙으면 신고 한 건에
+                 적어야 할 것이 늘어난 것처럼 읽힌다. */
               value={body} onChange={e => setBody(e.target.value)}
               error={shown.body} />
           </div>
@@ -202,8 +205,8 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
             color: "var(--text-muted)", lineHeight: 1.55 }}>
             <Icon name="shield-check" size={16} style={{ marginTop: 2 }} />
             <span>
-              신고 내용은 안내 정보를 고치는 데만 씁니다. 개별 회신은 드리지 않습니다.
-              응급 상황이나 신고가 필요한 일은 119 등 공식 채널로 연락해 주세요.
+              접수된 내용은 안내 정보를 수정하는 데 활용됩니다. 개별 답변은 어려운 점 양해 부탁드립니다.
+              긴급한 상황이나 신고가 필요한 경우에는 119 등 공식 채널을 이용해 주세요.
             </span>
           </p>
         </DetailBody>
