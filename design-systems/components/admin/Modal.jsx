@@ -13,7 +13,9 @@ import { IconButton } from "../core/IconButton.jsx";
  * 2. **포커스가 안에 갇힌다.** 탭 키가 뒤쪽 표로 새어 나가면, 보이지도 않는 버튼에
  *    포커스가 가 있는 채로 엔터를 누르게 된다
  * 3. **열릴 때 첫 입력칸에 포커스가 간다.** 담당자가 [등록]을 누른 뒤 하려던 일은
- *    언제나 첫 칸을 채우는 것이다
+ *    언제나 첫 칸을 채우는 것이다. 「첫 입력칸」은 **본문의 첫 칸**이지 머리줄의 [X] 가
+ *    아니고, 포커스를 옮기는 일은 **열릴 때 한 번**이지 렌더마다가 아니다 —
+ *    둘 다 2026-08-24 에 고쳤다 (아래 두 주석)
  * 4. **닫히면 포커스가 열었던 버튼으로 돌아간다.** 그러지 않으면 키보드 사용자는
  *    문서 맨 위로 튕겨나가 목록을 처음부터 다시 훑는다
  *
@@ -37,20 +39,40 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
 
 export function Modal({ open, title, description, children, footer, size = "md", onClose, style, ...rest }) {
   const box = React.useRef(null);
+  const body = React.useRef(null);
   const opener = React.useRef(null);
+
+  /* ── onClose 를 의존성에서 뺀다 (2026-08-24) ────────────────────────────────
+     아래 효과의 의존성이 `[open, onClose]` 였다. 그런데 부르는 쪽이 `onClose={() =>
+     setReset(false)}` 처럼 **화살표를 그 자리에 적으면 렌더마다 새 함수**가 되고, 그러면
+     이 효과가 글자 하나 칠 때마다 정리되고 다시 돈다 — 다시 돌면서 하는 일이 포커스
+     옮기기라, 담당자가 한 글자를 넣을 때마다 포커스가 튀었다 (로그인 화면의 비밀번호
+     초기화 요청 창이 그랬다).
+
+     칸에 값을 넣는 것과 다이얼로그가 열리는 것은 다른 사건이다. 이 효과는 **열림**에만
+     반응해야 하므로 최신 onClose 는 ref 로 들고 간다. 부르는 쪽마다 useCallback 을
+     쓰게 하는 것으로는 못 고친다 — 한 곳이 빠지면 그 화면에서만 다시 튀고, 그 사실을
+     알아채는 자리가 검수뿐이다. */
+  const closeRef = React.useRef(onClose);
+  React.useEffect(() => { closeRef.current = onClose; });
 
   React.useEffect(() => {
     if (!open) return undefined;
     opener.current = document.activeElement;
 
-    /* 첫 입력칸으로. 없으면(안내만 있는 다이얼로그) 상자 자체로 — 어디로도 보내지 않으면
+    /* ── 첫 입력칸은 **본문**의 첫 칸이다 (2026-08-24) ────────────────────────
+       전에는 상자 전체(`box`)에서 찾았는데, DOM 차례로 맨 앞에 있는 포커스 가능한
+       것은 머리줄의 [X] 닫기 단추다. 그래서 머리말 3번(「열릴 때 첫 입력칸에 포커스가
+       간다」)이 한 번도 지켜지지 않고 있었다 — 담당자가 [등록]을 누르면 포커스는 늘
+       닫기 단추에 가 있었고, 거기서 엔터를 치면 창이 닫혔다.
+       본문에 칸이 없으면(안내만 있는 다이얼로그) 상자 자체로 — 어디로도 보내지 않으면
        포커스가 body 에 남아 스크린리더가 다이얼로그가 열린 것을 알리지 못한다 */
-    const first = box.current && box.current.querySelector(FOCUSABLE);
+    const first = body.current && body.current.querySelector(FOCUSABLE);
     if (first) first.focus();
     else if (box.current) box.current.focus();
 
     const onKey = e => {
-      if (e.key === "Escape") { e.stopPropagation(); if (onClose) onClose(); return; }
+      if (e.key === "Escape") { e.stopPropagation(); if (closeRef.current) closeRef.current(); return; }
       if (e.key !== "Tab" || !box.current) return;
       const items = Array.from(box.current.querySelectorAll(FOCUSABLE));
       if (!items.length) return;
@@ -71,7 +93,8 @@ export function Modal({ open, title, description, children, footer, size = "md",
       document.body.style.overflow = prev;
       if (opener.current && opener.current.focus) opener.current.focus();
     };
-  }, [open, onClose]);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [open]);
 
   if (!open) return null;
 
@@ -101,7 +124,9 @@ export function Modal({ open, title, description, children, footer, size = "md",
           <IconButton name="x" label="닫기" size={36} onClick={onClose} style={{ flex: "0 0 auto", marginTop: -4 }} />
         </header>
 
-        <div style={{ padding: "var(--space-5)" }}>{children}</div>
+        {/* ref 를 다는 이유는 위 효과가 **여기서** 첫 칸을 찾기 때문이다 (머리줄의 [X] 가
+            아니라). 그래서 이 자리는 감싸는 div 하나로 남아 있어야 한다 */}
+        <div ref={body} style={{ padding: "var(--space-5)" }}>{children}</div>
 
         {footer ? (
           <footer style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)",

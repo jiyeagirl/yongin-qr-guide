@@ -6,7 +6,7 @@ import {
 } from "../../design-systems/admin.js";
 import { FESTIVALS, DISTRICTS } from "../../screens/main/data/districts.js";
 import { TODAY } from "../../screens/main/config.js";
-import { FESTIVAL_FIELDS, PROGRAM_COLUMNS, BOOTH_COLUMNS } from "../data/fields.js";
+import { FESTIVAL_FIELDS, PROGRAM_COLUMNS, BOOTH_COLUMNS, missingInRows } from "../data/fields.js";
 import { CHARACTER_ASSETS, CHARACTER_DEFAULT, ASSET_BASE } from "../data/assets.js";
 import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
@@ -119,6 +119,15 @@ export function Festivals({ onToast }) {
       if (p >= 0) bad.programs = `${p + 1}번째 줄의 종료 일시가 시작 일시보다 빠릅니다.`;
       const b = (v.booths || []).findIndex(late);
       if (b >= 0) bad.booths = `${b + 1}번째 줄의 종료 일시가 시작 일시보다 빠릅니다.`;
+
+      /* 필수 칸이 비었는지 (2026-08-24). **앞의 검사를 덮지 않는다** — 순서가 뒤집힌
+         줄은 두 칸이 다 차 있다는 뜻이라 애초에 여기 걸리지 않지만, 다른 줄에서 둘이
+         함께 걸렸을 때 무엇을 먼저 말할지는 정해 두어야 한다. 값이 없는 것이 값이
+         어긋난 것보다 먼저다 — 채우고 나서야 앞뒤를 따질 수 있다. */
+      const pm = missingInRows(PROGRAM_COLUMNS, v.programs);
+      if (pm) bad.programs = pm;
+      const bm = missingInRows(BOOTH_COLUMNS, v.booths);
+      if (bm) bad.booths = bm;
       /* 「배치도 이미지가 필요합니다」 검사는 뺐다 (2026-08-20) — 배치도 칸 자체가
          없어져, 고칠 수 없는 것을 이유로 저장을 막는 검사가 되기 때문이다 */
       /* 「부스 번호 겹침」 검사도 함께 뺐다 (2026-08-20) — 번호 칸 자체가 없다.

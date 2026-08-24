@@ -4,7 +4,7 @@ import { DISTRICTS, GU_ORDER } from "../../screens/main/data/districts.js";
    그것들은 서버 응답으로 통째로 갈아끼울 자리라 이름표가 딸려 오면 안 되지만, 이 표는
    **항목명·예시·범위**로 이루어진 화면의 것이고 서버로 옮겨갈 물건이 아니다.
    업종 칩의 이름표를 여기에 다시 적으면 시민 화면의 칩 이름과 갈린다. */
-import { CATEGORY_LABELS } from "../../design-systems/admin.js";
+import { CATEGORY_LABELS, eul } from "../../design-systems/admin.js";
 
 /* 관리자 웹 기능명세서 v1.1 의 항목표 — **폼 열둘의 유일한 출처다.**
  *
@@ -333,9 +333,21 @@ export const FESTIVAL_FIELDS = [
    ── 「장소」가 「위치」가 되었다 ────────────────────────────────────────────
    부스 표가 이미 「위치」였다. 같은 것을 한 화면에서 두 이름으로 부르면 담당자가 둘이
    다른 값인지 확인하게 된다 (명세서 「부르는 이름」 원칙과 같은 이유). */
+/* ── 언제와 무엇은 필수, 어디와 설명은 선택 (2026-08-24, 사용자 요청) ──────────
+   두 목록이 같은 규칙을 쓴다. 가르는 선은 **그 값 없이 이 줄이 뜻을 갖는가**다.
+
+     시작 일시 · 종료 일시   없으면 "언제 가면 되는가"에 답하지 못한다. 시민 화면의
+                            줄이 「10.17 15:00 ~ 21:00」인데 한쪽이 비면 그 줄이 반만 선다
+     프로그램명 · 부스명     없으면 무엇에 대한 줄인지 알 수 없다
+     위치                    비어도 줄은 선다. 축제장이 좁으면 굳이 적을 것이 없고,
+                            프로그램은 어차피 축제 장소가 위에 있다
+     설명                    이름 밖의 정보라 있으면 좋고 없어도 그만이다
+
+   종료 일시가 선택이었던 것이 이번에 바뀐 자리다. 「몇 시부터 몇 시까지」가 이 목록의
+   요점인데 종료를 비워 둘 수 있으면 목록의 절반이 시작 시각만 달고 서 있게 된다. */
 export const PROGRAM_COLUMNS = [
   { key: "startAt", label: "시작 일시", type: "datetime-local", required: true, width: 210 },
-  { key: "endAt", label: "종료 일시", type: "datetime-local", width: 210 },
+  { key: "endAt", label: "종료 일시", type: "datetime-local", required: true, width: 210 },
   { key: "title", label: "프로그램명", type: "text", required: true, maxLength: 40, placeholder: "개막 풍물놀이" },
   { key: "where", label: "위치", type: "text", maxLength: 60, placeholder: "시장통 무대" },
   { key: "desc", label: "설명", type: "text", maxLength: 300, row2: true, placeholder: "포곡농악보존회" },
@@ -377,12 +389,16 @@ export const PROGRAM_COLUMNS = [
      지도가 없으면 둘 다 시민 화면 어디에도 나가지 않는다.
 
    좌표로 찍을 자리가 정해지면 그때 네 칸을 함께 되살린다. */
+/* 필수·선택은 프로그램과 같은 선으로 가른다 (2026-08-24, 사용자 요청. PROGRAM_COLUMNS
+   머리말). 두 칸이 뒤집혔다 — **일시 둘이 필수가 되고 위치가 선택이 되었다.**
+   두 목록이 같은 화면에 나란히 서므로 같은 칸이 한쪽에서만 별표를 달면, 담당자가 그
+   차이에 이유가 있는 줄 알고 찾게 된다. */
 export const BOOTH_COLUMNS = [
-  { key: "startAt", label: "시작 일시", type: "datetime-local", width: 210 },
-  { key: "endAt", label: "종료 일시", type: "datetime-local", width: 210 },
+  { key: "startAt", label: "시작 일시", type: "datetime-local", required: true, width: 210 },
+  { key: "endAt", label: "종료 일시", type: "datetime-local", required: true, width: 210 },
   { key: "name", label: "부스명", type: "text", required: true, maxLength: 40,
     placeholder: "먹거리 부스" },
-  { key: "where", label: "위치", type: "text", required: true, maxLength: 60,
+  { key: "where", label: "위치", type: "text", maxLength: 60,
     placeholder: "시장통 입구 ~ 중앙 무대 양쪽" },
 ];
 
@@ -660,6 +676,35 @@ export function validate(fields, values, extra) {
     for (const k of Object.keys(more)) if (!bad[k]) bad[k] = more[k];
   }
   return bad;
+}
+
+/* ── 1:N 목록의 필수 칸 (2026-08-24) ─────────────────────────────────────────
+   위 `validate` 는 **항목표의 칸**을 본다. 1:N 목록(프로그램 · 부스)은 값이 배열이라
+   그 길로 들어오지 않는데, 그동안 Repeater 의 열 이름에는 별표(`*`)가 붙어 있었다 —
+   **아무도 검사하지 않는 별표**였다. 지키지 않아도 되는 표시가 화면에 서 있으면 담당자는
+   나머지 별표도 같은 것으로 여기게 되므로, 붙인 이상 여기서 막는다.
+
+   ── 첫 줄 하나만 말한다 ────────────────────────────────────────────────────
+   Repeater 는 칸마다 오류를 달지 못하고 목록 하나에 한 줄을 단다. 스무 줄 중 셋이 비었을
+   때 셋을 다 늘어놓으면 그 한 줄이 문단이 되므로, **처음 걸린 줄과 그 줄에서 빈 칸들**만
+   적는다. 고치고 다시 누르면 다음 줄이 나온다 — 어차피 한 번에 한 줄씩 손보게 된다.
+   줄 번호로 가리키는 것은 V-07 검사와 같은 이유다 (Festivals 의 extraValidate). */
+export function missingInRows(columns, rows) {
+  const need = columns.filter(c => c.required);
+  if (!need.length) return null;
+  const list = Array.isArray(rows) ? rows : [];
+  for (let i = 0; i < list.length; i += 1) {
+    const row = list[i] || {};
+    const gone = need.filter(c => {
+      const raw = row[c.key];
+      return raw == null || String(raw).trim() === "";
+    });
+    /* 「을(를)」로 적지 않는다 — 빈 칸이 하나일 때도 둘일 때도 마지막 낱말의 받침이
+       조사를 정한다 (design-systems 의 josa). 괄호를 남기면 화면이 사람 말을 하다 말고
+       서식으로 돌아간 것처럼 읽힌다 */
+    if (gone.length) return `${i + 1}번째 줄의 ${eul(gone.map(c => c.label).join(" · "))} 채워 주세요.`;
+  }
+  return null;
 }
 
 /* ── 여기 있던 `EMPTY_NOTE` 를 뺐다 (2026-08-20, 사용자 요청) ────────────────
