@@ -15,6 +15,9 @@
  *   dunjeon-2019-04 철거된 안내판  → S11  (표에 있으나 끝난 코드)
  *   dunjeon-03      설치 후 미활성 → S11-A (표에 있으나 아직 시작하지 않은 코드)
  *   그 밖의 문자열   → S11  (표에 없는 코드)
+ *
+ * **조회 자체가 안 될 수도 있다** → S11-B. 코드가 아니라 통신이 문제라 표와 무관하고,
+ * 검수 플래그 `?net=fail` 로만 켠다 (맨 아래).
  */
 import { ANCHOR } from "./dunjeon.js";
 
@@ -147,10 +150,25 @@ export function resolveQr(code) {
   return { status: retired ? "inactive" : "pending", code, point };
 }
 
-/* 서버 조회를 흉내 낸다. 화면은 await 만 하므로 실연동 때 이 함수 몸통만 바뀐다. */
+/* ?net=fail 이 **첫 조회만** 실패시켰는지 (아래 lookup). 모듈 변수인 것은 [다시 시도]가
+   같은 페이지 안에서 일어나기 때문이다 — 새로고침하면 다시 한 번 실패한다. */
+let netFailed = false;
+
+/* 서버 조회를 흉내 낸다. 화면은 await 만 하므로 실연동 때 이 함수 몸통만 바뀐다.
+   **실패로 끝날 수 있다** (2026-08-24) — 실연동에서 이 자리는 fetch 이고, 안내판 앞은
+   지하상가·시장 안처럼 전파가 약한 자리일 수 있다. 그때 화면이 S11-B 다. */
 export function lookup(code) {
-  return new Promise(resolve => {
-    setTimeout(() => resolve(resolveQr(code)), QR_LOOKUP_MS);
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      /* 검수 플래그. **첫 번째만** 실패시킨다 — 매번 실패하면 [다시 시도]가 아무 것도
+         하지 않는 단추로 보여, 그 단추가 실제로 되살아나는지를 검수할 수 없다 */
+      if (readReviewFlags().netFail && !netFailed) {
+        netFailed = true;
+        reject(new Error("network"));
+        return;
+      }
+      resolve(resolveQr(code));
+    }, QR_LOOKUP_MS);
   });
 }
 
@@ -161,10 +179,11 @@ export function lookup(code) {
  * config.js 의 TODAY 와 같은 성격이다 — 실서비스에서는 제거한다.
  *
  *   ?district=none   현재 상점가 없음 → 상점가 탭이 S03-E 로
+ *   ?net=fail        QR 조회가 통신 오류로 실패 → S11-B (첫 조회만. 위 lookup)
  */
 export function readReviewFlags(loc = typeof location !== "undefined" ? location : null) {
   const p = new URLSearchParams((loc && loc.search) || "");
-  return { noDistrict: p.get("district") === "none" };
+  return { noDistrict: p.get("district") === "none", netFail: p.get("net") === "fail" };
 }
 
 export default QR_POINTS;

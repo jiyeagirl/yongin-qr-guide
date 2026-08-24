@@ -43,6 +43,13 @@ export function QrEntry({ code, onResolved, base = "../../design-systems/" }) {
       setStep(2);
       /* 마지막 단계를 한 박자 보여준 뒤 넘긴다. 확보한 지점명을 사용자가 읽을 시간이다 */
       setTimeout(() => alive && onResolved(result), result.status === "ok" ? 420 : 220);
+    }).catch(() => {
+      /* 조회가 끝나지 못했다 — 코드가 아니라 통신이 문제다 (2026-08-24).
+         **여기서도 아무 판단을 하지 않는다.** 상태 한 마디만 올리고 무엇을 보여줄지는
+         S11-B(EntryFallback)가 정한다 — 위 머리말의 규칙 그대로다.
+         한 박자 쉬지 않는 것은 보여줄 지점명이 없기 때문이다. 읽을 것이 없는 화면을
+         220ms 더 세워 두면 그냥 느린 화면이 된다 */
+      if (alive) onResolved({ status: "error", code, point: null });
     });
     return () => { alive = false; clearTimeout(t1); };
   }, [code, onResolved]);

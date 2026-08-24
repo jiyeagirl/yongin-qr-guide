@@ -41,25 +41,40 @@ export function DistrictSoon({ district, onBack, onClose, onGoDistricts,
 
   return (
     <DetailPage title="상점가 상세 페이지" onBack={onBack} onClose={onClose}>
-      <div style={{ padding: "0 var(--gutter-screen) var(--space-8)" }}>
-        <EmptyState pose="sorry" base={base}
-          title="아직 준비 중입니다"
-          description={`${name}의 상세 안내 페이지는 아직 준비 중입니다. 준비되는 대로 이 자리에서 보실 수 있습니다.`}
-          action={onGoDistricts ? (
-            <Button variant="outline" icon="store" onClick={onGoDistricts}>
-              상점가 전체 보기
-            </Button>
-          ) : null} />
+      {/* ── 세로 가운데에 세운다 (2026-08-24) ────────────────────────────────
+          `DetailPage` 의 본문은 그냥 굴러가는 상자라(block + overflow-y), 안에 넣은 것은
+          위에 붙는다. 상세 화면들은 그것이 맞다 — 본문이 화면보다 길다. 이 화면은 아니다:
+          담을 것이 조아용과 두 문장뿐이라 위에 붙으면 아래가 통째로 빈다.
 
-        {/* 이 줄에 적힌 것(이름·규모·거리)이 지금 우리가 가진 전부다. 화면이 비어 보일수록
-            그 사실을 적어 두어야 "없다"가 인상이 아니라 정보가 된다 (U-CM-07 · U-CM-08) */}
-        {district ? (
-          <p style={{ marginTop: "var(--space-4)", textAlign: "center",
-            fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-            {district.gu} {district.area} · 점포 {district.stores}곳<br />
-            상점가 지정 현황 2026.07 기준
-          </p>
-        ) : null}
+          그래서 **본문 높이만큼의 칸(minHeight:100%)을 하나 두고 그 안에서 가운데로**
+          민다. `justifyContent:center` 가 아니라 `margin: auto 0` 인 것은 S11 무리
+          (EntryFallback)와 같은 이유다 — 2차 글자 확대에서 내용이 상자보다 커졌을 때
+          center 는 **위쪽을 잘라 스크롤로도 닿지 못하게** 만들지만, auto 여백은 그때
+          0 으로 접혀 그냥 위에서부터 굴러간다.
+
+          아래 여백만 준 것도 저쪽과 같다. 위에 AppBar 가 얹혀 있어 무게가 위로 쏠리므로,
+          기하학적 가운데보다 조금 아래가 눈에는 가운데로 보인다. */}
+      <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
+        <div style={{ margin: "auto 0", padding: "0 var(--gutter-screen) var(--space-6)" }}>
+          <EmptyState pose="sorry" base={base}
+            title="아직 준비 중입니다"
+            description={`${name}의 상세 안내 페이지는 아직 준비 중입니다. 준비되는 대로 이 자리에서 보실 수 있습니다.`}
+            action={onGoDistricts ? (
+              <Button variant="outline" icon="store" onClick={onGoDistricts}>
+                상점가 전체 보기
+              </Button>
+            ) : null} />
+
+          {/* 이 줄에 적힌 것(이름·규모·거리)이 지금 우리가 가진 전부다. 화면이 비어 보일수록
+              그 사실을 적어 두어야 "없다"가 인상이 아니라 정보가 된다 (U-CM-07 · U-CM-08) */}
+          {district ? (
+            <p style={{ marginTop: "var(--space-4)", textAlign: "center",
+              fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
+              {district.gu} {district.area} · 점포 {district.stores}곳<br />
+              상점가 지정 현황 2026.07 기준
+            </p>
+          ) : null}
+        </div>
       </div>
     </DetailPage>
   );

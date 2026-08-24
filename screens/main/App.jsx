@@ -9,10 +9,15 @@ import { readQrCode, readReviewFlags, resolveQr } from "./data/qr.js";
  *   QR 스캔 → S01 QrEntry (로딩)  ─ ok ────→  MainApp (셸: S02·S03·S04 탭)
  *                                ├ unknown  ┐
  *                                ├ inactive ┼→ S11   EntryFallback
- *                                └ pending  ─→ S11-A EntryFallback (같은 컴포넌트, 다른 문구)
+ *                                ├ pending  ─→ S11-A EntryFallback (같은 컴포넌트, 다른 문구)
+ *                                └ error    ─→ S11-B EntryFallback ([다시 시도] → retry)
  *
  * 갈래가 넷이 됐지만 이 파일은 그대로다 — 상태 문자열을 그대로 넘기고 무엇을 보일지는
  * 저쪽이 정한다 (2026-08-24. 갈래를 여기서 세면 화면이 늘 때마다 진입이 한 줄씩 길어진다).
+ *
+ * `error` 만 이 파일이 한 가지를 더 한다 — **[다시 시도]가 돌아올 자리**다 (아래 retry).
+ * QrEntry 를 새 key 로 다시 세워 조회를 처음부터 건다. 셸이 아직 없으므로 U-CM-16 과
+ * 부딪히지 않는다 (그 규칙이 막는 것은 **선 셸**을 다시 세우는 일이다).
  *
  * ── 왜 MainApp 안이 아니라 그 바깥인가 ─────────────────────────────────────
  * 셸(MainApp)은 지도를 만들고 335곳을 그린다. QR 이 잘못됐을 때 그 셸을 띄운 뒤 위에
