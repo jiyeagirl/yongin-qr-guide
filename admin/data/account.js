@@ -49,7 +49,7 @@ export const ALL_PAGES = [
   "facilities",
   "qr",
   "reports",
-  "asof", "settings", "accounts",
+  "asof", "accounts",   /* "settings" 가 여기 있었다 (2026-08-24. AdminApp 머리말) */
 ];
 
 /* 검수용 계정 두 벌 — 최종 관리자와 담당자. 화면이 갈리는 자리가 하나(계정 관리)뿐이라

@@ -14,10 +14,25 @@ import { Facilities } from "./pages/Facilities.jsx";
 import { QrPoints } from "./pages/QrPoints.jsx";
 import { Reports } from "./pages/Reports.jsx";
 import { DataAsOf } from "./pages/DataAsOf.jsx";
-import { Settings } from "./pages/Settings.jsx";
 import { Accounts } from "./pages/Accounts.jsx";
 
-/* 관리자 웹 진입점 (/admin/) — 관리자 웹 기능명세서 v1.1 의 M01 ~ M16.
+/* 관리자 웹 진입점 (/admin/) — 관리자 웹 기능명세서의 **화면 열다섯**.
+ *
+ * ── [환경 설정](M15)을 없앴다 (2026-08-24, 사용자 요청) ─────────────────────
+ * 두 구획이 있었다. **서비스 운영 설정**(안내 범위 2km · 배너 기준 1km · 상점가 임계
+ * 거리 · 신규 매장 판정 기간 · 코스 반경 · 탭별 지도 확대 단계)과 **변경 이력**이다.
+ *
+ * 운영 설정은 개발 쪽으로 넘긴다. 명세서 범위 문단이 이미 그은 선과 같은 선이다 —
+ * 담당자가 하는 일은 **개별 건을 고치는 것**이고, 저 숫자들은 건이 아니라 **화면 전체가
+ * 도는 방식**이다. 게다가 화면에 서 있는 내내 아무 데도 연결되지 않았다: config.js 는
+ * 모듈 상수라 관리자가 밀어 넣을 수 없어서, 담당자가 반경을 고치고 시민 화면에서
+ * 확인하려 해도 아무 일도 일어나지 않았다. 그 사실을 화면이 항목마다 적고 있었다는 것이
+ * 곧 이 구획이 관리자 화면의 자리가 아니라는 증거다.
+ *
+ * **변경 이력도 함께 내려갔다.** 그 구획은 이 화면 아래에 얹혀 있었을 뿐이라(명세서 10장
+ * "열람 위치는 환경 설정 화면 아래 구획") 얹힐 곳이 없어졌다. 기록 자체는 그대로 돈다 —
+ * `store.js` 의 `useCollection` 이 저장·삭제마다 한 줄씩 쌓고 `readHistory()` 로 남아
+ * 있으므로, 다른 화면에 붙이거나 개발 쪽 도구가 읽으면 된다. 없어진 것은 **보는 자리**다.
  *
  * ── 이 화면이 하는 일은 좁다 (2026-08-20, 명세서 개정) ──────────────────────
  * 명세서 범위 문단이 그것을 못 박았다: "개별 건의 조회·수정·신규 등록과 오류신고 기반
@@ -75,7 +90,7 @@ const NAV = [
 
   { section: "시스템 운영" },
   { key: "asof", label: "데이터 기준일 관리", icon: "calendar-clock" },
-  { key: "settings", label: "환경 설정", icon: "settings" },
+  /* [환경 설정]이 여기 있었다 (2026-08-24 삭제. 위 머리말 참조) */
   { key: "accounts", label: "계정 관리", icon: "users" },
 ];
 
@@ -88,7 +103,6 @@ const PAGES = {
   qr: QrPoints,
   reports: Reports,
   asof: DataAsOf,
-  settings: Settings,
   accounts: Accounts,
 };
 

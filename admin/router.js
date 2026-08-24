@@ -16,7 +16,10 @@ import { ALL_PAGES } from "./data/account.js";
  * 보이는데 눌러도 아무 일이 안 일어난다.
  *
  *   #/dashboard  #/districts  #/stores    #/festivals  #/facilities
- *   #/qr         #/reports    #/asof      #/settings   #/accounts
+ *   #/qr         #/reports    #/asof      #/accounts
+ *
+ * `#/settings` 는 2026-08-24 에 없어졌다 (AdminApp 머리말). ALL_PAGES 에서 빠졌으므로
+ * 그 주소로 들어와도 아래 parseHash 가 null 을 내고 첫 화면(대시보드)이 뜬다.
  */
 
 export const PAGES = ALL_PAGES;

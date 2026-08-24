@@ -86,6 +86,12 @@ function log(entry) {
   writeAll({ ...all, history: list.slice(-HISTORY_MAX) });
 }
 
+/* ── 지금 이것을 부르는 화면이 없다 (2026-08-24) ────────────────────────────
+   [환경 설정](M15) 아래 구획이 유일한 독자였고 그 화면이 없어졌다 (AdminApp 머리말).
+   **그래도 지우지 않는다.** 명세서 10장이 요구하는 것은 *기록*이고 그것은 위 `record()`
+   가 계속 하고 있다 — 없어진 것은 보는 자리다. 다시 붙인다면 대시보드 아래이고,
+   그때 필요한 것이 이 함수 하나다. 기록만 남기고 읽는 길을 지우면, 쌓이는 줄들이
+   어디서도 꺼낼 수 없는 것이 된다. */
 export function readHistory() {
   const all = readAll();
   return (all.history || []).slice().reverse();   /* 최근 것이 위로 */

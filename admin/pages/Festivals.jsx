@@ -24,8 +24,17 @@ import { EditorModal } from "./EditorModal.jsx";
  * 상태 이름이 명세서와 시민 화면에서 조금 다르다 — 명세서는 "진행 예정 · 진행 중 · 완료",
  * 시민 화면은 "예정 · 진행중 · 종료"다. **가리키는 것은 같은 셋**이고, 이름표는 시민 화면의
  * 것을 쓴다: 담당자가 관리자에서 본 낱말과 실제 화면의 낱말이 다르면 같은 축제를 두 이름으로
- * 말하게 된다. 대신 명세서가 정한 **노출 카테고리**(진행 / 완료)를 열로 따로 보여준다 —
- * 그것은 이름이 아니라 이 축제가 시민 화면 어디에 실리는지의 문제라 감출 수 없다.
+ * 말하게 된다.
+ *
+ * ── 「노출 카테고리」 열을 없앴다 (2026-08-24) ───────────────────────────────
+ * 명세서 2-3 의 진행 / 완료를 상태 옆에 열로 세워 두었다. 그런데 그 값은 **상태에서
+ * 한 글자도 더하지 않는다** — 종료면 완료, 나머지는 전부 진행이다. 담당자가 이미 읽은
+ * 배지를 옆 칸에서 다른 낱말로 한 번 더 말하고 있었고, 그 칸이 120px 을 쓰는 동안
+ * 정작 손대는 칸(노출 여부·관리)이 오른쪽으로 밀렸다.
+ *
+ * 카테고리라는 개념 자체가 없어진 것은 아니다. 명세서 2-3 의 표는 그대로이고, 진행 /
+ * 완료가 갈리는 자리는 시민 화면에 남아 있다 (둘러보기 탭은 진행만, S12 전체보기는 전부).
+ * 이 화면에서 그것을 다시 적지 않을 뿐이다.
  *
  * ── 조아용 이미지가 필수인 이유 ─────────────────────────────────────────────
  * 축제 자료가 이미지 파일로 제공되고 수기 입력이 전제라 카드에 넣을 사진이 없다.
@@ -58,8 +67,8 @@ function stateOf(f) {
   return "진행중";
 }
 
-/* 명세서 2-3 의 노출 카테고리. 예정과 진행중이 한 덩이고 종료만 따로다 */
-const categoryOf = f => (stateOf(f) === "종료" ? "완료" : "진행");
+/* 명세서 2-3 의 노출 카테고리(진행 / 완료)를 내던 `categoryOf` 가 여기 있었다.
+   2026-08-24 에 없앴다 — 아래 머리말 참조. */
 
 function periodOf(f) {
   if (!f.start) return EMPTY_MARK;
@@ -144,8 +153,6 @@ export function Festivals({ onToast }) {
           { key: "state", label: "상태", width: 90, align: "center",
             render: f => <Badge size="sm" {...festivalBadge(stateOf(f))}>{stateOf(f)}</Badge>,
             sortValue: f => FESTIVAL_STATES.indexOf(stateOf(f)) },
-          { key: "category", label: "노출 카테고리", width: 120, align: "center",
-            render: f => <Badge tone="neutral" size="sm">{categoryOf(f)}</Badge> },
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: f => (
               <Switch checked={f.visible !== false} aria-label={`${f.name} 노출 여부`}
@@ -165,7 +172,7 @@ export function Festivals({ onToast }) {
       <EditorModal ed={ed} size="xl"
         title={ed.draft && ed.draft.isNew ? "축제 등록" : "축제 수정"}
         description={ed.draft && !ed.draft.isNew
-          ? `${ed.draft.values.name} · ${stateOf(ed.draft.values)} (${categoryOf(ed.draft.values)} 카테고리)` : undefined}>
+          ? `${ed.draft.values.name} · ${stateOf(ed.draft.values)}` : undefined}>
         {ed.draft ? (
           <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors} onChange={ed.set}
             extra={

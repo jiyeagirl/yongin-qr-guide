@@ -1,9 +1,7 @@
-import {
-  MAP_LEVEL, TAB_MAP_LEVEL, WALK_ROUTE_QUOTA, FACILITY_AS_OF, STORE_AS_OF,
-} from "../../screens/main/config.js";
-import { NEAR_LIMIT, NEAR_ENOUGH } from "../../screens/main/data/facilities.js";
+import { WALK_ROUTE_QUOTA, FACILITY_AS_OF, STORE_AS_OF } from "../../screens/main/config.js";
 
-/* 설정값 세 벌 — 운영 설정(8-1) · API 쿼터(8-2) · 데이터 기준일(7장).
+/* 설정값 두 벌 — API 쿼터(8-2, 대시보드가 읽는다) · 데이터 기준일(7장, M14).
+ * 운영 설정(8-1)이 여기 있었다 (2026-08-24 삭제. 아래 참조).
  *
  * ── 기본값을 여기서 지어내지 않는다 ─────────────────────────────────────────
  * 명세서가 적은 기본값과 시민용 config.js 가 실제로 쓰는 값이 **같아야 한다.**
@@ -18,31 +16,15 @@ import { NEAR_LIMIT, NEAR_ENOUGH } from "../../screens/main/data/facilities.js";
  * 해당 상수들이 서버 응답으로 대체된다. 상단 띠가 그 사실을 늘 적는다.
  */
 
-/* ── 8-1 서비스 운영 설정 ────────────────────────────────────────────────────
-   거리 값이 두 개다. 명세서 8-1 이 역할을 갈라 적었고, **시민 화면이 이미 그대로 돌고 있다**:
+/* ── 8-1 서비스 운영 설정 — 이 파일에서 나갔다 (2026-08-24) ──────────────────
+   `OPERATION_DEFAULTS`(안내 범위 · 배너 기준 · 상점가 임계 거리 · 신규 매장 판정 기간 ·
+   코스 반경 · 탭별 확대 단계)와 `OPERATION_FROM_CONFIG` 가 여기 있었다. 그 값들을 읽던
+   [환경 설정] 화면(M15)이 개발 쪽으로 넘어가면서 함께 내려갔다 (AdminApp 머리말).
 
-     facility_radius_m 2km   목록에 담는 범위 (facilities.js 의 NEAR_LIMIT)
-     safety_far_banner_m 1km 원거리 배너 기준 (facilities.js 의 NEAR_ENOUGH)
-
-   그래서 여기서 숫자를 지어내지 않고 그 상수를 가져온다. 유형별 상한(화장실 1km 등)은
-   시민 화면 쪽에서 2026-08-19 에 이미 걷어냈고, 명세서가 그것을 따라온 것이다. */
-export const OPERATION_DEFAULTS = {
-  facilityRadiusM: NEAR_LIMIT,
-  safetyFarBannerM: NEAR_ENOUGH,
-  marketThresholdM: 1000,
-  newStoreDays: 30,
-  courseRadiusM: 500,
-  zoomFacility: TAB_MAP_LEVEL.facility || MAP_LEVEL,
-  zoomMarket: TAB_MAP_LEVEL.district || MAP_LEVEL,
-  /* `zoomDiscover` 는 뺐다 (2026-08-20) — 둘러보기 탭에 지도가 없어 읽는 곳이 없다.
-     `TAB_MAP_LEVEL.discover` 값 자체는 시민 화면 config 에 남아 있다 (그쪽 주석 참조). */
-};
-
-/* 시민 화면 코드에서 그대로 가져온 항목. 화면이 이 목록을 보고 "지금 시민 화면이 쓰는 값"
-   이라는 표시를 붙인다 — 나머지는 아직 화면에 연결되지 않은 값이라 구분되어야 한다. */
-export const OPERATION_FROM_CONFIG = [
-  "facilityRadiusM", "safetyFarBannerM", "zoomFacility", "zoomMarket",
-];
+   **없어진 것은 관리자 쪽 사본이지 값이 아니다.** 애초에 이 파일의 규칙이 "config.js 에
+   이미 있는 값은 가져다 쓴다"였고, 그래서 지금도 시민 화면은 `facilities.js` 의
+   `NEAR_LIMIT` · `NEAR_ENOUGH` 와 `config.js` 의 `TAB_MAP_LEVEL` 로 그대로 돈다.
+   사본을 남겨두면 아무도 읽지 않는 두 번째 출처가 된다 — 이 파일이 처음부터 막으려던 것이다. */
 
 /* ── 8-2 API 쿼터 설정 (개발자 전용) ─────────────────────────────────────── */
 export const QUOTA_DEFAULTS = {
