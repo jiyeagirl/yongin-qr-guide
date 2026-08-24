@@ -6,7 +6,7 @@ import {
 import { DISTRICTS, GU_ORDER, FESTIVALS, CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
 import { STORES } from "../../screens/main/data/dunjeon.js";
 import { QR_POINTS } from "../../screens/main/data/qr.js";
-import { DISTRICT_FIELDS, govLink } from "../data/fields.js";
+import { DISTRICT_FIELDS } from "../data/fields.js";
 import { useCollection, readCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
@@ -185,25 +185,17 @@ export function Districts({ onToast }) {
       <EditorModal ed={ed} size="lg"
         title={ed.draft && ed.draft.isNew ? "상점가 등록" : "상점가 수정"}
         description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}>
+        {/* ── 「상권센터 링크 미리보기」를 뺐다 (2026-08-24) ────────────────────
+             폼 아래에 조립된 주소를 글자로 적어 보여주던 자리다. 그 칸이 **번호**를 받던
+             때에는 필요했다 — 담당자가 넣은 `114` 가 어떤 주소가 되는지는 화면이
+             말해주지 않으면 알 수 없었다.
+
+             이제 그 칸이 주소를 통째로 받는다. 미리보기에 적을 것이 방금 입력한 값과 한
+             글자도 다르지 않아, 같은 값을 한 화면에 두 번 적는 자리가 된다 (명세서 화면
+             문구 원칙 — 어느 쪽이 맞는지 의심하게 된다). 주소가 맞는지는 담당자가 그
+             주소를 복사해 온 브라우저가 이미 답했다. */}
         {ed.draft ? (
-          <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors} onChange={ed.set}
-            extra={
-              ed.draft.values.govSeq ? (
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <p style={{ marginBottom: 6, fontSize: "var(--fs-label)",
-                    fontWeight: "var(--fw-semibold)", color: "var(--text-heading)" }}>
-                    상권센터 링크 미리보기
-                  </p>
-                  <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)",
-                    lineHeight: 1.6, wordBreak: "break-all" }}>
-                    {govLink(ed.draft.values)}
-                  </p>
-                  <p style={{ marginTop: 4, fontSize: "var(--fs-caption)", color: "var(--text-muted)" }}>
-                    사용자 화면의 상점가 카드 바로가기 화살표가 이 주소로 갑니다. 비우면 화살표가 사라집니다.
-                  </p>
-                </div>
-              ) : null
-            } />
+          <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors} onChange={ed.set} />
         ) : null}
       </EditorModal>
 

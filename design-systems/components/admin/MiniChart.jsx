@@ -29,6 +29,13 @@ import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
  *
  * 숫자를 SVG 안에 넣지 않는 이유: 이 그래프는 preserveAspectRatio="none" 이라
  * 가로로 늘어난다. 그 안의 <text> 는 글자까지 함께 늘어나 뭉개진다.
+ *
+ * ── 막대가 적어도 굵어지지 않는다 (2026-08-24) ─────────────────────────────
+ * viewBox 를 자료 개수에 맞춰 만들면 「오늘」(1일)을 골랐을 때 막대 하나가 카드 폭
+ * 전체로 늘어난다. 같은 그래프가 기간만 바꿨는데 다른 물건처럼 보이고, 굵기 자체가
+ * 값인 것처럼 읽힌다. 그래서 칸수의 하한을 `minSlots`(기본 7 — 기본 기간이 7일이다)로
+ * 두고, 자료가 그보다 적으면 남는 칸을 양옆 여백으로 쓴다. 막대 굵기는 7일일 때와
+ * 정확히 같고, 적은 자료는 가운데 선다.
  */
 
 const PAD = 2;   /* 막대 사이 간격(퍼센트 아님, viewBox 단위) */
@@ -48,7 +55,7 @@ function labelledIndexes(values) {
 }
 
 export function MiniChart({
-  data = [], type = "bar", height = 160,
+  data = [], type = "bar", height = 160, minSlots = 7,
   format = v => v.toLocaleString("ko-KR"),
   label = "추이",
   style, ...rest
@@ -56,16 +63,23 @@ export function MiniChart({
   const values = data.map(d => Number(d.value) || 0);
   const max = Math.max(1, ...values);
   /* viewBox 를 값의 개수에 맞춰 만든다. 픽셀이 아니라 비율로 그리므로
-     폭이 얼마든(1024px ~ 1600px) 막대 굵기가 스스로 맞는다 */
-  const W = Math.max(1, data.length) * 10;
+     폭이 얼마든(1024px ~ 1600px) 막대 굵기가 스스로 맞는다.
+     칸수에 하한(minSlots)이 있어 자료가 적어도 막대가 굵어지지 않는다 */
+  const slots = Math.max(1, minSlots, data.length);
+  const offset = (slots - data.length) / 2;   /* 남는 칸의 절반 — 자료를 가운데 세운다 */
+  const W = slots * 10;
   const H = 100;
 
   const bars = data.map((d, i) => {
     const h = (Number(d.value) || 0) / max * H;
-    return { ...d, x: i * 10 + PAD / 2, y: H - h, w: 10 - PAD, h };
+    return { ...d, x: (offset + i) * 10 + PAD / 2, y: H - h, w: 10 - PAD, h };
   });
 
   const line = bars.map((b, i) => `${i === 0 ? "M" : "L"}${b.x + b.w / 2},${b.y}`).join(" ");
+  /* 면은 막대가 선 자리에서만 닫는다 — viewBox 끝이 아니다(양옆 여백이 있을 수 있다) */
+  const area = bars.length
+    ? `${line} L${bars[bars.length - 1].x + bars[bars.length - 1].w / 2},${H} L${bars[0].x + bars[0].w / 2},${H} Z`
+    : "";
 
   const labelled = labelledIndexes(values);
 
@@ -77,7 +91,7 @@ export function MiniChart({
           style={{ display: "block", width: "100%", height, overflow: "visible" }}>
           {type === "line" ? (
             <>
-              <path d={`${line} L${W - PAD / 2},${H} L${PAD / 2},${H} Z`} fill="var(--brand-primary-soft)" />
+              <path d={area} fill="var(--brand-primary-soft)" />
               {/* vectorEffect 로 선 굵기가 가로 확대에 딸려 늘어나지 않게 한다 —
                   preserveAspectRatio="none" 때문에 그러지 않으면 선이 뭉개진다 */}
               <path d={line} fill="none" stroke="var(--brand-primary)" strokeWidth={2}
@@ -98,7 +112,7 @@ export function MiniChart({
           pointerEvents: "none" }}>
           {bars.map((b, i) => (labelled.has(i) ? (
             <span key={i} style={{ position: "absolute",
-              left: `${((i + 0.5) / Math.max(1, data.length)) * 100}%`,
+              left: `${((offset + i + 0.5) / slots) * 100}%`,
               bottom: `calc(${(b.h / H) * 100}% + 3px)`, transform: "translateX(-50%)",
               fontSize: "var(--fs-micro)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
               fontWeight: b.h === H ? "var(--fw-bold)" : "var(--fw-medium)",
@@ -109,12 +123,16 @@ export function MiniChart({
         </div>
       </div>
 
-      {/* 양 끝 날짜만 적는다. 서른 개를 다 적으면 글자가 겹쳐 아무 것도 안 읽힌다 */}
+      {/* 양 끝 날짜만 적는다. 서른 개를 다 적으면 글자가 겹쳐 아무 것도 안 읽힌다.
+          여백이 있을 때는 그만큼 안쪽으로 들여 막대 끝에 맞춘다(자료가 꽉 차면 0%라
+          전과 같다). 하루치면 양 끝이 같은 날이므로 한 번만, 막대 아래 가운데 적는다. */}
       {data.length ? (
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6,
+        <div style={{ display: "flex",
+          justifyContent: data.length === 1 ? "center" : "space-between",
+          padding: `0 ${(offset / slots) * 100}%`, marginTop: 6,
           fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
           <span>{data[0].label}</span>
-          <span>{data[data.length - 1].label}</span>
+          {data.length > 1 ? <span>{data[data.length - 1].label}</span> : null}
         </div>
       ) : null}
 

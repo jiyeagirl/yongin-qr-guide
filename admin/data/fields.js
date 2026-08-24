@@ -109,9 +109,32 @@ export const DISTRICT_FIELDS = [
     example: "둔전골목형상점가", span: 2 },
   { key: "gu", spec: "gu", label: "소속 구", required: true, type: "select", options: GU_OPTIONS,
     example: "처인구" },
-  { key: "govSeq", spec: "gov_seq", label: "상권센터 페이지 번호", required: false, type: "text",
-    range: "최대 10자", maxLength: 10, example: "114",
-    hint: "비우면 사용자 화면 카드의 바로가기 화살표가 사라집니다" },
+  /* ── 번호가 아니라 주소를 받는다 (2026-08-24, 사용자 요청) ──────────────────
+     전에는 「상권센터 페이지 번호」에 `114` 같은 일련번호를 넣게 하고, 화면이 그것을
+     주소로 조립했다. 두 가지가 잘못돼 있었다.
+
+     첫째, **담당자가 알아들을 수 없는 이름이었다.** 「상권센터 페이지 번호」를 받아
+     적으려면 그 번호가 시 누리집 주소 안의 `seq` 값이라는 것을 이미 알아야 하는데,
+     그것은 이 화면을 만든 쪽의 사정이다. 담당자가 손에 쥐고 있는 것은 브라우저 주소창의
+     주소 한 줄이다. 그러니 그 한 줄을 그대로 붙여넣게 한다.
+
+     둘째, **조립한 주소가 시민 화면이 쓰는 주소와 달랐다.** 여기서 만들던 것은
+     `marketGuide.do?key=114&searchGu=…&seq=…` 였고 시민 화면(districts.js 의
+     `homepage`)이 쓰는 것은 `marketGuideDetail.do?key=114&seq=…` 다. 게다가 32곳 어디에도
+     `govSeq` 값이 없어 이 칸은 늘 비어 있었다 — 고쳐도 시민 화면에 닿지 않는 칸이었다.
+
+     그래서 키를 `homepage` 로 맞췄다. **이제 이 칸이 시민 화면 카드의 바로가기가 여는
+     바로 그 주소다.** 조립하는 코드(`govLink`)는 없앴다 — 붙여넣은 주소가 곧 값이다.
+
+     ── 「비우면 …화살표가 사라집니다」도 뺐다 (2026-08-24, 사용자 요청) ────────
+     그렇게 동작하지도 않게 됐다. 비워 두면 사용자 화면의 [상세 페이지] 줄이 사라지는 대신
+     「아직 준비 중입니다」 안내가 뜬다 (screens/detail/DistrictSoon.jsx). 담당자가 값을
+     비우는 이유는 대개 **아직 페이지가 없어서**인데, 그때 줄이 통째로 사라지면 시민은
+     이 상점가만 무언가 빠졌다고 읽는다. */
+  { key: "homepage", spec: "gov_url", label: "상권 활성화 센터 페이지 링크",
+    required: false, type: "text", span: 2,
+    range: "최대 500자", maxLength: 500, pattern: V.url,
+    example: "https://www.yongin.go.kr/yimr/www/marketGuideDetail.do?key=114&seq=2" },
   { key: "addr", spec: "address", label: "주소", required: true, type: "text",
     range: "최대 100자", maxLength: 100,
     example: "처인구 김량장동 133-37번지 일원", span: 2 },
@@ -136,12 +159,9 @@ export const DISTRICT_FIELDS = [
   { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch" },
 ];
 
-/* 상권활성화센터 외부 링크 (명세서 2-1) */
-export function govLink(d) {
-  if (!d || !d.govSeq) return null;
-  return "https://www.yongin.go.kr/yimr/www/marketGuide.do?key=114"
-    + `&searchGu=${encodeURIComponent(d.gu || "")}&seq=${encodeURIComponent(d.govSeq)}`;
-}
+/* 상권 활성화 센터 외부 링크(명세서 2-1)를 만들던 `govLink()` 는 없앴다 (2026-08-24).
+   번호를 주소로 조립하던 함수인데, 이제 `homepage` 가 주소 자체다 — 조립할 것이 없다.
+   시민 화면은 예나 지금이나 `district.homepage` 를 그대로 연다 (DistrictRow 의 external). */
 
 /* ══ 2-2 개별 점포 정보 (M06) ══════════════════════════════════════════════
    출처: 공공데이터 · **데이터 기준일 표기 대상** (기준일은 개별 화면이 아니라 M14 에서 정한다)
@@ -189,30 +209,46 @@ export const STORE_FIELDS = [
      명세서 1장의 M06 기능란도 「폼, 지도 좌표 확인」이라고 적고 있다. */
   COORD,
 
+  /* ── 분류 넷에는 설명을 달지 않는다 (2026-08-24, 사용자 요청) ───────────────
+     「원본값 그대로」·「업종 칩 매핑이 이 값을 씁니다 (카페/디저트 분리)」가 붙어 있었다.
+     둘 다 **이 자료가 어디서 왔고 어디에 쓰이는가**를 적은 줄인데, 그것은 담당자가 이 칸에서
+     하는 일(고른다)과 상관이 없다. 넷이 나란히 선 자리라 설명 줄이 붙으면 고르는 칸보다
+     회색 글씨가 더 눈에 띈다. 칩이 이 넷에서 나온다는 사실은 **칩 칸이 자기 자리에서**
+     적는다 — 그것을 읽을 이유가 있는 자리는 거기 하나다. */
   { key: "bizL", spec: "category_large", label: "상권업종대분류명", required: true, type: "select",
-    options: opts(BIZ_MAJOR), range: "최대 30자", example: "음식", hint: "원본값 그대로" },
+    options: opts(BIZ_MAJOR), range: "최대 30자", example: "음식" },
   { key: "biz", spec: "category_mid", label: "상권업종중분류명", required: false, type: "select",
-    options: withBlank(opts(BIZ_MID), "— 없음 —"), range: "최대 30자", example: "한식",
-    hint: "업종 칩 매핑이 이 값을 씁니다 (카페/디저트 분리)" },
+    options: withBlank(opts(BIZ_MID), "— 없음 —"), range: "최대 30자", example: "한식" },
   { key: "bizS", spec: "category_small", label: "상권업종소분류명", required: false, type: "select",
     options: withBlank(opts(BIZ_MINOR), "— 없음 —"), range: "최대 30자", example: "곱창전골/구이" },
   { key: "ksic", spec: "industry_std", label: "표준산업분류명", required: false, type: "select",
     options: withBlank(opts(KSIC), "— 없음 —"), range: "최대 40자", example: "기타 주점업" },
 
-  { key: "onnuri", spec: "is_onnuri", label: "온누리 가맹여부", required: false, type: "switch",
-    hint: "시장명 매칭으로 자동 설정되며 수기로 바꿀 수 있습니다" },
+  /* 온누리 두 칸의 설명도 뺐다 (2026-08-24, 사용자 요청). 「시장명 매칭으로 자동
+     설정되며…」는 값의 출처이고, 「비운 것과 둘 다 안 됨은 다릅니다」는 우리 쪽 자료
+     구조를 담당자에게 설명한 줄이다. 토글은 켜거나 끄고, 체크박스는 아는 것만 고른다. */
+  { key: "onnuri", spec: "is_onnuri", label: "온누리 가맹여부", required: false, type: "switch" },
   { key: "onnuriType", spec: "onnuri_type", label: "온누리 상품권 종류", required: false,
-    type: "multiselect", options: ONNURI_TYPE_OPTIONS,
-    hint: "가맹인데 종류를 모르면 비워 둡니다 — 비운 것과 「둘 다 안 됨」은 다릅니다" },
+    type: "multiselect", options: ONNURI_TYPE_OPTIONS },
 
+  /* ── 이 칸은 ⚙ 이면서 고칠 수 있다 (2026-08-24) ─────────────────────────────
+     명세서 2-2 의 `chip_category` 는 "자동 산출 후 수기 변경 가능"이고 화면도 그렇게
+     동작하려 했는데 (Stores.jsx 의 setField 가 chipManual 을 기억한다), **폼에서는 고칠
+     수가 없었다.** `required: "auto"` 한 값이 ⚙ 배지와 읽기 전용을 함께 뜻했기 때문이다.
+     설명 줄은 「아래에서 수기로 바꿀 수 있습니다」라고 적혀 있어, 없는 자리를 가리키면서
+     못 하는 일을 하라고 말하고 있었다.
+
+     `editable` 로 그 둘을 갈랐다 (FormGrid). 배지는 ⚙ 그대로 — 값을 만드는 것은 여전히
+     규칙이다 — 두고 칸만 열었다. 설명도 그 두 가지를 그대로 적는다. */
   { key: "cat", spec: "chip_category", label: "표시 업종 칩", required: "auto", type: "select",
-    options: CHIP_OPTIONS, span: 2,
-    hint: "대·중·소분류에서 자동 산출됩니다. 아래에서 수기로 바꿀 수 있습니다" },
+    options: CHIP_OPTIONS, span: 2, editable: true,
+    hint: "상권업종 대·중·소분류에서 자동 산출된 값입니다. 관리자가 수기로 수정 가능합니다." },
 
   { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch",
     example: "폐업 확인 시 삭제 대신 이것을 끕니다" },
-  { key: "views", spec: "view_count", label: "조회수", required: "auto", type: "number", unit: "회",
-    hint: "인기순 정렬의 원천" },
+  /* 「인기순 정렬의 원천」도 뺐다 (2026-08-24, 사용자 요청). 못 고치는 숫자 옆에서
+     그 숫자가 어디에 쓰이는지를 알아도 담당자가 할 수 있는 일이 없다 */
+  { key: "views", spec: "view_count", label: "조회수", required: "auto", type: "number", unit: "회" },
   /* ── 등록 시점은 자동으로 채우되 고칠 수 있다 (2026-08-20, 사용자 요청) ──────
      전에는 읽기 전용(⚙)이었다. 원천의 `created_at` 을 그대로 보여주는 값이니 손댈 이유가
      없다고 본 것인데, **관리자가 점포를 새로 등록하는 경우가 실제로 있다.** 그때 이 값은
@@ -533,8 +569,13 @@ export const OPERATION_FIELDS = [
    빠진 것은 **고치는 자리**이지 값이 아니다. (노출 순서 · 공공시설 source 와 같은 경우다) */
 
 /* ══ 9장 계정 (M16) ════════════════════════════════════════════════════════
-   `role`(권한) 항목이 빠졌다 (2026-08-20). 관리자 화면을 쓰는 사람이 용인시 담당자
-   하나뿐이라 나눌 권한이 없다 — 모든 계정이 같은 일을 할 수 있다. */
+   `role`(권한) 항목이 빠졌다 (2026-08-20). 업무 화면 아홉 개에는 등급이 없다 —
+   시설 하나를 고치는 일에 등급을 매길 이유가 없다.
+
+   최종 관리자(2026-08-24)가 생긴 뒤에도 이 표는 그대로다. 지켜야 할 것이 **아이디가
+   `admin` 인 계정 하나**이지 등급 체계가 아니라서, 판정을 아이디로 한다 (account.js 의
+   `SUPER_ID`). `role` 열을 되살리면 등록·수정 폼에 고를 것이 사실상 없는 「권한」 칸이
+   생기고, 그 칸이 이 표와 명세서 항목표를 함께 늘린다. */
 
 export const ACCOUNT_FIELDS = [
   { key: "id", spec: "login_id", label: "아이디", required: true, type: "text",

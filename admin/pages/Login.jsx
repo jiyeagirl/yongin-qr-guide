@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Input, Icon, Notice, Modal, Textarea } from "../../design-systems/admin.js";
-import { SEED_ACCOUNTS, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES, SESSION_HOURS }
+import { SEED_ACCOUNTS, SUPER_ID, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES, SESSION_HOURS }
   from "../data/account.js";
 
 /* M01 로그인 — 로그인, 비밀번호 초기화 요청.
@@ -10,10 +10,11 @@ import { SEED_ACCOUNTS, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES, SESSION_HOURS }
  * 화면보다 먼저 사라지고, 그러면 이 화면 뒤를 아무도 못 본다. 감출 가치가 있는 비밀이
  * 아니라 검수용 열쇠이므로 안내 상자에 적어 두고, **이것이 임시라는 사실도 함께 적는다.**
  *
- * ── 계정이 하나다 (2026-08-20) ─────────────────────────────────────────────
- * 전에는 권한이 다른 두 계정(시청 담당자 · 개발자)을 나란히 적었다. 권한 구분을
- * 없애면서 검수용 계정도 하나가 됐다 — 화면이 계정에 따라 달라지지 않으므로
- * 두 벌을 두면 "이 계정으로는 무엇이 다른가"를 확인하는 데 시간만 쓴다.
+ * ── 계정이 둘이다 (2026-08-24) ─────────────────────────────────────────────
+ * v1.1 에서 하나로 줄였던 것을 다시 둘로 둔다. 이번에는 **화면이 실제로 갈리기**
+ * 때문이다 — `admin` 으로 들어오면 좌측 내비에 [계정 관리]가 있고 `yongin` 으로
+ * 들어오면 없다. 한 벌만 적어 두면 그 차이를 검수할 방법이 없다.
+ * (없앤 것은 `CITY`/`DEVELOPER` 등급이고, 업무 화면 아홉 개는 여전히 둘이 똑같다.)
  *
  * ── 잠금을 화면에 적는다 ────────────────────────────────────────────────────
  * 명세서 9장: "로그인 5회 실패 시 10분 잠금". 잠긴 뒤에야 그 사실을 알려주면 담당자는
@@ -24,7 +25,8 @@ import { SEED_ACCOUNTS, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES, SESSION_HOURS }
  * ── 비밀번호 초기화가 "요청"인 이유 ─────────────────────────────────────────
  * 메일로 재설정 링크를 보내려면 서버가 필요하고, 계정이 시청·운영사 몇 명뿐이라
  * 자동 재설정을 만들 만한 규모가 아니다. 그래서 "비밀번호 초기화 **요청**"이고 —
- * 다른 계정을 가진 담당자가 [계정 관리]에서 새 비밀번호를 넣어 주는 흐름이다.
+ * 최종 관리자가 [계정 관리]에서 새 비밀번호를 넣어 주는 흐름이다. 계정 관리가
+ * `admin` 전용이 된 뒤로 이 통로는 **담당자가 비밀번호를 바꾸는 유일한 길**이다.
  *
  * ── 조아용을 쓰지 않는다 ────────────────────────────────────────────────────
  * 캐릭터는 시민을 맞이하는 자리의 것이다 (디자인 시스템 7번 규칙). 업무 화면의 로그인은
@@ -103,18 +105,25 @@ export function Login({ onSignIn }) {
           {SEED_ACCOUNTS.map(a => (
             <span key={a.id} style={{ display: "block", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
               <b>{a.name}</b> — {a.id} / {a.pw}
+              {/* 어느 쪽으로 들어와야 계정 관리가 보이는지를 여기서 적는다.
+                  둘의 차이가 그 한 화면뿐이라 적어두지 않으면 검수하는 사람이
+                  「내비가 계정마다 다르다」를 결함으로 적게 된다 */}
+              {a.id === SUPER_ID ? (
+                <span style={{ color: "var(--text-muted)" }}> · [계정 관리] 화면은 이 계정에만 보입니다</span>
+              ) : null}
             </span>
           ))}
           <span style={{ display: "block", marginTop: "var(--space-2)" }}>
             서버 연동 전이라 화면 안에서만 확인하는 임시 계정입니다.
-            계정을 더 만들려면 들어간 뒤 [계정 관리]에서 등록합니다.
+            나머지 아홉 화면은 두 계정이 똑같이 씁니다.
+            계정을 더 만들려면 최종 관리자로 들어간 뒤 [계정 관리]에서 등록합니다.
           </span>
         </Notice>
       </div>
 
       {/* ── 비밀번호 초기화 요청 (M01) ──────────────────────────────────── */}
       <Modal open={reset} size="md" title="비밀번호 초기화 요청"
-        description={resetSent ? undefined : "다른 계정을 가진 담당자에게 초기화를 요청합니다."}
+        description={resetSent ? undefined : "최종 관리자에게 초기화를 요청합니다."}
         onClose={() => setReset(false)}
         footer={resetSent ? (
           <Button variant="primary" onClick={() => setReset(false)}>닫기</Button>
@@ -130,8 +139,8 @@ export function Login({ onSignIn }) {
               요청을 접수했습니다. 담당자가 확인한 뒤 새 비밀번호를 알려 드립니다.
             </p>
             <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-4)" }}>
-              서버 연동 전이라 실제로 전달되지는 않습니다. 지금은 [계정 관리] 화면에서
-              다른 계정이 비밀번호를 직접 바꿔 주는 흐름입니다.
+              서버 연동 전이라 실제로 전달되지는 않습니다. 지금은 최종 관리자가
+              [계정 관리] 화면에서 비밀번호를 직접 바꿔 주는 흐름입니다.
             </Notice>
           </>
         ) : (

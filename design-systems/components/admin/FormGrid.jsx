@@ -70,11 +70,16 @@ export function requiredKey(required) {
 export function FormField({
   label, required = false, example, range, hint, error,
   type = "text", value, onChange, options, placeholder, rows, min, max, maxLength, unit, disabled,
-  span = 1, children, style, ...rest
+  editable = false, span = 1, children, style, ...rest
 }) {
   const set = v => { if (onChange) onChange(v); };
   const badge = REQUIRED_BADGE[requiredKey(required)];
-  const readOnly = type === "readonly" || required === "auto";
+  /* ⚙(자동)이면서 **고칠 수 있는** 항목이 있다 — 점포의 업종 칩이 그것이다 (명세서 2-2:
+     "자동 산출 후 수기 변경 가능"). 그때까지 ⚙ 는 「못 고침」과 한 몸이었는데, 둘은 다른
+     이야기다: ⚙ 는 **값이 어디서 왔는가**(규칙이 만들었다)이고, 읽기 전용은 **누가 고칠 수
+     있는가**다. `editable` 이 그 둘을 가른다 — 배지는 ⚙ 그대로 두고 칸만 열어 준다.
+     기본값이 false 라 나머지 ⚙ 항목(점포수 · 조회수 …)은 전과 같이 읽기 전용이다. */
+  const readOnly = type === "readonly" || (required === "auto" && !editable);
 
   /* 칸 안에 적을 수 있는 타입인가 — 위 머리말 참조 */
   const inline = !readOnly && !["select", "multiselect", "switch", "date"].includes(type);

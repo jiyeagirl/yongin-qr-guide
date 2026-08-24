@@ -236,12 +236,12 @@ export function Dashboard({ onNavigate }) {
         gap: "var(--space-4)", marginBottom: "var(--space-7)" }}>
         <Card>
           <Section title="일별 스캔 추이">
+            {/* 그래프 밑에 「주말이 평일보다 높고 축제일에 늘었습니다」 한 줄을 적어
+                두었던 것을 뺐다 (2026-08-24, 사용자 요청). 막대에 값이 적히고 튄 날이
+                눈에 보이는 이상 그 문장은 그래프를 소리 내어 읽는 것에 지나지 않았고,
+                기간을 「오늘」이나 30일로 바꾸면 화면에 없는 날을 말하는 줄이 됐다. */}
             <MiniChart data={s.daily} type="bar" height={180}
               label={`${s.period.label} 일별 QR 스캔 수`} />
-            <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-caption)",
-              color: "var(--text-muted)", lineHeight: 1.55 }}>
-              주말이 평일보다 높고, 둔전 골목축제일(10.17)에 크게 늘었습니다.
-            </p>
           </Section>
         </Card>
 
