@@ -7,8 +7,12 @@ import { readQrCode, readReviewFlags, resolveQr } from "./data/qr.js";
 /* 진입 게이트 — 이 저장소의 **화면 진입점**이다 (index.html 과 tools/build.mjs 가 여기를 연다).
  *
  *   QR 스캔 → S01 QrEntry (로딩)  ─ ok ────→  MainApp (셸: S02·S03·S04 탭)
- *                                └ unknown ┐
- *                                └ inactive ┴→ S11 EntryFallback
+ *                                ├ unknown  ┐
+ *                                ├ inactive ┼→ S11   EntryFallback
+ *                                └ pending  ─→ S11-A EntryFallback (같은 컴포넌트, 다른 문구)
+ *
+ * 갈래가 넷이 됐지만 이 파일은 그대로다 — 상태 문자열을 그대로 넘기고 무엇을 보일지는
+ * 저쪽이 정한다 (2026-08-24. 갈래를 여기서 세면 화면이 늘 때마다 진입이 한 줄씩 길어진다).
  *
  * ── 왜 MainApp 안이 아니라 그 바깥인가 ─────────────────────────────────────
  * 셸(MainApp)은 지도를 만들고 335곳을 그린다. QR 이 잘못됐을 때 그 셸을 띄운 뒤 위에

@@ -30,7 +30,7 @@ export { PageHeader } from "./components/admin/PageHeader.jsx";
 export { DataTable, Cell } from "./components/admin/DataTable.jsx";
 export { Toolbar } from "./components/admin/Toolbar.jsx";
 export { Modal } from "./components/admin/Modal.jsx";
-export { ConfirmDialog } from "./components/admin/ConfirmDialog.jsx";
+export { ConfirmDialog, DELETE_NOTE } from "./components/admin/ConfirmDialog.jsx";
 export { FormGrid, FormField, FormSection, requiredKey } from "./components/admin/FormGrid.jsx";
 export { MiniChart } from "./components/admin/MiniChart.jsx";
 
@@ -60,7 +60,7 @@ export { FESTIVAL_STATES, FESTIVAL_STATE_TONE, FESTIVAL_BADGE_TONE, festivalTone
 export { Notice, Toast, EmptyState, LoadingBar, ProgressBar } from "./index.js";
 
 /* ── 공용: 그 밖 ─────────────────────────────────────────────────────────── */
-export { SegmentedTabs, StatTile, token, josa } from "./index.js";
+export { SegmentedTabs, StatTile, token, josa, eul } from "./index.js";
 
 /* 조아용은 시민을 맞이하는 자리의 것이지만(디자인 시스템 7번 규칙), 관리자에서도
    **고르는 대상**으로는 나온다 — 축제 카드에 쓸 그림을 여기서 정하기 때문이다.

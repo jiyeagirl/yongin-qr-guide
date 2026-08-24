@@ -6,7 +6,7 @@ import {
 import { QR_POINTS } from "../../screens/main/data/qr.js";
 import { DISTRICTS } from "../../screens/main/data/districts.js";
 import { QR_FIELDS, INSTALL_STATUS } from "../data/fields.js";
-import { useCollection } from "../data/store.js";
+import { useCollection, readCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
@@ -21,9 +21,24 @@ import { EditorModal } from "./EditorModal.jsx";
  * 화면에서 코드를 만들 수 있게 두면 인쇄물 없는 코드가 표에 남는다.
  *
  * 그래서 고칠 수 있는 것은 현장에서 달라지는 값뿐이다:
- *   설치 상태 · 설치일자 · 활성 여부 · 설치 상세 위치 · 관리 메모
- * 지점을 가리키는 값(QR 식별자 · 지점명 · 주소 · 좌표 · 소속 상점가)은 **읽기 전용**으로
- * 다이얼로그 위쪽에 적기만 한다. 삭제도 없다 — 아래 「끄는 것과 지우는 것은 다르다」 참조.
+ *   소속 상점가 · 설치 상태 · 설치일자 · 활성 여부 · 설치 상세 위치 · 관리 메모
+ * 지점을 가리키는 값(QR 식별자 · 지점명 · 주소 · 좌표)은 **읽기 전용**으로 다이얼로그
+ * 위쪽에 적기만 한다. 삭제도 없다 — 아래 「끄는 것과 지우는 것은 다르다」 참조.
+ *
+ * ── 소속 상점가만 읽기 전용에서 나왔다 (2026-08-24, 사용자 요청) ─────────────
+ * 위 네 값과 이 값은 성격이 다르다. 넷은 **안내판에 인쇄되어 현장에 붙은 것**이라 화면에서
+ * 고쳐 봐야 종이와 어긋날 뿐이지만, 소속 상점가는 어디에도 인쇄되지 않는다 — 우리가 이
+ * 지점을 어느 상점가에 매어 두었는가일 뿐이다.
+ *
+ * 그것이 바뀌어야 하는 자리가 생겼다. **상점가는 지워질 수 있고, 지우면 거기 걸린 QR 지점이
+ * 함께 간다** (Districts.jsx). 소속이 읽기 전용이면 담당자에게 남는 길은 둘뿐이었다 —
+ * 상점가를 지우지 않거나, 멀쩡한 안내판을 함께 지우거나. 현장의 안내판은 그대로 붙어 있는데
+ * 화면에서만 사라지는 쪽이 더 나쁘다.
+ *
+ * 이제 상점가를 정리하기 전에 **지점을 다른 상점가로 옮기거나 [지정 안 함]으로 둘 수 있다.**
+ * 비워 두는 것이 도망이 아니라 정상적인 갈래인 것은 아래 문단이 적은 그대로다.
+ * 고르개에는 **지금 살아 있는 상점가만 오른다** — 지워진 상점가로 옮길 수 있으면 방금 만든
+ * 길이 다시 같은 자리로 돌아온다.
  *
  * ── 이 화면이 시민용의 시작점을 정한다 ──────────────────────────────────────
  * 시민이 보는 모든 거리("약 320m")가 여기 등록된 좌표 한 점에 매달려 있다. 좌표가 100m
@@ -51,8 +66,10 @@ import { EditorModal } from "./EditorModal.jsx";
  * 삭제 버튼을 아예 두지 않는 것이 이 원칙을 지키는 가장 짧은 방법이다.
  */
 
-/* 현장에서 달라지는 값만 고친다. 나머지는 위쪽에 읽기 전용으로 적는다 */
-const STATUS_KEYS = ["installStatus", "installedAt", "active", "locationDetail", "memo"];
+/* 폼에 세우는 항목. 인쇄되지 않는 값만 고친다 — 나머지는 위쪽에 읽기 전용으로 적는다.
+   `districtId` 가 맨 앞인 것은 QR_FIELDS 의 차례가 그렇기 때문이고, 마침 맞다 —
+   무엇에 매인 지점인지를 정한 다음에 그 지점의 현황을 적는다. */
+const EDIT_KEYS = ["districtId", "installStatus", "installedAt", "active", "locationDetail", "memo"];
 
 const DISTRICT_NAME = DISTRICTS.reduce((o, d) => { o[d.id] = d.name; return o; }, {});
 
@@ -77,9 +94,20 @@ export function QrPoints({ onToast }) {
   const [active, setActive] = React.useState("");
   const list0 = useListState([status, active]);
 
+  /* 고르개에 오르는 상점가 — 항목표의 붙박이 목록(QR_FIELDS 의 options)이 아니라 **지금
+     살아 있는 것**을 쓴다. 지워진 상점가가 고르개에 남아 있으면, 지점을 옮겨 살려 두려던
+     담당자가 방금 지운 상점가를 다시 고르게 되고 그 지점은 그대로 다시 사라진다.
+     32개짜리 배열이라 렌더마다 다시 만들어도 값이 나가지 않는다. */
+  const districtOptions = [{ value: "", label: "— 지정 안 함 —" }]
+    .concat(readCollection("districts", DISTRICTS).map(d => ({ value: d.id, label: d.name })));
+
+  const fields = QR_FIELDS
+    .filter(f => EDIT_KEYS.includes(f.key))
+    .map(f => (f.key === "districtId" ? { ...f, options: districtOptions } : f));
+
   const ed = useRecordEditor({
-    /* 현황 항목만 폼에 세운다. 지점을 가리키는 값은 폼 위 요약에 읽기 전용으로 적는다 */
-    fieldsFor: () => QR_FIELDS.filter(f => STATUS_KEYS.includes(f.key)),
+    /* 인쇄되지 않는 값만 폼에 세운다. 안내판에 박힌 값은 폼 위 요약에 읽기 전용으로 적는다 */
+    fieldsFor: () => fields,
     /* 넘어온 행에 고친 값만 덮는다 — 폼에 없는 값(코드 · 좌표 …)은 그대로 간다 */
     onSave: values => upsert({ ...values, id: values.id || values.code }),
     onToast, label: "QR 지점",
@@ -96,8 +124,14 @@ export function QrPoints({ onToast }) {
 
   return (
     <>
+      {/* 뒷문장을 더했다 (2026-08-24) — 이 화면에는 삭제 버튼이 없는데도 지점이 목록에서
+          사라지는 길이 하나 생겼다. 상점가를 지우면 거기 걸린 QR 지점이 함께 간다
+          (Districts.jsx 의 removeWithLinked). 그 사실을 여기 적지 않으면, 어제 있던 지점이
+          없어졌는데 이 화면 어디에도 이유가 없는 상태가 된다.
+          **피하는 방법을 먼저 적는다** — 되돌리는 자리(상점가 목록)보다, 함께 지워지지 않게
+          미리 소속을 옮기는 쪽이 담당자가 실제로 하고 싶은 일이다. */}
       <PageHeader title="QR 지점 관리" count={`${filtered.length}곳`}
-        note="설치된 지점의 현황을 보고 설치 상태와 활성 여부를 갱신합니다. 지점을 새로 만들거나 지우지는 않습니다." />
+        note="설치된 지점의 현황을 보고 소속 골목형 상점가와 설치 상태를 갱신합니다. 지점을 새로 만들거나 지우지는 않습니다. 다만 소속 골목형 상점가를 삭제하면 그 지점도 함께 사라집니다. 지점을 남기려면 소속을 먼저 다른 곳으로 옮기거나 [지정 안 함]으로 바꿔 주세요. 함께 사라진 지점은 골목형 상점가 목록의 [삭제된 항목]에서 함께 돌아옵니다." />
 
       <Toolbar>
         <Select value={status} options={STATUS_OPTIONS} onChange={e => setStatus(e.target.value)} />
@@ -110,15 +144,15 @@ export function QrPoints({ onToast }) {
         caption="등록된 QR 설치 지점 목록"
         rows={paged.rows} rowKey="id" onRowClick={ed.openEdit}
         empty={{ title: "조건에 맞는 지점이 없습니다." }}
-        /* 설치는 끝났는데 아직 안 켠 지점 — 안내판은 붙어 있고 찍으면 오류가 뜬다.
-           남은 일 중 가장 급한 것이라 줄째로 세운다 */
+        /* 설치는 끝났는데 아직 안 켠 지점 — 안내판은 붙어 있고 찍으면 준비 중 안내가
+           뜬다 (S11-A). 남은 일 중 가장 급한 것이라 줄째로 세운다 */
         rowTone={p => (p.installStatus === "설치완료" && !p.active ? "warning"
           : p.installStatus === "훼손" ? "danger" : null)}
         columns={[
           { key: "code", label: "QR 식별자", width: 160, sortable: true },
           { key: "name", label: "지점명", sortable: true },
           { key: "addr", label: "도로명주소", render: p => p.addr || p.dong || EMPTY_MARK },
-          { key: "districtId", label: "소속 상점가", width: 180,
+          { key: "districtId", label: "소속 골목형 상점가", width: 190,
             render: p => (p.districtId
               ? DISTRICT_NAME[p.districtId]
               : <span style={{ color: "var(--text-muted)" }}>지정 안 함</span>) },
@@ -155,12 +189,14 @@ export function QrPoints({ onToast }) {
                   { label: "도로명주소", value: ed.draft.values.addr || ed.draft.values.dong },
                   { label: "좌표", value: ed.draft.values.lat != null && ed.draft.values.lng != null
                     ? `${ed.draft.values.lat}, ${ed.draft.values.lng}` : null },
-                  { label: "소속 상점가", value: DISTRICT_NAME[ed.draft.values.districtId] || "지정 안 함" },
+                  /* 「소속 상점가」가 이 목록에서 아래 폼으로 내려갔다 (2026-08-24) —
+                     인쇄되지 않는 유일한 값이고, 상점가가 지워질 때 옮길 자리가 필요하다
+                     (머리말). 여기에 한 번 더 적으면 같은 값이 한 화면에 두 번 나온다. */
                 ]} />
                 <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-caption)",
                   color: "var(--text-muted)", lineHeight: 1.55 }}>
-                  위 다섯 값은 안내판에 인쇄되어 현장에 붙은 것이라 이 화면에서 바꾸지 않습니다.
-                  아래 현황만 고칠 수 있습니다.
+                  위 네 값은 안내판에 인쇄되어 현장에 붙은 것이라 이 화면에서 바꾸지 않습니다.
+                  아래 항목만 고칠 수 있습니다.
                 </p>
 
                 {/* ── 경고는 폼 **위**다 (2026-08-20) ────────────────────────
@@ -168,16 +204,20 @@ export function QrPoints({ onToast }) {
                        이 둘도 위로 올렸다 — 폼이 「관리 메모」로 끝나야 하고(마지막 칸이
                        마지막에 보인다), 무엇보다 경고는 값을 고치기 **전에** 읽어야 한다. */}
                 {ed.draft.values.installStatus === "설치완료" && !ed.draft.values.active ? (
+                  /* 사용자 쪽 문구가 바뀌면 이 줄도 함께 고친다 (2026-08-24) — 종전에는
+                     「지금은 쓰지 않는 코드」라고 적었는데, 시민 화면이 훼손·철거와 준비
+                     중을 가르면서 이 조합에서 뜨는 것은 S11-A 가 되었다. 담당자가 여기서
+                     읽은 문구와 현장에서 뜨는 문구가 다르면 이 경고를 못 믿게 된다 */
                   <Notice tone="warning" size="sm" style={{ marginTop: "var(--space-4)" }}>
                     설치는 완료인데 활성이 꺼져 있습니다. 지금 이 안내판을 찍으면 사용자에게
-                    「지금은 쓰지 않는 코드」 안내가 뜹니다. 열 준비가 되었으면 활성을 켜 주세요.
+                    「아직 준비 중인 QR 코드입니다」 안내가 뜹니다. 열 준비가 되었으면 활성을 켜 주세요.
                   </Notice>
                 ) : null}
 
                 {!ed.draft.values.districtId ? (
                   <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-3)" }}>
-                    소속 상점가를 비워 두면 이 지점으로 들어온 사용자의 상점가 탭이 안내 상태로 뜹니다.
-                    근처에 상점가가 없는 자리(공원 · 관공서 앞)에서는 그것이 맞는 화면입니다.
+                    소속을 비워 두면 이 지점으로 들어온 사용자에게 가까운 골목형 상점가 3곳을 대신 안내합니다.
+                    근처에 골목형 상점가가 없는 자리(공원 · 관공서 앞)에서는 그것이 맞는 화면입니다.
                   </Notice>
                 ) : null}
               </div>

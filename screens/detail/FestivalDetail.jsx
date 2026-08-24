@@ -3,6 +3,7 @@ import {
   DetailPage, DetailBody, DetailNotice, InfoList, Accordion, SectionHeader,
   Badge, ListRow, Icon, Notice, festivalBadge,
 } from "../../design-systems/index.js";
+import { whenLabel } from "../main/data/districts.js";
 
 /* S09 축제 상세 (기능명세서 v1.1 4장 S09 행).
  * 관련 기능: U-FT-02(축제 상세) · U-FT-04(부스 위치) `C` · U-FT-05(당일 임시시설) `C`
@@ -90,7 +91,26 @@ export function FestivalDetail({ festival, onBack, onOpenDistrict }) {
      상점가명과 거리를 병기하라고 요구한다). km 로 적는다 — 축제는 수 km 밖이 기본이다. */
   const distance = f.dist >= 1000 ? `${(f.dist / 1000).toFixed(1)}km` : `${f.dist}m`;
 
-  const programs = (f.programs || []).map(p => ({ meta: p.at, title: p.title, body: p.desc }));
+  /* ── 시각과 위치가 값으로 들어온다 (2026-08-24) ─────────────────────────
+     전에는 `p.at` 이 "15:00~17:00" 이라는 한 덩어리 글자였고, 자리 정보("한숲공원
+     야외무대")는 설명 문장 끝에 섞여 있었다. 관리자 폼이 날짜·시각 고르개와 「위치」
+     칸을 갖게 되면서 여기도 조각으로 들어온다 (data/districts.js).
+
+     아코디언은 접힌 줄에 **시각과 제목만** 보인다. 위치는 펴야 보이는 쪽이 맞다 —
+     훑을 때 필요한 것은 "몇 시에 뭘 하나"이고, "어디서"는 갈지 정한 다음의 질문이다. */
+  const oneDay = f.start === f.end;
+  const programs = (f.programs || []).map(p => ({
+    meta: whenLabel(p.startAt, p.endAt, oneDay),
+    title: p.title,
+    body: p.where ? (
+      <>
+        <span style={{ display: "block", fontWeight: "var(--fw-semibold)", color: "var(--text-heading)" }}>
+          {p.where}
+        </span>
+        {p.desc}
+      </>
+    ) : p.desc,
+  }));
   const booths = f.booths || [];
 
   return (
@@ -195,10 +215,23 @@ export function FestivalDetail({ festival, onBack, onOpenDistrict }) {
             <SectionHeader title="부스 위치" note="주최 상점가 제공" />
             <div style={{ background: "var(--surface-card)", border: "var(--stroke-hairline) solid var(--border-default)",
               borderRadius: "var(--radius-card)", padding: "var(--space-2) var(--space-4)" }}>
+              {/* 두 줄이 각각 다른 질문에 답한다 — 어디에 있나(위치) · 지금 열었나(시각).
+                  「규모」 한 마디("20여 곳")가 있던 자리는 없앴다 (2026-08-24) — 무엇을 하는
+                  곳인지는 부스명이 이미 말한다. 시각이 없으면 그 줄은 나오지 않는다. */}
               {booths.map((b, i) => (
                 <ListRow key={b.name} icon={<Icon name="grid" size={22} />} title={b.name}
-                  meta={`${b.where} · ${b.count}`} trailing={null}
-                  divider={i < booths.length - 1} />
+                  meta={
+                    <>
+                      <span style={{ display: "block" }}>{b.where}</span>
+                      {b.startAt ? (
+                        <span style={{ display: "block", color: "var(--brand-primary)",
+                          fontWeight: "var(--fw-semibold)" }}>
+                          {whenLabel(b.startAt, b.endAt, oneDay)}
+                        </span>
+                      ) : null}
+                    </>
+                  }
+                  trailing={null} divider={i < booths.length - 1} />
               ))}
             </div>
             {/* 배치도 이미지는 아직 자료가 없다. 글자 목록만으로도 "어디쯤인지"는 전달된다 */}

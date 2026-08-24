@@ -1,17 +1,23 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, Cell, Modal, ConfirmDialog, Button, Select, Pagination,
-  Badge, Switch,
+  PageHeader, Toolbar, DataTable, Cell, ConfirmDialog, DELETE_NOTE, Button, Select, Pagination,
+  Badge, Switch, Icon,
 } from "../../design-systems/admin.js";
 import { DISTRICTS, GU_ORDER, FESTIVALS, CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
 import { STORES } from "../../screens/main/data/dunjeon.js";
 import { QR_POINTS } from "../../screens/main/data/qr.js";
 import { DISTRICT_FIELDS } from "../data/fields.js";
-import { useCollection, readCollection } from "../data/store.js";
+import {
+  useCollection, readCollection, removeRows, restoreRows, readRemoved,
+  linkRemoval, takeRemovalLinks,
+} from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
+import {
+  ViewTabs, removedColumns, removedEmpty, undoToast, HIDE_ON_RESTORE, VIEW_ALL, VIEW_REMOVED,
+} from "./RemovedItems.jsx";
 
 /* M03 상점가 목록 · M04 상점가 등록·수정 — 32개소.
  *
@@ -43,23 +49,52 @@ import { EditorModal } from "./EditorModal.jsx";
 
 const GU_OPTIONS = [{ value: "", label: "전체 구" }].concat(GU_ORDER.map(g => ({ value: g, label: g })));
 
-/* 삭제 차단 (명세서 10장) — 진행 중 축제 또는 활성 QR 이 걸린 상점가는 지울 수 없다.
-   지우면 시민 화면에서 그 축제와 QR 지점이 갈 곳을 잃는다. */
-function blockReason(d, festivals, qrPoints) {
-  const live = festivals.find(f => f.districtId === d.id && f.state !== "종료");
-  if (live) return `진행 중이거나 예정인 축제(${live.name})가 연결되어 있습니다.`;
-  const qr = qrPoints.find(p => p.districtId === d.id && p.active);
-  if (qr) return `활성 QR 지점(${qr.code})이 이 상점가를 가리키고 있습니다.`;
-  return null;
+/* QR 원본을 관리자 쪽 모양으로 바꾼 것 — 코드가 곧 id 다 (QrPoints.jsx 와 같은 한 줄).
+   **모듈 밖에서 한 번만 만든다.** 렌더마다 새 배열이면 `readCollection` 이 매번 새로
+   겹치고, 아래 `removedQr` 의 결과도 매 렌더 새 객체가 된다. */
+const QR_ROWS = QR_POINTS.map(p => ({ ...p, id: p.code }));
+
+/* ── 막지 않고, 함께 지운다 (2026-08-24, 사용자 요청으로 뒤집음) ──────────────
+   전에는 진행 중 축제나 활성 QR 이 걸린 상점가를 **지우지 못하게 막았다**. 명세서 10장의
+   "삭제를 차단한다"를 그대로 옮긴 것이었는데, 담당자 쪽에서 보면 막다른 길이었다 —
+   상점가 하나를 정리하려면 축제 화면에서 축제를 지우고, QR 화면에서 지점을 지우고,
+   다시 돌아와야 했다. 세 화면을 오가는 동안 무엇을 지웠는지 스스로 기억해야 하고,
+   중간에 그만두면 **축제만 없어진 상태**가 남는다.
+
+   이제 **연결된 것이 함께 간다.** 지우기 전에 무엇이 함께 지워지는지 보여주고
+   (아래 ConfirmDialog), 되돌릴 때도 함께 돌아온다 (undo). 지우는 일이 한 번의 결정이 되고,
+   그 결정을 통째로 되돌릴 수 있으므로 막을 이유가 없어진다.
+
+   ── 점포도 함께 간다 (2026-08-24, 같은 날 고침) ────────────────────────────
+   처음에는 점포만 빼 두었다. "335곳을 한 번에 지우는 일은 이 화면이 할 일이 아니다"라고
+   적었는데, **그러면 남은 점포를 볼 수 있는 자리가 없다.** 시민 화면에서 점포에 닿는
+   길은 상점가 하나뿐이고(S03 은 상점가 탭이다), 관리자 점포 목록에서는 없어진 상점가
+   이름이 필터에 남는다. 지운 뒤에 어디에도 뜨지 않는 자료를 "남겼다"고 말하는 것은
+   기록으로도 틀리다 — 그것은 남은 것이 아니라 **찾을 수 없게 된 것**이다.
+
+   일괄 처리를 두 화면으로 한정한다는 규칙(명세서 1장)에도 걸리지 않는다. 그 규칙은
+   담당자가 **여럿을 골라 한꺼번에 처리하는 도구**를 어디에 두느냐는 이야기이고, 여기서
+   일어나는 일은 한 건을 지운 결과다. 무엇보다 되돌리기가 한 번으로 끝난다.
+
+   함께 가는 것 셋의 성격이 다르므로 다이얼로그가 적는 방식도 다르다 —
+   축제·QR 지점은 **이름으로**(많아야 한둘), 점포는 **곳수로**(둔전만 335곳이다). */
+function linkedOf(d, festivals, qrPoints, stores) {
+  return {
+    festivals: festivals.filter(f => f.districtId === d.id),
+    qr: qrPoints.filter(p => p.districtId === d.id),
+    /* 점포는 `districtId` 가 비어 있으면 둔전이다 (아래 counts 와 같은 규칙) —
+       더미 자료 335곳이 전부 그 상태라, 이 기본값을 빠뜨리면 아무것도 걸리지 않는다 */
+    stores: stores.filter(s => (s.districtId || CURRENT_DISTRICT_ID) === d.id),
+  };
 }
 
 export function Districts({ onToast }) {
-  const { rows, upsert, remove, patch } = useCollection("districts", DISTRICTS, null, "상점가");
+  const { rows, removed, upsert, remove, restore, patch } = useCollection("districts", DISTRICTS, null, "골목형 상점가");
   const storeRows = readCollection("stores", STORES);
-  const qrRows = readCollection("qr", QR_POINTS.map(p => ({ ...p, id: p.code })));
+  const qrRows = readCollection("qr", QR_ROWS);
+  const festivalRows = readCollection("festivals", FESTIVALS);
   const [gu, setGu] = React.useState("");
   const list0 = useListState([gu]);
-  const [blocked, setBlocked] = React.useState(null);
 
   /* 노출 상태인 점포를 상점가별로 센다. 점포 자료가 없는 곳은 키가 아예 없다 —
      그때는 상점가 레코드에 적힌 값을 그대로 쓴다 (아래 countOf). */
@@ -90,8 +125,9 @@ export function Districts({ onToast }) {
     /* 산출값(⚙)은 저장하지 않는다. 폼에 보이라고 얹어 둔 값이라 그대로 저장하면
        덮개에 계산 결과가 굳고, 변경 이력에도 고치지 않은 필드가 매번 올라온다. */
     onSave: ({ storeCount, onnuriCount, ...values }) => upsert(values),
-    onRemove: remove,
-    onToast, label: "상점가",
+    /* 상점가 하나가 아니라 거기 걸린 것까지 함께 지운다 (아래 removeWithLinked) */
+    onRemove: (id, name) => removeWithLinked(id, name),
+    onToast, label: "골목형 상점가",
   });
 
   /* 다이얼로그를 열 때 산출값을 채워 넣는다. ⚙ 라 저장되지 않고 화면에만 보이면 되지만,
@@ -101,36 +137,80 @@ export function Districts({ onToast }) {
     ed.openEdit({ ...row, storeCount: c.stores, onnuriCount: c.onnuri });
   };
 
-  const filtered = rows.filter(d => {
+  /* 「전체 | 삭제된 항목」 — 탭이 바꾸는 것은 거르기 전의 목록뿐이다 (RemovedItems) */
+  const [view, setView] = React.useState(VIEW_ALL);
+  const inRemoved = view === VIEW_REMOVED;
+  const source = inRemoved ? removed : rows;
+
+  const filtered = source.filter(d => {
     if (gu && d.gu !== gu) return false;
     if (!list0.term) return true;
     return `${d.name} ${d.gu} ${d.area} ${d.addr}`.includes(list0.term);
   });
   const paged = list0.paginate(filtered);
 
-  const askRemove = d => {
-    const why = blockReason(d, FESTIVALS, qrRows);
-    if (why) { setBlocked({ name: d.name, why }); return; }
-    ed.askRemove(d);
+  /* 지금 이 상점가에 걸려 있는 것들 — 다이얼로그가 늘어놓고, 확인하면 함께 지운다 */
+  const linked = ed.pending ? linkedOf(ed.pending, festivalRows, qrRows, storeRows) : null;
+
+  /* ── 함께 지운다 ─────────────────────────────────────────────────────────
+     `useRecordEditor` 의 onRemove 가 상점가 하나를 지우고, 여기서 걸린 것들을 마저 지운다.
+     컬렉션을 넘나드는 삭제라 훅(useCollection)이 아니라 store.js 의 removeRows 를 직접
+     부른다 — 이 화면이 축제·QR·점포 컬렉션을 통째로 세울 이유가 없다 (그쪽 머리말).
+     **여럿을 한 번에 넘기는 것이 중요하다** — 점포 335건을 한 건씩 지우면 이력이 그것만으로
+     가득 찬다 (store.js 의 removeRows 머리말). 이력에는 상점가 이름을 적어 둔다:
+     「일괄 삭제 · 점포 · 둔전 골목형상점가 삭제」가 「335건」보다 나중에 읽힌다. */
+  const removeWithLinked = (id, name) => {
+    const d = rows.find(x => x.id === id);
+    remove(id, name);
+    if (!d) return;
+    const l = linkedOf(d, festivalRows, qrRows, storeRows);
+    /* 이번 삭제로 **실제로 지워진 것**만 적어 둔다 (store.js 의 linkRemoval).
+       따로 지워져 있던 것은 removeRows 가 건너뛰므로 목록에 오르지 않고,
+       되돌리기가 그것까지 되살리는 일도 없다. */
+    linkRemoval("districts", id, {
+      festivals: removeRows("festivals", l.festivals, "축제", `${d.name} 삭제`),
+      qr: removeRows("qr", l.qr, "QR 지점", `${d.name} 삭제`),
+      stores: removeRows("stores", l.stores, "점포", `${d.name} 삭제`),
+    });
+  };
+
+  /* ── 함께 되돌린다 ───────────────────────────────────────────────────────
+     **이 상점가를 지울 때 함께 지워진 것**을 되돌린다 — 지금 이 상점가를 가리키면서
+     지워져 있는 것 전부가 아니다 (그 구분이 왜 필요한지는 store.js 의 linkRemoval).
+     규칙 한 줄로 적으면: **함께 지워진 것은 함께 돌아온다.** */
+  const undo = d => {
+    const took = takeRemovalLinks("districts", d.id) || {};
+    /* 상점가만 꺼진 채로 돌아온다. 함께 돌아오는 축제·QR·점포는 그대로다 —
+       상점가가 꺼져 있으면 그 아래는 어차피 사용자 화면에 없다 (store.js 의 restoreRows) */
+    restore(d.id, d.name, HIDE_ON_RESTORE);
+    const pick = (source, ids) => (ids || []).length
+      ? source.filter(r => ids.includes(r.id)) : [];
+    restoreRows("festivals", pick(readRemoved("festivals", FESTIVALS), took.festivals),
+      "축제", `${d.name} 복구`);
+    restoreRows("qr", pick(readRemoved("qr", QR_ROWS), took.qr), "QR 지점", `${d.name} 복구`);
+    restoreRows("stores", pick(readRemoved("stores", STORES), took.stores), "점포", `${d.name} 복구`);
+    onToast(undoToast(d.name));
   };
 
   return (
     <>
-      <PageHeader title="상점가 정보 관리" count={`${filtered.length}곳`}
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>상점가 등록</Button>} />
+      <PageHeader title="골목형 상점가 정보 관리" count={`${filtered.length}곳`}
+        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>골목형 상점가 등록</Button>}
+        tabs={<ViewTabs value={view} onChange={setView} count={removed.length} />} />
 
       <Toolbar>
         <Select value={gu} options={GU_OPTIONS} onChange={e => setGu(e.target.value)} />
-        <ListSearch state={list0} placeholder="상점가명 · 소재지 검색" />
+        <ListSearch state={list0} placeholder="골목형 상점가명 · 소재지 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
       <DataTable
         caption="등록된 골목형 상점가 목록"
-        rows={paged.rows} rowKey="id" onRowClick={openEdit}
-        empty={{ title: "조건에 맞는 상점가가 없습니다." }}
-        columns={[
-          { key: "name", label: "상점가명", sortable: true,
+        rows={paged.rows} rowKey="id"
+        onRowClick={inRemoved ? undefined : openEdit}
+        empty={inRemoved ? removedEmpty("골목형 상점가") : { title: "조건에 맞는 골목형 상점가가 없습니다." }}
+        columns={(cols => (inRemoved ? removedColumns(cols, undo) : cols))([
+          { key: "name", label: "골목형 상점가명", sortable: true,
             render: d => (
               <Cell>
                 {d.name}
@@ -169,9 +249,9 @@ export function Districts({ onToast }) {
           { key: "manage", label: "관리", width: 96, align: "center",
             render: d => (
               <Button variant="ghost" size="sm" icon="trash-2"
-                onClick={() => askRemove(d)} style={{ color: "var(--state-danger)" }}>삭제</Button>
+                onClick={() => ed.askRemove(d)} style={{ color: "var(--state-danger)" }}>삭제</Button>
             ) },
-        ]} />
+        ])} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
         <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />
@@ -183,7 +263,7 @@ export function Districts({ onToast }) {
           점포수가 읽기 전용이라는 사실은 열 머리말의 「노출 상태 기준」이 이미 말한다. */}
 
       <EditorModal ed={ed} size="lg"
-        title={ed.draft && ed.draft.isNew ? "상점가 등록" : "상점가 수정"}
+        title={ed.draft && ed.draft.isNew ? "골목형 상점가 등록" : "골목형 상점가 수정"}
         description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}>
         {/* ── 「상권센터 링크 미리보기」를 뺐다 (2026-08-24) ────────────────────
              폼 아래에 조립된 주소를 글자로 적어 보여주던 자리다. 그 칸이 **번호**를 받던
@@ -199,30 +279,66 @@ export function Districts({ onToast }) {
         ) : null}
       </EditorModal>
 
-      <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
-        description="상점가를 삭제합니다."
-        footnote="소속 점포는 함께 지워지지 않습니다. 당장 목록에서 내리려면 삭제 대신 [노출 여부] 토글을 꺼 주세요 — 사용자 화면에서는 사라지고 연결은 그대로 남습니다."
-        onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
+      {/* ── 함께 지워지는 것을 먼저 보여준다 (2026-08-24) ─────────────────────
+             전에는 여기 오기 전에 「삭제할 수 없습니다」 창이 막았다 (위 linkedOf 주석).
+             이제 막지 않는 대신 **무엇이 함께 가는지**를 적는다. 적는 방식이 둘로 갈린다:
 
-      {/* 삭제 차단 (명세서 10장). 버튼을 감추지 않고 눌렀을 때 이유를 말한다 —
-          감추면 왜 이 줄만 삭제 버튼이 없는지 알 수 없다 */}
-      <Modal open={!!blocked} size="md" title="삭제할 수 없습니다"
-        description={blocked ? blocked.name : undefined}
-        onClose={() => setBlocked(null)}
-        footer={<Button variant="primary" onClick={() => setBlocked(null)}>확인</Button>}>
-        {blocked ? (
-          <>
-            <p style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: 1.65 }}>
-              {blocked.why}
+               축제 · QR 지점   **이름으로.** "QR 지점 2곳"은 몇 건인지만 알려주고 정작
+                                그것이 무엇인지는 다른 화면에 가서 확인하게 만든다.
+                                길어질 일도 없다 — 상점가 하나에 많아야 한둘이다
+               점포             **곳수로.** 둔전만 335곳이라 이름을 늘어놓으면 확인 창이
+                                아니라 목록이 된다. 여기서 알아야 하는 것도 어느 가게인지가
+                                아니라 **이만큼이 함께 간다**는 크기다
+
+             QR 지점에는 빠져나갈 길을 함께 적는다 — 안내판은 현장에 그대로 붙어 있으므로
+             지우는 것이 늘 맞는 답은 아니다 (QrPoints.jsx 머리말). */}
+      <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
+        description="골목형 상점가를 삭제합니다."
+        footnote={DELETE_NOTE}
+        onClose={ed.cancelRemove} onConfirm={ed.confirmRemove}>
+        {linked && (linked.festivals.length || linked.qr.length || linked.stores.length) ? (
+          <div style={{ marginTop: "var(--space-3)", padding: "var(--space-3) var(--space-4)",
+            background: "var(--surface-sunken)", borderRadius: "var(--radius-md)" }}>
+            <p style={{ fontSize: "var(--fs-label)", fontWeight: "var(--fw-bold)",
+              color: "var(--text-heading)", lineHeight: 1.5 }}>
+              연결된 아래 항목도 함께 삭제됩니다
             </p>
-            <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-label)",
-              color: "var(--text-muted)", lineHeight: 1.6 }}>
-              연결을 먼저 정리한 뒤에 삭제할 수 있습니다. 당장 목록에서 내리려면
-              삭제 대신 [노출 여부] 토글을 꺼 주세요.
+            <ul style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+              {linked.festivals.map(f => (
+                <li key={f.id} style={{ display: "flex", alignItems: "center", gap: 6,
+                  fontSize: "var(--fs-label)", color: "var(--text-body)", lineHeight: 1.5 }}>
+                  <Icon name="party-popper" size={14} color="var(--text-muted)" />
+                  축제 · {f.name}
+                </li>
+              ))}
+              {linked.qr.map(p => (
+                <li key={p.id} style={{ display: "flex", alignItems: "center", gap: 6,
+                  fontSize: "var(--fs-label)", color: "var(--text-body)", lineHeight: 1.5 }}>
+                  <Icon name="qr-code" size={14} color="var(--text-muted)" />
+                  QR 지점 · {p.name || p.code}
+                  {p.active === false ? <Badge tone="neutral" size="sm">비활성</Badge> : null}
+                </li>
+              ))}
+              {linked.stores.length ? (
+                <li style={{ display: "flex", alignItems: "center", gap: 6,
+                  fontSize: "var(--fs-label)", color: "var(--text-body)", lineHeight: 1.5 }}>
+                  <Icon name="store" size={14} color="var(--text-muted)" />
+                  점포 · {linked.stores.length.toLocaleString("ko-KR")}곳
+                </li>
+              ) : null}
+            </ul>
+            {/* 되돌릴 때도 함께 온다는 것을 여기서 말한다 — 이 목록을 보고 망설이는
+                사람에게 필요한 답이 그것이다 (아래 각주의 [삭제된 항목]과 이어진다) */}
+            <p style={{ marginTop: 8, fontSize: "var(--fs-caption)",
+              color: "var(--text-muted)", lineHeight: 1.5 }}>
+              되돌릴 때도 함께 돌아옵니다.
+              {linked.qr.length
+                ? " 안내판을 그대로 두려면 [QR 지점 관리]에서 소속 골목형 상점가를 먼저 옮겨 주세요."
+                : ""}
             </p>
-          </>
+          </div>
         ) : null}
-      </Modal>
+      </ConfirmDialog>
     </>
   );
 }

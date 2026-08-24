@@ -19,7 +19,7 @@ import { WALK_ROUTE_QUOTA, FACILITY_AS_OF, STORE_AS_OF } from "../../screens/mai
 /* ── 8-1 서비스 운영 설정 — 이 파일에서 나갔다 (2026-08-24) ──────────────────
    `OPERATION_DEFAULTS`(안내 범위 · 배너 기준 · 상점가 임계 거리 · 신규 매장 판정 기간 ·
    코스 반경 · 탭별 확대 단계)와 `OPERATION_FROM_CONFIG` 가 여기 있었다. 그 값들을 읽던
-   [환경 설정] 화면(M15)이 개발 쪽으로 넘어가면서 함께 내려갔다 (AdminApp 머리말).
+   [환경 설정] 화면이 개발 쪽으로 넘어가면서 함께 내려갔다 (AdminApp 머리말).
 
    **없어진 것은 관리자 쪽 사본이지 값이 아니다.** 애초에 이 파일의 규칙이 "config.js 에
    이미 있는 값은 가져다 쓴다"였고, 그래서 지금도 시민 화면은 `facilities.js` 의

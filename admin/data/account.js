@@ -2,7 +2,7 @@ import React from "react";
 import { safeStore } from "../../screens/main/data/sessionStore.js";
 import { readCollection, subscribe } from "./store.js";
 
-/* 계정 (M01 · M16).
+/* 계정 (M01 · M15).
  *
  * ── 진짜 인증이 아니다 ──────────────────────────────────────────────────────
  * 서버가 없다. 실서비스에서는 이 파일이 통째로 세션 API 호출로 바뀐다. 비밀번호를
@@ -13,7 +13,7 @@ import { readCollection, subscribe } from "./store.js";
  * v1.1 에서 `CITY`/`DEVELOPER` 두 권한을 없앤 것은 그대로다 — **업무 화면 아홉 개는
  * 모든 계정이 똑같이 본다.** 시설을 고치는 일에 등급을 매길 이유는 지금도 없다.
  *
- * 갈라지는 자리는 하나, **계정 관리(M16)** 뿐이고 이유는 업무가 아니라 자물쇠다.
+ * 갈라지는 자리는 하나, **계정 관리(M15)** 뿐이고 이유는 업무가 아니라 자물쇠다.
  * 모든 계정이 계정을 지울 수 있으면 서로를 지울 수 있고, 마지막 하나가 남을 때까지
  * 지우고 나면 **그 하나를 쓰던 사람이 떠나는 순간 아무도 못 들어온다.** 「마지막 계정
  * 보호」는 계정이 0이 되는 것만 막을 뿐, *누가* 마지막으로 남는지는 못 정한다.
@@ -97,11 +97,21 @@ export function isProtectedAccount(id) {
 /* ── 세션 ────────────────────────────────────────────────────────────────────
    sessionStorage 다. 새로고침에 살아남아야 검수가 되고(화면 하나 고칠 때마다 다시
    로그인하게 만들 이유가 없다), 탭을 닫으면 사라져야 한다. 실서비스라면 이 자리는
-   서버가 준 세션 쿠키다 — 브라우저 저장소에 담을 값이 아니다. */
+   서버가 준 세션 쿠키다 — 브라우저 저장소에 담을 값이 아니다.
+
+   ── 시간 제한을 없앴다 (2026-08-24, 사용자 요청) ────────────────────────────
+   8시간이 있었다(`SESSION_HOURS`). 없앤 이유는 그 제한이 **여기서 지킬 수 있는 것이
+   아니기 때문**이다 — 만료를 브라우저가 재면 시계를 되돌린 기기에서 영원한 세션이 되고,
+   저장소를 지우면 그만인 값이라 막고 싶은 상대는 애초에 걸리지 않는다. 로그인 잠금과
+   같은 자리다: 실서비스에서 이 판정은 서버에 있어야 한다.
+
+   그동안 실제로 한 일은 하나뿐이었다 — 오전에 열어 둔 탭에서 오후에 저장을 누르면
+   로그인 화면으로 튕기고, 채우던 폼이 통째로 날아갔다. 탭을 닫으면 세션도 함께
+   없어지므로(sessionStorage) 자리를 뜨는 사람이 하는 일은 그대로다.
+   실연동 때는 서버가 정한 만료를 따르고, 그때 이 파일은 세션 API 호출로 바뀐다. */
 const KEY = "yongin.admin.session.v2";
 const LOCK_KEY = "yongin.admin.lock.v1";
 
-export const SESSION_HOURS = 8;             /* 명세서 9장 — 세션 8시간 */
 export const MAX_ATTEMPTS = 5;              /* 5회 실패 시 */
 export const LOCK_MINUTES = 10;             /* 10분 잠금 */
 
@@ -127,9 +137,9 @@ function session(a) {
 function readSession() {
   const raw = readRaw(KEY);
   if (!raw || !raw.id) return null;
-  /* 8시간이 지났으면 없는 것으로 친다. 만료를 저장 시점에 계산해 두지 않고 읽을 때마다
-     재는 이유: 저장해 두면 시계를 되돌린 기기에서 영원한 세션이 만들어진다 */
-  if (raw.at && Date.now() - raw.at > SESSION_HOURS * 3600 * 1000) { writeRaw(KEY, null); return null; }
+  /* 시간으로 끝나지 않는다 (위 머리말). 세션이 끝나는 길은 셋 — [로그아웃] · 탭 닫기 ·
+     아래 두 줄(계정이 없어지거나 꺼지는 것)이다. `raw.at` 은 그대로 적어 두되 읽지
+     않는다: 언제 들어왔는지는 실연동 때 서버에 넘길 값이라 지금 버릴 이유가 없다 */
   /* 저장된 것은 id 뿐이다. 이름은 표에서 다시 읽는다 — 계정 관리에서 이름을 고쳤는데
      상단바가 옛 이름을 들고 있으면, 지금 누구로 들어와 있는지가 화면마다 달라진다.
      계정을 중지하거나 지우면 그 자리에서 세션이 끝난다 */
@@ -181,12 +191,12 @@ export function useSession() {
     const key = String(id || "").trim();
     const lock = lockStatus(key);
     if (lock.locked) {
-      return `로그인 시도가 ${MAX_ATTEMPTS}회 실패해 잠겼습니다. ${lock.left}분 뒤에 다시 시도해 주세요.`;
+      return `로그인 시도를 ${MAX_ATTEMPTS}회 실패했습니다. ${LOCK_MINUTES}분 뒤에 다시 시도할 수 있습니다.`;
     }
     const found = readAccounts().find(a => a.id === key && a.pw === pw);
     if (!found) {
       const next = noteFail(key);
-      if (next.until) return `로그인 시도가 ${MAX_ATTEMPTS}회 실패해 ${LOCK_MINUTES}분간 잠겼습니다.`;
+      if (next.until) return `로그인 시도를 ${MAX_ATTEMPTS}회 실패했습니다. ${LOCK_MINUTES}분 뒤에 다시 시도할 수 있습니다.`;
       const left = MAX_ATTEMPTS - next.fails;
       return `아이디 또는 비밀번호가 올바르지 않습니다. (${left}회 더 실패하면 ${LOCK_MINUTES}분간 잠깁니다)`;
     }

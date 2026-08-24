@@ -8,21 +8,35 @@ import { safeStore } from "../../screens/main/data/sessionStore.js";
  * 한 번 만들어지는 상수다. 관리자가 그것을 직접 밀어 넣으면 두 화면이 같은 배열을
  * 공유한다는 사실에 기대게 되는데, 실서비스에서 그 자리는 서버다 — 배열이 아니다.
  *
- * 그래서 **원본 위에 덮개(overlay)를 얹는다.** 덮개가 갖는 것은 셋뿐이다:
+ * 그래서 **원본 위에 덮개(overlay)를 얹는다.** 덮개가 갖는 것은 넷뿐이다:
  *
  *   edits    { id: 바뀐 필드만 }   원본 행을 고친 것
  *   added    [ 통째 행 ]           새로 등록한 것
  *   removed  [ id ]                지운 것
+ *   links    { id: 함께 지운 것 }  연쇄 삭제의 기억 (아래 linkRemoval)
  *
  * ── removed 가 곧 명세서 10장의 "물리 삭제 없음" 이다 ──────────────────────
  * 명세서 공통 정책: "물리 삭제 없음. `is_deleted` 플래그로 처리한다."
  * 여기서 `removed` 에 id 를 넣는 것이 그 플래그다 — **원본 배열에서는 아무 것도 지워지지
- * 않는다.** 목록을 만들 때 걸러낼 뿐이라 [데모 데이터 초기화] 한 번으로 전부 돌아온다.
- * 실연동 때 이 자리는 서버의 `is_deleted = true` 가 된다.
+ * 않는다.** 목록을 만들 때 걸러낼 뿐이다. 실연동 때 이 자리는 서버의 `is_deleted = true`.
+ *
+ * ── 그 플래그가 화면에서도 보인다 (2026-08-24) ─────────────────────────────
+ * 예전에는 지운 것을 되돌리는 길이 [데모 데이터 초기화] 하나뿐이었다. 그것은 **전부**를
+ * 되돌리는 버튼이라, 한 건을 잘못 지운 사람이 쓸 수 있는 길이 아니었다 — 되돌리려면
+ * 그날 고친 것을 전부 버려야 했다. 그래서 화면이 "물리 삭제 없음"이라고 적으면서도
+ * 담당자에게는 사실상 영구 삭제로 보였다.
+ *
+ * 이제 목록 화면마다 [삭제된 항목 n] 이 서고 거기서 한 건씩 되돌린다 (`restore`).
+ * 덮개 구조는 그대로다 — `removed` 에서 id 하나를 빼는 것이 곧 복구다.
+ *
+ * **새로 등록한 행도 같은 길을 탄다** (2026-08-24 바뀜). 전에는 `added` 에서 빼버려
+ * 흔적이 남지 않았는데, 그러면 방금 등록한 것을 잘못 지웠을 때만 되돌릴 수 없다 —
+ * 가장 되돌리고 싶은 경우가 유일하게 안 되는 셈이었다. 이제 `added` 에 그대로 두고
+ * `removed` 에 id 를 넣는다. 아래 merge 가 이미 두 곳을 다 거르고 있었다.
  *
  * ── 변경 이력 (명세서 10장) ─────────────────────────────────────────────────
  * "모든 등록·수정·삭제에 변경 이력을 기록한다 (대상, 변경 필드, 주체, 일시)."
- * 덮개와 같은 저장소에 `history` 로 쌓는다. 화면(설정 > 변경 이력)이 그것을 읽는다.
+ * 덮개와 같은 저장소에 `history` 로 쌓는다. **읽는 화면은 지금 없다** (아래 readHistory).
  * 주체는 setActor 로 들어온다 — 저장하는 쪽(useCollection)이 지금 누가 로그인해 있는지
  * 알 방법이 없고, 화면마다 계정을 넘기게 하면 한 화면은 반드시 빠뜨린다.
  *
@@ -33,7 +47,7 @@ import { safeStore } from "../../screens/main/data/sessionStore.js";
  */
 
 const KEY = "yongin.admin.data.v2";
-const EMPTY = { edits: {}, added: [], removed: [], seq: 0 };
+const EMPTY = { edits: {}, added: [], removed: [], links: {}, seq: 0 };
 const HISTORY_MAX = 200;   /* 세션 저장소 용량이 5MB 안팎이다. 검수용으로 충분하고, 넘으면 앞에서 버린다 */
 
 let cache = null;
@@ -87,7 +101,7 @@ function log(entry) {
 }
 
 /* ── 지금 이것을 부르는 화면이 없다 (2026-08-24) ────────────────────────────
-   [환경 설정](M15) 아래 구획이 유일한 독자였고 그 화면이 없어졌다 (AdminApp 머리말).
+   [환경 설정] 화면 아래 구획이 유일한 독자였고 그 화면이 없어졌다 (AdminApp 머리말).
    **그래도 지우지 않는다.** 명세서 10장이 요구하는 것은 *기록*이고 그것은 위 `record()`
    가 계속 하고 있다 — 없어진 것은 보는 자리다. 다시 붙인다면 대시보드 아래이고,
    그때 필요한 것이 이 함수 하나다. 기록만 남기고 읽는 길을 지우면, 쌓이는 줄들이
@@ -110,10 +124,172 @@ function merge(source, ov) {
   return out.concat(ov.added.filter(r => !ov.removed.includes(r.id)));
 }
 
+/* 위 merge 가 걸러낸 것들 — [삭제된 항목] 상자가 이것을 읽는다.
+   **고친 값을 얹어서 돌려준다.** 지우기 전에 이름을 고쳤다면 담당자가 목록에서 마지막으로
+   본 이름은 고친 쪽이고, 원본 이름으로 적으면 자기가 지운 줄을 못 알아본다.
+   차례는 merge 와 같다 (원본 순서 다음 새로 등록한 것) — 두 목록이 같은 규칙으로 늘어서야
+   [삭제된 항목]에서 되돌린 줄을 목록에서 다시 찾을 때 짐작이 맞는다. */
+function removedOf(source, ov) {
+  const out = source
+    .filter(r => ov.removed.includes(r.id))
+    .map(r => (ov.edits[r.id] ? { ...r, ...ov.edits[r.id] } : r));
+  return out.concat(ov.added.filter(r => ov.removed.includes(r.id)));
+}
+
 /* 훅 밖에서 한 번 읽어야 하는 자리가 있다 — 로그인(계정 표)과 처리 대기 배지가 그렇다.
    같은 merge 를 두 번 적지 않기 위해 내보낸다. */
 export function readCollection(name, source) {
   return merge(source, overlayOf(name));
+}
+
+/* ── 훅 밖에서 한 줄을 더하고 고친다 (2026-08-24) ───────────────────────────
+   **로그인 화면의 비밀번호 초기화 요청이 이것을 쓴다.** 그 화면은 세션보다 앞에 서 있어서
+   (AdminApp 은 로그인 전에는 셸을 세우지 않는다) `useCollection` 을 걸 자리가 없다 —
+   훅을 쓰려면 로그인하지 않은 사람에게 셸을 세워 주어야 하는데, 그것이야말로 저쪽
+   머리말이 하지 않기로 한 일이다.
+
+   아래 `useCollection` 의 upsert/patch 도 이 둘을 부른다. 같은 일을 두 벌 적으면 언젠가
+   한쪽만 고쳐지고, 그때 갈라지는 것은 **이력에 남는 줄**이라 눈에 띄지도 않는다. */
+export function addRow(name, row, label) {
+  const cur = overlayOf(name);
+  const seq = (cur.seq || 0) + 1;
+  /* id 를 시각이 아니라 일련번호로 만든다. 같은 검수를 두 번 해도 같은 id 가 나와야
+     "아까 그 행"을 말로 지목할 수 있다 */
+  const id = `${name}-new-${String(seq).padStart(3, "0")}`;
+  setOverlay(name, { added: cur.added.concat({ ...row, id }), seq });
+  log({ action: "등록", target: label || name, id, name: row.name || id, fields: [] });
+  return id;
+}
+
+export function patchRow(name, id, part, rowName, label) {
+  const cur = overlayOf(name);
+  if (cur.added.some(r => r.id === id)) {
+    setOverlay(name, { added: cur.added.map(r => (r.id === id ? { ...r, ...part } : r)) });
+  } else {
+    setOverlay(name, { edits: { ...cur.edits, [id]: { ...(cur.edits[id] || {}), ...part } } });
+  }
+  log({ action: "수정", target: label || name, id, name: rowName || id, fields: Object.keys(part) });
+}
+
+/* ── 지우기·되돌리기는 원본 배열을 보지 않는다 ─────────────────────────────
+   `removed` 에 id 를 넣고 빼는 일이 전부라, 그 컬렉션의 원본이 무엇인지 알 필요가 없다.
+   그래서 훅 밖으로 낸다 — **한 화면이 다른 컬렉션을 함께 지워야 하는 자리**가 있기
+   때문이다 (상점가를 지우면 거기 걸린 축제 · QR 지점 · 소속 점포가 함께 간다. Districts.jsx).
+   그 화면이 `useCollection("festivals")` 를 따로 세우면 원본 배열과 훅이 하나씩 더 붙는데,
+   정작 쓰는 것은 이 두 줄뿐이다.
+
+   `useCollection` 의 remove/restore 도 이것을 부른다 — 같은 일을 두 벌 적지 않는다.
+
+   ── 여럿을 한 번에 (2026-08-24) ────────────────────────────────────────────
+   상점가 하나를 지우면 소속 점포가 함께 간다. 둔전은 335곳이다.
+   그것을 removeRow 로 335번 부르면 두 가지가 망가진다:
+     · 저장과 알림이 335번 돌아 목록이 그만큼 다시 그려진다
+     · **이력이 335줄이 된다.** HISTORY_MAX 가 200이라 그날 한 일이 전부 밀려나고,
+       남는 것은 점포 삭제 200줄뿐이다 — 무엇을 했는지 알아볼 수 없는 이력이 된다
+   그래서 한 번 쓰고 **한 줄로 적는다** (patchMany 와 같은 규칙). 한 건이면 「삭제」,
+   여럿이면 「일괄 삭제」다 — 셈이 아니라 담당자가 한 번 누른 일의 단위를 적는 것이다. */
+export function removeRows(name, rows, label, note) {
+  const cur = overlayOf(name);
+  /* 두 번 눌러도 이력이 두 줄이 되지 않는다 — 이미 지워진 것은 세지 않는다 */
+  const add = rows.filter(r => !cur.removed.includes(r.id));
+  if (!add.length) return [];
+  const ids = add.map(r => r.id);
+  setOverlay(name, { removed: cur.removed.concat(ids) });
+  logMany("삭제", name, label, add, note);
+  return ids;   /* **이번에 지운 것만** 돌려준다 — 부르는 쪽이 그것을 적어 둔다 (linkRemoval) */
+}
+
+/* `hide` 를 주면 되돌리면서 그 필드를 함께 덮는다 — `{ visible: false }` · `{ active: false }`.
+   **되돌린 것은 꺼진 채로 돌아온다** (2026-08-24, 사용자 요청):
+
+   지운 것을 되돌리는 일과 그것을 사용자 화면에 다시 내보이는 일은 **다른 결정**이다.
+   담당자가 [되돌리기]를 누르는 이유는 대개 "잘못 지웠다"이지 "지금 이대로 다시 내보내라"가
+   아니고, 되돌린 자료는 지우기 전 그대로라 값이 맞는지 아직 아무도 다시 보지 않았다.
+   켜는 것은 표에서 토글 하나이므로, 끄고 돌려주는 쪽이 되돌리기 어려운 쪽이 아니다.
+   그 사실을 토스트가 적는다 (RemovedItems 의 undoToast).
+
+   **연쇄 복구에는 주지 않는다** — 상점가와 함께 돌아오는 축제·QR·점포 말이다.
+   상점가가 이미 꺼진 채로 돌아오고, 상점가가 꺼져 있으면 그 아래는 어차피 사용자 화면에
+   없다. 335곳을 하나씩 다시 켜게 만들 이유가 없다 (Districts.jsx 의 undo). */
+export function restoreRows(name, rows, label, note, hide) {
+  const cur = overlayOf(name);
+  const back = rows.filter(r => cur.removed.includes(r.id));
+  if (!back.length) return [];
+  const ids = back.map(r => r.id);
+  setOverlay(name, {
+    removed: cur.removed.filter(x => !ids.includes(x)),
+    ...hidePatch(cur, back, hide),
+  });
+  logMany("복구", name, label, back, note, Object.keys(hide || {}));
+  return ids;
+}
+
+/* 되돌리는 그 한 번의 쓰기에 노출 끄기를 얹는다. 따로 patch 를 부르면 저장이 두 번 돌고
+   이력에 「복구」 다음 「수정」이 붙어, 담당자가 하지 않은 수정이 한 줄 남는다.
+   원본 행은 `edits` 에, 새로 등록한 행은 `added` 에 덮는다 (patchMany 와 같은 갈래). */
+function hidePatch(cur, rows, hide) {
+  if (!hide) return {};
+  const edits = { ...cur.edits };
+  let added = cur.added;
+  for (const r of rows) {
+    if (added.some(a => a.id === r.id)) added = added.map(a => (a.id === r.id ? { ...a, ...hide } : a));
+    else edits[r.id] = { ...(edits[r.id] || {}), ...hide };
+  }
+  return { edits, added };
+}
+
+/* ── 함께 지운 것을 적어 둔다 ────────────────────────────────────────────────
+   상점가를 되돌릴 때 무엇을 함께 되살릴지 정하는 값이다.
+
+   처음에는 적어 두지 않고 **"지금 지워져 있으면서 이 상점가를 가리키는 것"** 을 전부
+   되살렸다. 축제와 QR 지점만 걸릴 때는 그것으로 충분했는데, 점포가 함께 가면서 깨졌다 —
+   담당자가 지난주에 폐업 오등록으로 지운 점포 한 곳이 상점가를 되돌리는 순간 **아무도
+   되살리지 않았는데 되살아난다.** 되돌리기가 자기가 지운 것 이상을 건드리면 그 단추는
+   못 믿을 단추가 된다.
+
+   그래서 지운 **그 순간에 실제로 지워진 id** 만 적어 두고(removeRows 의 반환값),
+   되돌릴 때 그것만 되살린다. 따로 남는 삭제는 그대로 남고, 각자의 목록 위
+   [삭제된 항목]에서 한 건씩 되돌린다 — 그 자리가 화면마다 있으므로 갇히지 않는다.
+
+   되돌리면서 지운다(take) — 상점가를 되돌린 뒤에도 기록이 남아 있으면, 그 상점가를
+   다시 지웠다 되돌릴 때 옛 목록이 섞인다. */
+export function linkRemoval(name, id, links) {
+  const cur = overlayOf(name);
+  setOverlay(name, { links: { ...(cur.links || {}), [id]: links } });
+}
+
+export function takeRemovalLinks(name, id) {
+  const cur = overlayOf(name);
+  const all = cur.links || {};
+  if (!all[id]) return null;
+  const next = { ...all };
+  delete next[id];
+  setOverlay(name, { links: next });
+  return all[id];
+}
+
+function logMany(action, name, label, rows, note, fields = []) {
+  const target = label || name;
+  if (rows.length === 1) {
+    log({ action, target, id: rows[0].id, name: rows[0].name || rows[0].id, fields });
+    return;
+  }
+  log({ action: `일괄 ${action}`, target, id: `${rows.length}건`,
+    name: note || `${rows.length}건`, fields });
+}
+
+export function removeRow(name, id, rowName, label) {
+  return removeRows(name, [{ id, name: rowName }], label);
+}
+
+export function restoreRow(name, id, rowName, label, hide) {
+  return restoreRows(name, [{ id, name: rowName }], label, null, hide);
+}
+
+/* 지금 지워져 있는 것들 — 훅 밖에서도 봐야 한다 (상점가가 함께 되돌릴 것을 고를 때).
+   원본이 필요하므로 화면이 넘긴다. */
+export function readRemoved(name, source) {
+  return removedOf(source, overlayOf(name));
 }
 
 /* 덮개가 바뀔 때 알려 준다. 상단바가 이것을 듣는다 — [데모 데이터 초기화] 버튼은
@@ -170,6 +346,10 @@ export function useCollection(name, source, derive, label) {
        덮개는 작아서(수십 건) 비용이 무시할 만하고, 바뀌지 않았는데 다시 겹치는 일을 막는다 */
     [source, JSON.stringify(ov)]);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* [삭제된 항목] 상자가 읽는다. 지운 것이 없으면 빈 배열이고, 그때 그 단추는 나오지 않는다 */
+  const removed = React.useMemo(() => removedOf(source, ov),
+    [source, JSON.stringify(ov)]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   const target = label || name;
 
   /* 새로 만들거나 고친다. id 가 있으면 수정, 없으면 등록이다. */
@@ -177,15 +357,7 @@ export function useCollection(name, source, derive, label) {
     const cur = overlayOf(name);
     const value = derive ? derive(row) : row;
 
-    if (!value.id) {
-      const seq = (cur.seq || 0) + 1;
-      /* id 를 시각이 아니라 일련번호로 만든다. 같은 검수를 두 번 해도 같은 id 가 나와야
-         "아까 그 행"을 말로 지목할 수 있다 */
-      const id = `${name}-new-${String(seq).padStart(3, "0")}`;
-      setOverlay(name, { added: cur.added.concat({ ...value, id }), seq });
-      log({ action: "등록", target, id, name: value.name || id, fields: [] });
-      return id;
-    }
+    if (!value.id) return addRow(name, value, target);
 
     const isAdded = cur.added.some(r => r.id === value.id);
     if (isAdded) {
@@ -205,25 +377,16 @@ export function useCollection(name, source, derive, label) {
     return value.id;
   }, [name, source, derive, target]);
 
-  const remove = React.useCallback((id, rowName) => {
-    const cur = overlayOf(name);
-    /* 새로 등록한 행은 덮개에서 빼면 흔적이 남지 않는다. 원본 행은 지웠다는 사실을
-       남겨야 하므로 removed 에 넣는다 (= is_deleted 플래그) */
-    if (cur.added.some(r => r.id === id)) setOverlay(name, { added: cur.added.filter(r => r.id !== id) });
-    else setOverlay(name, { removed: cur.removed.concat(id) });
-    log({ action: "삭제", target, id, name: rowName || id, fields: [] });
-  }, [name, target]);
+  /* 지운다 = `removed` 에 id 를 넣는다 (= is_deleted 플래그). **원본이든 새로 등록한
+     행이든 같다** (2026-08-24. 머리말 참조) — 그래야 둘 다 되돌릴 수 있다.
+     되돌리기도 그 id 를 빼면 끝이고, 이력에 「복구」로 남는다 — 지운 것만 적히면
+     이력을 읽는 사람에게는 아직 지워진 채로 보인다. 둘 다 위 removeRow/restoreRow 다. */
+  const remove = React.useCallback((id, rowName) => removeRow(name, id, rowName, target), [name, target]);
+  const restore = React.useCallback((id, rowName, hide) => restoreRow(name, id, rowName, target, hide), [name, target]);
 
   /* 노출 토글처럼 필드 하나만 바꾸는 자리 — 폼을 열지 않고 표에서 바로 누른다 */
-  const patch = React.useCallback((id, part, rowName) => {
-    const cur = overlayOf(name);
-    if (cur.added.some(r => r.id === id)) {
-      setOverlay(name, { added: cur.added.map(r => (r.id === id ? { ...r, ...part } : r)) });
-    } else {
-      setOverlay(name, { edits: { ...cur.edits, [id]: { ...(cur.edits[id] || {}), ...part } } });
-    }
-    log({ action: "수정", target, id, name: rowName || id, fields: Object.keys(part) });
-  }, [name, target]);
+  const patch = React.useCallback((id, part, rowName) =>
+    patchRow(name, id, part, rowName, target), [name, target]);
 
   /* 여러 행을 한 번에 고친다 — 노출 순서 바꾸기와 일괄 처리가 이것을 쓴다.
      patch 를 32번 부르면 저장과 알림이 32번 돌아, 목록이 그만큼 다시 그려진다.
@@ -242,7 +405,7 @@ export function useCollection(name, source, derive, label) {
       name: note || `${entries.length}건`, fields: Object.keys(entries[0][1] || {}) });
   }, [name, target]);
 
-  return { rows, upsert, remove, patch, patchMany,
+  return { rows, removed, upsert, remove, restore, patch, patchMany,
     changed: Object.keys(ov.edits).length + ov.added.length + ov.removed.length };
 }
 

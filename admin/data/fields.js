@@ -104,7 +104,7 @@ export function checkPassword(pw) {
    `sort_order` 도 함께 빠졌다 — 명세서 항목표에 없다. 32곳의 차례는 시민 화면이 거리로
    정한다 (districts.js 의 byDistrictNear). */
 export const DISTRICT_FIELDS = [
-  { key: "name", spec: "name", label: "상점가명", required: true, type: "text",
+  { key: "name", spec: "name", label: "골목형 상점가명", required: true, type: "text",
     range: "2~40자 · 전역 유일", minLength: 2, maxLength: 40,
     example: "둔전골목형상점가", span: 2 },
   { key: "gu", spec: "gu", label: "소속 구", required: true, type: "select", options: GU_OPTIONS,
@@ -199,7 +199,7 @@ export const STORE_FIELDS = [
   { key: "branch", spec: "branch_name", label: "지점명", required: false, type: "text",
     range: "최대 40자", maxLength: 40, example: "에버랜드점",
     hint: "골목상점가는 단독 점포가 대부분이라 열에 아홉은 원천에 값이 없습니다" },
-  { key: "districtId", spec: "market_id", label: "소속 상점가", required: true, type: "select",
+  { key: "districtId", spec: "market_id", label: "소속 골목형 상점가", required: true, type: "select",
     options: DISTRICT_OPTIONS, example: "둔전골목형상점가" },
   { key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
     range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 },
@@ -293,7 +293,7 @@ export const FESTIVAL_FIELDS = [
     range: "2~40자", minLength: 2, maxLength: 40, example: "둔전 골목축제", span: 2 },
   { key: "districtId", spec: "market_id", label: "상권명", required: true, type: "select",
     options: DISTRICT_OPTIONS, example: "둔전골목형상점가", span: 2,
-    hint: "주최 상점가" },
+    hint: "주최 골목형 상점가" },
   { key: "start", spec: "date_from", label: "시작일", required: true, type: "date", example: "2026-10-17" },
   { key: "end", spec: "date_to", label: "종료일", required: true, type: "date", example: "2026-10-17",
     hint: "시작일과 같거나 이후여야 합니다" },
@@ -306,23 +306,67 @@ export const FESTIVAL_FIELDS = [
     hint: "이름 사이는 쉼표로 나눕니다. 사용자 화면이 그 기준으로 줄을 나눕니다" },
 ];
 
-/* 2-4 프로그램 일정 (1:N) `C` — 자료 제공 범위 확정 후 반영 여부 결정 */
+/* 2-4 프로그램 일정 (1:N) `C` — 자료 제공 범위 확정 후 반영 여부 결정
+
+   ── 시각을 글자로 받지 않는다 (2026-08-24, 사용자 요청) ─────────────────────
+   전에는 「시작 일시」가 그냥 text 칸이었고 예시가 「10.17 11:00」이었다. 예시를 적어
+   두어도 담당자마다 다르게 적는다 — "10/17 11시", "17일 오전 11시", "11:00". 그렇게 들어온
+   값은 **정렬할 수도 견줄 수도 없는 글자**라, 시민 화면에서 시간순으로 늘어놓는 일도
+   "진행 중인 시간대를 펴는" 일도 할 수 없다.
+
+   이제 `datetime-local` 한 칸이 날짜와 시각을 함께 받는다 — 담당자는 달력과 시계에서
+   고르고, 저장되는 값은 `2026-10-17T11:00` 하나뿐이다.
+
+   ── 「종료 일시」가 생겼다 ──────────────────────────────────────────────────
+   시작만 있으면 시민 화면이 "11:00" 이라고만 적는다. 축제 프로그램에서 실제로 묻는 것은
+   **몇 시부터 몇 시까지**다 — 지금 가면 볼 수 있는지가 그것으로 갈린다.
+   종료도 **시각이 아니라 일시**를 받는다 (부스와 같다). 한때 시각만 받게 두었었는데,
+   그러면 같은 화면의 두 목록이 시각을 다른 방식으로 받게 되고 담당자가 그 차이를
+   먼저 알아채야 한다 — 자정을 넘기는 프로그램이 드물다는 것은 우리 쪽 짐작이지
+   담당자가 칸을 보고 알 수 있는 규칙이 아니다.
+
+   ── 짧은 값은 윗줄, 문장은 아랫줄 (2026-08-24, 사용자 요청) ─────────────────
+   다섯 칸을 한 줄에 세우면 각 칸이 120px 로 쪼그라든다 — 일시 고르개 둘이 그 줄에서
+   420px 을 먼저 가져가기 때문이다. 그래서 **윗줄에 시작 · 종료 · 이름 · 위치**를 두고
+   **설명만 아랫줄로 내린다** (`row2`). 나란히 훑는 값과 읽는 문장은 하는 일이 다르다.
+
+   ── 「장소」가 「위치」가 되었다 ────────────────────────────────────────────
+   부스 표가 이미 「위치」였다. 같은 것을 한 화면에서 두 이름으로 부르면 담당자가 둘이
+   다른 값인지 확인하게 된다 (명세서 「부르는 이름」 원칙과 같은 이유). */
 export const PROGRAM_COLUMNS = [
-  { key: "at", label: "시작 일시", type: "text", required: true, width: 150, placeholder: "10.17 11:00" },
+  { key: "startAt", label: "시작 일시", type: "datetime-local", required: true, width: 210 },
+  { key: "endAt", label: "종료 일시", type: "datetime-local", width: 210 },
   { key: "title", label: "프로그램명", type: "text", required: true, maxLength: 40, placeholder: "개막 풍물놀이" },
-  { key: "place", label: "장소", type: "text", maxLength: 60, width: 180, placeholder: "시장통 무대" },
-  { key: "desc", label: "설명", type: "text", maxLength: 300, placeholder: "포곡농악보존회" },
+  { key: "where", label: "위치", type: "text", maxLength: 60, placeholder: "시장통 무대" },
+  { key: "desc", label: "설명", type: "text", maxLength: 300, row2: true, placeholder: "포곡농악보존회" },
 ];
 
 /* 2-5 부스 위치 (1:N) — **글로 안내한다** (2026-08-20, 사용자 요청)
-   ── 세 칸이 곧 시민 화면의 한 줄이다 ────────────────────────────────────────
+   ── 칸이 곧 시민 화면의 줄이다 ──────────────────────────────────────────────
    시민 화면(S09 부스 위치)이 찍는 것은 지도가 아니라 목록 한 줄이다:
 
      먹거리 부스
-     시장통 입구 ~ 중앙 무대 양쪽 · 20여 곳
+     시장통 입구 ~ 중앙 무대 양쪽
+     10.17 15:00 ~ 21:00
 
-   이 표의 세 칸이 그 줄의 세 조각이다 (`name` · `where` · `count`). 관리자가 채운 것이
-   그대로 나가고, 나가지 않는 값은 여기 없다.
+   관리자가 채운 것이 그대로 나가고, 나가지 않는 값은 여기 없다.
+
+   ── 칸 차례를 프로그램과 맞춘다 (2026-08-24, 사용자 요청) ────────────────────
+   시작 일시 · 종료 일시 · 이름 · 위치. 두 목록이 같은 화면에 나란히 서므로 차례가
+   다르면 담당자가 매번 어느 칸이 어느 칸인지 다시 읽는다.
+
+   ── 「규모」도 「설명」도 두지 않는다 (2026-08-24, 사용자 요청) ────────────────
+   「20여 곳」 한 마디였던 「규모」를 「설명」으로 바꿨다가, 그 칸을 통째로 뺐다.
+   부스에서 실제로 알아야 하는 것은 **어디에 있고 언제 여는가**이고 그 셋이 이미 칸으로
+   있다. 무엇을 파는 곳인지는 대개 부스명이 말한다(「먹거리 부스」 · 「체험 부스」) —
+   설명 칸을 두면 부스마다 그 이름을 한 번 더 풀어 적는 자리가 된다.
+   프로그램에는 설명이 남아 있다: 거기서는 이름이 「개막 풍물놀이」이고 누가 하는지
+   (「포곡농악보존회」)가 이름 밖의 정보다.
+
+   ── 시작·종료 일시가 있다 (2026-08-24, 사용자 요청) ─────────────────────────
+   부스는 축제 내내 열려 있지 않다. **두 칸 다 날짜를 받는다** — 여러 날짜에 걸치는
+   축제(구성언남은 3일이다)에서 부스는 날을 넘겨 서 있고, "언제까지 하는지"가 곧
+   오늘 가도 되는지의 답이다.
 
    ── 빠진 것들과 그 이유 ─────────────────────────────────────────────────────
    「위치 지정」(실제 좌표 / 배치도 상대좌표)과 「좌표 / 배치도 %」  좌표를 받아 두어도
@@ -334,11 +378,12 @@ export const PROGRAM_COLUMNS = [
 
    좌표로 찍을 자리가 정해지면 그때 네 칸을 함께 되살린다. */
 export const BOOTH_COLUMNS = [
-  { key: "name", label: "부스명", type: "text", required: true, width: 200, maxLength: 40,
+  { key: "startAt", label: "시작 일시", type: "datetime-local", width: 210 },
+  { key: "endAt", label: "종료 일시", type: "datetime-local", width: 210 },
+  { key: "name", label: "부스명", type: "text", required: true, maxLength: 40,
     placeholder: "먹거리 부스" },
   { key: "where", label: "위치", type: "text", required: true, maxLength: 60,
     placeholder: "시장통 입구 ~ 중앙 무대 양쪽" },
-  { key: "count", label: "규모", type: "text", width: 150, maxLength: 20, placeholder: "20여 곳" },
 ];
 
 /* ══ 3장 공공시설 (M10) ════════════════════════════════════════════════════
@@ -464,9 +509,13 @@ export const QR_FIELDS = [
   { key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
     range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 },
   COORD,
-  { key: "districtId", spec: "market_id", label: "소속 상점가", required: false, type: "select",
+  { key: "districtId", spec: "market_id", label: "소속 골목형 상점가", required: false, type: "select",
     options: withBlank(DISTRICT_OPTIONS, "— 지정 안 함 —"), span: 2,
-    hint: "비우면 사용자 화면의 상점가 탭이 안내 상태로 진입합니다" },
+    /* 「안내 상태로 진입합니다」에서 고쳤다 (2026-08-24, 사용자 요청). 「안내 상태」는
+       우리가 화면 갈래에 붙인 이름(S03-E)이라 담당자에게 가리키는 대상이 없었다 —
+       비웠을 때 사용자가 **실제로 보는 것**을 적는다. 세 곳인 것은 S03-E 의
+       NEARBY_DISTRICT_COUNT 다 (DistrictEmpty.jsx). */
+    hint: "골목형 상점가를 지정하지 않은 경우, 해당 QR로 진입한 사용자에게 가까운 골목형 상점가 3곳을 대신 안내합니다" },
 
   { key: "installStatus", spec: "install_status", label: "설치 상태", required: true, type: "select",
     options: INSTALL_STATUS_OPTIONS, example: "설치완료" },
@@ -499,26 +548,30 @@ export const REPORT_TARGET_TYPES = ["공공시설", "점포", "상점가", "축�
 export const REPORT_TYPES = ["정보 오류", "없어진 시설", "위치 부정확", "추가 제안", "기타"];
 export const REPORT_STATES = ["접수", "확인중", "처리완료", "반려", "중복"];
 
-/* 회신이 필요한 상태 둘. 회신 없이 닫힌 신고는 시민 쪽에서 보면 무시된 것과 구별되지 않는다 */
-export const REPORT_NEEDS_REPLY = ["처리완료", "반려"];
+/* 신고를 닫는 상태 둘. 여기로 옮기려면 근거가 있어야 한다 (아래 memo 의 ◐).
+   전에는 이름이 `REPORT_NEEDS_REPLY` 였고 회신 내용을 요구했다 — 회신을 없애면서
+   요구는 내부 메모로 옮겼다 (2026-08-24. Reports.jsx 머리말). */
+export const REPORT_CLOSING_STATES = ["처리완료", "반려"];
 
 export const REPORT_FIELDS = [
   { key: "state", spec: "status", label: "처리 상태", required: true, type: "select",
     options: REPORT_STATES.map(v => ({ value: v, label: v })) },
   { key: "assignee", spec: "assignee", label: "담당자", required: false, type: "select" },
-  { key: "memo", spec: "internal_memo", label: "내부 메모", required: false, type: "textarea", rows: 3,
+  { key: "memo", spec: "internal_memo", label: "내부 메모", required: "cond",
+    when: v => REPORT_CLOSING_STATES.includes(v.state), type: "textarea", rows: 3,
     range: "최대 500자", maxLength: 500, span: 2,
-    hint: "사용자에게 공개되지 않습니다" },
-  { key: "reply", spec: "reply_content", label: "회신 내용", required: "cond",
-    when: v => REPORT_NEEDS_REPLY.includes(v.state), type: "textarea", rows: 3,
-    range: "최대 500자", maxLength: 500, span: 2,
-    hint: "처리완료 또는 반려로 옮기려면 반드시 적어야 합니다" },
+    hint: "사용자에게 공개되지 않습니다. 처리완료 또는 반려로 옮기려면 반드시 적어야 합니다" },
+  /* ── `reply_content`(회신 내용)가 여기 있었다 (2026-08-24 삭제) ─────────────
+     **회신을 하지 않는다.** 시민 쪽 신고 폼은 처음부터 연락처를 받지 않았고
+     (2026-08-18 결정, screens/detail/ReportForm.jsx), 접수 화면이 "개별 답변은 어려운
+     점 양해 부탁드립니다"라고 적는다. 보낼 곳이 없는 글을 받는 칸이었다.
+     `contact`(회신처)도 5-1 에서 함께 나갔다 — 받지 않으니 보관할 것도 파기할 것도 없다. */
 ];
 
 /* ══ 8장 서비스 운영 설정 — 입력 항목이 없다 (2026-08-24, 사용자 요청) ══════
    `OPERATION_FIELDS` 여덟 줄이 여기 있었다: 주변 공공시설 안내 범위 · 안전시설 원거리
    배너 기준 · 상점가 임계 거리 · 신규 매장 판정 기간 · 골목 한바퀴 반경 · 탭별 지도 확대
-   단계 둘. [환경 설정](M15) 화면과 함께 **개발 쪽으로 넘어갔다.**
+   단계 둘. [환경 설정] 화면과 함께 **개발 쪽으로 넘어갔다.**
 
    8-2 API 쿼터가 2026-08-20 에 먼저 같은 길로 갔고(카카오 계약과 서버가 정하는 값),
    이번에 8-1 도 뒤따랐다 — 둘 다 **개별 건이 아니라 화면 전체가 도는 방식**이라
@@ -530,7 +583,7 @@ export const REPORT_FIELDS = [
    대시보드의 사용량 카드가 읽는다 — 빠진 것은 **고치는 자리**이지 값이 아니다.
    (노출 순서 · 공공시설 source 와 같은 경우다) */
 
-/* ══ 9장 계정 (M16) ════════════════════════════════════════════════════════
+/* ══ 9장 계정 (M15) ════════════════════════════════════════════════════════
    `role`(권한) 항목이 빠졌다 (2026-08-20). 업무 화면 아홉 개에는 등급이 없다 —
    시설 하나를 고치는 일에 등급을 매길 이유가 없다.
 
@@ -545,9 +598,11 @@ export const ACCOUNT_FIELDS = [
     pattern: V.loginId, minLength: 4, maxLength: 20, example: "yongin01" },
   { key: "name", spec: "name", label: "이름", required: true, type: "text",
     range: "2~20자", minLength: 2, maxLength: 20, example: "김담당" },
+  /* hint 를 두지 않는다 (2026-08-24, 사용자 요청). "수정할 때 비우면 기존 비밀번호를
+     그대로 둡니다"가 붙어 있었는데, 칸 안의 범위 표시가 이미 무엇을 넣는 칸인지 말하고
+     비워 두는 쪽은 아무 일도 일어나지 않는 쪽이라 미리 배워 둘 것이 없다 */
   { key: "pw", spec: "password", label: "비밀번호", required: true, type: "text",
-    range: "10~64자 · 영문·숫자·특수문자 중 2종 이상", span: 2,
-    hint: "수정할 때 비우면 기존 비밀번호를 그대로 둡니다" },
+    range: "10~64자 · 영문·숫자·특수문자 중 2종 이상", span: 2 },
   { key: "active", spec: "is_active", label: "사용 여부", required: true, type: "switch" },
   { key: "email", spec: "email", label: "이메일", required: true, type: "text",
     range: "최대 100자", maxLength: 100, pattern: V.email, example: "gis@yongin.go.kr" },

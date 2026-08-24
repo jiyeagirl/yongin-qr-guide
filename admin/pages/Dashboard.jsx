@@ -287,14 +287,14 @@ export function Dashboard({ onNavigate }) {
 
       {/* ── 상점가별 둘러보기 매장 (명세서 6장) ─────────────────────────
              시민 화면의 둘러보기 탭을 그대로 미리 보는 자리다. 머리말 참조. */}
-      <Section title="상점가별 둘러보기 매장" variant="lead"
-        note="둘러보기 탭에서 노출되는 상점가별 매장 목록을 확인할 수 있습니다. 상점가를 선택하면 사용자 화면에 노출되는 해당 상점가의 매장 정보를 확인할 수 있습니다."
+      <Section title="골목형 상점가별 둘러보기 매장" variant="lead"
+        note="둘러보기 탭에서 노출되는 골목형 상점가별 매장 목록을 확인할 수 있습니다. 상점가를 선택하면 사용자 화면에 노출되는 해당 상점가의 매장 정보를 확인할 수 있습니다."
         style={{ marginBottom: "var(--space-4)" }}>
         {/* 고르개 옆에 「처인구 포곡읍 · 노출 점포 335곳」을 적었었는데 뺐다 (2026-08-20) —
             고르개의 각 줄이 이미 「처인구 · 둔전골목형상점가 (점포 335곳)」이라 같은 말이
             바로 옆에서 두 번 읽혔다. */}
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <Select label="상점가" options={districtOptions} value={districtId}
+          <Select label="골목형 상점가" options={districtOptions} value={districtId}
             onChange={e => setDistrictId(e.target.value)} style={{ width: 420 }} />
         </div>
 
@@ -353,8 +353,8 @@ export function Dashboard({ onNavigate }) {
           <Notice tone="info" title="점포 목록이 아직 들어오지 않았습니다">
             {district && district.stores
               /* 시 안내의 점포수는 알고 있으므로 그 수를 함께 적어 "0곳"과 구별한다 */
-              ? `이 상점가는 시 안내 기준 점포 ${n(district.stores)}곳이 등록되어 있으나, 점포 목록 데이터가 아직 적재되지 않았습니다.`
-              : "이 상점가는 점포 목록 데이터가 아직 적재되지 않았습니다."}
+              ? `이 골목형 상점가는 시 안내 기준 점포 ${n(district.stores)}곳이 등록되어 있으나, 점포 목록 데이터가 아직 적재되지 않았습니다.`
+              : "이 골목형 상점가는 점포 목록 데이터가 아직 적재되지 않았습니다."}
             <span style={{ display: "block", marginTop: 4 }}>
               이로 인해 사용자 화면의 신규 매장 / 인기 매장 리스트가 노출되지 않습니다.
             </span>

@@ -4,6 +4,7 @@ import { useSession, can } from "./data/account.js";
 import { subscribe, setActor, readCollection } from "./data/store.js";
 import { useHashPage, replace, go } from "./router.js";
 import { REPORTS, isOpen } from "./data/reports.js";
+import { readOpenResets } from "./data/passwordResets.js";
 
 import { Login } from "./pages/Login.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
@@ -18,7 +19,7 @@ import { Accounts } from "./pages/Accounts.jsx";
 
 /* 관리자 웹 진입점 (/admin/) — 관리자 웹 기능명세서의 **화면 열다섯**.
  *
- * ── [환경 설정](M15)을 없앴다 (2026-08-24, 사용자 요청) ─────────────────────
+ * ── [환경 설정]을 없앴다 (2026-08-24, 사용자 요청) ─────────────────────
  * 두 구획이 있었다. **서비스 운영 설정**(안내 범위 2km · 배너 기준 1km · 상점가 임계
  * 거리 · 신규 매장 판정 기간 · 코스 반경 · 탭별 지도 확대 단계)과 **변경 이력**이다.
  *
@@ -53,7 +54,7 @@ import { Accounts } from "./pages/Accounts.jsx";
  *
  * ── 내비가 갈리는 자리는 계정 관리 하나뿐이다 (2026-08-24) ─────────────────
  * `CITY`/`DEVELOPER` 두 권한을 없앤 v1.1 은 그대로다 — **업무 화면 아홉 개는 모든
- * 계정이 다 본다.** 계정 관리(M16)만 최종 관리자(`admin`)에게 열린다. 등급을 매긴
+ * 계정이 다 본다.** 계정 관리(M15)만 최종 관리자(`admin`)에게 열린다. 등급을 매긴
  * 것이 아니라 지워지지 않는 계정 하나를 남겨 둔 것이다 (`data/account.js` 머리말).
  *
  * 내비 필터와 라우터 판정이 v1.1 때 쓰던 `can()` 한 함수 그대로인 것에 유의 —
@@ -71,15 +72,21 @@ import { Accounts } from "./pages/Accounts.jsx";
    화면을 여는 사람은 명세서를 펴 놓고 있지 않다. 「상점가」는 무엇을 하는 자리인지
    말하지 않는다 — 보는 자리인지, 고치는 자리인지, 새로 넣는 자리인지.
 
-   그래서 항목은 「상점가 정보 관리」처럼 **일 이름**으로 적고, 구획은 그 일들을 묶는
-   더 큰 일(정보 관리 · 민원 관리 · 시스템 운영)로 적는다. 대상 이름(골목형 상점가 ·
+   그래서 항목은 「골목형 상점가 정보 관리」처럼 **일 이름**으로 적고, 구획은 그 일들을
+   묶는 더 큰 일(정보 관리 · 민원 관리 · 시스템 운영)로 적는다. 대상 이름(골목형 상점가 ·
    공공시설)은 항목 안에 이미 들어 있으므로 구획 제목에서 되풀이하지 않는다.
-   이름이 길어진 만큼 --admin-nav-w 를 264px 로 넓혔다. */
+   이름이 길어진 만큼 --admin-nav-w 를 264px 로 넓혔다.
+
+   ── 「상점가」를 「골목형 상점가」로 되돌렸다 (2026-08-24, 사용자 요청) ─────────
+   이름을 줄여 두었는데, 이 사업의 대상은 **골목형 상점가**라는 지정 제도이고 그냥
+   상점가가 아니다. 시민 화면도 「골목형 상점가」라 적고(S03 · S13 · S03-E), 명세서도
+   장 제목이 그렇다. 관리자만 줄여 부르면 담당자가 보고서를 쓸 때 화면에서 읽은 말과
+   다른 말을 적게 된다 (명세서 「부르는 이름」 원칙과 같은 이유). */
 const NAV = [
   { key: "dashboard", label: "대시보드", icon: "layout-dashboard" },
 
   { section: "정보 관리" },
-  { key: "districts", label: "상점가 정보 관리", icon: "store" },
+  { key: "districts", label: "골목형 상점가 정보 관리", icon: "store" },
   { key: "stores", label: "점포 정보 관리", icon: "shopping-bag" },
   { key: "festivals", label: "축제 정보 관리", icon: "party-popper" },
   { key: "facilities", label: "공공시설 정보 관리", icon: "life-buoy" },
@@ -89,7 +96,9 @@ const NAV = [
   { key: "reports", label: "오류신고 관리", icon: "inbox" },
 
   { section: "시스템 운영" },
-  { key: "asof", label: "데이터 기준일 관리", icon: "calendar-clock" },
+  /* 「데이터 기준일 관리」였다 (2026-08-24) — 고치는 화면에서 보는 화면이 되면서
+     이름도 바뀌었다. 기준일은 자료를 적재하는 개발 쪽이 함께 갱신한다 (DataAsOf 머리말) */
+  { key: "asof", label: "데이터 갱신 현황", icon: "calendar-clock" },
   /* [환경 설정]이 여기 있었다 (2026-08-24 삭제. 위 머리말 참조) */
   { key: "accounts", label: "계정 관리", icon: "users" },
 ];
@@ -136,9 +145,12 @@ export function AdminApp() {
 
   /* 내비 배지는 **지금 값**이어야 한다. 원본을 세면 검수 중에 신고 하나를 처리해도
      배지가 그대로 남아, 눌러도 아무 일이 없는 숫자가 된다.
-     배지를 다는 곳은 오류신고 하나뿐이다 — 관리자가 **답해야 하는 것**이 그것뿐이다. */
+     배지를 다는 곳은 둘 — 관리자가 **답해야 하는 것**이 그 둘뿐이다. 오류신고는 시민이
+     보낸 것이고, 비밀번호 초기화 요청은 담당자가 로그인 화면에서 보낸 것이다
+     (2026-08-24. `data/passwordResets.js`). 계정 관리 항목은 최종 관리자의 내비에만
+     있으므로 (`can()`) 이 배지도 그 계정에게만 보인다 — 아래 `allowed` 가 거른다. */
   const openReports = readCollection("reports", REPORTS).filter(isOpen).length;
-  const badges = { reports: openReports || null };
+  const badges = { reports: openReports || null, accounts: readOpenResets().length || null };
 
   /* 알 수 없는 경로면 첫 화면으로 되돌린다 (`#/zzz`).
      로그인 전에는 아무 것도 하지 않는다 — 그때는 셸 자체가 없다. */

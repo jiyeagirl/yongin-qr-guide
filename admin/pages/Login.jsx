@@ -1,7 +1,8 @@
 import React from "react";
 import { Button, Input, Icon, Notice, Modal, Textarea } from "../../design-systems/admin.js";
-import { SEED_ACCOUNTS, SUPER_ID, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES, SESSION_HOURS }
+import { SEED_ACCOUNTS, SUPER_ID, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES }
   from "../data/account.js";
+import { submitReset } from "../data/passwordResets.js";
 
 /* M01 로그인 — 로그인, 비밀번호 초기화 요청.
  *
@@ -28,6 +29,16 @@ import { SEED_ACCOUNTS, SUPER_ID, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES, SESSIO
  * 최종 관리자가 [계정 관리]에서 새 비밀번호를 넣어 주는 흐름이다. 계정 관리가
  * `admin` 전용이 된 뒤로 이 통로는 **담당자가 비밀번호를 바꾸는 유일한 길**이다.
  *
+ * ── 그 요청이 이제 실제로 남는다 (2026-08-24, 사용자 요청) ─────────────────
+ * 종전에는 [요청 보내기]가 "접수했습니다"를 띄우고 끝이었다 — 받는 자리가 없었다.
+ * 이제 `submitReset()` 이 줄을 남기고, 계정 관리의 세 번째 탭이 그것을 받는다
+ * (`data/passwordResets.js`). 화면이 접수했다고 말하면서 접수하지 않는 것은
+ * 이 화면에서 가장 나쁜 종류의 거짓말이다.
+ *
+ * **아이디가 등록된 것인지 여기서 따지지 않는다.** 오타면 최종 관리자가 목록에서
+ * 「등록되지 않은 아이디」 배지를 보고 거른다 — 로그인 화면이 "그런 아이디 없습니다"라고
+ * 답하면 아이디가 있는지 없는지를 밖에서 물어볼 수 있는 창구가 된다.
+ *
  * ── 조아용을 쓰지 않는다 ────────────────────────────────────────────────────
  * 캐릭터는 시민을 맞이하는 자리의 것이다 (디자인 시스템 7번 규칙). 업무 화면의 로그인은
  * 맞이하는 자리가 아니라 시작하는 자리다.
@@ -39,6 +50,7 @@ export function Login({ onSignIn }) {
   const [reset, setReset] = React.useState(false);
   const [resetSent, setResetSent] = React.useState(false);
   const [resetNote, setResetNote] = React.useState("");
+  const [resetError, setResetError] = React.useState(null);
 
   const lock = lockStatus(id);
 
@@ -46,6 +58,15 @@ export function Login({ onSignIn }) {
     e.preventDefault();
     if (!id.trim() || !pw) { setError("아이디와 비밀번호를 입력해 주세요."); return; }
     setError(onSignIn(id, pw));
+  };
+
+  /* 아이디만 본다 — 사유는 비워도 보낸다. 필수로 두면 "비밀번호를 잊었다"를 사유 칸에
+     한 번 더 적게 되고, 최종 관리자가 그 줄에서 새로 알게 되는 것이 없다 */
+  const sendReset = () => {
+    if (!id.trim()) { setResetError("아이디를 입력해 주세요."); return; }
+    submitReset(id, resetNote);
+    setResetError(null);
+    setResetSent(true);
   };
 
   return (
@@ -78,14 +99,18 @@ export function Login({ onSignIn }) {
               error={error || undefined} />
 
             {lock.locked ? (
+              /* 「약 n분」이 아니라 잠금 시간을 그대로 적는다 (2026-08-24, 사용자 요청).
+                 남은 시간을 분 단위로 올림해 보여주면 새로고침마다 숫자가 바뀌는데,
+                 그 숫자로 담당자가 하는 일은 달라지지 않는다 — 기다리는 것뿐이다 */
               <Notice tone="danger" size="sm">
-                로그인 시도가 {MAX_ATTEMPTS}회 실패해 잠겼습니다. 약 {lock.left}분 뒤에 다시 시도할 수 있습니다.
+                로그인 시도를 {MAX_ATTEMPTS}회 실패했습니다. {LOCK_MINUTES}분 뒤에 다시 시도할 수 있습니다.
               </Notice>
             ) : null}
 
             <Button variant="primary" size="lg" block type="submit" disabled={lock.locked}>로그인</Button>
 
-            <button type="button" onClick={() => { setReset(true); setResetSent(false); }}
+            <button type="button"
+              onClick={() => { setReset(true); setResetSent(false); setResetError(null); }}
               style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--space-2) 0",
                 fontFamily: "var(--font-sans)", fontSize: "var(--fs-label)", color: "var(--text-link)",
                 textDecoration: "underline", textUnderlineOffset: 3 }}>
@@ -94,9 +119,11 @@ export function Login({ onSignIn }) {
           </div>
         </form>
 
+        {/* 세션 시간을 적던 자리다 (2026-08-24 — 시간 제한을 없앴다. account.js 머리말).
+            남은 것은 담당자가 실제로 겪을 수 있는 것 하나다 */}
         <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-caption)",
           color: "var(--text-muted)", lineHeight: 1.6 }}>
-          로그인 후 세션은 {SESSION_HOURS}시간 유지됩니다. {MAX_ATTEMPTS}회 실패하면 {LOCK_MINUTES}분간 잠깁니다.
+          로그인하면 브라우저 탭을 닫을 때까지 유지됩니다. {MAX_ATTEMPTS}회 실패하면 {LOCK_MINUTES}분간 잠깁니다.
         </p>
 
         {/* 검수용 안내. 실서비스에서는 이 상자를 통째로 지운다 —
@@ -130,28 +157,32 @@ export function Login({ onSignIn }) {
         ) : (
           <>
             <Button variant="ghost" onClick={() => setReset(false)}>취소</Button>
-            <Button variant="primary" onClick={() => setResetSent(true)}>요청 보내기</Button>
+            <Button variant="primary" onClick={sendReset}>요청 보내기</Button>
           </>
         )}>
         {resetSent ? (
           <>
             <p style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: 1.65 }}>
-              요청을 접수했습니다. 담당자가 확인한 뒤 새 비밀번호를 알려 드립니다.
+              <b>{id.trim()}</b> 계정의 초기화 요청을 접수했습니다.
+              최종 관리자가 확인한 뒤 새 비밀번호를 알려 드립니다.
             </p>
             <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-4)" }}>
-              서버 연동 전이라 실제로 전달되지는 않습니다. 지금은 최종 관리자가
-              [계정 관리] 화면에서 비밀번호를 직접 바꿔 주는 흐름입니다.
+              서버 연동 전이라 메일이나 문자로 전달되지는 않습니다. 요청은 최종 관리자의
+              [계정 관리] 화면 &gt; [비밀번호 초기화 요청] 탭에 쌓이며,
+              같은 브라우저 탭 안에서만 유지됩니다.
             </Notice>
           </>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-            <Input label="아이디" value={id} onChange={e => setId(e.target.value)}
+            <Input label="아이디" value={id}
+              onChange={e => { setId(e.target.value); setResetError(null); }}
               placeholder="초기화할 계정의 아이디"
-              hint="이 아이디로 등록된 이메일로 담당자가 연락합니다." />
+              error={resetError || undefined}
+              hint="이 아이디로 등록된 이메일이나 연락처로 최종 관리자가 연락합니다." />
             <Textarea label="사유" value={resetNote} rows={3} maxLength={200}
               onChange={e => setResetNote(e.target.value)}
               placeholder="예) 인사이동으로 인수인계 받았습니다."
-              hint="자동 재설정을 만들지 않은 이유는 계정이 몇 명뿐이기 때문입니다 — 사람이 확인하는 편이 빠르고 안전합니다." />
+              hint="적지 않아도 보낼 수 있습니다. 자동 재설정을 만들지 않은 이유는 계정이 몇 명뿐이기 때문입니다 — 사람이 확인하는 편이 빠르고 안전합니다." />
           </div>
         )}
       </Modal>

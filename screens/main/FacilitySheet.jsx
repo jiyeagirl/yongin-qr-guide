@@ -118,10 +118,9 @@ export function FacilitySheet({
       <div style={{ padding: "var(--space-1) var(--gutter-screen) 0" }}>
         {rows.length === 0 ? (
           /* 유형 칩은 0건이면 아예 숨기므로(FilterBar) 여기까지 오는 경우는 거의 없다.
-             그래도 빈 화면 대신 문장을 둔다 — U-FC-09 와 같은 취지다 */
-          <Notice tone="info" title="표시할 시설이 없습니다">
-            선택한 유형 칩을 해제하면 주변 공공시설이 모두 나옵니다.
-          </Notice>
+             그래도 빈 화면 대신 문장을 둔다 — U-FC-09 와 같은 취지다.
+             한 줄이다 (2026-08-24, 사용자 요청. DistrictSheet 와 같은 이유) */
+          <Notice tone="info">조건에 맞는 시설이 없습니다.</Notice>
         ) : sections.map((sec, si) => (
           <section key={sec.id} style={{ marginTop: si === 0 ? 0 : "var(--space-5)" }}>
             {showHeads ? (
@@ -155,8 +154,9 @@ export function FacilitySheet({
       <div style={{ padding: "var(--space-5) var(--gutter-screen) 0" }}>
         <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
           {/* 고른 것이 없으면(=전체) 화면에 깔린 유형은 4종 전부다 */}
-          {asOfLine(asOf, types.length ? types : Object.keys(asOf), FACILITY_LABELS)}<br />
-          안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
+          {/* 한 줄이다 (2026-08-24, 사용자 요청. DistrictSheet 와 같은 이유) */}
+          {asOfLine(asOf, types.length ? types : Object.keys(asOf), FACILITY_LABELS)}
+          {". 안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요."}
         </p>
       </div>
     </div>

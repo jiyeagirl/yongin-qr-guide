@@ -11,6 +11,9 @@ import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
+import {
+  removedTab, removedColumns, removedEmpty, undoToast, HIDE_ON_RESTORE, VIEW_ALL, VIEW_REMOVED,
+} from "./RemovedItems.jsx";
 
 /* M09 공공시설 목록 · M10 공공시설 등록·수정 — **관리자 목록 화면의 기준이다.**
  *
@@ -41,7 +44,7 @@ import { EditorModal } from "./EditorModal.jsx";
  * ── 데이터 기준일이 이 화면에 없다 (명세서 7장) ────────────────────────────
  * 유형마다 다른 기준월을 갖지만 **개별 등록 화면에는 입력란을 두지 않는다.** 갱신이
  * 원천 파일 단위로 일어나므로 건별로 적으면 같은 날 받은 자료에 다른 날짜가 붙는다.
- * 대신 머리에 지금 값이 무엇인지 적는다 — 담당자가 [데이터 기준일 관리]로 가야
+ * 대신 머리에 지금 값이 무엇인지 적는다 — 담당자가 [데이터 갱신 현황]으로 가야
  * 알 수 있게 두면, 여기서 고친 자료가 어느 달 기준으로 나가는지 모른 채 저장한다.
  */
 
@@ -79,7 +82,7 @@ function derive(row) {
 }
 
 export function Facilities({ onToast }) {
-  const { rows, upsert, remove, patch, patchMany } = useCollection("facilities", FACILITIES, derive, "공공시설");
+  const { rows, removed, upsert, remove, restore, patch, patchMany } = useCollection("facilities", FACILITIES, derive, "공공시설");
   const [type, setType] = React.useState("");
   const list0 = useListState([type]);
 
@@ -93,12 +96,27 @@ export function Facilities({ onToast }) {
     onToast, label: "공공시설",
   });
 
-  const filtered = rows.filter(f => {
-    if (type && f.type !== type) return false;
+  /* ── 삭제된 항목은 **유형 탭 줄에 이어 붙인다** (2026-08-24) ─────────────────
+     다른 네 화면은 「전체 | 삭제된 항목 n」 두 칸짜리 탭 줄을 새로 갖지만, 이 화면에는
+     그 줄이 이미 있다 (전체 · AED · 화장실 · 쉼터 · 대피소). 탭 줄을 하나 더 얹으면
+     같은 모양의 줄이 위아래로 둘이 되어, 어느 쪽이 무엇을 정하는지 눌러 봐야 안다.
+
+     한 줄에 섞이는 것이 어색해 보이지만, 이 줄이 답하는 물음은 처음부터 하나다 —
+     **"지금 무엇을 보여주는 목록인가"** (PageHeader 의 tabs 머리말). 유형도 그 답이고
+     지운 목록도 그 답이다. 삭제된 항목을 고르면 유형 고르기가 풀리는데(아래 onChange),
+     그것도 맞다: 지금 보는 것이 다른 목록이기 때문이다. 되돌아오면 마지막 유형이 그대로다. */
+  const [view, setView] = React.useState(VIEW_ALL);
+  const inRemoved = view === VIEW_REMOVED;
+  const source = inRemoved ? removed : rows;
+
+  const filtered = source.filter(f => {
+    if (!inRemoved && type && f.type !== type) return false;
     if (!list0.term) return true;
     return `${f.name} ${f.addr} ${f.place || ""} ${f.hours || ""}`.includes(list0.term);
   });
   const paged = list0.paginate(filtered);
+
+  const undo = f => { restore(f.id, f.name, HIDE_ON_RESTORE); onToast(undoToast(f.name)); };
 
   /* 일괄 처리 (명세서 1장) — 선택한 것을 한꺼번에 내리거나 올린다. 여기서 실제로
      쓰이는 자리는 "한 골목의 시설 여럿이 공사로 막혔을 때"다. 삭제를 일괄로 두지
@@ -126,15 +144,24 @@ export function Facilities({ onToast }) {
   return (
     <>
       {/* 제목 아래 설명을 두지 않는다 (2026-08-20, 사용자 요청) — 명세서 장 번호와
-          시민 화면 기준일 고지가 적혀 있었다. 기준일은 [데이터 기준일 관리]가 정하는
+          시민 화면 기준일 고지가 적혀 있었다. 기준일은 [데이터 갱신 현황]이 보여주는
           값이고, 다루는 네 유형은 바로 아래 탭이 이미 늘어놓는다. */}
       {/* 유형 탭은 머리의 일부다 — 「지금 무엇을 보여주는 목록인가」를 정하는 줄이라
           제목 바로 아래 붙는다 (PageHeader 의 tabs 머리말) */}
       <PageHeader title="공공시설 정보 관리" count={`${filtered.length}곳`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>시설 등록</Button>}
-        tabs={<SegmentedTabs items={TYPE_TABS} value={type} onChange={setType} />} />
+        tabs={
+          <SegmentedTabs items={TYPE_TABS.concat(removedTab(removed.length))}
+            value={inRemoved ? VIEW_REMOVED : type}
+            onChange={id => {
+              if (id === VIEW_REMOVED) { setView(VIEW_REMOVED); return; }
+              setView(VIEW_ALL); setType(id);
+            }} />
+        } />
 
-      <Toolbar actions={list0.selected.length ? (
+      {/* 일괄 처리는 「전체」에서만 선다 — 지운 줄의 노출을 켜고 끄는 일에는 뜻이 없다
+          (점포 목록과 같은 규칙. removedColumns 주석) */}
+      <Toolbar actions={!inRemoved && list0.selected.length ? (
         <>
           <span style={{ fontSize: "var(--fs-label)", color: "var(--text-body)", whiteSpace: "nowrap" }}>
             {list0.selected.length}건 선택
@@ -149,13 +176,16 @@ export function Facilities({ onToast }) {
 
       <DataTable
         caption="등록된 공공시설 목록"
-        rows={paged.rows} rowKey="id" onRowClick={ed.openEdit}
-        selectable selected={list0.selected} onSelectedChange={list0.setSelected}
+        rows={paged.rows} rowKey="id"
+        onRowClick={inRemoved ? undefined : ed.openEdit}
+        selectable={!inRemoved} selected={list0.selected} onSelectedChange={list0.setSelected}
         /* 좌표가 없으면 지도에 찍히지 않고 거리 계산도 안 된다 — 목록에서 바로 보여야
-           그 줄을 열어 지도에서 찍게 된다 */
-        rowTone={f => (f.lat == null || f.lng == null ? "warning" : null)}
-        empty={{ title: "조건에 맞는 시설이 없습니다.", description: "검색어나 유형 탭을 지워 보세요." }}
-        columns={[
+           그 줄을 열어 지도에서 찍게 된다. 지운 목록에서는 끈다: 고칠 수 없는 줄에
+           노란 띠를 둘러 봐야 담당자가 할 수 있는 일이 없다 */
+        rowTone={f => (!inRemoved && (f.lat == null || f.lng == null) ? "warning" : null)}
+        /* 제목 한 줄이다 (2026-08-24, 사용자 요청. Stores 와 같은 이유) */
+        empty={inRemoved ? removedEmpty("공공시설") : { title: "조건에 맞는 공공시설이 없습니다." }}
+        columns={(cols => (inRemoved ? removedColumns(cols, undo) : cols))([
           { key: "name", label: "명칭", sortable: true },
           { key: "type", label: "유형", width: 110, sortable: true,
             render: f => (
@@ -182,7 +212,7 @@ export function Facilities({ onToast }) {
               <Button variant="ghost" size="sm" icon="trash-2"
                 onClick={() => ed.askRemove(f)} style={{ color: "var(--state-danger)" }}>삭제</Button>
             ) },
-        ]} />
+        ])} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
         <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />

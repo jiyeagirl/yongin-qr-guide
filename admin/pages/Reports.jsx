@@ -3,9 +3,9 @@ import {
   PageHeader, Toolbar, DataTable, Cell, Modal, Button, Select, Badge, Notice, Pagination,
   InfoList, Textarea, EMPTY_MARK,
 } from "../../design-systems/admin.js";
-import { REPORTS, CONTACT_KEEP_DAYS } from "../data/reports.js";
+import { REPORTS } from "../data/reports.js";
 import {
-  REPORT_STATES, REPORT_TYPES, REPORT_TARGET_TYPES, REPORT_NEEDS_REPLY,
+  REPORT_STATES, REPORT_TYPES, REPORT_TARGET_TYPES, REPORT_CLOSING_STATES,
 } from "../data/fields.js";
 import { readAccounts } from "../data/account.js";
 import { useCollection } from "../data/store.js";
@@ -19,21 +19,27 @@ import { useListState, ListSearch, SearchHint } from "./useListState.js";
  * 접수된 신고를 관리자가 지울 수 있으면 그 목록은 더 이상 접수 기록이 아니다.
  * 잘못 들어온 건은 지우는 대신 「반려」나 「중복」으로 옮긴다.
  *
- * ── 회신 없이 닫을 수 없다 ──────────────────────────────────────────────────
- * 명세서 5-2: `reply_content` 는 ◐ 이고 "처리완료 또는 반려 전환 시 필수"다.
- * 답 없이 닫힌 신고는 시민 쪽에서 보면 무시된 것과 구별되지 않는다.
- * (지금은 시민에게 답을 돌려보낼 통로가 없다. 아래 안내가 그 사실을 적는다.)
+ * ── 회신을 하지 않는다 (2026-08-24, 사용자 요청) ────────────────────────────
+ * 「회신처」와 「회신 내용」 두 칸이 여기 있었다. **둘 다 뺐다.**
+ *
+ * 시민 쪽은 처음부터 그랬다 — S10 신고 폼은 연락처 칸을 열지 않고(2026-08-18 결정),
+ * 접수 화면이 "개별 답변은 어려운 점 양해 부탁드립니다"라고 적는다. 그러니 이 화면의
+ * 회신처는 **들어올 리 없는 값**이었고(더미에만 있었다), 회신 내용은 **아무 데도 가지
+ * 않는 글**이었다. 담당자가 정성껏 답을 적으면 그것은 관리자 화면에만 남는다.
+ *
+ * 닫을 때 근거를 남기라는 요구(명세서 5-2 의 ◐)는 **내부 메모로 옮겼다.** 없앤 것은
+ * 답장이지 기록이 아니다 — 처리완료·반려는 이 신고를 더 보지 않겠다는 결정이라,
+ * 왜 그렇게 정했는지가 없으면 석 달 뒤 같은 신고가 다시 들어왔을 때 처음부터 다시 본다.
  *
  * ── 같은 대상에 세 건이 쌓이면 세운다 ───────────────────────────────────────
  * 명세서 5장의 규칙인데, 이유는 **판단이 달라지기 때문**이다. 한 건이면 신고한 사람의
  * 착각일 수 있지만 세 명이 같은 말을 하면 자료가 틀린 것이다. 그때 담당자가 할 일은
  * "답을 적는다"가 아니라 "자료를 고친다"로 바뀐다.
  *
- * ── 회신처는 개인정보다 ─────────────────────────────────────────────────────
- * 명세서 5장: "회신처는 개인정보이므로 처리 완료 후 90일 보관 뒤 자동 파기."
- * 실제 파기는 서버 배치가 하는 일이고, 화면이 할 수 있는 것은 담당자에게 **이 값이
- * 곧 사라진다**는 것과 목록에 함부로 뿌리지 않는 것뿐이다. 그래서 목록 표에는 회신처
- * 열이 없고 상세에서만 보인다.
+ * ── 개인정보 보관 문제가 함께 없어졌다 ──────────────────────────────────────
+ * 명세서 5장의 "회신처는 개인정보이므로 처리 완료 후 90일 보관 뒤 자동 파기"는 화면이
+ * 지킬 수 없는 조항이었다 — 파기는 서버 배치의 일이고 화면이 할 수 있는 것은 그 사실을
+ * 적어 두는 것뿐이었다. 애초에 받지 않으니 **보관할 것도 파기할 것도 없다.**
  *
  * ── 미처리를 위에 둔다 ──────────────────────────────────────────────────────
  * 기본 차례가 접수일 역순이 아니라 **상태 먼저, 그 다음 최신순**이다. 순수 최신순이면
@@ -92,14 +98,15 @@ export function Reports({ onToast, onNavigate }) {
 
   const save = () => {
     if (!open) return;
-    /* ◐ 조건부 — 처리완료·반려로 옮기려면 회신 내용이 있어야 한다 (명세서 5-2) */
-    if (REPORT_NEEDS_REPLY.includes(draft.state) && !String(draft.reply || "").trim()) {
-      setError(`「${draft.state}」(으)로 옮기려면 회신 내용을 적어야 합니다.`);
+    /* ◐ 조건부 — 신고를 닫으려면 근거가 있어야 한다 (명세서 5-2. 회신 내용이 받던 자리를
+       내부 메모가 이어받았다 — 머리말 참조) */
+    if (REPORT_CLOSING_STATES.includes(draft.state) && !String(draft.memo || "").trim()) {
+      setError(`「${draft.state}」(으)로 옮기려면 내부 메모에 근거를 적어야 합니다.`);
       return;
     }
     patch(open.id, {
       state: draft.state, assignee: draft.assignee || null,
-      memo: draft.memo || null, reply: String(draft.reply || "").trim() || null,
+      memo: String(draft.memo || "").trim() || null,
     }, open.id);
     onToast(`${open.id} 처리 내용을 저장했습니다.`);
     close();
@@ -211,7 +218,8 @@ export function Reports({ onToast, onNavigate }) {
               { label: "대상", value: open.target },
               { label: "대상 ID", value: open.targetId },
               { label: "접수 지점", value: open.qrCode },
-              { label: "회신처", value: open.contact },
+              /* 「회신처」가 여기 있었다 (2026-08-24 삭제) — 회신을 하지 않으므로
+                 시민 쪽 신고 폼이 애초에 연락처를 받지 않는다 (머리말) */
             ]} />
 
             <div style={{ marginTop: "var(--space-4)", padding: "var(--space-4)",
@@ -219,13 +227,6 @@ export function Reports({ onToast, onNavigate }) {
               fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: 1.65 }}>
               {open.body}
             </div>
-
-            {open.contact ? (
-              <p style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-                회신처는 개인정보입니다. 처리 완료 후 {CONTACT_KEEP_DAYS}일이 지나면 자동으로 파기되며,
-                목록 표에는 표시하지 않습니다.
-              </p>
-            ) : null}
 
             {/* 5-2 관리자 처리 항목 */}
             <div style={{ marginTop: "var(--space-5)", display: "grid",
@@ -237,24 +238,15 @@ export function Reports({ onToast, onNavigate }) {
                 onChange={e => setDraft(d => ({ ...d, assignee: e.target.value }))} />
             </div>
 
+            {/* 「회신 내용」 칸이 이 아래 있었다 (2026-08-24 삭제). ◐ 조건부 요구는
+                내부 메모가 이어받았다 — 그래서 이 칸이 rows 2 에서 3 으로 늘고 오류를 받는다. */}
             <div style={{ marginTop: "var(--space-4)" }}>
-              <Textarea label="내부 메모" value={draft.memo || ""} rows={2} maxLength={500}
-                onChange={e => setDraft(d => ({ ...d, memo: e.target.value }))}
-                placeholder="확인 경위, 연락한 곳, 판단 근거."
-                hint="사용자에게 공개되지 않습니다." />
-            </div>
-
-            <div style={{ marginTop: "var(--space-4)" }}>
-              <Textarea label="회신 내용" value={draft.reply || ""} rows={3} maxLength={500}
+              <Textarea label="내부 메모" value={draft.memo || ""} rows={3} maxLength={500}
                 error={error || undefined}
-                onChange={e => { setDraft(d => ({ ...d, reply: e.target.value })); setError(null); }}
-                placeholder="확인 결과와 조치 내용을 적습니다."
-                hint={`「${REPORT_NEEDS_REPLY.join("」 · 「")}」(으)로 옮기려면 반드시 적어야 합니다.`} />
+                onChange={e => { setDraft(d => ({ ...d, memo: e.target.value })); setError(null); }}
+                placeholder="확인 경위, 연락한 곳, 판단 근거."
+                hint={`사용자에게 공개되지 않습니다. 「${REPORT_CLOSING_STATES.join("」 · 「")}」(으)로 옮기려면 반드시 적어야 합니다.`} />
             </div>
-
-            <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-4)" }}>
-              지금은 회신 내용이 관리자 화면에만 남습니다. 회신처로 알림을 보내는 기능은 서버 연동 후 열립니다.
-            </Notice>
           </>
         ) : null}
       </Modal>

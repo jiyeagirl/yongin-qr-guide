@@ -13,6 +13,9 @@ import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
+import {
+  ViewTabs, removedColumns, removedEmpty, undoToast, HIDE_ON_RESTORE, VIEW_ALL, VIEW_REMOVED,
+} from "./RemovedItems.jsx";
 
 /* M07 축제 목록 · M08 축제 등록·수정 — 6건.
  *
@@ -70,6 +73,16 @@ function stateOf(f) {
 /* 명세서 2-3 의 노출 카테고리(진행 / 완료)를 내던 `categoryOf` 가 여기 있었다.
    2026-08-24 에 없앴다 — 아래 머리말 참조. */
 
+/* 1:N 목록의 날짜 칸을 축제 기간 안으로 묶는다. `datetime-local` 의 min/max 는
+   달력에서 그 밖의 날을 고르지 못하게 한다 — 값이 이미 폼 위쪽에 있는데 아래에서
+   아무 날이나 고를 수 있으면, 그 둘이 어긋난 상태가 저장까지 간다.
+   기간이 아직 비어 있으면 묶지 않는다 (아무 날도 못 고르는 달력이 더 나쁘다). */
+function withPeriod(columns, v) {
+  if (!v.start || !v.end) return columns;
+  const min = `${v.start}T00:00`, max = `${v.end}T23:59`;
+  return columns.map(c => (c.type === "datetime-local" ? { ...c, min, max } : c));
+}
+
 function periodOf(f) {
   if (!f.start) return EMPTY_MARK;
   const short = s => s.slice(5).replace("-", ".");
@@ -77,7 +90,7 @@ function periodOf(f) {
 }
 
 export function Festivals({ onToast }) {
-  const { rows, upsert, remove, patch } = useCollection("festivals", FESTIVALS, null, "축제");
+  const { rows, removed, upsert, remove, restore, patch } = useCollection("festivals", FESTIVALS, null, "축제");
   const [state, setState] = React.useState("");
   const list0 = useListState([state]);
 
@@ -96,6 +109,16 @@ export function Festivals({ onToast }) {
       /* V-07 — 종료일 ≥ 시작일 (같은 날 허용) */
       if (v.start && v.end && v.end < v.start) bad.end = "종료일은 시작일과 같거나 이후여야 합니다.";
       if (!v.pose) bad.pose = "조아용 이미지를 골라 주세요.";
+      /* 1:N 목록에도 같은 검사가 걸린다 (2026-08-24). 시각을 글자가 아니라 값으로 받게
+         되면서 비로소 견줄 수 있게 된 검사다 — 「10.17 11:00」 이라는 글자끼리는 앞뒤를
+         알 수 없었다. 오류는 줄 번호로 가리킨다: Repeater 는 칸마다 오류를 달지 못하고
+         목록 하나에 한 줄을 다는데, 그 한 줄이 어느 줄 이야기인지 말해주지 않으면
+         스무 줄짜리 목록에서 찾을 수가 없다. */
+      const late = x => x.startAt && x.endAt && x.endAt < x.startAt;
+      const p = (v.programs || []).findIndex(late);
+      if (p >= 0) bad.programs = `${p + 1}번째 줄의 종료 일시가 시작 일시보다 빠릅니다.`;
+      const b = (v.booths || []).findIndex(late);
+      if (b >= 0) bad.booths = `${b + 1}번째 줄의 종료 일시가 시작 일시보다 빠릅니다.`;
       /* 「배치도 이미지가 필요합니다」 검사는 뺐다 (2026-08-20) — 배치도 칸 자체가
          없어져, 고칠 수 없는 것을 이유로 저장을 막는 검사가 되기 때문이다 */
       /* 「부스 번호 겹침」 검사도 함께 뺐다 (2026-08-20) — 번호 칸 자체가 없다.
@@ -115,12 +138,19 @@ export function Festivals({ onToast }) {
     return o;
   }, [rows, ed.draft]);
 
-  const filtered = rows.filter(f => {
+  /* 「전체 | 삭제된 항목」 — 탭이 바꾸는 것은 거르기 전의 목록뿐이다 (RemovedItems) */
+  const [view, setView] = React.useState(VIEW_ALL);
+  const inRemoved = view === VIEW_REMOVED;
+  const source = inRemoved ? removed : rows;
+
+  const filtered = source.filter(f => {
     if (state && stateOf(f) !== state) return false;
     if (!list0.term) return true;
     return `${f.name} ${DISTRICT_NAME[f.districtId] || ""} ${f.program || ""}`.includes(list0.term);
   });
   const paged = list0.paginate(filtered);
+
+  const undo = f => { restore(f.id, f.name, HIDE_ON_RESTORE); onToast(undoToast(f.name)); };
 
   return (
     <>
@@ -128,19 +158,21 @@ export function Festivals({ onToast }) {
           자동 판정되며 직접 고를 수 없습니다」가 있었다. 고를 수 없다는 것은 **고르는 칸이
           없다는 사실**이 이미 말하고 있고, 없는 기능을 설명하는 줄이 목록보다 먼저 읽힌다. */}
       <PageHeader title="축제 정보 관리" count={`${filtered.length}건`}
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>축제 등록</Button>} />
+        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>축제 등록</Button>}
+        tabs={<ViewTabs value={view} onChange={setView} count={removed.length} />} />
 
       <Toolbar>
         <Select value={state} options={STATE_OPTIONS} onChange={e => setState(e.target.value)} />
-        <ListSearch state={list0} placeholder="축제명 · 상점가 검색" />
+        <ListSearch state={list0} placeholder="축제명 · 골목형 상점가 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
       <DataTable
         caption="등록된 축제 목록"
-        rows={paged.rows} rowKey="id" onRowClick={ed.openEdit}
-        empty={{ title: "해당 상태의 축제가 없습니다." }}
-        columns={[
+        rows={paged.rows} rowKey="id"
+        onRowClick={inRemoved ? undefined : ed.openEdit}
+        empty={inRemoved ? removedEmpty("축제") : { title: "해당 상태의 축제가 없습니다." }}
+        columns={(cols => (inRemoved ? removedColumns(cols, undo) : cols))([
           { key: "name", label: "축제명", sortable: true },
           { key: "pose", label: "조아용", width: 88, align: "center",
             render: f => (f.pose
@@ -163,7 +195,7 @@ export function Festivals({ onToast }) {
               <Button variant="ghost" size="sm" icon="trash-2"
                 onClick={() => ed.askRemove(f)} style={{ color: "var(--state-danger)" }}>삭제</Button>
             ) },
-        ]} />
+        ])} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
         <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />
@@ -185,11 +217,16 @@ export function Festivals({ onToast }) {
                        「조건부 · 자료 확보 시」 배지가 붙었다. 자료를 받을지 아직 모른다는
                        것은 **우리 쪽 사정**이지 이 칸을 채우는 사람이 알아야 할 일이 아니다.
                        담당자에게 이 둘은 그냥 "있으면 넣고 없으면 비우는" 선택 항목이다. */}
+                {/* 날짜 고르개를 축제 기간 안으로 묶는다 (2026-08-24). 위 폼의 시작일·종료일이
+                    이미 정해져 있으므로, 달력이 그 밖의 날을 흐리게 두면 담당자가 다른 달을
+                    잘못 고르는 일 자체가 없어진다. 기간을 아직 안 넣었으면 묶지 않는다 —
+                    아무 날도 못 고르는 달력이 되는 쪽이 나쁘다. */}
                 <Repeater
                   title="프로그램 일정"
-                  columns={PROGRAM_COLUMNS} rows={ed.draft.values.programs || []}
+                  columns={withPeriod(PROGRAM_COLUMNS, ed.draft.values)}
+                  rows={ed.draft.values.programs || []}
                   onChange={p => ed.set("programs", p)}
-                  addLabel="프로그램 추가"
+                  addLabel="프로그램 추가" error={ed.errors.programs}
                   note="작성하신 순서에 따라 사용자 화면에 노출됩니다." />
 
                 {/* 부스는 **글로 안내한다** (2026-08-20). 좌표 칸 둘과 배치도 이미지(V-06),
@@ -197,7 +234,8 @@ export function Festivals({ onToast }) {
                     한 줄이 된다. 자세한 사정은 data/fields.js 의 BOOTH_COLUMNS 주석. */}
                 <Repeater
                   title="부스 위치"
-                  columns={BOOTH_COLUMNS} rows={ed.draft.values.booths || []}
+                  columns={withPeriod(BOOTH_COLUMNS, ed.draft.values)}
+                  rows={ed.draft.values.booths || []}
                   onChange={b => ed.set("booths", b)}
                   addLabel="부스 추가" error={ed.errors.booths}
                   note="작성하신 순서에 따라 사용자 화면에 노출됩니다." />
@@ -208,7 +246,14 @@ export function Festivals({ onToast }) {
 
       <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
         description="축제를 삭제합니다."
-        footnote="종료된 축제는 삭제하지 않고 그대로 두는 것이 원칙입니다 — 완료 카테고리로 옮겨 계속 노출됩니다. 잘못 등록한 건만 지웁니다."
+        /* 여기만 기본 각주(DELETE_NOTE)를 쓰지 않는다. 축제에는 「폐업·폐쇄」가 없고,
+           대신 **종료**가 있는데 그것은 지울 이유가 아니라 카테고리가 바뀌는 일이다
+           (명세서 2-3: 종료일이 지나도 삭제·숨김이 아니라 완료 카테고리로 옮겨 계속 노출).
+           그 사실을 먼저 말해야 "끝났으니 지운다"를 막을 수 있다.
+           되돌리는 자리는 다른 화면과 같으므로 마지막 줄은 같은 문장이다. */
+        footnote={"종료된 축제는 삭제하지 않고 [완료] 카테고리로 이동하여 계속 노출합니다. "
+          + "잘못 등록된 경우에만 삭제해 주세요. "
+          + "삭제한 항목은 목록 위 [삭제된 항목]에서 되돌릴 수 있습니다."}
         onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
     </>
   );

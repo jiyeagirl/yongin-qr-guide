@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  EmptyState, SectionHeader, DistrictRow, Notice, Button,
+  EmptyState, SectionHeader, DistrictRow, Notice, Button, TextButton,
 } from "../../design-systems/index.js";
 
 /* S03-E 상점가 탭 안내 상태 (U-ST-16).
@@ -45,14 +45,38 @@ export function DistrictEmpty({
         style={{ padding: "var(--space-6) 0 var(--space-4)" }} />
 
       {/* 막힌 채로 두지 않는다 — 이 탭이 못 하는 일을 다른 탭이 하고 있다는 것을 알려준다.
-          여기서 나가는 길이 없으면 사용자는 탭을 하나씩 눌러보며 확인해야 한다. */}
+          여기서 나가는 길이 없으면 사용자는 탭을 하나씩 눌러보며 확인해야 한다.
+
+          ── 안의 동작을 글자 링크로 바꿨다 (2026-08-24, 사용자 요청) ─────────────
+          `Button size="sm" variant="outline"` 이었다. 두 가지가 어긋났다.
+
+            흰 덩어리   outline 은 **흰 바탕과 테두리**를 갖는다 (Button 의 VARIANTS).
+                        그것이 teal 로 옅게 깔린 안내 상자 위에 얹히니, 상자 안에 다른
+                        상자가 하나 더 들어앉은 꼴이 됐다.
+            무게        sm 도 최소 높이 40px 에 굵은 라벨이다. 이 상자에서 주인공은
+                        "시설은 그대로 볼 수 있다"는 문장이고 버튼은 그 문장의 꼬리인데,
+                        문장보다 버튼이 먼저 눈에 들어왔다. 게다가 이 화면의 주된 내용은
+                        아래 「가볼 만한 상점가」라 거기 있는 버튼과 무게가 맞부딪혔다.
+
+          `TextButton` 이 정확히 이 경우를 위해 있는 부품이다 (그 파일 머리말이 같은
+          이야기를 적고 있다) — 바탕도 테두리도 없이 글자와 꺾쇠만 남기고, **손이 닿는
+          높이는 44px 그대로**다 (U-CM-13). 눈에는 작고 손에는 크다.
+
+          색은 브랜드 초록이 아니라 `--text-link`(teal-700)다. 이 상자의 제목·아이콘과
+          **같은 색**이라 상자 안의 것으로 읽히고, 초록을 쓰면 옅은 teal 바탕 위에 세 번째
+          색이 된다. 팔레트 값을 직접 적지 않는 것은 이것이 "누를 수 있는 글자"라는 뜻을
+          가진 자리이기 때문이다 — 링크 색이 바뀌면 여기도 따라와야 한다.
+          왼쪽 여백은 0 으로 당겨 문장과 첫 글자를 맞춘다 — 링크가 문장에서 이어진다.
+          아이콘 둘은 각각 할 일이 있다: 구명튜브는 **어느 탭인지**를(탭바와 같은 그림쇠),
+          꺾쇠는 **여기서 나간다**는 것을 말한다. */}
       {onGoFacility ? (
         <Notice tone="info" title="주변 공공시설은 그대로 볼 수 있습니다">
           AED · 화장실 · 쉼터 · 대피소는 상점가와 무관하게 안내됩니다.
-          <span style={{ display: "block", marginTop: "var(--space-2)" }}>
-            <Button size="sm" variant="outline" icon="life-buoy" onClick={onGoFacility}>
+          <span style={{ display: "block", marginTop: 2 }}>
+            <TextButton icon="life-buoy" iconEnd="chevron-right" onClick={onGoFacility}
+              style={{ paddingLeft: 0, color: "var(--text-link)" }}>
               공공시설 탭으로
-            </Button>
+            </TextButton>
           </span>
         </Notice>
       ) : null}
@@ -89,8 +113,8 @@ export function DistrictEmpty({
           깔리는 것은 가까운 상점가 몇 곳뿐이고 안전시설은 한 줄도 없다. */}
       <p style={{ marginTop: "var(--space-5)", fontSize: "var(--fs-caption)",
         color: "var(--text-muted)", lineHeight: 1.55 }}>
-        상점가 지정 현황 2026.07 기준<br />
-        안내 정보는 참고용입니다.
+        {/* 한 줄이다 (2026-08-24, 사용자 요청. DistrictSheet 와 같은 이유) */}
+        상점가 지정 현황 2026.07 기준. 안내 정보는 참고용입니다.
       </p>
     </div>
   );
