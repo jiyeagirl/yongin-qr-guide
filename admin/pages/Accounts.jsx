@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, Cell, ConfirmDialog, Button, Badge, Switch,
+  PageHeader, Toolbar, DataTable, Cell, ConfirmDialog, Button, Badge, Switch, Notice,
   Pagination, Modal, SegmentedTabs, EMPTY_MARK,
 } from "../../design-systems/admin.js";
 import { ACCOUNT_FIELDS, checkPassword, V } from "../data/fields.js";
@@ -154,14 +154,27 @@ export function Accounts({ account, onToast }) {
   /* 요청 줄이 가리키는 계정. 오타나 이미 지운 계정이면 없다 — 그 사실이 표에 배지로 뜬다 */
   const accountOf = r => rows.find(a => a.id === r.loginId);
 
-  /* 요청 줄을 누르면 그 계정의 수정 창이 열린다 (비밀번호 칸이 비어 있는 그 창이다).
-     여는 것으로 끝이고 요청은 저장하는 쪽에서 닫힌다 — 열어만 보고 닫는 일이 더 잦다 */
+  /* ── 요청에 관한 일은 전부 수정 창 안에서 한다 (2026-08-24, 사용자 요청) ───────
+     표의 관리 칸에 [비밀번호 변경]과 [처리 완료] 두 단추를 나란히 두었더니 두 가지가
+     틀렸다.
+
+       행 높이가 들쭉날쭉해진다   단추 둘이 칸 폭을 넘겨 접히면서 그 줄만 두 줄이 됐다.
+                                 대기 줄과 처리한 줄의 높이가 달라 표가 계단처럼 보였다
+       처리하고 나면 자취가 없다   [처리 완료]를 누른 뒤 그 계정을 다시 열어도 방금
+                                 무엇을 처리했는지 화면 어디에도 없었다
+
+     이제 표에는 단추가 **하나**(비밀번호 재설정)이고 그것이 하는 일은 수정 창을 여는 것
+     하나다. 요청의 사유·일시와 [처리 완료]·[대기로]는 그 창 안에 선다 — 비밀번호를 넣는
+     자리와 요청을 닫는 자리가 같아야 두 일이 한 번에 끝난다. */
   const openFromReset = r => {
     const found = accountOf(r);
     if (!found) {
-      setBlocked({ name: r.loginId, plain: true,
+      /* 계정이 없으면 열 창도 없다. 그래도 요청은 닫을 수 있어야 하므로 이 안내창이
+         [처리 완료로 표시]를 들고 간다 — 그러지 않으면 오타로 들어온 요청이 대기 상태로
+         영원히 남아 배지의 숫자가 줄지 않는다 */
+      setBlocked({ name: r.loginId, plain: true, resetRow: r,
         why: "이 아이디로 등록된 계정이 없습니다. 비밀번호를 바꿔 줄 대상이 없습니다.",
-        note: "아이디를 잘못 적었거나 이미 삭제된 계정입니다. 삭제한 계정이라면 [삭제된 항목] 탭에서 되돌릴 수 있고, 오타라면 요청한 담당자에게 확인한 뒤 [처리 완료]로 닫아 주세요." });
+        note: "아이디를 잘못 적었거나 이미 삭제된 계정입니다. 삭제한 계정이라면 [삭제된 항목] 탭에서 먼저 되돌려 주세요." });
       return;
     }
     openEdit(found);
@@ -172,6 +185,12 @@ export function Accounts({ account, onToast }) {
       r.loginId);
     onToast(done ? `${r.loginId} 요청을 처리 완료로 표시했습니다.` : `${r.loginId} 요청을 대기로 되돌렸습니다.`);
   };
+
+  /* 지금 열어 둔 계정의 요청 — **가장 최근 것 하나**다 (sortResets 가 최근 순이다).
+     처리한 것도 가져온다: 방금 닫은 요청이 창에서 사라지면 무엇을 처리했는지가 없어진다 */
+  const draftReset = ed.draft && !ed.draft.isNew
+    ? (sortResets(resets.rows).find(r => r.loginId === ed.draft.values.id) || null)
+    : null;
 
   const undo = a => {
     restore(a.id, a.name, DEACTIVATE_ON_RESTORE);
@@ -246,14 +265,17 @@ export function Accounts({ account, onToast }) {
             description: "담당자가 로그인 화면에서 [비밀번호를 잊으셨나요?]로 요청하면 여기에 쌓입니다. 브라우저 탭을 닫으면 이 목록도 비워집니다.",
           }}
           columns={[
-            { key: "loginId", label: "아이디", width: 190, sortable: true,
+            /* 배지 글자를 줄였다 (2026-08-24) — 「등록되지 않은 아이디」·「n번째 요청」은
+               아이디와 나란히 서면 칸을 넘겨 접히고, 접히는 순간 그 줄만 키가 자란다.
+               줄일 수 있는 말이었다: 무엇이 미등록인지는 이 칸이 아이디 칸이라 이미 안다 */
+            { key: "loginId", label: "아이디", width: 210, sortable: true,
               render: r => (
                 <Cell>
                   {r.loginId}
-                  {accountOf(r) ? null : <Badge tone="danger" size="sm">등록되지 않은 아이디</Badge>}
+                  {accountOf(r) ? null : <Badge tone="danger" size="sm">미등록</Badge>}
                   {/* 같은 사람이 다시 보낸 것을 줄 하나로 합쳤다는 사실을 여기서 적는다.
                       적지 않으면 첫 요청의 사유가 조용히 바뀐 것으로 보인다 */}
-                  {r.again > 1 ? <Badge tone="neutral" size="sm">{r.again}번째 요청</Badge> : null}
+                  {r.again > 1 ? <Badge tone="neutral" size="sm">{r.again}번째</Badge> : null}
                 </Cell>
               ) },
             { key: "at", label: "요청 일시", width: 130, sortable: true,
@@ -265,18 +287,14 @@ export function Accounts({ account, onToast }) {
               render: r => (isOpenReset(r)
                 ? <Badge tone="warning" size="sm">대기</Badge>
                 : <Badge tone="neutral" size="sm">처리 완료</Badge>) },
-            { key: "manage", label: "관리", width: 210, align: "center",
-              render: r => (isOpenReset(r) ? (
-                <Cell>
-                  <Button variant="outline" size="sm" icon="key-round"
-                    onClick={e => { e.stopPropagation(); openFromReset(r); }}>비밀번호 변경</Button>
-                  <Button variant="ghost" size="sm" icon="check"
-                    onClick={e => { e.stopPropagation(); closeReset(r, true); }}>처리 완료</Button>
-                </Cell>
-              ) : (
-                <Button variant="ghost" size="sm" icon="rotate-ccw"
-                  onClick={e => { e.stopPropagation(); closeReset(r, false); }}>대기로</Button>
-              )) },
+            /* 모든 줄에 **같은 단추 하나**다 (2026-08-24). 상태에 따라 단추가 갈리면 그
+               갈래마다 폭이 달라지고, 담당자가 줄마다 무엇을 누를 수 있는지 다시 읽는다.
+               하는 일도 하나 — 수정 창을 여는 것이다. 처리하는 일은 그 안에서 한다 */
+            { key: "manage", label: "관리", width: 156, align: "center",
+              render: r => (
+                <Button variant="outline" size="sm" icon="key-round"
+                  onClick={e => { e.stopPropagation(); openFromReset(r); }}>비밀번호 재설정</Button>
+              ) },
           ]} />
       ) : (
         <DataTable
@@ -288,7 +306,9 @@ export function Accounts({ account, onToast }) {
           empty={inRemoved ? removedEmpty("계정") : { title: "조건에 맞는 계정이 없습니다." }}
           columns={(cols => (inRemoved ? removedColumns(cols, undo) : cols))([
             { key: "id", label: "아이디", width: 160, sortable: true },
-            { key: "name", label: "이름", width: 210, sortable: true,
+            /* 배지가 셋까지 붙는 칸이라 폭을 넉넉히 준다 (2026-08-24) — 접히면 그 줄만
+               키가 자라고, 표의 행 높이가 줄마다 다르면 훑는 눈이 걸린다 */
+            { key: "name", label: "이름", width: 250, sortable: true,
               render: a => (
                 <Cell>
                   {a.name}
@@ -297,7 +317,7 @@ export function Accounts({ account, onToast }) {
                   {/* 이 계정으로 온 초기화 요청이 대기 중이라는 표시. 요청 탭에 가지 않아도
                       목록에서 보인다 — 비밀번호를 바꿔 주는 일은 어차피 이 줄에서 한다 */}
                   {openResets.some(r => r.loginId === a.id)
-                    ? <Badge tone="warning" size="sm">비밀번호 초기화 요청</Badge> : null}
+                    ? <Badge tone="warning" size="sm">초기화 요청</Badge> : null}
                 </Cell>
               ) },
             { key: "email", label: "이메일", render: a => a.email || EMPTY_MARK },
@@ -342,11 +362,42 @@ export function Accounts({ account, onToast }) {
       <EditorModal ed={ed} size="lg"
         title={ed.draft && ed.draft.isNew ? "계정 등록" : "계정 수정"}
         description={ed.draft && !ed.draft.isNew
-          ? `${ed.draft.values.name} · ${ed.draft.values.id}${openResets.some(r => r.loginId === ed.draft.values.id)
-            ? " · 비밀번호 초기화 요청 대기" : ""}`
-          : undefined}>
+          ? `${ed.draft.values.name} · ${ed.draft.values.id}` : undefined}>
         {ed.draft ? (
-          <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors} onChange={ed.set} />
+          <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors} onChange={ed.set}
+            /* ── 요청 창구 (2026-08-24, 사용자 요청. 위 openFromReset 머리말) ──────
+                 폼 **위**다. 담당자가 이 창을 연 이유가 그 요청이고, 무엇을 왜 바꾸는지를
+                 읽은 다음에 비밀번호를 넣는 것이 순서다 (QR 지점의 경고와 같은 자리).
+
+                 처리한 요청도 그대로 남겨 보여준다. 닫는 순간 사라지면 방금 무엇을
+                 처리했는지 되짚을 자리가 없어지고, 잘못 눌렀을 때 되돌릴 곳도 없다 —
+                 종전에는 그것을 표의 [대기로] 단추가 맡고 있었다. */
+            before={draftReset ? (
+              <div style={{ gridColumn: "1 / -1" }}>
+                <Notice tone={isOpenReset(draftReset) ? "warning" : "neutral"} size="sm"
+                  title={`${isOpenReset(draftReset) ? "비밀번호 초기화 요청" : "처리 완료된 초기화 요청"} · ${resetTime(draftReset.at)}`}>
+                  {draftReset.note ? (
+                    <span style={{ display: "block" }}>사유 : {draftReset.note}</span>
+                  ) : null}
+                  <span style={{ display: "block", marginTop: draftReset.note ? 4 : 0 }}>
+                    {isOpenReset(draftReset)
+                      ? "새 비밀번호를 넣고 [저장]하면 이 요청이 처리 완료로 바뀝니다."
+                      : "이미 처리한 요청입니다."}
+                  </span>
+                  {/* 비밀번호를 바꾸지 않고 닫는 길 — 전화로 이미 알려 주었거나, 잘못 온
+                      요청일 때다. 바꾸면서 닫는 것은 [저장]이 알아서 한다 (위 onSave) */}
+                  <div style={{ marginTop: "var(--space-3)" }}>
+                    {isOpenReset(draftReset) ? (
+                      <Button variant="outline" size="sm"
+                        onClick={() => closeReset(draftReset, true)}>비밀번호 변경 없이 처리 완료</Button>
+                    ) : (
+                      <Button variant="ghost" size="sm"
+                        onClick={() => closeReset(draftReset, false)}>대기로 되돌리기</Button>
+                    )}
+                  </div>
+                </Notice>
+              </div>
+            ) : null} />
         ) : null}
       </EditorModal>
 
@@ -360,7 +411,19 @@ export function Accounts({ account, onToast }) {
       <Modal open={!!blocked} size="md" title="할 수 없습니다"
         description={blocked ? blocked.name : undefined}
         onClose={() => setBlocked(null)}
-        footer={<Button variant="primary" onClick={() => setBlocked(null)}>확인</Button>}>
+        /* 요청 탭에서 온 안내창에는 닫는 길을 하나 더 준다 — 계정이 없어 수정 창을 열 수
+           없는 요청이라, 여기서 처리하지 못하면 대기 상태로 영원히 남는다 */
+        footer={
+          <>
+            {blocked && blocked.resetRow ? (
+              <Button variant="outline"
+                onClick={() => { closeReset(blocked.resetRow, true); setBlocked(null); }}>
+                처리 완료로 표시
+              </Button>
+            ) : null}
+            <Button variant="primary" onClick={() => setBlocked(null)}>확인</Button>
+          </>
+        }>
         {blocked ? (
           <>
             <p style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: 1.65 }}>

@@ -161,17 +161,24 @@ export function Login({ onSignIn }) {
           </>
         )}>
         {resetSent ? (
-          <>
-            <p style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: 1.65 }}>
+          /* 접수 문장 한 줄로 끝낸다 (2026-08-24, 사용자 요청). 아래에 검수용 안내 상자가
+             있었다 — 메일·문자로 가지 않는다는 것, 요청이 [계정 관리]의 어느 탭에 쌓이는지,
+             탭을 닫으면 비워진다는 것. 셋 다 **우리 쪽 사정이고 관리자 쪽 이야기**라,
+             비밀번호를 잊고 이 창을 연 사람이 할 일을 하나도 바꾸지 않는다.
+             서버 연동 전이라는 사실은 이 화면 아래 [검수용 계정] 상자가 이미 적는다. */
+          /* 두 문장이 각자의 줄에 선다 (2026-08-24, 사용자 요청). 앞은 **접수됐다**는
+             사실이고 뒤는 **다음에 무슨 일이 일어나는가**라, 이어 붙이면 뒷문장이
+             앞문장의 꼬리로 읽힌다. `<br />` 이 아니라 block 을 쓰는 것은 좁은 화면에서
+             앞 줄이 접히더라도 두 문장의 관계가 그대로 남아야 하기 때문이다
+             (EntryFallback 이 같은 이유로 같은 모양을 쓴다). */
+          <p style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: 1.65 }}>
+            <span style={{ display: "block" }}>
               <b>{id.trim()}</b> 계정의 초기화 요청을 접수했습니다.
+            </span>
+            <span style={{ display: "block", marginTop: 4 }}>
               최종 관리자가 확인한 뒤 새 비밀번호를 알려 드립니다.
-            </p>
-            <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-4)" }}>
-              서버 연동 전이라 메일이나 문자로 전달되지는 않습니다. 요청은 최종 관리자의
-              [계정 관리] 화면 &gt; [비밀번호 초기화 요청] 탭에 쌓이며,
-              같은 브라우저 탭 안에서만 유지됩니다.
-            </Notice>
-          </>
+            </span>
+          </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
             <Input label="아이디" value={id}
@@ -179,10 +186,13 @@ export function Login({ onSignIn }) {
               placeholder="초기화할 계정의 아이디"
               error={resetError || undefined}
               hint="이 아이디로 등록된 이메일이나 연락처로 최종 관리자가 연락합니다." />
+            {/* 사유 칸에 hint 를 두지 않는다 (2026-08-24, 사용자 요청). 「적지 않아도 보낼
+                수 있습니다」와 자동 재설정을 만들지 않은 이유가 붙어 있었다 — 앞은 칸에
+                별표가 없는 것이 이미 말하고, 뒤는 **우리 쪽 사정**이라 이 창을 여는 사람이
+                할 일을 바꾸지 않는다. 비밀번호를 잊은 사람은 아이디를 적고 보낼 뿐이다 */}
             <Textarea label="사유" value={resetNote} rows={3} maxLength={200}
               onChange={e => setResetNote(e.target.value)}
-              placeholder="예) 인사이동으로 인수인계 받았습니다."
-              hint="적지 않아도 보낼 수 있습니다. 자동 재설정을 만들지 않은 이유는 계정이 몇 명뿐이기 때문입니다 — 사람이 확인하는 편이 빠르고 안전합니다." />
+              placeholder="예) 인사이동으로 인수인계 받았습니다." />
           </div>
         )}
       </Modal>
