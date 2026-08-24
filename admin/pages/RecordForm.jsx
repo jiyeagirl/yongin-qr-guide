@@ -55,7 +55,7 @@ export function RecordForm({
             error={errors[f.key]}
             type={f.type} options={f.options} rows={f.rows} span={f.span} unit={f.unit}
             min={f.min} max={f.max} maxLength={f.maxLength} disabled={f.disabled}
-            editable={f.editable}
+            editable={f.editable} reveal={f.reveal}
             value={values[f.key]}
             onChange={v => onChange(f.key, v)} />
         );

@@ -70,6 +70,9 @@ export function requiredKey(required) {
 export function FormField({
   label, required = false, example, range, hint, error,
   type = "text", value, onChange, options, placeholder, rows, min, max, maxLength, unit, disabled,
+  /* `type="password"` 칸에 눈 단추를 세울지 (Input 의 reveal). 항목표가 정한다 —
+     같은 폼 안에서도 자기 비밀번호를 넣는 칸과 남의 것을 넣어 주는 칸은 사정이 다르다 */
+  reveal = false,
   editable = false, span = 1, children, style, ...rest
 }) {
   const set = v => { if (onChange) onChange(v); };
@@ -151,7 +154,7 @@ export function FormField({
     } else {
       const input = (
         <Input type={type === "number" ? "number" : type} value={value == null ? "" : value}
-          placeholder={ph} disabled={disabled}
+          placeholder={ph} disabled={disabled} reveal={reveal}
           onChange={e => set(e.target.value)}
           min={min} max={max} maxLength={maxLength} />
       );

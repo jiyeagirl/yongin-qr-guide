@@ -18,6 +18,21 @@ button{font-family:inherit}
    보였다. opacity:1 은 파이어폭스가 기본으로 얹는 투명도를 걷어내는 것이다 —
    그것을 두면 색을 정해도 브라우저마다 다르게 나온다. */
 input::placeholder,textarea::placeholder{color:var(--text-placeholder);opacity:1}
+/* 검색칸의 ×가 둘이었다 (2026-08-24). `type="search"` 에는 **브라우저가 제 몫의 지우기
+   단추를 칸 안에 그린다.** 우리 SearchField 는 그 위에 자기 지우기 단추(circle-x)를
+   세우므로, 글자를 넣는 순간 ×가 둘 뜬다 — 하나는 칸 오른쪽 끝(우리 것, onClear 로
+   상태를 지운다), 하나는 그보다 조금 왼쪽(브라우저 것). 브라우저 것은 DOM 의 값만 지우고
+   리액트가 들고 있는 상태는 그대로라, 눌러도 아무 일이 없는 것처럼 보인다 —
+   **눌리는데 안 듣는 단추**가 가장 나쁘다.
+
+   `type` 을 text 로 바꾸지 않는 이유: `search` 는 읽어주는 도구에 「검색창」으로 전해지고
+   모바일 자판의 엔터를 「검색」으로 바꾼다. 없앨 것은 타입이 아니라 브라우저가 얹는 장식이다.
+   iOS 가 얹는 둥근 테두리도 같은 자리에서 걷어낸다 (테두리는 Input 이 그린다). */
+input[type="search"]{-webkit-appearance:none;appearance:none}
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration{-webkit-appearance:none;appearance:none;display:none}
 a{color:var(--text-link);text-decoration:none;font-weight:var(--fw-semibold)}
 a:hover{color:var(--yong-teal-500);text-decoration:underline}
 svg{display:block}

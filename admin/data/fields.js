@@ -616,8 +616,19 @@ export const ACCOUNT_FIELDS = [
     range: "2~20자", minLength: 2, maxLength: 20, example: "김담당" },
   /* hint 를 두지 않는다 (2026-08-24, 사용자 요청). "수정할 때 비우면 기존 비밀번호를
      그대로 둡니다"가 붙어 있었는데, 칸 안의 범위 표시가 이미 무엇을 넣는 칸인지 말하고
-     비워 두는 쪽은 아무 일도 일어나지 않는 쪽이라 미리 배워 둘 것이 없다 */
-  { key: "pw", spec: "password", label: "비밀번호", required: true, type: "text",
+     비워 두는 쪽은 아무 일도 일어나지 않는 쪽이라 미리 배워 둘 것이 없다.
+
+     ── 가려서 보여주고, 눈으로 열어 본다 (2026-08-24, 사용자 요청) ─────────────
+     `type: "text"` 였다 — 비밀번호가 화면에 그대로 적혀 있었다. 이제 까만 동그라미로
+     가리고 칸 오른쪽 눈 단추로 연다 (`reveal`. design-systems 의 Input).
+     **가리는 것이 기본이고 여는 것이 선택**인 이유는 이 화면이 남의 계정을 다루는
+     자리이기 때문이다 — 누가 뒤에 서 있을 수 있는 사무실에서 목록을 훑는 동안 비밀번호가
+     내내 떠 있을 이유가 없다. 그러면서도 열 수는 있어야 한다: 새로 넣어 준 값을 전화로
+     불러 줘야 하고, 오타가 나도 가려져 있으면 알 수 없다.
+
+     실서비스에서는 이 칸이 **빈 채로 열린다** — 서버가 해시를 돌려주지 그 값을 돌려주지
+     않기 때문이다. 그때 눈 단추는 「방금 내가 넣은 값」을 확인하는 용도로만 남는다. */
+  { key: "pw", spec: "password", label: "비밀번호", required: true, type: "password", reveal: true,
     range: "10~64자 · 영문·숫자·특수문자 중 2종 이상", span: 2 },
   { key: "active", spec: "is_active", label: "사용 여부", required: true, type: "switch" },
   { key: "email", spec: "email", label: "이메일", required: true, type: "text",
