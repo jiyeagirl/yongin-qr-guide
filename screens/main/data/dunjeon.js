@@ -365,10 +365,11 @@ export const COURSES = COURSE_PLAN.map(({ pick, ...c }) => {
   return { ...c, stops, ...totals(stops) };
 }).filter(c => c.stops.length >= 3);
 
-/* 주변 공공시설(U-ST-07)은 여기 있지 않다. 공공시설 탭(S02)과 같은 데이터를 봐야 하므로
-   `data/facilities.js` 의 NEARBY 를 쓴다 — 두 탭이 같은 시설을 다른 거리로 말하면 안 된다.
-   이 파일이 facilities.js 를 import 하지 않는 것은 순환 참조를 만들지 않기 위해서다
-   (facilities.js 가 여기서 ANCHOR 를 가져간다). 둘을 합치는 일은 화면(MainApp)이 한다. */
+/* 주변 공공시설(U-ST-07)은 여기 있지 않았고, 이제 **화면에도 없다** (2026-08-24).
+   `data/facilities.js` 의 NEARBY 를 화면(MainApp)이 합쳐 쓰던 자리인데 붙던 두 자리
+   (점포 상세 · 상점가 탭 하단)가 모두 없어져 그 상수째 지웠다 — 시설을 고르는 자리는
+   공공시설 탭 하나다. 이 파일이 facilities.js 를 import 하지 않는 규칙은 그대로다
+   (facilities.js 가 여기서 ANCHOR 를 가져가므로 순환 참조가 된다). */
 
 /* 축제는 여기 있지 않다. 6건이 32개소에 흩어져 있고 둘러보기 탭이 전체를 다루므로
    `data/districts.js` 가 소유한다. 상점가 탭의 우리 축제 배너(U-FT-03)도 거기서

@@ -49,15 +49,11 @@ export function App() {
 
   if (phase === "fallback") {
     const r = result || resolveQr(code);
-    return (
-      <EntryFallback
-        status={r.status}
-        code={r.code}
-        point={r.point}
-        onRetry={retry}
-        /* 고른 상점가의 요약은 EntryFallback 이 그 자리에서 펼친다 (그쪽 주석 참조).
-           여기서 더 할 일은 없다 — 셸은 QR 지점이 있어야 서기 때문이다. */ />
-    );
+    /* 넘기는 것은 **무슨 일인지와 되돌릴 방법** 둘뿐이다. 찍은 코드(r.code)와 안내판
+       이름(r.point)도 넘기고 있었는데, 그 둘을 적던 자리가 없어졌다 (2026-08-24.
+       EntryFallback 머리말). 쓰지 않는 값을 계속 넘기면 그 화면이 무엇을 아는지가
+       흐려진다 — 지금 이 화면이 아는 것은 "셸을 세울 수 없다"는 사실 하나다. */
+    return <EntryFallback status={r.status} onRetry={retry} />;
   }
 
   /* 정상 진입 — 여기서부터는 셸이 화면을 전부 맡는다.

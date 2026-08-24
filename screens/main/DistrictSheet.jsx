@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  NearbyFacilities, ListControls, OnnuriChip, Pagination,
+  ListControls, OnnuriChip, Pagination,
   Notice, StoreRow, FestivalBanner, CATEGORY_LABELS,
 } from "../../design-systems/index.js";
 import { PAGE_SIZE, STORE_AS_OF } from "./config.js";
@@ -17,7 +17,7 @@ import { PAGE_SIZE, STORE_AS_OF } from "./config.js";
  *   ─────────────────────────────────────────────     (ListControls 한 줄)
  *   점포 목록 20곳
  *   335곳 중 1–20   ‹  1  …  17  ›                           ← 쪽 나누기
- *   주변 공공시설 / 기준일자·고지
+ *   기준일자·고지                          ← 주변 공공시설 블록이 그 위에 있었다 (2026-08-24 뺌)
  *
  * **소재지는 상점가명 옆이다** (2026-08-18). 제목 아래 한 줄로 두면 절반 스냅에서 그 한 줄이
  * 점포 한 줄을 통째로 먹어, 시트를 열었는데 가게가 하나밖에 안 보였다. 같은 이유로 헤더 아래
@@ -57,7 +57,8 @@ export function DistrictSheet({
      셸이 두 값을 다 쥐고 있어야 한 문자열로 묶을 수 있다. 필터가 바뀔 때 1쪽으로
      되돌리는 것도 같은 이유로 셸이 한다 (필터도 셸의 상태다). */
   page = 1, setPage,
-  selectedId, onPickStore, onPickFacility, onOpenFestival,
+  /* `onPickFacility` 가 여기 있었다 — 주변 공공시설 블록과 함께 나갔다 (2026-08-24) */
+  selectedId, onPickStore, onOpenFestival,
   /* 축제 배너 닫기 (2026-08-18). 닫힘 상태는 셸이 들고 있다 — 이 시트는 탭을 옮기면
      언마운트되므로 여기에 두면 둘러보기를 갔다 올 때마다 배너가 되살아난다 */
   festivalDismissed = false, onDismissFestival,
@@ -139,23 +140,37 @@ export function DistrictSheet({
         ) : null}
       </div>
 
-      {/* ── 주변 공공시설 (U-ST-07) ─────────────────────────────
-             **U-ST-07 이 남아 있는 유일한 자리다** (2026-08-20). 한때 점포 상세(S06)에도
-             같은 블록이 있었으나 거기서는 뺐다 — 한 가게를 묻고 들어온 화면에 그 가게와
-             무관한 시설 목록이 끼는 자리였다 (StoreDetail 머리말). 여기서는 상점가 전체를
-             내려다보는 목록의 끝이라 성격이 다르다. */}
-      <div style={{ padding: "var(--space-5) var(--gutter-screen) 0" }}>
-        <NearbyFacilities items={data.nearby} onPick={onPickFacility} />
-      </div>
+      {/* ── 주변 공공시설(U-ST-07) 블록이 여기 있었다 (2026-08-24 삭제, 사용자 요청) ──
+             점포 상세(S06)에서 뺀 것과 **같은 이유의 마지막 자리**다. 그때 남긴 근거는
+             "여기는 상점가 전체를 내려다보는 목록의 끝이라 성격이 다르다"였는데, 그 말이
+             성립하려면 이 목록을 끝까지 내려온 사람이 시설을 찾고 있어야 한다. 그는
+             **가게를 고르고 있다** — 시설을 찾을 생각이었다면 탭 하나 옆의 공공시설 탭이
+             그 일을 통째로 맡고 있고, 거기에는 유형 칩도 거리순 목록도 지도 마커도 있다.
+
+             블록 하나로는 그중 아무것도 못 준다. 실제로 이 줄을 누르면 하는 일이
+             **공공시설 탭으로 데려가는 것**이었다 (MainApp 의 showFacilityOnMap) —
+             갈 곳이 그 탭뿐이라는 것을 코드가 이미 말하고 있었다.
+
+             U-ST-07 은 이로써 화면에서 사라진다. 시설 자료(`data.nearby`)는 그대로 있고
+             공공시설 탭이 같은 것을 본다 — 두 탭이 같은 시설을 다른 거리로 말하지 않게
+             하려고 한 출처를 쓰는 규칙(MainApp 의 `d`)도 그대로다. */}
 
       {/* ── 고지 ──────────────────────────────────────────────
              "다른 상점가 목록"은 둘러보기 탭 최하단으로 이동했다 (U-ST-14 → U-DC-04) ── */}
       <div style={{ padding: "var(--space-5) var(--gutter-screen) 0", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-        {/* U-CM-07 정보 기준일자 · U-CM-08 참고용 고지와 119.
-            오류 신고(U-CM-10)는 여기 두지 않는다 — 신고 대상이 특정되는 상세 화면에서 진입한다 */}
+        {/* U-CM-07 정보 기준일자 · U-CM-08 참고용 고지.
+            오류 신고(U-CM-10)는 여기 두지 않는다 — 신고 대상이 특정되는 상세 화면에서 진입한다.
+
+            ── 119 안내를 껐다 (2026-08-24) ────────────────────────────────────
+            그 문장은 **안전시설을 보여준 화면의 고지**다. AED·대피소를 안내한 다음
+            "그래도 급하면 119"로 잇는 자리이고, 앞의 안내가 있어야 뒷문장이 고지가 된다
+            (DetailNotice 의 emergency 주석). 이 화면이 그 문장을 달고 있던 이유는 바로 위에
+            주변 공공시설 네 줄이 있었기 때문인데, 같은 날 그 블록을 뺐다 — 이제 이 시트에
+            깔리는 것은 점포뿐이고, 가게 목록 끝의 119 는 걸릴 데 없이 떠 있는 문장이다.
+            S06 점포 상세 · S08 코스 · S09 축제 · S12 · S13 이 이미 같은 이유로 꺼져 있다. */}
         <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
           점포 정보 {STORE_AS_OF} 기준<br />
-          안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
+          안내 정보는 참고용입니다.
         </p>
       </div>
     </div>

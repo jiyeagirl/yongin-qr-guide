@@ -1,81 +1,85 @@
 import React from "react";
-import {
-  AppBar, EmptyState, Button, Notice, SectionHeader, ListRow, OnnuriBadge, Icon,
-} from "../../design-systems/index.js";
-import { DISTRICTS } from "../main/data/districts.js";
+import { AppBar, EmptyState, Button } from "../../design-systems/index.js";
+import { CONTACT } from "../main/config.js";
 
 /* S11 빈 상태 · 오류 · 잘못된 QR (U-CM-02).
  *
  * QR 을 찍었는데 그 코드로 지점을 만들 수 없을 때 나오는 화면이다. 세 갈래다.
  *
- *   unknown   표에 없는 코드      안내판이 손상됐거나 아직 등록 전
- *   inactive  표에 있으나 비활성   교체된 안내판 (새 안내판을 찍게 안내)
+ *   unknown   표에 없는 코드      용인시 QR 이 아니거나 손상됐다
+ *   inactive  표에 있으나 비활성   지금은 쓰지 않는 안내판
  *   error     조회 자체가 실패     망 문제 등 — 여기만 [다시 시도]가 있다
  *
- * 셋을 한 화면으로 두는 이유는 사용자가 할 일이 같기 때문이다 — **여기서 막히지 않게 하는 것**.
- * 다른 것은 왜 막혔는지 한 줄뿐이라 화면을 셋으로 나누면 같은 폴백을 세 번 만들게 된다.
+ * 셋을 한 화면으로 두는 이유는 사용자가 할 일이 같기 때문이다 — **다른 QR 을 찍는 것**.
+ * 다른 것은 왜 막혔는지 한 줄뿐이라 화면을 셋으로 나누면 같은 화면을 세 번 만들게 된다.
  *
- * ── 폴백을 지도가 아니라 목록으로 둔 이유 (명세서와 다른 지점) ──────────────
- * 명세서 S11 행은 "전체 지도 폴백 진입"이라고 적고 있다. 여기서는 목록으로 냈다.
+ * ── 안내와 조아용뿐이다 (2026-08-24 · 사용자 요청) ─────────────────────────
+ * 이 화면에는 세 덩이가 더 있었다. **찍으신 QR** 상자(코드 문자열과 안내판 이름),
+ * **용인시 골목형 상점가 32곳 목록**(구별로 묶고 누르면 요약이 펼쳐졌다), 그리고 그
+ * 목록에 딸린 기준일 고지다. 전부 걷어냈다.
  *
- * 32개소를 한 화면에 담으려면 시 전역(약 25km)까지 줌아웃해야 하는데, 그 축척의 핀은
- * "용인시 어딘가"로만 읽힌다 — 2026-08-18 에 S04 둘러보기에서 지도를 걷어낸 것과 같은
- * 이유다. 게다가 이 화면에는 **QR 지점이 없다.** 지도의 "내 위치" 점을 찍을 좌표가 없고,
- * 임의의 중심에 점을 찍으면 없는 위치를 있다고 말하는 셈이 된다. 같은 이유로 이 목록에는
- * 거리를 적지 않는다 (DistrictRow 를 쓰지 않고 ListRow 로 직접 그리는 이유다 —
- * 그 컴포넌트는 거리 표기가 전제다).
+ * 걷어낸 이유는 **그 어느 것도 이 사람이 지금 할 수 있는 일이 아니어서**다. 목록에서
+ * 상점가를 눌러도 갈 곳이 없다 — 상점가 화면은 셸의 탭이고 셸은 QR 지점이 있어야 선다
+ * (확정 결정사항 6). 그래서 누르면 요약만 펼치고 "그곳 안내판의 QR 을 찍어 주세요"라고
+ * 다시 말하는 자리였다. 서른두 줄을 훑게 해놓고 결론이 첫 화면과 같은 말이면, 그 줄들은
+ * 길을 열어준 것이 아니라 **막힌 화면을 길어 보이게** 한 것이다.
  *
- * 구별로 묶어 그리므로 "우리 동네가 있나"를 훑는 데는 오히려 목록이 빠르다.
- * 지도 폴백이 필요하다고 판단되면 KakaoMap 에 앵커를 끄는 prop 을 먼저 만들어야 한다.
+ * QR 코드 문자열도 마찬가지다. 문의할 때의 단서였는데, 문의처를 화면에 적어두면
+ * (아래 CONTACT) 전화를 건 사람은 자기가 서 있는 안내판을 보고 말하면 된다 —
+ * 화면 속 문자열보다 눈앞의 안내판이 정확하다.
+ *
+ * 남은 것은 조아용 · 무슨 일인지 한 줄 · 무엇을 하면 되는지 한 줄 · 문의처다.
+ * 참고용 고지(U-CM-07 · U-CM-08)도 함께 내렸다 — 이 화면에는 이제 시설도 점포도
+ * 없어서 "안내 정보는 참고용입니다"가 가리킬 대상이 없다.
+ *
+ * (명세서 S11 행의 "전체 지도 폴백 진입"은 v1.1 에서 이미 목록으로 바뀌어 있었고,
+ *  이제 그 목록마저 없다 — 지도든 목록이든 QR 지점 없이는 갈 곳이 열리지 않는다.)
  */
 
+/* ── "QR" 은 뒤에 오는 말과 떨어지지 않는다 (2026-08-24) ────────────────────
+   아래 문장에서 QR 뒤에 있는 것은 보통 공백이 아니라 **줄바꿈 없는 공백**(U+00A0)이다.
+   그냥 두면 폭이 모자랄 때 그 자리에서 줄이 갈려 "…지금은 쓰지 않는 QR / 코드일 수
+   있습니다." 처럼 한 낱말이 두 줄에 걸친다. 이 화면은 문장 두 줄이 전부라, 그 한 번이
+   곧 화면의 인상이 된다.
+
+   **눈에 보이지 않는 문자다.** 이 줄들을 고칠 때 QR 뒤를 지우고 스페이스바를 누르면
+   보통 공백으로 바뀌어 조용히 되돌아간다 — 그때는 이 주석을 보고 다시 넣어야 한다.
+
+   줄마다 `word-break: keep-all` 도 함께 건다. 시민용 화면에는 관리자 쪽(admin.css 의
+   `.admin-web`)처럼 위에서 걸어주는 규칙이 없어, 기본값(normal)이 한글을 **글자와 글자
+   사이 아무 데서나** 끊는다 — "쓰지 / 않는" 이 아니라 "쓰 / 지 않는" 이 나오는 자리다. */
 const COPY = {
   unknown: {
     pose: "curious",
-    title: "등록되지 않은 QR 코드입니다",
-    desc: "안내판의 QR 이 손상되었거나 아직 등록 전일 수 있습니다. 안내판에 적힌 주소로 직접 접속하셔도 됩니다.",
+    title: "등록되지 않은 QR 코드입니다",
+    lines: [
+      "용인시의 QR 이 아니거나, 코드가 손상되었을 수 있습니다.",
+      "다른 QR 을 찍어 주세요.",
+    ],
   },
   inactive: {
+    /* 제목이 "지금은 쓰지 않는 안내판입니다" 였다 (2026-08-24 바꿈). 그 문장은 우리가
+       아는 사실(표에 있으나 비활성)을 말하는데, 화면 앞에 선 사람이 아는 것은 **안내가
+       안 나온다**는 것뿐이다. 먼저 그것을 말하고, 짐작되는 이유는 다음 줄로 내린다. */
     pose: "sorry",
-    title: "지금은 쓰지 않는 안내판입니다",
-    desc: "이 자리의 안내판은 새것으로 교체되었습니다. 가까이에 있는 새 안내판의 QR 을 찍어 주세요.",
+    title: "안내를 불러올 수 없는 QR 코드입니다",
+    lines: [
+      "코드가 손상되었거나, 지금은 쓰지 않는 QR 코드일 수 있습니다.",
+      "다른 QR 을 찍어 주세요.",
+    ],
   },
   error: {
+    /* 여기만 다르다 — 코드가 아니라 통신이 문제라, 할 일이 [다시 시도]이지 다른 QR 이
+       아니다. 그래서 문의처도 적지 않는다 (전화로 풀 일이 아니다). */
     pose: "sorry",
     title: "정보를 불러오지 못했습니다",
-    desc: "통신 상태를 확인한 뒤 다시 시도해 주세요.",
+    lines: ["통신 상태를 확인한 뒤 다시 시도해 주세요."],
+    retry: true,
   },
 };
 
-/* 구 순서를 이름 가나다로 두지 않는다 — 처인구가 대상 32개소의 대부분이라 맨 앞이 맞다 */
-const GU_ORDER = ["처인구", "기흥구", "수지구"];
-
-export function EntryFallback({
-  status = "unknown", code, point, onRetry, onPickDistrict,
-  base = "../../design-systems/",
-}) {
+export function EntryFallback({ status = "unknown", onRetry, base = "../../design-systems/" }) {
   const copy = COPY[status] || COPY.unknown;
-
-  /* 목록에서 고른 상점가. 지금 갈 곳은 없다 — 상점가 상세는 별도 화면이 아니라 셸의 탭이고
-     (확정 결정사항 6) 셸은 QR 지점이 있어야 선다. 그렇다고 아무 반응이 없으면 목록이 고장 난
-     것으로 읽히므로, 가진 정보(구역·점포·온누리·축제)를 그 자리에서 펼쳐 보인다.
-     이것만으로도 "우리 동네에 뭐가 있나"라는 이 화면의 질문에는 답이 된다. */
-  const [picked, setPicked] = React.useState(null);
-  const pick = d => {
-    setPicked(prev => (prev && prev.id === d.id ? null : d));
-    if (onPickDistrict) onPickDistrict(d);
-  };
-
-  const groups = React.useMemo(() => {
-    const by = new Map();
-    for (const d of DISTRICTS) {
-      if (!by.has(d.gu)) by.set(d.gu, []);
-      by.get(d.gu).push(d);
-    }
-    return [...by.entries()]
-      .sort((a, b) => GU_ORDER.indexOf(a[0]) - GU_ORDER.indexOf(b[0]))
-      .map(([gu, list]) => [gu, [...list].sort((a, b) => a.name.localeCompare(b.name, "ko"))]);
-  }, []);
 
   return (
     <div style={{ position: "relative", width: "100%", maxWidth: "var(--screen-max)", height: "100%",
@@ -86,96 +90,36 @@ export function EntryFallback({
           누른 사람이 서비스 밖으로 나간다 */}
       <AppBar title="용인시 위치안내" style={{ flex: "0 0 auto" }} />
 
+      {/* 내용이 한 덩이뿐이라 세로 가운데에 세운다. 위아래 `auto` 여백으로 밀어 올리는
+          것은 justifyContent 로 가운데를 잡으면 2차 글자 확대에서 내용이 상자보다 커졌을 때
+          **위쪽이 잘려 스크롤로도 닿지 않기** 때문이다 (margin auto 는 그때 0 으로 접힌다). */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain",
-        WebkitOverflowScrolling: "touch" }}>
+        WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column" }}>
+        <div style={{ margin: "auto 0", padding: "0 var(--gutter-screen) var(--space-6)",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
 
-        <EmptyState pose={copy.pose} base={base} title={copy.title} description={copy.desc}
-          action={status === "error" && onRetry
-            ? <Button icon="rotate-ccw" onClick={onRetry}>다시 시도</Button>
-            : null} />
-
-        <div style={{ padding: "0 var(--gutter-screen) var(--space-9)",
-          display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
-
-          {/* 찍은 코드를 그대로 보여준다. 안내판 번호와 대조하거나 문의할 때 이것이 유일한 단서다.
-              비활성 코드는 표에 이름이 남아 있으므로 어느 안내판이었는지까지 말해줄 수 있다. */}
-          {code ? (
-            <Notice tone={status === "error" ? "warning" : "info"} title="찍으신 QR">
-              <span style={{ display: "block", fontFamily: "var(--font-mono, monospace)",
-                wordBreak: "break-all" }}>{code}</span>
-              {point && point.name
-                ? <span style={{ display: "block", marginTop: 4 }}>{point.name}</span>
-                : null}
-            </Notice>
-          ) : null}
-
-          {/* 고른 곳의 요약. 목록 위에 고정해 둔다 — 목록 안에 끼워 넣으면
-              서른 줄 중 어디가 펼쳐졌는지 찾느라 다시 스크롤하게 된다 */}
-          {picked ? (
-            <Notice tone="success" title={picked.name}>
-              {picked.gu} {picked.area}
-              <span style={{ display: "block", marginTop: 4 }}>
-                점포 {picked.stores}곳{picked.onnuri != null ? ` · 온누리 가맹 ${picked.onnuri}곳` : ""}
-                {picked.festival ? <> · {picked.festival.short || picked.festival.name}</> : null}
-              </span>
-              <span style={{ display: "block", marginTop: "var(--space-2)", color: "var(--text-muted)" }}>
-                이 상점가로 들어가려면 그곳 안내판의 QR 을 찍어 주세요.
-              </span>
-            </Notice>
-          ) : null}
-
-          {/* ── 폴백 (U-CM-02) ─────────────────────────────────────────────
-                 막힌 채로 두지 않는다. 지금 어디인지 모르더라도 무엇이 있는지는 보여준다. */}
-          <section>
-            <SectionHeader title="용인시 골목형 상점가" note={`${DISTRICTS.length}곳`} />
-            <p style={{ marginBottom: "var(--space-3)", fontSize: "var(--fs-caption)",
-              color: "var(--text-muted)", lineHeight: 1.55 }}>
-              QR 지점을 알 수 없어 거리 대신 구별로 정리했습니다.
-            </p>
-
-            {groups.map(([gu, list]) => (
-              <div key={gu} style={{ marginBottom: "var(--space-5)" }}>
-                <h3 style={{ display: "flex", alignItems: "center", gap: "var(--space-2)",
-                  marginBottom: "var(--space-1)", fontSize: "var(--fs-label)",
-                  fontWeight: "var(--fw-bold)", color: "var(--brand-primary-strong)" }}>
-                  <Icon name="map-pin" size={16} />
-                  {gu}
-                  <span style={{ fontWeight: "var(--fw-regular)", color: "var(--text-muted)" }}>
-                    {list.length}곳
-                  </span>
-                </h3>
-                <div role="list">
-                  {list.map((d, i) => (
-                    <ListRow key={d.id}
-                      divider={i < list.length - 1}
-                      onClick={() => pick(d)}
-                      style={picked && picked.id === d.id
-                        ? { background: "var(--surface-brand-soft)", borderRadius: "var(--radius-sm)" }
-                        : undefined}
-                      icon={<Icon name="store" size={20} />}
-                      title={d.name}
-                      meta={<>
-                        {d.area}
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 6 }}>
-                          점포 {d.stores}곳
-                          {/* 온누리 가맹수가 없는 곳은 배지째 내린다 (DistrictRow 와 같은 규칙) */}
-                          {d.onnuri != null ? <>
-                            <OnnuriBadge size="sm" />
-                            {d.onnuri}곳
-                          </> : null}
-                        </span>
-                      </>} />
-                  ))}
-                </div>
-              </div>
+          <EmptyState pose={copy.pose} base={base} title={copy.title}
+            /* 줄마다 block 을 쓴다 — 두 문장이 각자의 줄에 서야 "다른 QR 을 찍어 주세요"가
+               앞 문장의 꼬리가 아니라 **할 일**로 읽힌다. 좁은 화면에서 앞 줄이 접히더라도
+               그 관계는 그대로다 (<br /> 이면 접힌 자리와 뒤섞인다). */
+            description={copy.lines.map((t, i) => (
+              <span key={i} style={{ display: "block", marginTop: i ? 4 : 0,
+                wordBreak: "keep-all", overflowWrap: "break-word" }}>{t}</span>
             ))}
-          </section>
+            action={copy.retry && onRetry
+              ? <Button icon="rotate-ccw" onClick={onRetry}>다시 시도</Button>
+              : null} />
 
-          {/* U-CM-07 · U-CM-08 */}
-          <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-            상점가 지정 현황 2026.07 기준<br />
-            안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
-          </p>
+          {/* 문의처 — 이 서비스 안에 남은 길이 없는 사람의 마지막 자리다 (config 의 CONTACT).
+              통신 오류에는 적지 않는다: 그때 할 일은 [다시 시도]이지 전화가 아니다. */}
+          {copy.retry ? null : (
+            <p style={{ textAlign: "center", fontSize: "var(--fs-caption)",
+              color: "var(--text-muted)", lineHeight: 1.6, wordBreak: "keep-all" }}>
+              문의 : {CONTACT.dept},{" "}
+              {/* 번호만 줄 끝에서 잘리지 않게 붙들어 둔다 */}
+              <span style={{ whiteSpace: "nowrap" }}>{CONTACT.tel}</span>
+            </p>
+          )}
         </div>
       </div>
     </div>

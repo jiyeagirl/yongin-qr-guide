@@ -5,7 +5,7 @@ import {
   Icon, Mascot, token, VisuallyHidden,
 } from "../../design-systems/index.js";
 import { DUNJEON } from "./data/dunjeon.js";
-import { FACILITIES, NEARBY, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.js";
+import { FACILITIES, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.js";
 import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalNear,
   CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT,
   byDistrictNear, GU_ORDER } from "./data/districts.js";
@@ -110,9 +110,11 @@ function receiptNo(now = new Date()) {
 }
 
 export function MainApp({ qr = null, noDistrict = false }) {
-  /* 주변 공공시설(U-ST-07)은 공공시설 탭과 같은 데이터에서 뽑는다 — 두 탭이 같은 시설을
-     다른 거리로 말하지 않게 한다. 합치는 일은 데이터 파일이 아니라 화면이 한다 (순환 참조 방지) */
-  const d = React.useMemo(() => ({ ...DUNJEON, nearby: NEARBY, festival: CURRENT_FESTIVAL }), []);
+  /* `nearby`(U-ST-07 주변 공공시설 4줄)가 여기서 합쳐졌다 — 읽는 화면이 없어져 함께
+     걷어냈다 (2026-08-24. DistrictSheet 의 해당 자리 주석 · facilities.js 의 U-ST-07 항목).
+     축제는 그대로다: 6건이 32개소에 흩어져 있어 `districts.js` 가 소유하고, 여기서
+     지금 상점가의 것 하나를 얹는다 (순환 참조를 피하려고 데이터 파일이 아니라 화면이 합친다). */
+  const d = React.useMemo(() => ({ ...DUNJEON, festival: CURRENT_FESTIVAL }), []);
 
   const [tab, setTab] = React.useState("facility");   /* QR 스캔 시 공공시설 탭으로 진입 (U-CM-03) */
   const [snap, setSnap] = React.useState("half");
@@ -361,37 +363,23 @@ export function MainApp({ qr = null, noDistrict = false }) {
     say("QR스캔 위치로 이동했습니다");
   };
 
-  /* 상점가 탭 하단 "주변 공공시설"의 한 줄 → **공공시설 탭으로 옮겨 지도에서 켠다**
-     (2026-08-18). 상점가 탭은 점포 레이어를 갖고 있어 여기서는 시설 마커를 그릴 수 없다
-     (U-CM-17: 한 번에 한 레이어). 그래서 상세로 보내는 대신 그 시설이 실제로 그려지는
-     탭으로 데려간다 — 목록에서 고른 것을 지도에서 보여준다는 규칙은 그대로 지키면서,
-     레이어 규칙도 깨지 않는 유일한 길이다.
+  /* ── `showFacilityOnMap` 이 여기 있었다 (2026-08-24 삭제, 사용자 요청) ────────
+     시설 한 줄을 누르면 공공시설 탭으로 옮겨 그 마커를 켜던 함수다. 상점가 탭은 점포
+     레이어를 갖고 있어 시설 마커를 그릴 수 없어서(U-CM-17: 한 번에 한 레이어), 상세로
+     보내는 대신 그 시설이 실제로 그려지는 탭으로 데려가던 길이었다.
 
-     changeTab 이 선택을 비우고 카메라를 QR 지점으로 되돌린 **뒤에** pickFacility 가 다시
-     고른다. 상태 갱신은 한 번에 묶여 마지막 값이 남고, 카메라는 pickOnMap 이 두 프레임
-     뒤에 옮기므로 순서가 어긋나지 않는다. */
-  /* 부르는 곳은 이제 상점가 탭 시트 하나뿐이다 (2026-08-20). 점포 상세(S06)에서
-     주변 공공시설 블록을 빼면서 오버레이에서 들어오는 경로가 사라져, 쌓인 오버레이를
-     걷어내던 `fromOverlay` 갈래도 함께 걷어냈다. */
-  const showFacilityOnMap = f => {
-    if (tab !== "facility") changeTab("facility");
-    /* 유형 필터가 그 시설을 걸러내고 있으면 **그 유형을 더한다** (2026-08-20).
-       여럿 고르기가 되면서 "그 유형으로 바꾸기"보다 나은 길이 생겼다 — 걸어둔 조건을
-       그대로 두고 필요한 것만 하나 켜면 되므로, 사용자가 고른 것을 아무것도 잃지 않는다.
-       칩을 다 끄면(전체) 애초에 걸리지 않으므로 여기 들어오지 않는다 */
-    if (fcTypes.length && !fcTypes.includes(f.type)) setFcTypes([...fcTypes, f.type]);
-    pickFacility(f);
-    /* 탭이 발밑에서 바뀌는 이동이라 무슨 일이 일어났는지 한 줄로 말한다.
-       **시설 이름은 넣지 않는다** (2026-08-18). 토스트에 이름까지 넣으면 "에버랜드로
-       버스환승장 AED" 같은 이름에서 문장이 두 줄이 되고, 두 줄짜리 토스트는 아래 탭바까지
-       덮는다 (Toast 주석). 여기서 답해야 할 것은 **어느 탭으로 옮겼는가**이고 —
-       그게 발밑에서 바뀐 것이다 — 무엇이 켜졌는지는 바로 뜨는 미리보기 카드가 이름으로
-       말한다. 같은 사실을 두 곳에서 말하느라 문장을 늘릴 이유가 없다. */
-    say("공공시설 탭으로 이동했습니다");
-  };
+     부르는 곳이 하나씩 줄다가 없어졌다. 2026-08-20 에 점포 상세(S06)의 주변 공공시설
+     블록이 빠졌고, 2026-08-24 에 상점가 탭 시트의 같은 블록이 빠졌다 (DistrictSheet).
+     **시설을 고르는 일은 공공시설 탭 하나가 통째로 맡는다** — 거기에는 유형 칩도
+     거리순 목록도 지도 마커도 있고, 이 함수가 하던 일도 결국 "그 탭으로 데려가기"였다.
+
+     같은 목적지가 필요해지면 되살릴 것은 이 함수가 아니라 그 자리의 판단이다:
+     탭을 바꾸고(changeTab) · 걸린 유형 칩에 그 유형을 더하고 · pickFacility 로 켜고 ·
+     탭이 발밑에서 바뀌었다고 한 줄 말한다. 셋 다 지금도 그대로 있는 조각들이다. */
 
   /* 둘러보기(S04)의 신규·인기 매장 카드 → **상점가 탭으로 옮겨 지도에서 켠다** (2026-08-18).
-     위 showFacilityOnMap 과 같은 규칙이고 이유도 같다. 둘러보기 탭에는 지도가 없어서
+     방금 없어진 `showFacilityOnMap`(위)과 같은 규칙이고 이유도 같다 — 이제 이쪽만
+     남았다. 둘러보기 탭에는 지도가 없어서
      (CLAUDE.md) 여기서는 켤 마커가 없다 — 점포 마커가 실제로 그려지는 탭으로 데려간다.
 
      이 카드는 335곳 목록을 우회하는 지름길이다 (U-ST-09). 지름길로 고른 가게가 필터에
@@ -409,7 +397,10 @@ export function MainApp({ qr = null, noDistrict = false }) {
     const needle = q.trim();
     if (needle && !(store.name.includes(needle) || store.biz.includes(needle))) setQ("");
     pickOnMap(store);
-    /* 점포명도 넣지 않는다 — 위와 같은 이유다 (showFacilityOnMap 주석) */
+    /* 점포명을 넣지 않는다. 토스트에 이름까지 넣으면 긴 상호명에서 문장이 두 줄이 되고,
+       두 줄짜리 토스트는 아래 탭바까지 덮는다 (Toast 주석). 여기서 답해야 할 것은
+       **어느 탭으로 옮겼는가**이고 — 그게 발밑에서 바뀐 것이다 — 무엇이 켜졌는지는
+       바로 뜨는 미리보기 카드가 이름으로 말한다. */
     say("상점가 탭으로 이동했습니다");
   };
 
@@ -704,8 +695,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
         onCopied={copied} />
     ) : (
       /* 주변 공공시설을 넘기지 않는다 (2026-08-20). 점포 상세에서 그 블록을 뺐다 —
-         이유는 StoreDetail 머리말. 상점가 탭 하단(DistrictSheet)의 같은 블록은
-         그대로이고, 거기서 고른 시설은 여전히 지도로 간다 (onPickFacility 아래쪽). */
+         이유는 StoreDetail 머리말. 상점가 탭 하단(DistrictSheet)에 같은 블록이
+         남아 있었는데 그것도 2026-08-24 에 뺐다 — **이제 시민용 화면에서 시설을
+         고르는 자리는 공공시설 탭 하나뿐이다** (U-ST-07 은 화면에서 사라졌다). */
       <StoreDetail
         store={target}
         district={d.district}
@@ -944,9 +936,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
               selectedId={selected ? selected.id : null}
               /* 점포 행도 마커를 누른 것과 같다 (pickFacility 주석) */
               onPickStore={pickOnMap}
-              /* "주변 공공시설"은 공공시설 탭으로 옮겨 그 자리에서 켠다 —
-                 이 탭에는 시설 마커가 없다 (showFacilityOnMap 주석) */
-              onPickFacility={showFacilityOnMap}
+              /* `onPickFacility` 가 여기 있었다 — 주변 공공시설 블록과 함께 나갔다
+                 (2026-08-24. DistrictSheet 의 해당 자리 주석) */
               onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
               /* 닫힌 축제의 id 를 셸이 들고 있다. 시트 안에 두면 탭을 옮길 때 언마운트되어
                  둘러보기를 갔다 올 때마다 배너가 되살아난다 (U-FC-09 말풍선과 같은 이유).
