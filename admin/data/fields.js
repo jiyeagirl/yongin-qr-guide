@@ -534,8 +534,12 @@ export const FACILITY_FIELDS = {
       range: "최대 50자", maxLength: 50, example: "평일 09:00~18:00 / 24시간 개방" },
     { key: "capacity", spec: "capacity", label: "이용가능 인원", required: false, type: "number",
       range: "0~9999", min: 0, max: 9999, unit: "명", example: "40" },
+    /* 예시가 **둘을 쉼표로 잇는다** (2026-08-25, 사용자 요청). 한 가지만 적어 두면
+       여럿일 때 무엇으로 잇는지 담당자마다 갈리고, 그때 나오는 것이 가운뎃점이다 —
+       원천 자료가 담지 못하는 글자다 (facilities.js 의 `extra` 머리말). 안내 줄을
+       따로 두지 않는 이유는 예시가 그 자리에서 이미 보여주기 때문이다 */
     { key: "extra", spec: "extra_info", label: "부가정보", required: false, type: "text",
-      range: "최대 100자", maxLength: 100, example: "냉방기 있음", span: 2 },
+      range: "최대 100자", maxLength: 100, example: "냉방기 있음, 정수기 있음", span: 2 },
     ...COMMON_TAIL,
   ],
   shelter: [
