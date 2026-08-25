@@ -57,8 +57,8 @@ import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
  *
  *   ② **줄을 가는 선으로 갈랐다.** 선 하나로 가르면 어디까지가 한 줄인지 눈으로
  *      좇아야 한다 — 특히 아랫줄이 있는 줄과 없는 줄이 섞이면 선의 간격이 들쭉날쭉하다.
- *      이제 줄 하나가 **가라앉은 바탕의 카드**다. 흰 입력칸이 그 위에 얹혀 어디까지가
- *      한 줄인지 색으로 끝난다.
+ *      이제 줄 하나가 **카드**다. 카드가 닫힌 도형이라 어디까지가 한 줄인지 눈으로
+ *      좇을 것이 없다.
  */
 
 /* 오른쪽에 비워 두는 폭 — 삭제 버튼(36) + 그 앞의 gap. 열 이름 줄 · 아랫줄 · 예시 줄이
@@ -67,14 +67,26 @@ import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
 const RESERVE = "calc(36px + var(--space-2))";
 
 /* 카드 안쪽 여백. **열 이름 줄이 이 값만큼 함께 들여져야** 머리글과 칸이 한 세로선에
-   선다 — 카드는 안쪽으로 밀려 있고 열 이름 줄은 카드 밖이다 (아래 head). */
+   선다 — 카드는 안쪽으로 밀려 있고 열 이름 줄은 카드 밖이다 (아래 head).
+   테두리를 두르면서 그 한 줄(1px)도 함께 밀어내므로 `CARD_INSET` 이 둘을 더한 값이다 —
+   RESERVE 가 4px 어긋나 있던 것과 같은 성격의 어긋남을 미리 막는다. */
 const CARD_PAD = "var(--space-3)";
+const CARD_INSET = `calc(${CARD_PAD} + var(--stroke-hairline))`;
 
-/* 줄 하나를 감싸는 카드. 바탕이 중립 회색이고 안의 입력칸은 흰색이라(Input · Select 의
-   기본 바탕), **어디까지가 한 줄인지 색으로 끝난다** — 선을 눈으로 좇지 않아도 된다. */
+/* 줄 하나를 감싸는 카드.
+   ── 바탕을 깔지 않고 테두리로 두른다 (2026-08-25 오후, 사용자 요청) ──────────────
+   하루 전에는 중립 회색(`--surface-row` #f1f3f5)을 깔았다. 「어디까지가 한 줄인가」는
+   그것으로 끝났는데 **회색이 배경으로 읽히지 않았다** — 흰 입력칸을 넷씩 얹으니 그 밑의
+   회색이 바탕이 아니라 덩어리 하나로 보이고, 흰 폼 한가운데 회색 블록이 줄 수만큼 쌓였다.
+
+   테두리는 그 부피 없이 같은 일을 한다. 안쪽 입력칸의 테두리(`--border-strong` #c3cec8)보다
+   **옅은 단**(`--border-default` #dce4df)을 쓰는 것이 요점이다 — 진하면 상자 안의 상자가
+   되어 어느 쪽이 누를 자리인지 흐려진다. 옅으면 바깥은 틀, 안은 칸으로 갈린다.
+   토큰 하나가 이 자리에만 있던 `--surface-row` 는 쓰는 데가 없어져 함께 지웠다. */
 const CARD = {
   display: "flex", flexDirection: "column", gap: "var(--space-2)",
-  padding: CARD_PAD, background: "var(--surface-row)",
+  padding: CARD_PAD, background: "var(--surface-card)",
+  border: "var(--stroke-hairline) solid var(--border-default)",
   borderRadius: "var(--radius-md)",
 };
 
@@ -103,7 +115,7 @@ export function Repeater({
   /* 아랫줄이 있는 목록만 카드를 두른다 (위 PLAIN 머리말). 열 이름 줄의 들여쓰기도
      여기에 따라간다 — 카드가 없으면 들일 것이 없다 */
   const carded = bottom.length > 0;
-  const inset = carded ? CARD_PAD : "0px";
+  const inset = carded ? CARD_INSET : "0px";
 
   /* ── 지우기 전에 한 번 묻는다 (2026-08-25, 사용자 요청) ──────────────────────
      휴지통이 칸 바로 옆에 있어 위치를 고치려다 누르기 쉽다. 다른 목록과 달리 이 줄은

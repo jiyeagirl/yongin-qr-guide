@@ -76,8 +76,18 @@ export function RequiredBadge({ required = false }) {
 /* 항목 하나. children 을 주면 그것을 쓰고, 없으면 type 에 맞는 컨트롤을 만든다.
    타입 스위치를 여기에 두는 이유: 화면 열넷이 저마다 switch 문을 갖게 하면
    "select 는 어떻게 그리더라"가 열네 벌이 되고, 그중 하나는 반드시 달라진다. */
+/* ── 이름 줄에 한 마디 더 다는 자리 (`badge`, 2026-08-25) ─────────────────────
+   필수 배지 뒤에 붙는다. `FormSection` 이 같은 이름의 슬롯을 이미 갖고 있어 이름을 맞췄다.
+
+   여기 서는 것은 **그 칸을 고르기 전에 알아야 하는 말**이다. 칸 아래(`hint` · `error`)와
+   다른 점이 그것이다 — 아래 줄은 값을 넣고 나서 읽는 자리라, 고르는 동안 눈이 가 있는
+   위쪽에서 말해야 하는 것이 있다. 조아용 이미지의 겹침 안내가 그렇다: 썸네일을 누르는
+   순간 알아야 하는데, 격자 밑에 있으면 안내 줄과 나란히 두 줄로 서서 어느 쪽이 지금
+   일어난 일인지도 흐려졌다 (사용자 요청).
+
+   배지든 글자든 받는다 — 무엇을 세울지는 화면이 정한다. */
 export function FormField({
-  label, required = false, example, range, hint, error,
+  label, required = false, badge, example, range, hint, error,
   type = "text", value, onChange, options, placeholder, rows, min, max, maxLength, unit, disabled,
   /* `type="password"` 칸에 눈 단추를 세울지 (Input 의 reveal). 항목표가 정한다 —
      같은 폼 안에서도 자기 비밀번호를 넣는 칸과 남의 것을 넣어 주는 칸은 사정이 다르다 */
@@ -201,6 +211,7 @@ export function FormField({
           {label}
         </span>
         <RequiredBadge required={required} />
+        {badge}
       </div>
       {control}
       {foot ? (
