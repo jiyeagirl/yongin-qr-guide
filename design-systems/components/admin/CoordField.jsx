@@ -37,6 +37,11 @@ export function outOfBounds(lat, lng) {
     || b < COORD_BOUNDS.lngMin || b > COORD_BOUNDS.lngMax;
 }
 
+/* 이 지도의 배율. 건물 하나를 가리키는 자리라 3 이다(카카오는 작을수록 가깝다).
+   **두 곳에서 쓰므로 상수로 둔다** — 지도를 만들 때와, 밖에서 좌표가 바뀌어 따라갈 때.
+   두 자리에 3 을 따로 적으면 한쪽만 고쳐지고 그 어긋남은 화면에서 잘 안 보인다. */
+const LEVEL = 3;
+
 /* 소수점 6자리 (V-01). 표기와 저장을 같은 자리에서 자른다 — 화면은 6자리로 보여주고
    데이터에는 14자리가 들어 있으면, 두 값을 견주는 사람이 매번 다른 것을 본다. */
 export function fixCoord(v) {
@@ -58,9 +63,42 @@ export function CoordField({
      (지도를 누르는 것은 `lat`·`lng` 를 고치는 일이고 오류는 `coord` 에 달려 있다) */
   const err = has ? null : error;
 
+  const mapApi = React.useRef(null);
+
+  /* **지도가 마지막으로 내놓은 좌표**를 적어 둔다 — 아래 「밖에서 들어온 좌표」가 이것으로
+     갈린다. 핀을 끌어 옮긴 것까지 지도를 따라 움직이면 끄는 동안 화면이 계속 밀린다.
+
+     켜고 끄는 깃발이 아니라 값으로 두는 이유: 깃발은 **소비되지 않고 남을 수** 있다.
+     끈 자리가 반올림 뒤 이전과 같은 좌표면 `lat`·`lng` 가 그대로라 아래 effect 가 아예
+     돌지 않고, 깃발이 켜진 채 남아 그다음 주소 선택을 한 번 삼킨다. 값끼리 견주면 그런
+     자리가 없다 — 같으면 어차피 그 자리를 보고 있는 것이고, 다르면 따라가면 된다. */
+  const fromMap = React.useRef(null);
+  const at = (a, b) => `${fixCoord(a)},${fixCoord(b)}`;
   const pick = React.useCallback((la, ln) => {
+    fromMap.current = at(la, ln);
     if (onChange) onChange({ lat: fixCoord(la), lng: fixCoord(ln) });
   }, [onChange]);
+
+  /* ── 밖에서 좌표가 바뀌면 지도가 따라간다 (2026-08-25, 사용자 요청) ───────────
+     `KakaoMap` 은 지도를 **한 번만** 만든다 — `center` 가 나중에 바뀌어도 화면은 그
+     자리에 남는다 (그쪽 「지도 생성 — 한 번만」). 그래서 이미 좌표가 있는 자료를 열어
+     주소를 다시 검색해 고르면, 좌표 숫자와 핀은 새 자리로 가는데 **보고 있는 화면은
+     옛 자리에 그대로** 있었다 — 핀이 화면 밖으로 나가 아무 일도 일어나지 않은 것처럼
+     보인다. 좌표가 없던 자료에서는 그때 지도가 처음 서므로 이 일이 안 생겨, 신규
+     등록으로만 검수하면 놓치는 자리였다.
+
+     **줌도 함께 맞춘다.** [핀 위치로]와 갈리는 지점이다 — 그쪽은 「핀을 잃어버렸으니
+     데려다 달라」라서 맞춰 둔 배율을 지키는 것이 요점이고, 여기는 **다른 곳을 골랐다**라서
+     옛 배율이 그 자리의 것이 아니다. 시 전체가 보이도록 멀리 끌어 둔 채 주소를 고르면
+     새 자리도 시 전체로 보인다. */
+  React.useEffect(() => {
+    if (!has) return;
+    /* 핀을 끈 것이면 이미 그 자리를 보고 있다 */
+    if (fromMap.current === at(lat, lng)) return;
+    /* 지도가 아직 없으면(첫 렌더 · 좌표가 막 생겨 지도가 이제 서는 참) 할 일이 없다 —
+       그때는 `KakaoMap` 이 이 좌표를 center 로 받아 만들어진다 */
+    if (mapApi.current) mapApi.current.setView(Number(lat), Number(lng), LEVEL);
+  }, [lat, lng, has]);
 
   /* ── 핀을 잃어버렸을 때 되찾는 길 (2026-08-25, 사용자 요청) ──────────────────
      이 지도는 끌어 움직일 수 있는데 되돌리는 길이 없었다. 자리를 확인하려고 주변을
@@ -70,7 +108,6 @@ export function CoordField({
      줌은 건드리지 않고 **가운데만 옮긴다.** 핀을 정확히 놓으려고 깊이 당겨 둔 배율을
      되돌리면, 되찾기가 곧 다시 맞추기가 된다 (시민 화면의 [QR 스캔 지점으로]는 줌까지
      되돌리는데 그쪽은 탐색용 지도라 사정이 다르다). */
-  const mapApi = React.useRef(null);
   const backToPin = () => {
     if (mapApi.current && has) mapApi.current.focus(Number(lat), Number(lng));
   };
@@ -111,7 +148,7 @@ export function CoordField({
                   가리키는 점이 하나 더 서고 말풍선이 시설 이름을 적어, 무엇을 끌어야
                   하는지 화면이 스스로 흐린다. 여기 있어야 하는 것은 핀뿐이다. */}
               <KakaoMap appKey={appKey} center={{ lat: Number(lat), lng: Number(lng) }}
-                anchorLabel={name || "지정 위치"} anchor={false} level={3} mapRef={mapApi}
+                anchorLabel={name || "지정 위치"} anchor={false} level={LEVEL} mapRef={mapApi}
                 pick={{ lat: Number(lat), lng: Number(lng), label: name }} onPick={pick} />
               {/* 시민 지도의 [QR 스캔 지점으로]와 **같은 부품**이다 (2026-08-25, 사용자
                   요청). 하는 일이 같으므로 — 끌어 움직인 지도를 기준점으로 되돌린다 —
