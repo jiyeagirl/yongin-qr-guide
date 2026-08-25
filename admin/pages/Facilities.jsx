@@ -3,7 +3,8 @@ import {
   PageHeader, Toolbar, DataTable, Cell, Button, Select, Switch, Badge, Pagination, ConfirmDialog,
   FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, CoordField, fixCoord, EMPTY_MARK,
 } from "../../design-systems/admin.js";
-import { FACILITIES, facilityName } from "../../screens/main/data/facilities.js";
+import { facilityName } from "../../screens/main/data/facilities.js";
+import { FACILITY_ROWS } from "../data/sources.js";
 import { KAKAO_APP_KEY } from "../../screens/main/config.js";
 import { FACILITY_FIELDS } from "../data/fields.js";
 import { useCollection } from "../data/store.js";
@@ -89,7 +90,7 @@ function derive(row) {
 }
 
 export function Facilities({ onToast }) {
-  const { rows, upsert, remove, patch, patchMany } = useCollection("facilities", FACILITIES, derive, "공공시설");
+  const { rows, upsert, remove, patch, patchMany } = useCollection("facilities", FACILITY_ROWS, derive, "공공시설");
   const [type, setType] = React.useState("");
   const list0 = useListState([type]);
 
@@ -130,7 +131,7 @@ export function Facilities({ onToast }) {
         options={FACILITY_TYPES.map(t => ({ value: t, label: FACILITY_LABELS[t] }))}
         onChange={e => ed.set("type", e.target.value)} />
       <p style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.5 }}>
-        유형에 따라 입력 항목이 달라집니다. 등록 후에는 바꿀 수 없습니다.
+        유형에 따라 입력 항목이 달라지며, 등록 후에는 변경할 수 없습니다.
       </p>
     </div>
   ) : null;
@@ -188,8 +189,8 @@ export function Facilities({ onToast }) {
           { key: "summary", label: "주요 항목", render: summaryOf },
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: f => (
-              <Switch checked={f.visible !== false} aria-label={`${f.name} 노출 여부`}
-                onChange={() => patch(f.id, { visible: f.visible === false }, f.name)} />
+              <Switch checked={f.visible} aria-label={`${f.name} 노출 여부`}
+                onChange={() => patch(f.id, { visible: !f.visible }, f.name)} />
             ) },
           { key: "manage", label: "관리", width: 96, align: "center",
             render: f => (

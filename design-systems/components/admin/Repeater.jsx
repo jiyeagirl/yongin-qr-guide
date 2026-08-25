@@ -34,10 +34,21 @@ import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
  * 그럴 이유가 없다.
  *
  * 그래서 칼럼에 `row2: true` 를 달면 **그 항목만 아랫줄로 내려간다.** 아랫줄은 열 이름
- * 줄이 가리키지 못하므로(윗줄 칸과 폭이 다르다) 칸 앞에 이름표를 직접 붙인다.
+ * 줄이 가리키지 못하므로(윗줄 칸과 폭이 다르다) 이름표를 직접 붙인다.
  * 한 항목이 두 줄이 되면 어디까지가 한 항목인지 흐려지므로 항목 사이에 가는 줄을 긋는다.
+ *
+ * ── 이름표는 칸 **위**에 붙인다 (2026-08-25, 사용자 요청) ────────────────────
+ * 처음에는 칸 **앞**에 56px 짜리 이름표를 세웠다. 그러면 이 폼에서 이름과 칸의 관계가
+ * 두 가지가 된다 — 윗줄과 폼의 나머지 칸은 이름이 위에 있고 여기만 왼쪽이다. 담당자는
+ * 그 차이를 말로 설명하지 못하면서 「여기만 뭔가 다르다」고 느낀다 (EditorModal 머리말과
+ * 같은 이야기다). 게다가 이름표가 56px 을 먼저 가져가 **칸의 오른쪽 끝이 윗줄 칸과
+ * 어긋났다** — 문장을 적는 칸이라 그 어긋남이 가장 넓은 자리에서 보인다.
  */
-const LABEL_W = 56;
+
+/* 오른쪽에 비워 두는 폭 — 삭제 버튼(36) + 그 앞의 gap. 열 이름 줄 · 아랫줄 · 예시 줄이
+   **같은 값을 써야** 세 줄의 칸 끝이 한 자리에서 만난다. 전에는 40 이라고 적혀 있어
+   4px 씩 어긋나 있었다 (2026-08-25). */
+const RESERVE = "calc(36px + var(--space-2))";
 
 /* 칸 안 예시에는 「예)」를 붙인다 — 흐린 글씨는 이미 값이 들어 있는 것처럼 보인다
    (FormField 와 같은 규칙) */
@@ -46,25 +57,49 @@ const phOf = c => (c.placeholder ? `예) ${c.placeholder}` : undefined);
 export function Repeater({
   title, note, badge, columns = [], rows = [], onChange,
   newRow = () => ({}), addLabel = "행 추가",
+  /* 지울 때 무엇을 지우는지 이름으로 적기 위한 열쇠 (아래 `pending`). 목록마다 이름 칸이
+     다르다 — 프로그램은 `title`, 부스는 `name`. 없으면 「n번째 줄」로 부른다 */
+  nameKey = "name",
   minRows = 0, error, span = 2,
 }) {
   const list = Array.isArray(rows) ? rows : [];
   const top = columns.filter(c => !c.row2);
   const bottom = columns.filter(c => c.row2);
 
+  /* ── 지우기 전에 한 번 묻는다 (2026-08-25, 사용자 요청) ──────────────────────
+     휴지통이 칸 바로 옆에 있어 위치를 고치려다 누르기 쉽다. 다른 목록과 달리 이 줄은
+     **되돌릴 자리도 없다** — 폼 안의 임시 값이라 [저장]하기 전에는 어디에도 없다.
+
+     그런데 여기서 `ConfirmDialog` 를 띄울 수는 없다. 이 편집기는 이미 열려 있는
+     다이얼로그 **안**이고, 상자를 겹치면 ESC 가 둘을 한꺼번에 닫는다 (두 리스너가 같은
+     document 에 걸린다 — EditorModal 머리말이 같은 이유로 겹치기를 피했다). 겹쳐 띄운
+     상자가 바깥 폼까지 닫아 버리면, 실수를 막으려고 만든 장치가 더 큰 것을 잃게 한다.
+
+     그래서 **그 줄 아래에 확인 줄을 편다.** 지울 줄이 위에 그대로 보이는 채로 묻는 것이
+     상자를 띄우는 것보다 오히려 정확하다 — 어느 줄인지 이름으로도 적고 눈으로도 보인다. */
+  const [pending, setPending] = React.useState(null);
+  const asking = pending != null && pending < list.length ? pending : null;
+
   const set = (i, key, value) => {
     if (!onChange) return;
     onChange(list.map((r, n) => (n === i ? { ...r, [key]: value } : r)));
   };
-  const add = () => onChange && onChange(list.concat(newRow()));
-  const drop = i => onChange && onChange(list.filter((_, n) => n !== i));
+  const add = () => { setPending(null); if (onChange) onChange(list.concat(newRow())); };
+  const drop = i => {
+    setPending(null);
+    if (onChange) onChange(list.filter((_, n) => n !== i));
+  };
+  const nameOf = (row, i) => {
+    const v = row && row[nameKey];
+    return v && String(v).trim() ? String(v).trim() : `${i + 1}번째 줄`;
+  };
 
   /* 열 이름 줄. 비었을 때도 그린다 — 아래 예시 줄이 어느 칸에 무엇을 넣는 자리인지
      말해 주는 것이 이 줄이다. 오른쪽 40px 은 삭제 버튼 자리를 비워 둔 것이다.
      **윗줄 칸만 가리킨다** — 아랫줄 칸은 자기 이름표를 앞에 달고 있다. */
   const head = (
     <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)",
-      paddingRight: 40, fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
+      paddingRight: RESERVE, fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
       {top.map(c => (
         <span key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
           {c.label}{c.required ? <b style={{ color: "var(--state-danger)" }}> *</b> : null}
@@ -104,17 +139,18 @@ export function Repeater({
     );
   };
 
-  /* 아랫줄 — 이름표 + 칸. 열 이름 줄이 가리키지 못하는 자리라 이름을 직접 단다.
-     오른쪽 40px 은 윗줄 삭제 버튼과 폭을 맞추기 위한 것이다. */
+  /* 아랫줄 — 이름표가 **칸 위**에 선다 (2026-08-25. 머리말). 열 이름 줄이 가리키지 못하는
+     자리라 이름을 직접 달되, 붙이는 자리는 윗줄·폼의 나머지 칸과 같다.
+     오른쪽을 비워 두는 폭은 윗줄과 같은 RESERVE 다 — 그래야 칸 끝이 한 자리에서 만난다. */
   const lower = (row, i, off) => (bottom.length ? (
-    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", paddingRight: 40 }}>
+    <div style={{ display: "flex", gap: "var(--space-2)", paddingRight: RESERVE }}>
       {bottom.map(c => (
-        <React.Fragment key={c.key}>
-          <span style={{ flex: `0 0 ${LABEL_W}px`, fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
+        <div key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
+          <div style={{ marginBottom: 4, fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
             {c.label}{c.required ? <b style={{ color: "var(--state-danger)" }}> *</b> : null}
-          </span>
-          <div style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>{cell(c, row, i, off)}</div>
-        </React.Fragment>
+          </div>
+          {cell(c, row, i, off)}
+        </div>
       ))}
     </div>
   ) : null);
@@ -149,10 +185,33 @@ export function Repeater({
                     {cell(c, row, i, false)}
                   </div>
                 ))}
-                <IconButton name="trash-2" label={`${i + 1}번째 줄 삭제`} size={36}
-                  onClick={() => drop(i)} style={{ flex: "0 0 auto", color: "var(--state-danger)" }} />
+                {/* 묻고 있는 동안에는 휴지통을 자리째 비운다 — 같은 줄에 「지울까요?」와
+                    다시 누를 수 있는 삭제 단추가 함께 서면 어느 쪽이 지금 할 일인지
+                    흐려진다. 폭은 그대로 잡아 두어야 칸이 흔들리지 않는다 */}
+                {asking === i ? (
+                  <span aria-hidden="true" style={{ flex: "0 0 36px" }} />
+                ) : (
+                  <IconButton name="trash-2" label={`${i + 1}번째 줄 삭제`} size={36}
+                    onClick={() => setPending(i)} style={{ flex: "0 0 auto", color: "var(--state-danger)" }} />
+                )}
               </div>
               {lower(row, i, false)}
+
+              {asking === i ? (
+                <div role="group" aria-label="삭제 확인"
+                  style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--space-2)",
+                    padding: "var(--space-2) var(--space-3)", background: "var(--state-danger-tint)",
+                    border: "var(--stroke-hairline) solid var(--state-danger-soft)",
+                    borderRadius: "var(--radius-md)" }}>
+                  <span style={{ fontSize: "var(--fs-label)", color: "var(--text-body)", lineHeight: 1.5 }}>
+                    <b style={{ color: "var(--text-heading)" }}>{nameOf(row, i)}</b> 을(를) 지울까요?
+                  </span>
+                  <span style={{ marginLeft: "auto", display: "flex", gap: "var(--space-2)" }}>
+                    <Button variant="ghost" size="sm" onClick={() => setPending(null)}>취소</Button>
+                    <Button variant="danger" size="sm" onClick={() => drop(i)}>삭제</Button>
+                  </span>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>

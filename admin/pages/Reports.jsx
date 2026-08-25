@@ -3,7 +3,7 @@ import {
   PageHeader, Toolbar, DataTable, Cell, Modal, Button, Select, Badge, Notice, Pagination,
   InfoList, Textarea, EMPTY_MARK,
 } from "../../design-systems/admin.js";
-import { REPORTS } from "../data/reports.js";
+import { REPORTS, isOpen } from "../data/reports.js";
 import {
   REPORT_STATES, REPORT_TYPES, REPORT_TARGET_TYPES, REPORT_CLOSING_STATES,
 } from "../data/fields.js";
@@ -35,6 +35,12 @@ import { useListState, ListSearch, SearchHint } from "./useListState.js";
  * 명세서 5장의 규칙인데, 이유는 **판단이 달라지기 때문**이다. 한 건이면 신고한 사람의
  * 착각일 수 있지만 세 명이 같은 말을 하면 자료가 틀린 것이다. 그때 담당자가 할 일은
  * "답을 적는다"가 아니라 "자료를 고친다"로 바뀐다.
+ *
+ * **손 뗀 건은 세지 않는다** (2026-08-25, 사용자 요청). 전에는 상태와 무관하게 셌더니
+ * 세 건을 다 처리완료로 옮겨도 그 줄들이 계속 붉게 서 있었다 — 남은 일이 없는데 남은
+ * 일처럼 보이는 표시라 담당자가 끌 방법이 없었다. 지금은 `isOpen`(접수 · 확인중)만
+ * 세므로 하나를 닫는 순간 셋이 둘이 되고 강조가 그 자리에서 풀린다. 닫힌 줄 자신도
+ * 세지 않으니 붉게 서지 않는다 — 처리 상태 칸의 초록 배지와 어긋나지 않는다.
  *
  * ── 개인정보 보관 문제가 함께 없어졌다 ──────────────────────────────────────
  * 명세서 5장의 "회신처는 개인정보이므로 처리 완료 후 90일 보관 뒤 자동 파기"는 화면이
@@ -72,13 +78,18 @@ export function Reports({ onToast, onNavigate }) {
   const ASSIGNEE_OPTIONS = [{ value: "", label: "— 담당자 없음 —" }]
     .concat(accounts.map(a => ({ value: a.name, label: a.name })));
 
-  /* 같은 대상에 몇 건이 쌓였나. targetId 가 없는 건(기타 문의)은 세지 않는다 —
-     대상이 없는 신고끼리는 "같은 대상"이라는 말이 성립하지 않는다 */
+  /* 같은 대상에 **아직 남은** 건이 몇인가. 둘을 세지 않는다:
+     targetId 가 없는 건(기타 문의) — 대상이 없는 신고끼리는 "같은 대상"이 성립하지 않는다.
+     손 뗀 건(처리완료 · 반려 · 중복) — 머리말 참조 */
   const dupCount = React.useMemo(() => {
     const o = {};
-    rows.forEach(r => { if (r.targetId) o[r.targetId] = (o[r.targetId] || 0) + 1; });
+    rows.forEach(r => { if (r.targetId && isOpen(r)) o[r.targetId] = (o[r.targetId] || 0) + 1; });
     return o;
   }, [rows]);
+
+  /* 강조가 걸리는 조건 한 곳. 줄 자신이 닫혀 있으면 0 이다 — 대상에 남은 것이 셋이어도
+     이 줄에서 할 일은 끝났다 */
+  const dupOf = r => (r && r.targetId && isOpen(r) ? dupCount[r.targetId] || 0 : 0);
 
   const filtered = React.useMemo(() => rows
     .filter(r => {
@@ -101,7 +112,8 @@ export function Reports({ onToast, onNavigate }) {
     /* ◐ 조건부 — 신고를 닫으려면 근거가 있어야 한다 (명세서 5-2. 회신 내용이 받던 자리를
        내부 메모가 이어받았다 — 머리말 참조) */
     if (REPORT_CLOSING_STATES.includes(draft.state) && !String(draft.memo || "").trim()) {
-      setError(`「${draft.state}」(으)로 옮기려면 내부 메모에 근거를 적어야 합니다.`);
+      /* 닫는 상태 둘(처리완료·반려)이 다 「로」를 받는다 — 조사를 고르는 자리가 아니다 */
+      setError(`${draft.state}로 변경하려면 내부 메모를 입력해 주세요.`);
       return;
     }
     patch(open.id, {
@@ -148,11 +160,23 @@ export function Reports({ onToast, onNavigate }) {
       <DataTable
         caption="접수된 오류신고 목록"
         rows={paged.rows} rowKey="id" onRowClick={openOne}
-        /* 같은 대상에 세 건 이상이면 세운다 (명세서 5장) */
-        rowTone={r => (r.targetId && dupCount[r.targetId] >= DUP_THRESHOLD ? "danger" : null)}
+        /* 같은 대상에 남은 것이 세 건 이상이면 세운다 (명세서 5장) */
+        rowTone={r => (dupOf(r) >= DUP_THRESHOLD ? "danger" : null)}
         empty={{ title: "조건에 맞는 접수 건이 없습니다." }}
         columns={[
-          { key: "id", label: "접수번호", width: 104, sortable: true },
+          /* 누적 배지가 여기 붙는다 (2026-08-25 이동). 「대상」 칸(200px)에 있을 때는
+             이름이 길면 배지가 아랫줄로 내려가 그 행만 키가 자랐다 — 훑는 눈이 걸린다.
+             접수번호는 글자 수가 늘 같아(rp-016) 배지가 설 자리를 미리 낼 수 있고,
+             그래서 nowrap 으로 못 박아도 잘릴 것이 없다 (접수일 칸과 같은 처리) */
+          { key: "id", label: "접수번호", width: 176, sortable: true,
+            render: r => (
+              <Cell style={{ flexWrap: "nowrap", whiteSpace: "nowrap" }}>
+                {r.id}
+                {dupOf(r) >= DUP_THRESHOLD ? (
+                  <Badge tone="danger" size="sm">{dupOf(r)}건 누적</Badge>
+                ) : null}
+              </Cell>
+            ) },
           /* 접수일은 통째로만 읽힌다. 104px 에서는 「2026-」 / 「10-15」 로 갈렸다 —
              `.admin-web` 의 overflow-wrap:break-word 가 붙임표를 끊을 자리로 보기 때문이다.
              날짜가 들어갈 만큼 넓히고 그 칸에서는 줄바꿈을 막는다 (열 하나가 두 줄이 되면
@@ -161,14 +185,7 @@ export function Reports({ onToast, onNavigate }) {
             render: r => <span style={{ whiteSpace: "nowrap" }}>{r.at}</span> },
           { key: "targetType", label: "대상 유형", width: 100, sortable: true },
           { key: "target", label: "대상", width: 200,
-            render: r => (
-              <Cell>
-                {r.target || EMPTY_MARK}
-                {r.targetId && dupCount[r.targetId] >= DUP_THRESHOLD ? (
-                  <Badge tone="danger" size="sm">{dupCount[r.targetId]}건 누적</Badge>
-                ) : null}
-              </Cell>
-            ) },
+            render: r => r.target || EMPTY_MARK },
           { key: "kind", label: "신고 유형", width: 120, sortable: true },
           { key: "body", label: "내용",
             /* 표에서는 한 줄로 자른다. 전문은 눌러서 본다 — 신고 내용은 길이가 제각각이라
@@ -204,8 +221,8 @@ export function Reports({ onToast, onNavigate }) {
         ) : null}>
         {open ? (
           <>
-            {open.targetId && dupCount[open.targetId] >= DUP_THRESHOLD ? (
-              <Notice tone="danger" size="sm" title={`같은 대상에 ${dupCount[open.targetId]}건이 쌓였습니다`}
+            {dupOf(open) >= DUP_THRESHOLD ? (
+              <Notice tone="danger" size="sm" title={`같은 대상에 ${dupOf(open)}건이 쌓였습니다`}
                 style={{ marginBottom: "var(--space-4)" }}>
                 한 사람의 착각이 아니라 자료가 틀렸을 가능성이 큽니다. 답을 적기 전에
                 대상 자료를 먼저 확인해 주세요.
@@ -244,8 +261,10 @@ export function Reports({ onToast, onNavigate }) {
               <Textarea label="내부 메모" value={draft.memo || ""} rows={3} maxLength={500}
                 error={error || undefined}
                 onChange={e => { setDraft(d => ({ ...d, memo: e.target.value })); setError(null); }}
-                placeholder="확인 경위, 연락한 곳, 판단 근거."
-                hint={`사용자에게 공개되지 않습니다. 「${REPORT_CLOSING_STATES.join("」 · 「")}」(으)로 옮기려면 반드시 적어야 합니다.`} />
+                /* 안내 문구가 여기 있었다 (2026-08-25 삭제) — 「공개되지 않습니다」는
+                   칸 이름이 「내부 메모」라 이미 하는 말이고, 닫을 때 적으라는 요구는
+                   실제로 막히는 순간 error 가 그 자리에서 적는다 */
+                placeholder="확인 경위, 연락한 곳, 판단 근거." />
             </div>
           </>
         ) : null}

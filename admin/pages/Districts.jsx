@@ -3,9 +3,8 @@ import {
   PageHeader, Toolbar, DataTable, Cell, ConfirmDialog, DELETE_NOTE, Button, Select, Pagination,
   Badge, Switch, Icon,
 } from "../../design-systems/admin.js";
-import { DISTRICTS, GU_ORDER, FESTIVALS, CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
-import { STORES } from "../../screens/main/data/dunjeon.js";
-import { QR_POINTS } from "../../screens/main/data/qr.js";
+import { GU_ORDER } from "../../screens/main/data/districts.js";
+import { DISTRICT_ROWS, STORE_ROWS, FESTIVAL_ROWS, QR_ROWS } from "../data/sources.js";
 import { DISTRICT_FIELDS } from "../data/fields.js";
 import { useCollection, readCollection, removeRows } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
@@ -46,10 +45,10 @@ import { EditorModal } from "./EditorModal.jsx";
 
 const GU_OPTIONS = [{ value: "", label: "전체 구" }].concat(GU_ORDER.map(g => ({ value: g, label: g })));
 
-/* QR 원본을 관리자 쪽 모양으로 바꾼 것 — 코드가 곧 id 다 (QrPoints.jsx 와 같은 한 줄).
-   **모듈 밖에서 한 번만 만든다.** 렌더마다 새 배열이면 `readCollection` 이 매번 새로
-   겹치고, 아래 `removedQr` 의 결과도 매 렌더 새 객체가 된다. */
-const QR_ROWS = QR_POINTS.map(p => ({ ...p, id: p.code }));
+/* QR 원본을 관리자 쪽 모양으로 바꾸던 한 줄이 여기 있었다 (2026-08-25 에 `data/sources.js`
+   로 옮겼다) — QrPoints.jsx 가 같은 줄을 따로 갖고 있었다. 원천 표를 관리자 쪽 모양으로
+   맞추는 일은 화면이 아니라 자료가 할 일이고, **모듈 밖에서 한 번만** 만들어야 한다:
+   렌더마다 새 배열이면 `readCollection` 이 매번 새로 겹친다. */
 
 /* ── 막지 않고, 함께 지운다 (2026-08-24, 사용자 요청으로 뒤집음) ──────────────
    전에는 진행 중 축제나 활성 QR 이 걸린 상점가를 **지우지 못하게 막았다**. 명세서 10장의
@@ -84,17 +83,18 @@ function linkedOf(d, festivals, qrPoints, stores) {
   return {
     festivals: festivals.filter(f => f.districtId === d.id),
     qr: qrPoints.filter(p => p.districtId === d.id),
-    /* 점포는 `districtId` 가 비어 있으면 둔전이다 (아래 counts 와 같은 규칙) —
-       더미 자료 335곳이 전부 그 상태라, 이 기본값을 빠뜨리면 아무것도 걸리지 않는다 */
-    stores: stores.filter(s => (s.districtId || CURRENT_DISTRICT_ID) === d.id),
+    /* 소속이 비어 있으면 둔전이라는 기본값은 **표가 이미 채워서 준다** (2026-08-25,
+       `data/sources.js`) — 더미 자료 335곳이 전부 그 상태라, 화면마다 메우다가
+       한 곳이라도 빠지면 아무것도 걸리지 않는다 */
+    stores: stores.filter(s => s.districtId === d.id),
   };
 }
 
 export function Districts({ onToast }) {
-  const { rows, upsert, remove, patch, patchMany } = useCollection("districts", DISTRICTS, null, "골목형 상점가");
-  const storeRows = readCollection("stores", STORES);
+  const { rows, upsert, remove, patch, patchMany } = useCollection("districts", DISTRICT_ROWS, null, "골목형 상점가");
+  const storeRows = readCollection("stores", STORE_ROWS);
   const qrRows = readCollection("qr", QR_ROWS);
-  const festivalRows = readCollection("festivals", FESTIVALS);
+  const festivalRows = readCollection("festivals", FESTIVAL_ROWS);
   const [gu, setGu] = React.useState("");
   const list0 = useListState([gu]);
 
@@ -103,30 +103,52 @@ export function Districts({ onToast }) {
   const counts = React.useMemo(() => {
     const o = {};
     for (const s of storeRows) {
-      const id = s.districtId || CURRENT_DISTRICT_ID;
+      const id = s.districtId;
       if (!o[id]) o[id] = { stores: 0, onnuri: 0 };
-      if (s.visible === false) continue;
+      if (!s.visible) continue;
       o[id].stores += 1;
       if (s.onnuri) o[id].onnuri += 1;
     }
     return o;
   }, [storeRows]);
 
-  /* 화면에 적을 점포수 — 센 값이 있으면 그것, 없으면 레코드의 값 */
+  /* 화면에 적을 점포수 — **담당자가 손으로 고쳤으면 그 값**, 아니면 센 값,
+     둘 다 없으면(점포 자료가 없는 31곳) 레코드에 적힌 값.
+
+     `countManual` 이 그 「손으로 고쳤다」는 기억이다 (2026-08-25. 점포의 `chipManual` 과
+     같은 성격이다). 이 갈래가 없으면 고칠 수 있게 열어 놓아도 **둔전에서는 아무 일도
+     일어나지 않는다** — 세는 쪽이 매 렌더 다시 이겨서, 담당자가 보기에는 저장이 안 된
+     화면이 된다. 이 화면이 오래 지켜온 규칙이 그것이다: 화면에서 고쳤는데 목록이
+     그대로면 고친 것이 아니다. */
   const countOf = d => {
     const c = counts[d.id];
-    return {
-      stores: c ? c.stores : Number(d.stores || 0),
-      onnuri: c ? c.onnuri : Number(d.onnuri || 0),
-    };
+    if (d.countManual || !c) {
+      return { stores: Number(d.stores || 0), onnuri: Number(d.onnuri || 0) };
+    }
+    return { stores: c.stores, onnuri: c.onnuri };
   };
 
   const ed = useRecordEditor({
     fieldsFor: () => DISTRICT_FIELDS,
-    initial: () => ({ gu: GU_ORDER[0], visible: true }),
-    /* 산출값(⚙)은 저장하지 않는다. 폼에 보이라고 얹어 둔 값이라 그대로 저장하면
-       덮개에 계산 결과가 굳고, 변경 이력에도 고치지 않은 필드가 매번 올라온다. */
-    onSave: ({ storeCount, onnuriCount, ...values }) => upsert(values),
+    /* 새 상점가에는 셀 점포가 없다. 두 칸을 빈 채로 두면 「값이 없는 것」과 「0곳」이
+       구별되지 않는데, 이 자리에서 맞는 쪽은 0 이다 — 아직 아무것도 안 들어왔다 */
+    initial: () => ({ gu: GU_ORDER[0], visible: true, storeCount: 0, onnuriCount: 0 }),
+    /* 폼의 두 칸(`storeCount` · `onnuriCount`)은 레코드의 `stores` · `onnuri` 로 들어간다 —
+       이름이 다른 것은 항목표가 명세서의 필드명을 그대로 쓰기 때문이다.
+
+       **센 값과 같으면 손댄 것으로 치지 않는다.** 열어보기만 하고 저장한 경우까지 수기로
+       굳으면 그 뒤로 점포를 더해도 수가 그대로다. 같은 이유로, 수기 값을 다시 센 값과
+       같게 적으면 자동으로 돌아간다 — 되돌리는 길이 따로 필요 없다. */
+    onSave: ({ storeCount, onnuriCount, ...values }) => {
+      const stores = Math.max(0, Number(storeCount) || 0);
+      const onnuri = Math.max(0, Number(onnuriCount) || 0);
+      const auto = counts[values.id];
+      const countManual = !!auto && (stores !== auto.stores || onnuri !== auto.onnuri);
+      upsert({ ...values, stores, onnuri, countManual });
+    },
+    /* 항목 하나만 봐서는 알 수 없는 검사 — 가맹 점포는 점포의 부분집합이다 */
+    extraValidate: v => (Number(v.onnuriCount) > Number(v.storeCount)
+      ? { onnuriCount: "점포수보다 많을 수 없습니다." } : {}),
     /* 상점가 하나가 아니라 거기 걸린 것까지 함께 지운다 (아래 removeWithLinked) */
     onRemove: (id, name) => removeWithLinked(id, name),
     onToast, label: "골목형 상점가",
@@ -213,19 +235,25 @@ export function Districts({ onToast }) {
                 {/* 「현재」 배지를 두지 않는다 — 그것은 QR 을 찍은 시민이 서 있는 곳이라는
                     뜻이라 관리자 표에서는 가리키는 대상이 없다. 이 상점가에 QR 지점이
                     걸려 있다는 사실은 QR 지점 관리와 삭제 차단 안내가 이미 말한다. */}
-                {d.visible === false ? <Badge tone="neutral" size="sm">숨김</Badge> : null}
+                {d.visible ? null : <Badge tone="neutral" size="sm">숨김</Badge>}
               </Cell>
             ) },
           { key: "gu", label: "구", width: 80, sortable: true },
           { key: "area", label: "소재지", sortable: true },
           /* 「노출 상태 기준」이라고 적어 두었던 열 밑 설명을 뺐다 (2026-08-20) —
              머리줄은 어느 칸이 무엇인지만 가리킨다. 세는 규칙은 명세서 2-1 이 갖는다. */
-          { key: "stores", label: "점포수", width: 110, align: "right", sortable: true,
+          { key: "stores", label: "점포수", width: 150, align: "right", sortable: true,
             sortValue: d => countOf(d).stores,
+            /* 수기로 고친 줄은 그렇다고 적는다 (2026-08-25) — 적지 않으면 점포 목록의
+               건수와 이 수가 어긋났을 때 어느 쪽이 고장인지 알 수 없다. 점포 목록의
+               「업종 칩 · 수기」 배지와 같은 말, 같은 모양이다 */
             render: d => (
-              <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
-                {countOf(d).stores.toLocaleString("ko-KR")}곳
-              </span>
+              <Cell align="right" style={{ flexWrap: "nowrap" }}>
+                {d.countManual ? <Badge tone="info" size="sm">수기</Badge> : null}
+                <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                  {countOf(d).stores.toLocaleString("ko-KR")}곳
+                </span>
+              </Cell>
             ) },
           { key: "onnuri", label: "온누리", width: 100, align: "right", sortable: true,
             sortValue: d => countOf(d).onnuri,
@@ -239,8 +267,8 @@ export function Districts({ onToast }) {
              왜 폼에서 뺐는지는 data/fields.js 의 DISTRICT_FIELDS 주석에 적혀 있다. */
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: d => (
-              <Switch checked={d.visible !== false} aria-label={`${d.name} 노출 여부`}
-                onChange={() => patch(d.id, { visible: d.visible === false }, d.name)} />
+              <Switch checked={d.visible} aria-label={`${d.name} 노출 여부`}
+                onChange={() => patch(d.id, { visible: !d.visible }, d.name)} />
             ) },
           { key: "manage", label: "관리", width: 96, align: "center",
             render: d => (
@@ -323,18 +351,14 @@ export function Districts({ onToast }) {
                 </li>
               ) : null}
             </ul>
-            {/* 「되돌릴 때도 함께 돌아옵니다」가 여기 있었다 (2026-08-24) — 되돌리는 자리가
-                없어졌으므로 그 말도 없어진다. 대신 **QR 지점만은 빠져나갈 길을 적는다**:
-                안내판은 현장에 그대로 붙어 있어서, 지우면 그 코드를 찍은 시민이
-                「등록되지 않은 코드」를 보게 된다 (QrPoints.jsx 머리말). 이 줄이 그 창의
-                유일한 대안이라 QR 이 걸렸을 때만 서고, 그때는 반드시 선다. */}
-            {linked.qr.length ? (
-              <p style={{ marginTop: 8, fontSize: "var(--fs-caption)",
-                color: "var(--text-muted)", lineHeight: 1.5 }}>
-                안내판은 현장에 그대로 남습니다. 지점을 지우지 않으려면
-                [QR 지점 관리]에서 소속 골목형 상점가를 먼저 옮겨 주세요.
-              </p>
-            ) : null}
+            {/* 여기 두 줄이 차례로 있다가 없어졌다.
+                「되돌릴 때도 함께 돌아옵니다」 (2026-08-24) — 되돌리는 자리가 없어졌다.
+                「안내판은 현장에 그대로 남습니다 · [QR 지점 관리]에서 소속을 먼저 옮겨
+                주세요」 (2026-08-25, 사용자 요청) — 이 상자가 하는 일은 **함께 지워지는
+                것을 보여주는 것**이고, 위 목록이 QR 지점을 이름으로 이미 적고 있다.
+                옮기는 방법까지 적으면 지울지 말지를 정하는 자리에서 다른 화면의 절차를
+                읽게 된다. 안내판이 현장에 남는다는 사실은 QR 지점 관리의 삭제 확인 창이
+                그 일을 하는 자리에서 적는다 (QrPoints.jsx 의 DELETE_NOTE_QR). */}
           </div>
         ) : null}
       </ConfirmDialog>

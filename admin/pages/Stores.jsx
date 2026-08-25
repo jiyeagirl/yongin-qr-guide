@@ -5,8 +5,8 @@ import {
   CoordField, fixCoord,
 } from "../../design-systems/admin.js";
 import { KAKAO_APP_KEY } from "../../screens/main/config.js";
-import { STORES } from "../../screens/main/data/dunjeon.js";
 import { CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
+import { STORE_ROWS } from "../data/sources.js";
 import { STORE_FIELDS, BIZ_MAJOR, DISTRICT_OPTIONS, deriveChip } from "../data/fields.js";
 import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
@@ -62,19 +62,12 @@ const ONNURI_OPTIONS = [
 
 const DISTRICT_FILTER = [{ value: "", label: "전체 골목형 상점가" }].concat(DISTRICT_OPTIONS);
 
-/* 등록일시 (⚙). 더미는 "기준월에서 뺀 개월 수"(agoMonths)만 갖고 있어 여기서 날짜로 편다.
-   실데이터에서는 서버가 준 created_at 이 그대로 들어온다. */
-const BASE_YEAR = 2026, BASE_MONTH = 6;
-export function createdAtOf(s) {
-  if (s.createdAt) return s.createdAt;
-  if (s.agoMonths == null) return null;
-  let y = BASE_YEAR, m = BASE_MONTH - Number(s.agoMonths);
-  while (m < 1) { m += 12; y -= 1; }
-  return `${y}-${String(m).padStart(2, "0")}`;
-}
+/* 등록일시를 펴는 `createdAtOf` 가 여기 있었다 (2026-08-25 에 `data/sources.js` 로 옮겼다).
+   같은 파일이 「노출 여부」와 「소속 골목형 상점가」의 빈자리도 함께 채운다 — 그 셋은 다
+   **원천에 없는 값**이고, 화면마다 다르게 메우다가 목록과 폼이 갈렸다 (저쪽 머리말). */
 
 export function Stores({ onToast }) {
-  const { rows, upsert, remove, patch, patchMany } = useCollection("stores", STORES, null, "점포");
+  const { rows, upsert, remove, patch, patchMany } = useCollection("stores", STORE_ROWS, null, "점포");
   const [major, setMajor] = React.useState("");
   const [onnuri, setOnnuri] = React.useState("");
   const [district, setDistrict] = React.useState("");
@@ -102,7 +95,7 @@ export function Stores({ onToast }) {
 
   const filtered = React.useMemo(() => rows.filter(s => {
     if (major && s.bizL !== major) return false;
-    if (district && (s.districtId || CURRENT_DISTRICT_ID) !== district) return false;
+    if (district && s.districtId !== district) return false;
     if (onnuri === "y" && !s.onnuri) return false;
     if (onnuri === "n" && s.onnuri) return false;
     if (!list0.term) return true;
@@ -173,8 +166,8 @@ export function Stores({ onToast }) {
             render: s => <span style={{ fontVariantNumeric: "tabular-nums" }}>{Number(s.views || 0).toLocaleString("ko-KR")}</span> },
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: s => (
-              <Switch checked={s.visible !== false} aria-label={`${s.name} 노출 여부`}
-                onChange={() => patch(s.id, { visible: s.visible === false }, s.name)} />
+              <Switch checked={s.visible} aria-label={`${s.name} 노출 여부`}
+                onChange={() => patch(s.id, { visible: !s.visible }, s.name)} />
             ) },
           { key: "manage", label: "관리", width: 96, align: "center",
             render: s => (
@@ -190,8 +183,11 @@ export function Stores({ onToast }) {
       <EditorModal ed={ed} size="lg"
         title={ed.draft && ed.draft.isNew ? "점포 등록" : "점포 수정"}
         description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}>
+        {/* 값을 손보지 않고 그대로 넘긴다 (2026-08-25) — 전에는 여기서 `createdAt` 을
+            끼워 넣었는데, 그러면 **화면에 보이는 값이 폼 안에는 없는** 상태가 된다.
+            지금은 표가 이미 채워서 준다 (`data/sources.js`) */}
         {ed.draft ? (
-          <RecordForm fields={ed.fields} values={{ ...ed.draft.values, createdAt: createdAtOf(ed.draft.values) }}
+          <RecordForm fields={ed.fields} values={ed.draft.values}
             errors={ed.errors} onChange={setField}
             onAddress={(key, picked) => ed.setMany({ [key]: picked.addr, lat: picked.lat, lng: picked.lng })}
             /* 점포도 지도에 핀으로 찍힌다 — 상점가 탭의 335개 마커가 이 좌표다.

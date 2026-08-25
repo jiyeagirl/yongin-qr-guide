@@ -4,7 +4,8 @@ import {
   Pagination, AssetPicker, Repeater, Mascot,
   FESTIVAL_STATES, festivalBadge, EMPTY_MARK,
 } from "../../design-systems/admin.js";
-import { FESTIVALS, DISTRICTS } from "../../screens/main/data/districts.js";
+import { DISTRICTS } from "../../screens/main/data/districts.js";
+import { FESTIVAL_ROWS } from "../data/sources.js";
 import { TODAY } from "../../screens/main/config.js";
 import { FESTIVAL_FIELDS, PROGRAM_COLUMNS, BOOTH_COLUMNS, missingInRows } from "../data/fields.js";
 import { CHARACTER_ASSETS, CHARACTER_DEFAULT, ASSET_BASE } from "../data/assets.js";
@@ -89,7 +90,7 @@ function periodOf(f) {
 }
 
 export function Festivals({ onToast }) {
-  const { rows, upsert, remove, patch, patchMany } = useCollection("festivals", FESTIVALS, null, "축제");
+  const { rows, upsert, remove, patch, patchMany } = useCollection("festivals", FESTIVAL_ROWS, null, "축제");
   const [state, setState] = React.useState("");
   const list0 = useListState([state]);
 
@@ -208,8 +209,8 @@ export function Festivals({ onToast }) {
             sortValue: f => FESTIVAL_STATES.indexOf(stateOf(f)) },
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: f => (
-              <Switch checked={f.visible !== false} aria-label={`${f.name} 노출 여부`}
-                onChange={() => patch(f.id, { visible: f.visible === false }, f.name)} />
+              <Switch checked={f.visible} aria-label={`${f.name} 노출 여부`}
+                onChange={() => patch(f.id, { visible: !f.visible }, f.name)} />
             ) },
           { key: "manage", label: "관리", width: 96, align: "center",
             render: f => (
@@ -247,6 +248,8 @@ export function Festivals({ onToast }) {
                   columns={withPeriod(PROGRAM_COLUMNS, ed.draft.values)}
                   rows={ed.draft.values.programs || []}
                   onChange={p => ed.set("programs", p)}
+                  /* 지울 때 「무엇을」에 해당하는 칸 — 프로그램은 `title` 이다 (부스는 `name`) */
+                  nameKey="title"
                   addLabel="프로그램 추가" error={ed.errors.programs}
                   note="작성하신 순서에 따라 사용자 화면에 노출됩니다." />
 
@@ -273,7 +276,7 @@ export function Festivals({ onToast }) {
            그 사실을 먼저 말해야 "끝났으니 지운다"를 막을 수 있다.
            **첫 줄은 다른 화면과 같다** (2026-08-24) — 되돌릴 수 없다는 사실은 화면마다
            다르게 적을 여지가 없고, 무엇보다 이 상자에서 가장 먼저 읽혀야 한다. */
-        footnote={"삭제한 항목은 영구적으로 지워지며 되돌릴 수 없습니다. "
+        footnote={"삭제한 항목은 복구할 수 없습니다. "
           + "종료된 축제는 삭제하지 않고 [완료] 카테고리로 이동하여 계속 노출합니다. "
           + "잘못 등록된 경우에만 삭제해 주세요."}
         onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />

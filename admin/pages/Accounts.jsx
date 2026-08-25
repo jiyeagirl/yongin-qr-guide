@@ -267,10 +267,7 @@ export function Accounts({ account, onToast }) {
           onRowClick={openFromReset}
           /* 대기 중인 줄만 눈에 띈다. 처리한 줄은 지난 기록이라 가라앉아 있어야 한다 */
           rowTone={r => (isOpenReset(r) ? "warning" : null)}
-          empty={{
-            title: "받은 요청이 없습니다.",
-            description: "담당자가 로그인 화면에서 [비밀번호를 잊으셨나요?]로 요청하면 여기에 쌓입니다. 브라우저 탭을 닫으면 이 목록도 비워집니다.",
-          }}
+          empty={{ title: "받은 요청이 없습니다." }}
           columns={[
             /* 배지 글자를 줄였다 (2026-08-24) — 「등록되지 않은 아이디」·「n번째 요청」은
                아이디와 나란히 서면 칸을 넘겨 접히고, 접히는 순간 그 줄만 키가 자란다.
@@ -410,8 +407,13 @@ export function Accounts({ account, onToast }) {
       <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
         description="계정을 삭제합니다."
         /* 여기도 기본 각주를 쓰지 않는다 — 계정에는 「폐업·폐쇄」도 「사용자 화면」도 없다.
-           대신 권하는 것이 [노출 여부]가 아니라 [사용 여부]다. 마지막 줄만 같다. */
-        footnote="이 계정으로 로그인할 수 없게 됩니다. 지난 변경 이력에 남은 이름은 그대로 유지됩니다. 잠시 쓰지 않을 뿐이라면 삭제 대신 [사용 여부] 토글을 꺼 주세요. 삭제한 계정은 목록 위 [삭제된 항목]에서 되돌릴 수 있습니다."
+           대신 권하는 것이 [노출 여부]가 아니라 [사용 여부]다. **첫 문장은 다른 화면과
+           같다** (2026-08-25). 그 자리에 「삭제한 계정은 목록 위 [삭제된 항목]에서 되돌릴
+           수 있습니다」가 맨 뒤에 붙어 있었는데, 그 탭은 v1.7 에서 없어졌다 — 화면이
+           있지도 않은 자리를 가리키며 되돌릴 수 있다고 적고 있었다. */
+        footnote={"삭제한 항목은 복구할 수 없습니다. "
+          + "이 계정으로 로그인할 수 없게 되며, 지난 변경 이력에 남은 이름은 그대로 유지됩니다. "
+          + "잠시 쓰지 않을 뿐이라면 삭제하지 말고 [사용 여부]를 꺼주세요."}
         onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
 
       <Modal open={!!blocked} size="md" title="할 수 없습니다"

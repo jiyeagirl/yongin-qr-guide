@@ -139,11 +139,24 @@ export const DISTRICT_FIELDS = [
     range: "최대 100자", maxLength: 100,
     example: "처인구 김량장동 133-37번지 일원", span: 2 },
 
+  /* ── ⚙ 이면서 고칠 수 있다 (2026-08-25, 사용자 요청) ───────────────────────
+     점포 목록에서 센 값이 늘 맞는 것은 아니다. **점포 자료가 있는 상점가가 32곳 중 한
+     곳뿐이라**(둔전) 나머지 31곳의 수는 애초에 세어 나온 값이 아니고, 현장에서 한두 곳이
+     새로 들어왔는데 점포 자료가 아직 안 들어온 사이에도 담당자가 게시값을 맞춰야 한다.
+     못 고치게 두면 그 사이 내내 사용자 화면 머리글이 틀린 수를 적는다.
+
+     업종 칩(`cat`)과 같은 처리다 — 배지는 ⚙ 그대로 두고(값을 만드는 것은 여전히 집계다)
+     칸만 연다. 담당자가 손으로 고치면 그 뒤로 집계가 그 값을 덮지 않는다
+     (Districts.jsx 의 `countManual`). 손으로 정한 값을 자동 규칙이 덮으면 화면을
+     못 믿게 된다.
+
+     **안내 줄은 두지 않는다** (2026-08-25, 사용자 요청). 「점포 목록에서 센 값입니다…」와
+     「위 점포수를 넘을 수 없습니다」 둘 다 뺐다 — 앞은 ⚙ 배지가 이미 하는 말이고,
+     뒤는 어겼을 때 그 칸에 오류가 뜬다 (앞머리 「화면 문구 원칙」의 마지막 두 항목). */
   { key: "storeCount", spec: "store_count", label: "점포수", required: "auto",
-    type: "number", unit: "곳",
-    hint: "구역 주소 매칭 결과 중 노출 상태인 건수. 사용자 화면 헤더에 표시됩니다" },
+    type: "number", unit: "곳", min: 0, editable: true },
   { key: "onnuriCount", spec: "onnuri_count", label: "온누리 가맹 점포수", required: "auto",
-    type: "number", unit: "곳", hint: "위 중 온누리 가맹 건수" },
+    type: "number", unit: "곳", min: 0, editable: true },
 
   /* ── `onnuri_market_name`(온누리 원본 표기명)이 여기 없는 이유 (2026-08-20) ──
      온누리 가맹점은 주소가 아니라 원본의 `소속 시장명` 컬럼으로 걸러내고, 그 표기가
@@ -196,9 +209,12 @@ const COORD = { key: "coord", spec: "lat · lng", label: "좌표", required: "au
 export const STORE_FIELDS = [
   { key: "name", spec: "name", label: "상호명", required: true, type: "text",
     range: "1~60자", minLength: 1, maxLength: 60, example: "은행나무곱창" },
+  /* 안내 줄을 뺐다 (2026-08-25, 사용자 요청) — 「골목상점가는 단독 점포가 대부분이라
+     열에 아홉은 원천에 값이 없습니다」. **우리 쪽 자료 사정**이라 담당자가 이 칸에서 하는
+     일과 상관이 없다 (앞머리 「화면 문구 원칙」). 비워도 된다는 것은 선택 항목 표시가
+     이미 말한다 */
   { key: "branch", spec: "branch_name", label: "지점명", required: false, type: "text",
-    range: "최대 40자", maxLength: 40, example: "에버랜드점",
-    hint: "골목상점가는 단독 점포가 대부분이라 열에 아홉은 원천에 값이 없습니다" },
+    range: "최대 40자", maxLength: 40, example: "에버랜드점" },
   { key: "districtId", spec: "market_id", label: "소속 골목형 상점가", required: true, type: "select",
     options: DISTRICT_OPTIONS, example: "둔전골목형상점가" },
   { key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
@@ -259,7 +275,7 @@ export const STORE_FIELDS = [
      이 값을 먼저 본다. 화면에서 고쳤는데 목록이 그대로면 고친 것이 아니다. */
   { key: "createdAt", spec: "created_at", label: "등록 시점", required: false, type: "month",
     example: "2026-06", span: 2,
-    hint: "둘러보기 탭의 「신규 매장」을 뽑는 기준입니다" },
+    hint: "둘러보기 탭에 노출되는 '신규 매장'의 선정 기준입니다" },
 ];
 
 /* 업종 칩 자동 산출 (chip_category ⚙).
@@ -302,8 +318,11 @@ export const FESTIVAL_FIELDS = [
   { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch" },
   { key: "program", spec: "program_text", label: "주요 프로그램", required: false, type: "textarea",
     rows: 3, range: "최대 500자", maxLength: 500,
-    example: "먹거리 장터, 상인 경품행사, 어르신 한마당", span: 2,
-    hint: "이름 사이는 쉼표로 나눕니다. 사용자 화면이 그 기준으로 줄을 나눕니다" },
+    /* 안내 줄을 뺐다 (2026-08-25, 사용자 요청) — 「이름 사이는 쉼표로 나눕니다. 사용자
+       화면이 그 기준으로 줄을 나눕니다」. 앞 문장은 **칸 안의 예시가 이미 보여주고**
+       (「먹거리 장터, 상인 경품행사, 어르신 한마당」), 뒤 문장은 그 쉼표가 저쪽에서
+       어떻게 쓰이는지에 대한 우리 쪽 사정이다 (앞머리 「화면 문구 원칙」). */
+    example: "먹거리 장터, 상인 경품행사, 어르신 한마당", span: 2 },
 ];
 
 /* 2-4 프로그램 일정 (1:N) `C` — 자료 제공 범위 확정 후 반영 여부 결정
@@ -442,7 +461,7 @@ const COMMON_TAIL = [
    이름은 주소를 다시 골라도 덮이지 않는다** (Facilities.jsx 의 onAddress). */
 const DERIVED_NAME = { key: "name", spec: "—", label: "명칭", required: true, type: "text",
   range: "2~60자", minLength: 2, maxLength: 60, span: 2, example: "둔전로 42 AED",
-  hint: "도로명주소를 고르면 자동으로 채워집니다. 현장에서 달리 부르거나 자동 생성된 이름이 맞지 않으면 고쳐 주세요" };
+  hint: "도로명주소를 선택하면 이름이 자동으로 입력됩니다. 현장에서 사용하는 명칭과 다른 경우 수정하면 됩니다" };
 
 export const FACILITY_FIELDS = {
   aed: [
@@ -452,7 +471,7 @@ export const FACILITY_FIELDS = {
     { key: "place", spec: "aed_place_detail", label: "설치 위치", required: true, type: "text",
       range: "최대 100자", maxLength: 100, span: 2,
       example: "관리사무소 건물 1층 출입구",
-      hint: "응급 상황에서 결정적인 정보이므로 필수입니다. 층 정보도 이 문장에 포함합니다" },
+      hint: "응급 상황에 필요한 정보이므로 필수 입력 항목입니다. 층 정보도 함께 입력합니다" },
     ...COMMON_TAIL,
   ],
   toilet: [
@@ -524,9 +543,11 @@ export const QR_FIELDS = [
        있고**, 화면에서 코드를 바꾸면 그 종이가 가리키는 지점이 표에서 사라진다.
        "바꾸지 마세요"가 아니라 무슨 일이 일어나는지를 적는다: 판단은 담당자가 한다 */
     hint: "안내판에 인쇄된 코드입니다. 바꾸면 옛 코드를 찍은 사용자에게 「등록되지 않은 QR 코드」 안내가 뜹니다" },
+  /* 지점명의 안내 줄을 뺐다 (2026-08-25, 사용자 요청) — 「사용자 화면 상단에 상시
+     노출되므로 40자를 넘기지 않습니다」. 길이는 칸 안의 범위 표시(2~40자)가 이미 적고
+     `maxLength` 가 막는다. 어디에 나가는지는 이 칸을 채우는 일과 상관이 없다 */
   { key: "name", spec: "name", label: "지점명", required: true, type: "text",
-    range: "2~40자", minLength: 2, maxLength: 40, example: "둔전 시장 입구 버스정류장",
-    hint: "사용자 화면 상단에 상시 노출되므로 40자를 넘기지 않습니다" },
+    range: "2~40자", minLength: 2, maxLength: 40, example: "둔전 시장 입구 버스정류장" },
   { key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
     range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 },
   COORD,
@@ -551,14 +572,18 @@ export const QR_FIELDS = [
      훼손·철거(S11)와 준비 중(S11-A)을 가르면서, 꺼져 있을 때 뜨는 것이 설치 상태에 따라
      갈린다 — 설치완료인데 꺼져 있으면 「교체 안내」가 아니라 「아직 준비 중」이다.
      그 조합은 이 창의 경고 상자가 실제 문구까지 그대로 적어 준다 (QrPoints.jsx).
-     뒷 문장(기본값)은 새로 만드는 자리의 이야기인데 **이 화면은 새로 만들지 않는다** —
-     붙어 있는 지점의 현황만 고친다 (아래 qrEntryUrl 위 주석). */
+     뒷 문장(기본값)은 새로 만드는 자리의 이야기였다. 2026-08-25 에 [QR 지점 등록]이 생겨
+     그 자리가 실제로 화면에 있게 됐지만 이 줄은 되살리지 않는다 — 기본값이 무엇인지는
+     **등록 창이 열리면 스위치가 꺼진 채로 서 있는 것**이 그 자리에서 보여주고, 그 상태로
+     찍으면 무엇이 뜨는지는 등록 안내 상자가 적는다 (QrPoints.jsx). */
   { key: "active", spec: "is_active", label: "활성 여부", required: true, type: "switch" },
 
+  /* 안내 줄을 뺐다 (2026-08-25, 사용자 요청) — 「설치와 점검에 쓰는 기록입니다. 사용자
+     화면에는 나오지 않습니다」. 무엇을 적는 칸인지는 칸 안의 예시가 보여주고(「정류장
+     승차대 오른쪽 기둥, 눈높이」), 시민 화면에 나가지 않는다는 것은 우리 쪽 사정이다 */
   { key: "locationDetail", spec: "location_detail", label: "설치 상세 위치", required: false,
     type: "textarea", rows: 2, range: "최대 100자", maxLength: 100,
-    example: "정류장 승차대 오른쪽 기둥, 눈높이", span: 2,
-    hint: "설치와 점검에 쓰는 기록입니다. 사용자 화면에는 나오지 않습니다" },
+    example: "정류장 승차대 오른쪽 기둥, 눈높이", span: 2 },
   { key: "memo", spec: "memo", label: "관리 메모", required: false, type: "textarea", rows: 2,
     range: "최대 500자", maxLength: 500, span: 2 },
 ];
@@ -569,11 +594,11 @@ export function qrEntryUrl(code) {
   return `${origin}/s/${code || ""}`;
 }
 
-/* 식별자 자동생성은 뺐다 (2026-08-20) — 관리자 화면에서 QR 지점을 **새로 만들지 않는다.**
-   코드는 안내판에 인쇄되어 현장에 붙는 값이라, 화면에서 지어낼 수 있게 두면 인쇄물 없는
-   코드가 표에 남는다. 이 조항은 2026-08-24 에 수정·삭제가 열린 뒤에도 그대로다 —
-   **이미 붙어 있는 지점을 고치거나 지우는 것**과 **없던 코드를 만드는 것**은 다른 일이다
-   (QrPoints.jsx 머리말). 그래서 [지점 등록] 단추는 여전히 없다. */
+/* 식별자 **자동생성**은 뺀 채로 둔다 (2026-08-20). 2026-08-25 에 [QR 지점 등록]이 생겼지만
+   그것과 이것은 다른 이야기다 — 등록 창에서도 코드는 담당자가 **적는다.** 화면이 지어내면
+   그 값은 안내판에 인쇄된 코드와 맞을 이유가 없고, 여기서 맞춰야 할 것은 이미 종이에
+   찍혀 나간 글자다. 그래서 `code` 의 hint 도 등록할 때와 고칠 때가 다르다
+   (QrPoints.jsx 의 NEW_CODE_HINT). */
 
 /* ══ 5장 오류신고 (M13) ════════════════════════════════════════════════════ */
 export const REPORT_TARGET_TYPES = ["공공시설", "점포", "상점가", "축제", "기타"];

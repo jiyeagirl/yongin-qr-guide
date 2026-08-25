@@ -12,9 +12,9 @@ import {
 import { REPORTS } from "../data/reports.js";
 /* `QR_POINTS` 를 여기서 읽었다 — 「설치 미완료 QR」 배지가 나가면서 함께 빠졌다
    (2026-08-24). 아래 지점별 스캔 표는 로그 통계(`SCANS_BY_POINT`)를 쓴다 */
-import { STORES, discoverPicks, DISCOVER_PICK } from "../../screens/main/data/dunjeon.js";
-import { DISTRICTS, CURRENT_DISTRICT_ID, GU_ORDER } from "../../screens/main/data/districts.js";
-import { FACILITIES } from "../../screens/main/data/facilities.js";
+import { discoverPicks, DISCOVER_PICK } from "../../screens/main/data/dunjeon.js";
+import { CURRENT_DISTRICT_ID, GU_ORDER } from "../../screens/main/data/districts.js";
+import { STORE_ROWS, FACILITY_ROWS, DISTRICT_ROWS } from "../data/sources.js";
 import { QUOTA_DEFAULTS } from "../data/settings.js";
 import { readCollection } from "../data/store.js";
 
@@ -122,9 +122,9 @@ export function Dashboard({ onNavigate }) {
   /* `qr` 컬렉션을 여기서 읽던 줄이 있었다 — 「설치 미완료 QR」 배지가 나가면서 함께
      빠졌다 (2026-08-24). 이 화면이 QR 지점에서 읽는 것은 이제 아래 지점별 스캔 표뿐이고,
      그쪽은 로그 통계(`SCANS_BY_POINT`)라 덮개를 거치지 않는다 */
-  const stores = readCollection("stores", STORES);
-  const facilities = readCollection("facilities", FACILITIES);
-  const districtRows = readCollection("districts", DISTRICTS);
+  const stores = readCollection("stores", STORE_ROWS);
+  const facilities = readCollection("facilities", FACILITY_ROWS);
+  const districtRows = readCollection("districts", DISTRICT_ROWS);
 
   /* 기간 안에 새로 들어온 신고 (명세서 6장 요약 카드 넷째) */
   const newReports = reports.filter(r => r.at >= s.from && r.at <= s.to).length;
@@ -165,15 +165,15 @@ export function Dashboard({ onNavigate }) {
   ].filter(b => b.count > 0);
 
   /* ── 상점가별 둘러보기 미리보기 ───────────────────────────────────────────
-     씨앗 점포에는 `districtId` 가 없다. 둔전 소속으로 읽는 것은 상점가 관리와 같은
-     규칙이다 (Districts.jsx) — 더미 세계의 점포 335곳이 전부 둔전 것이라서다. */
+     씨앗 점포에는 `districtId` 가 없어 둔전 소속으로 읽는데, 그 기본값은 **표가 채워서
+     준다** (2026-08-25, `data/sources.js`) — 전에는 이 화면과 상점가 관리가 같은 규칙을
+     따로 적고 있었다. */
   const [districtId, setDistrictId] = React.useState(CURRENT_DISTRICT_ID);
 
   const storesByDistrict = React.useMemo(() => {
     const o = {};
     for (const s of stores) {
-      const id = s.districtId || CURRENT_DISTRICT_ID;
-      (o[id] = o[id] || []).push(s);
+      (o[s.districtId] = o[s.districtId] || []).push(s);
     }
     return o;
   }, [stores]);
@@ -188,7 +188,7 @@ export function Dashboard({ onNavigate }) {
       .sort((a, b) => GU_ORDER.indexOf(a.gu) - GU_ORDER.indexOf(b.gu)
         || a.name.localeCompare(b.name, "ko"))
       .map(d => {
-        const cnt = (storesByDistrict[d.id] || []).filter(s => s.visible !== false).length;
+        const cnt = (storesByDistrict[d.id] || []).filter(s => s.visible).length;
         return { value: d.id, label: `${d.gu} · ${d.name} ${cnt ? `(점포 ${n(cnt)}곳)` : "(점포 자료 없음)"}` };
       }), [districtRows, storesByDistrict]);
 

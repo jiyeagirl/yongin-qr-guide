@@ -66,8 +66,11 @@ export function AssetPicker({
         {value && (usedBy[value] || []).length ? (
           <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-caption)",
             color: "var(--state-warning)", lineHeight: 1.55 }}>
-            이 그림은 이미 {(usedBy[value] || []).join(" · ")} 이(가) 쓰고 있습니다.
-            둘러보기 탭에서 카드가 같은 그림으로 나란히 서게 됩니다 - 다른 그림을 고르는 편이 좋습니다.
+            {/* 어느 축제가 쓰는지와 그래서 무엇이 어떻게 되는지를 함께 적던 두 문장을
+                한 줄로 줄였다 (2026-08-25, 사용자 요청). 어느 축제인지는 **고르개의
+                「n건 사용 중」 배지**가 이미 세어 두었고, 겹쳐도 막지는 않으므로 여기서
+                할 말은 「겹친다」와 「다른 것을 고르라」 둘뿐이다 */}
+            이미 다른 축제에서 사용 중인 이미지입니다. 다른 이미지를 선택해주세요.
           </p>
         ) : null}
       </div>

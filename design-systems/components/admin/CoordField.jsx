@@ -84,7 +84,9 @@ export function CoordField({
               alignItems: "center", justifyContent: "center", gap: 8, background: "var(--surface-sunken)",
               fontSize: "var(--fs-label)", color: "var(--text-muted)", textAlign: "center", padding: "var(--space-4)" }}>
               <Icon name="map-pin-off" size={24} color="var(--text-muted)" />
-              <span>도로명주소를 고르면 좌표가 자동으로 들어오고 이 자리에 지도가 뜹니다.</span>
+              {/* 2026-08-25, 사용자 요청 — 「도로명주소를 고르면 좌표가 자동으로 들어오고
+                  이 자리에 지도가 뜹니다」에서 고쳤다. 하는 말은 같다 */}
+              <span>도로명주소를 선택하면 좌표가 자동으로 입력되며, 해당 위치가 지도에 표시됩니다.</span>
             </div>
           )}
         </div>
