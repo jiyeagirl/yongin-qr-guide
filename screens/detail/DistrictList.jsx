@@ -129,7 +129,7 @@ export function DistrictList({ districts = [], guOrder = [], sortNear, pageSize 
                  통째로 맡고, 거기는 상태·날짜·홍보 문구까지 있다. 여기 배지는 32줄 중
                  여섯에만 붙어 그 여섯 줄이 다른 종류처럼 보이게 할 뿐이고, 눌리지도 않는데
                  알약 모양이라 칩(구 선택)과 같은 것으로 읽히기까지 했다. */
-              <DistrictRow key={d.id} district={d} festivalTag={false} external
+              <DistrictRow key={d.id} district={d} external
                 divider={i < shown.length - 1}
                 onClick={() => onOpenDistrict && onOpenDistrict(d)} />
             ))}

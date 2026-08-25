@@ -66,10 +66,13 @@ export function DistrictSoon({ district, onBack, onClose, onGoDistricts,
             ) : null} />
 
           {/* 이 줄에 적힌 것(이름·규모·거리)이 지금 우리가 가진 전부다. 화면이 비어 보일수록
-              그 사실을 적어 두어야 "없다"가 인상이 아니라 정보가 된다 (U-CM-07 · U-CM-08) */}
+              그 사실을 적어 두어야 "없다"가 인상이 아니라 정보가 된다 (U-CM-07 · U-CM-08).
+              `keep-all` — 「점포 335곳」이나 「상점가 지정 현황」이 글자 사이에서 끊기지
+              않게 한다 (2026-08-25. `EmptyState` 와 같은 이유, 그쪽 머리말) */}
           {district ? (
             <p style={{ marginTop: "var(--space-4)", textAlign: "center",
-              fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
+              fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55,
+              wordBreak: "keep-all", overflowWrap: "anywhere" }}>
               {district.gu} {district.area} · 점포 {district.stores}곳<br />
               상점가 지정 현황 2026.07 기준
             </p>

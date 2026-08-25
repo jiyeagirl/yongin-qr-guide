@@ -193,9 +193,10 @@ export function DiscoverPanel({
         {/* 지도가 없어졌으므로 마커 선택 강조(selected)도 없다 — 강조할 지도가 없다 */}
         <div role="list">
           {preview.map((d, i) => (
-            /* [축제] 배지를 끈다 — 맨 위 섹션이 통째로 축제이고 [전체보기]까지 있어서,
-               여기 배지는 같은 사실을 세 번째로 말한다 (DistrictRow 의 festivalTag 주석) */
-            <DistrictRow key={d.id} district={d} festivalTag={false} external
+            /* [축제] 배지를 끄던 자리다 — 2026-08-25 부터 `DistrictRow` 가 그 배지를 아예
+               갖지 않아 끌 것이 없다 (그쪽 머리말). 여기서 껐던 이유는 그대로 유효하다:
+               맨 위 섹션이 통째로 축제이고 [전체보기]까지 있어 세 번째로 같은 말이 된다 */
+            <DistrictRow key={d.id} district={d} external
               divider={i < preview.length - 1}
               onClick={() => onOpenDistrict && onOpenDistrict(d)} />
           ))}

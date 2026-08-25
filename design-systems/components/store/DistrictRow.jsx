@@ -1,7 +1,7 @@
 import React from "react";
 import { ListRow } from "../core/ListRow.jsx";
 import { Icon } from "../core/Icon.jsx";
-import { Badge } from "../core/Badge.jsx";
+/* `Badge` 를 여기서 뺐다 (2026-08-25) — [축제] 배지가 유일한 쓰임이었다 */
 import { OnnuriBadge } from "../core/OnnuriBadge.jsx";
 
 /* 다른 상점가 목록의 한 행 (U-DC-04, U-ST-14). 둘러보기 탭 최하단이 쓴다.
@@ -12,15 +12,20 @@ import { OnnuriBadge } from "../core/OnnuriBadge.jsx";
    점포 수와 온누리 가맹 수를 함께 적는 이유: 상점가를 고르는 기준이 이름이 아니라 규모와
    온누리 사용 가능 여부이기 때문이다.
 
-   ── festivalTag ────────────────────────────────────────────────────────────
-   축제가 걸린 곳에 [축제] 배지를 달지 여부다. **지금 켜두는 곳은 S03-E 하나뿐이다** —
-   "가볼 만한 상점가"는 가까운 상점가가 없다는 안내 화면이라 축제 정보가 따로 없고,
-   그 배지가 "왜 저기로 가나"에 대한 유일한 답이 된다.
+   ── [축제] 배지가 여기 있었다 (`festivalTag`, 2026-08-25 삭제) ───────────────
+   축제가 걸린 상점가 줄에 노란 알약을 달던 것이다. 2026-08-18 에 둘러보기 탭(S04)과 S13
+   전체보기에서 먼저 껐고 — 두 화면 다 축제를 맡는 자리가 따로 있으며([전체보기] → S12)
+   서른몇 줄 중 여섯에만 붙는 배지는 **그 여섯 줄을 다른 종류처럼** 보이게 할 뿐이었다 —
+   S03-E 하나만 남겨 두었다. "가볼 만한 상점가"에는 축제 섹션이 없으니 그 배지가 "왜
+   저기로 가나"의 유일한 답이라는 이유였다.
 
-   둘러보기 탭(S04)과 S13 전체보기에서는 끈다 (2026-08-18). 두 화면 다 축제를 맡는 자리가
-   따로 있고([전체보기] → S12), 거기에는 상태·날짜·홍보 문구까지 있다. 여기 배지는 서른몇
-   줄 중 여섯에만 붙어 **그 여섯 줄이 다른 종류처럼** 보이게 할 뿐이다. 눌리는 것도
-   아닌데 알약 모양이라 같은 화면의 칩(필터)과 같은 것으로 읽히기까지 했다.
+   **그 하나도 껐다** (2026-08-25, 사용자 요청). 남겨 둔 근거는 이 줄에서 축제를 알리는
+   값이 있다는 것이었지, **그 모양이어야 한다**는 것이 아니었다. 눌리지 않는데 알약이라
+   같은 화면의 칩(필터)과 같은 것으로 읽히는 문제는 S03-E 에서도 그대로였고, 화면 하나에만
+   남은 표시는 다른 화면에서 본 적 없는 것이라 오히려 더 낯설다.
+
+   켜는 곳이 없어져 프로퍼티째 지웠다 — 쓰지 않는 갈래는 아무도 눌러보지 않은 채 남는다.
+   `district.festival` 값 자체는 그대로다 (축제 목록·상세가 읽는다).
 
    ── external ───────────────────────────────────────────────────────────────
    줄을 누르면 용인시 누리집의 그 상점가 안내 페이지로 나간다 (2026-08-18).
@@ -44,13 +49,12 @@ import { OnnuriBadge } from "../core/OnnuriBadge.jsx";
    나가는 줄에는 onClick 을 달지 않는다 — 앵커가 새 창을 여는데 해시까지 바뀌면 돌아왔을
    때 열어본 적 없는 화면이 덮여 있다. */
 export function DistrictRow({ district, onClick, selected = false, divider = true,
-  festivalTag = true, external = false, style, ...rest }) {
+  external = false, style, ...rest }) {
   const d = district;
   /* 거리 0 은 "0m"가 아니라 지금 서 있는 곳이다 (S13 전체 목록에는 현재 상점가도 들어간다).
      축제 목록의 같은 자리와 문구를 맞춘다 — 두 목록이 같은 사실을 다르게 말할 이유가 없다 */
   const km = d.dist === 0 ? "지금 계신 곳"
     : d.dist >= 1000 ? `${(d.dist / 1000).toFixed(1)}km` : `${d.dist}m`;
-  const flag = festivalTag && d.festival;
   const href = external && d.homepage ? d.homepage : null;
 
   return (
@@ -61,11 +65,11 @@ export function DistrictRow({ district, onClick, selected = false, divider = tru
       href={href}
       aria-label={href ? `${d.name} 상세 페이지 — 용인시 누리집에서 새 창으로 열림` : undefined}
       divider={divider}
-      /* 배지를 끄면 아이콘 색도 함께 되돌린다 — 배지 없이 색만 남기면 이름표 없는
-         색 신호가 되어 색으로만 뜻을 전하는 꼴이 된다 */
-      icon={<Icon name="store" size={22} color={flag ? "var(--yong-cream-900)" : "var(--text-muted)"} />}
+      /* 아이콘 색이 배지에 따라 갈렸다 (2026-08-25 없앰) — 배지 없이 색만 남기면
+         이름표 없는 색 신호가 되어 색으로만 뜻을 전하는 꼴이 된다. 배지가 없어졌으므로
+         색도 한 가지다 */
+      icon={<Icon name="store" size={22} color="var(--text-muted)" />}
       title={d.name}
-      tag={flag ? <Badge size="sm" tone="accent" dot>축제</Badge> : null}
       meta={<>
         {d.gu} {d.area} · {km}
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 6 }}>
