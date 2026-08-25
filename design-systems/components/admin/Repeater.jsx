@@ -70,13 +70,20 @@ const RESERVE = "calc(36px + var(--space-2))";
    선다 — 카드는 안쪽으로 밀려 있고 열 이름 줄은 카드 밖이다 (아래 head). */
 const CARD_PAD = "var(--space-3)";
 
-/* 줄 하나를 감싸는 카드. 바탕이 가라앉은 색이고 안의 입력칸은 흰색이라(Input · Select 의
+/* 줄 하나를 감싸는 카드. 바탕이 중립 회색이고 안의 입력칸은 흰색이라(Input · Select 의
    기본 바탕), **어디까지가 한 줄인지 색으로 끝난다** — 선을 눈으로 좇지 않아도 된다. */
 const CARD = {
   display: "flex", flexDirection: "column", gap: "var(--space-2)",
-  padding: CARD_PAD, background: "var(--surface-sunken)",
+  padding: CARD_PAD, background: "var(--surface-row)",
   borderRadius: "var(--radius-md)",
 };
+
+/* ── 카드는 **아랫줄이 있는 목록에만** 두른다 (2026-08-25, 사용자 요청) ──────────
+   카드가 푸는 문제는 「한 줄이 어디서 끝나는가」이고, 그 물음은 아랫줄(`row2`)이 있을
+   때만 생긴다 — 펴진 줄과 접힌 줄이 섞여 높이가 들쭉날쭉하기 때문이다. 부스 위치처럼
+   한 줄이 늘 한 줄인 목록에서는 입력칸 한 줄이 그대로 한 항목이라, 바탕을 깔면 묶어야
+   할 것이 없는데 색만 하나 더 생긴다. 종전에 가는 선을 그리던 조건과 같은 조건이다. */
+const PLAIN = { display: "flex", flexDirection: "column", gap: "var(--space-2)" };
 
 /* 칸 안 예시에는 「예)」를 붙인다 — 흐린 글씨는 이미 값이 들어 있는 것처럼 보인다
    (FormField 와 같은 규칙) */
@@ -93,6 +100,10 @@ export function Repeater({
   const list = Array.isArray(rows) ? rows : [];
   const top = columns.filter(c => !c.row2);
   const bottom = columns.filter(c => c.row2);
+  /* 아랫줄이 있는 목록만 카드를 두른다 (위 PLAIN 머리말). 열 이름 줄의 들여쓰기도
+     여기에 따라간다 — 카드가 없으면 들일 것이 없다 */
+  const carded = bottom.length > 0;
+  const inset = carded ? CARD_PAD : "0px";
 
   /* ── 지우기 전에 한 번 묻는다 (2026-08-25, 사용자 요청) ──────────────────────
      휴지통이 칸 바로 옆에 있어 위치를 고치려다 누르기 쉽다. 다른 목록과 달리 이 줄은
@@ -146,7 +157,7 @@ export function Repeater({
      **윗줄 칸만 가리킨다** — 아랫줄 칸은 자기 이름표를 위에 달고 있다. */
   const head = (
     <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)",
-      padding: `0 calc(${RESERVE} + ${CARD_PAD}) 0 ${CARD_PAD}`,
+      padding: `0 calc(${RESERVE} + ${inset}) 0 ${inset}`,
       fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
       {top.map(c => (
         <span key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
@@ -224,7 +235,7 @@ export function Repeater({
 
           {/* 줄 하나가 카드 하나다 (머리말 ②) — 가는 선으로 가르지 않는다 */}
           {list.map((row, i) => (
-            <div key={i} style={CARD}>
+            <div key={i} style={carded ? CARD : PLAIN}>
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                 {top.map(c => (
                   <div key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
@@ -283,9 +294,9 @@ export function Repeater({
            글자가 한다. 머리의 「0건」도 같은 말을 한다. */
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
           {head}
-          {/* 예시도 **카드 안에** 그린다 — [추가]를 눌렀을 때 실제로 생기는 모양 그대로여야
-              이 줄이 예시 노릇을 한다 */}
-          <div style={CARD}>
+          {/* 예시도 **줄과 같은 모양으로** 그린다 — [추가]를 눌렀을 때 실제로 생기는
+              모양 그대로여야 이 줄이 예시 노릇을 한다 */}
+          <div style={carded ? CARD : PLAIN}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               {/* 고르는 칸의 예시는 **첫 선택지**다. 빈 값으로 두면 예시 줄에서 그 칸만
                   비어 보여, 고르는 칸이라는 사실이 오히려 흐려진다 (cell 의 off 갈래) */}
