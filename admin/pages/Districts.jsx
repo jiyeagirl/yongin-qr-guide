@@ -91,7 +91,7 @@ function linkedOf(d, festivals, qrPoints, stores) {
 }
 
 export function Districts({ onToast }) {
-  const { rows, upsert, remove, patch } = useCollection("districts", DISTRICTS, null, "골목형 상점가");
+  const { rows, upsert, remove, patch, patchMany } = useCollection("districts", DISTRICTS, null, "골목형 상점가");
   const storeRows = readCollection("stores", STORES);
   const qrRows = readCollection("qr", QR_ROWS);
   const festivalRows = readCollection("festivals", FESTIVALS);
@@ -170,12 +170,30 @@ export function Districts({ onToast }) {
     removeRows("stores", l.stores, "점포", `${d.name} 삭제`);
   };
 
+  /* ── 고르기와 일괄 처리 (2026-08-24 추가, 사용자 요청) ─────────────────────
+     점포·공공시설에만 있던 것을 목록 화면 전부로 넓혔다. **삭제는 일괄로 두지 않는다** —
+     되돌릴 수 없는 일을 한 번에 여러 건 하게 만들지 않는다 (그쪽 화면과 같은 규칙).
+     여기서 실제로 쓰이는 자리는 「구 하나를 통째로 내렸다 올리는」 일이다. */
+  const bulkVisible = on => {
+    patchMany(list0.selected.map(id => [id, { visible: on }]), `골목형 상점가 ${on ? "노출" : "숨김"}`);
+    onToast(`${list0.selected.length}건을 ${on ? "노출" : "숨김"}으로 바꿨습니다.`);
+    list0.setSelected([]);
+  };
+
   return (
     <>
       <PageHeader title="골목형 상점가 정보 관리" count={`${filtered.length}곳`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>골목형 상점가 등록</Button>} />
 
-      <Toolbar>
+      <Toolbar actions={list0.selected.length ? (
+        <>
+          <span style={{ fontSize: "var(--fs-label)", color: "var(--text-body)", whiteSpace: "nowrap" }}>
+            {list0.selected.length}건 선택
+          </span>
+          <Button variant="outline" size="sm" icon="eye" onClick={() => bulkVisible(true)}>노출</Button>
+          <Button variant="outline" size="sm" icon="eye-off" onClick={() => bulkVisible(false)}>숨김</Button>
+        </>
+      ) : null}>
         <Select value={gu} options={GU_OPTIONS} onChange={e => setGu(e.target.value)} />
         <ListSearch state={list0} placeholder="골목형 상점가명 · 소재지 검색" />
         <SearchHint state={list0} />
@@ -185,6 +203,7 @@ export function Districts({ onToast }) {
         caption="등록된 골목형 상점가 목록"
         rows={paged.rows} rowKey="id"
         onRowClick={openEdit}
+        selectable selected={list0.selected} onSelectedChange={list0.setSelected}
         empty={{ title: "조건에 맞는 골목형 상점가가 없습니다." }}
         columns={[
           { key: "name", label: "골목형 상점가명", sortable: true,

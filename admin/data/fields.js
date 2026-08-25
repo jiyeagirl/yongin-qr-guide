@@ -518,7 +518,12 @@ export const INSTALL_STATUS_OPTIONS = INSTALL_STATUS.map(v => ({ value: v, label
 export const QR_FIELDS = [
   { key: "code", spec: "qr_code", label: "QR 식별자", required: true, type: "text",
     range: "4~12자 · 영문 소문자+숫자 · 전역 유일", pattern: V.qrCode,
-    minLength: 4, maxLength: 12, example: "dunjeon01" },
+    minLength: 4, maxLength: 12, example: "dunjeon01",
+    /* 2026-08-24 부터 이 칸을 고칠 수 있다 (사용자 요청. QrPoints.jsx 머리말). 고칠 수
+       있게 된 순간 이 한 줄이 필요해진다 — **안내판은 옛 코드로 인쇄되어 현장에 붙어
+       있고**, 화면에서 코드를 바꾸면 그 종이가 가리키는 지점이 표에서 사라진다.
+       "바꾸지 마세요"가 아니라 무슨 일이 일어나는지를 적는다: 판단은 담당자가 한다 */
+    hint: "안내판에 인쇄된 코드입니다. 바꾸면 옛 코드를 찍은 사용자에게 「등록되지 않은 QR 코드」 안내가 뜹니다" },
   { key: "name", spec: "name", label: "지점명", required: true, type: "text",
     range: "2~40자", minLength: 2, maxLength: 40, example: "둔전 시장 입구 버스정류장",
     hint: "사용자 화면 상단에 상시 노출되므로 40자를 넘기지 않습니다" },
@@ -564,9 +569,11 @@ export function qrEntryUrl(code) {
   return `${origin}/s/${code || ""}`;
 }
 
-/* 식별자 자동생성은 뺐다 (2026-08-20) — 관리자 화면에서 QR 지점을 새로 만들지 않는다.
-   코드는 안내판에 인쇄되어 현장에 붙는 값이라, 화면에서 만들 수 있게 두면 인쇄물 없는
-   코드가 표에 남는다. QR 지점 관리는 붙어 있는 지점의 **현황**만 다룬다. */
+/* 식별자 자동생성은 뺐다 (2026-08-20) — 관리자 화면에서 QR 지점을 **새로 만들지 않는다.**
+   코드는 안내판에 인쇄되어 현장에 붙는 값이라, 화면에서 지어낼 수 있게 두면 인쇄물 없는
+   코드가 표에 남는다. 이 조항은 2026-08-24 에 수정·삭제가 열린 뒤에도 그대로다 —
+   **이미 붙어 있는 지점을 고치거나 지우는 것**과 **없던 코드를 만드는 것**은 다른 일이다
+   (QrPoints.jsx 머리말). 그래서 [지점 등록] 단추는 여전히 없다. */
 
 /* ══ 5장 오류신고 (M13) ════════════════════════════════════════════════════ */
 export const REPORT_TARGET_TYPES = ["공공시설", "점포", "상점가", "축제", "기타"];

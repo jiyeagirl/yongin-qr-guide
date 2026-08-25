@@ -89,7 +89,7 @@ function periodOf(f) {
 }
 
 export function Festivals({ onToast }) {
-  const { rows, upsert, remove, patch } = useCollection("festivals", FESTIVALS, null, "축제");
+  const { rows, upsert, remove, patch, patchMany } = useCollection("festivals", FESTIVALS, null, "축제");
   const [state, setState] = React.useState("");
   const list0 = useListState([state]);
 
@@ -155,6 +155,16 @@ export function Festivals({ onToast }) {
   });
   const paged = list0.paginate(filtered);
 
+  /* 고르기와 일괄 처리 (2026-08-24 추가, 사용자 요청. 다른 목록 화면과 같은 규칙) —
+     **삭제는 일괄로 두지 않는다.** 여기서 쓰이는 자리는 「지난 축제 여럿을 한 번에
+     내리는」 일이다. 상태(진행중·예정·종료)는 오늘 기준 자동 판정이라 손댈 수 없고,
+     담당자가 실제로 켜고 끄는 것은 노출뿐이다. */
+  const bulkVisible = on => {
+    patchMany(list0.selected.map(id => [id, { visible: on }]), `축제 ${on ? "노출" : "숨김"}`);
+    onToast(`${list0.selected.length}건을 ${on ? "노출" : "숨김"}으로 바꿨습니다.`);
+    list0.setSelected([]);
+  };
+
   return (
     <>
       {/* 제목 아래 설명을 두지 않는다 (2026-08-20, 사용자 요청) — 「상태는 오늘 기준으로
@@ -163,7 +173,15 @@ export function Festivals({ onToast }) {
       <PageHeader title="축제 정보 관리" count={`${filtered.length}건`}
         action={<Button variant="primary" icon="plus" onClick={ed.openNew}>축제 등록</Button>} />
 
-      <Toolbar>
+      <Toolbar actions={list0.selected.length ? (
+        <>
+          <span style={{ fontSize: "var(--fs-label)", color: "var(--text-body)", whiteSpace: "nowrap" }}>
+            {list0.selected.length}건 선택
+          </span>
+          <Button variant="outline" size="sm" icon="eye" onClick={() => bulkVisible(true)}>노출</Button>
+          <Button variant="outline" size="sm" icon="eye-off" onClick={() => bulkVisible(false)}>숨김</Button>
+        </>
+      ) : null}>
         <Select value={state} options={STATE_OPTIONS} onChange={e => setState(e.target.value)} />
         <ListSearch state={list0} placeholder="축제명 · 골목형 상점가 검색" />
         <SearchHint state={list0} />
@@ -173,6 +191,7 @@ export function Festivals({ onToast }) {
         caption="등록된 축제 목록"
         rows={paged.rows} rowKey="id"
         onRowClick={ed.openEdit}
+        selectable selected={list0.selected} onSelectedChange={list0.setSelected}
         empty={{ title: "해당 상태의 축제가 없습니다." }}
         columns={[
           { key: "name", label: "축제명", sortable: true },
