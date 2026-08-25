@@ -387,8 +387,11 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
             <Badge tone="neutral">{stops.length}곳</Badge>
             <Badge tone="neutral">약 {plan.meters >= 1000 ? `${(plan.meters / 1000).toFixed(1)}km` : `${plan.meters}m`}</Badge>
           </div>
+          {/* 코스 설명은 굵게 적는다 (2026-08-25, 사용자 요청) — 위 배지 줄과 아래 순번
+              목록 사이에 낀 한 줄이라, 본문 굵기로는 배지와 목록에 눌려 읽히지 않았다.
+              이 화면에서 「무엇을 도는 코스인가」를 말하는 유일한 문장이다. */}
           <p style={{ fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: "var(--lh-body)",
-            wordBreak: "keep-all" }}>{c.desc}</p>
+            fontWeight: "var(--fw-bold)", wordBreak: "keep-all" }}>{c.desc}</p>
           {/* ── 「…에서 출발해 순서대로 도는 코스를 나타냅니다」가 여기 있었다 ──────────
                  (2026-08-18 한 줄로 줄임 → 2026-08-25 삭제, 사용자 요청)
 
