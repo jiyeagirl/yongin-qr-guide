@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Input, Icon, Notice, Modal, Textarea } from "../../design-systems/admin.js";
-import { SEED_ACCOUNTS, SUPER_ID, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES }
+import { SEED_ACCOUNTS, SUPER_ID, canRequestReset, lockStatus, MAX_ATTEMPTS, LOCK_MINUTES }
   from "../data/account.js";
 import { submitReset } from "../data/passwordResets.js";
 
@@ -61,9 +61,28 @@ export function Login({ onSignIn }) {
   };
 
   /* 아이디만 본다 — 사유는 비워도 보낸다. 필수로 두면 "비밀번호를 잊었다"를 사유 칸에
-     한 번 더 적게 되고, 최종 관리자가 그 줄에서 새로 알게 되는 것이 없다 */
+     한 번 더 적게 되고, 최종 관리자가 그 줄에서 새로 알게 되는 것이 없다.
+
+     ── 최종 관리자 아이디만 막는다 (2026-08-25, 사용자 요청) ────────────────────
+     **그 요청을 받을 사람이 자기 자신이다** — 요청은 계정 관리의 탭에 쌓이는데 그 화면은
+     `admin` 에게만 열린다. 들어오지 못해서 보낸 요청을 자기만 볼 수 있으니, 보내면 화면이
+     「접수했습니다」라고 답한 뒤 아무 일도 일어나지 않는다. 판정은 `account.js` 가 한다
+     (자물쇠 셋이 한자리에 있어야 하나가 빠지지 않는다 — 그쪽 머리말).
+
+     **위의 「등록된 아이디인지 따지지 않는다」와 어긋나지 않는다.** 저 규칙이 막는 것은
+     아이디가 있는지 없는지를 밖에서 물어볼 수 있는 창구가 되는 것인데, `admin` 이 있다는
+     사실은 이 화면 아래 [검수용 계정] 상자가 이미 적고 있고 실서비스에서도 최종 관리자
+     아이디는 감추는 값이 아니다. 여기서 새로 새는 것이 없다. */
   const sendReset = () => {
     if (!id.trim()) { setResetError("아이디를 입력해 주세요."); return; }
+    if (!canRequestReset(id)) {
+      /* 한 줄이다 (2026-08-25, 사용자 요청). 뒤에 「요청을 받는 [계정 관리] 화면이 이
+         계정에만 열리기 때문입니다」가 붙어 있었는데, **왜 안 되는지는 우리 쪽 사정**이고
+         이 칸 앞에 선 사람이 할 일을 바꾸지 않는다 — 어느 쪽이든 여기서는 못 한다.
+         칸 아래 오류 줄은 짧아야 읽힌다 (QR 지점 경고와 삭제 각주를 줄인 것과 같다). */
+      setResetError("최종 관리자 계정은 이 요청으로 초기화할 수 없습니다.");
+      return;
+    }
     submitReset(id, resetNote);
     setResetError(null);
     setResetSent(true);

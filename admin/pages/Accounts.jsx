@@ -5,8 +5,9 @@ import {
 } from "../../design-systems/admin.js";
 import { ACCOUNT_FIELDS, checkPassword, V } from "../data/fields.js";
 import { SEED_ACCOUNTS, isLastAccount, isProtectedAccount, SUPER_ID } from "../data/account.js";
+/* `RESET_OPEN` 을 이 줄에서 뺐다 (2026-08-25) — [대기로 되돌리기]가 유일한 쓰임이었다 */
 import {
-  useResetRequests, sortResets, resetTime, isOpenReset, RESET_OPEN, RESET_DONE,
+  useResetRequests, sortResets, resetTime, isOpenReset, RESET_DONE,
 } from "../data/passwordResets.js";
 import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
@@ -182,9 +183,12 @@ export function Accounts({ account, onToast }) {
        처리하고 나면 자취가 없다   [처리 완료]를 누른 뒤 그 계정을 다시 열어도 방금
                                  무엇을 처리했는지 화면 어디에도 없었다
 
-     이제 표에는 단추가 **하나**(비밀번호 재설정)이고 그것이 하는 일은 수정 창을 여는 것
-     하나다. 요청의 사유·일시와 [처리 완료]·[대기로]는 그 창 안에 선다 — 비밀번호를 넣는
-     자리와 요청을 닫는 자리가 같아야 두 일이 한 번에 끝난다. */
+     그래서 표의 단추를 **하나**(비밀번호 재설정)로 줄이고 요청에 관한 일을 창 안으로
+     옮겼다 — 비밀번호를 넣는 자리와 요청을 닫는 자리가 같아야 두 일이 한 번에 끝난다.
+
+     **2026-08-25 에 그 하나마저 없앴다** (사용자 요청). 창을 여는 길은 줄 클릭으로 이미
+     있었고(`onRowClick`), 창 안으로 옮겨 두었던 [처리 완료]·[대기로]도 함께 걷어냈다.
+     남은 것은 안내 상자 하나와 [저장]뿐이다 (아래 두 자리의 주석). */
   const openFromReset = r => {
     const found = accountOf(r);
     if (!found) {
@@ -201,10 +205,14 @@ export function Accounts({ account, onToast }) {
     openEdit(found);
   };
 
-  const closeReset = (r, done) => {
-    resets.patch(r.id, { status: done ? RESET_DONE : RESET_OPEN, doneBy: done ? account.id : null },
-      r.loginId);
-    onToast(done ? `${r.loginId} 요청을 처리 완료로 표시했습니다.` : `${r.loginId} 요청을 대기로 되돌렸습니다.`);
+  /* 닫기만 한다. `closeReset(r, done)` 이었고 `done: false` 가 [대기로 되돌리기]였는데,
+     그 단추가 없어지면서(2026-08-25) 되돌리는 길이 사라졌다 — 쓰지 않는 갈래를 남겨 두면
+     아무도 눌러보지 않은 채 남는다. 지금 이것을 부르는 곳은 **계정이 없어 수정 창을 열
+     수 없는 요청** 하나뿐이다 (openFromReset 의 blocked 갈래). 계정이 있는 요청은
+     [저장]이 닫는다 (위 onSave). */
+  const markResetDone = r => {
+    resets.patch(r.id, { status: RESET_DONE, doneBy: account.id }, r.loginId);
+    onToast(`${r.loginId} 요청을 처리 완료로 표시했습니다.`);
   };
 
   /* 지금 열어 둔 계정의 요청 — **가장 최근 것 하나**다 (sortResets 가 최근 순이다).
@@ -297,14 +305,19 @@ export function Accounts({ account, onToast }) {
               render: r => (isOpenReset(r)
                 ? <Badge tone="warning" size="sm">대기</Badge>
                 : <Badge tone="neutral" size="sm">처리 완료</Badge>) },
-            /* 모든 줄에 **같은 단추 하나**다 (2026-08-24). 상태에 따라 단추가 갈리면 그
-               갈래마다 폭이 달라지고, 담당자가 줄마다 무엇을 누를 수 있는지 다시 읽는다.
-               하는 일도 하나 — 수정 창을 여는 것이다. 처리하는 일은 그 안에서 한다 */
-            { key: "manage", label: "관리", width: 156, align: "center",
-              render: r => (
-                <Button variant="outline" size="sm" icon="key-round"
-                  onClick={e => { e.stopPropagation(); openFromReset(r); }}>비밀번호 재설정</Button>
-              ) },
+            /* ── 「관리」 칸이 여기 있었다 (2026-08-25 삭제, 사용자 요청) ─────────────
+               [비밀번호 재설정] 단추 하나가 서 있었고, 하는 일은 **줄을 누르는 것과 똑같이**
+               수정 창을 여는 것이었다(`onRowClick={openFromReset}`, 바로 위). 같은 일을 하는
+               두 길이 한 줄에 있으면 담당자는 둘이 다른 일인 줄 알고 한 번 재어 본다.
+
+               게다가 이 목록에서만 「관리」의 뜻이 달랐다 — 다른 목록 여섯에서 그 칸은
+               [삭제]다. 열 이름이 같은데 안에 든 것이 다르면 화면을 옮길 때마다 무엇이
+               들었는지 다시 읽어야 한다. 여기에 [삭제]를 놓을 수도 없다: 요청은 지우지 않고
+               [처리 완료]로 닫는 기록이다 (`passwordResets.js`). 그러면 남길 이유가 없다.
+
+               2026-08-24 에 단추 둘([비밀번호 변경]·[처리 완료])을 하나로 줄인 판단의
+               연장이다 — 그때 근거가 「처리하는 일은 창 안에서 한다」였고, 창을 여는 길이
+               이미 줄 클릭으로 있으니 마지막 하나도 남을 자리가 없다. */
           ]} />
       ) : (
         <DataTable
@@ -379,8 +392,8 @@ export function Accounts({ account, onToast }) {
                  읽은 다음에 비밀번호를 넣는 것이 순서다 (QR 지점의 경고와 같은 자리).
 
                  처리한 요청도 그대로 남겨 보여준다. 닫는 순간 사라지면 방금 무엇을
-                 처리했는지 되짚을 자리가 없어지고, 잘못 눌렀을 때 되돌릴 곳도 없다 —
-                 종전에는 그것을 표의 [대기로] 단추가 맡고 있었다. */
+                 처리했는지 되짚을 자리가 없어진다 — 되돌리는 길이 없어진 뒤로(2026-08-25)
+                 이 상자가 그 일을 혼자 맡는다. */
             before={draftReset ? (
               <div style={{ gridColumn: "1 / -1" }}>
                 <Notice tone={isOpenReset(draftReset) ? "warning" : "neutral"} size="sm"
@@ -388,22 +401,24 @@ export function Accounts({ account, onToast }) {
                   {draftReset.note ? (
                     <span style={{ display: "block" }}>사유 : {draftReset.note}</span>
                   ) : null}
+                  {/* ── 단추 둘이 여기 있었다 (2026-08-25 삭제, 사용자 요청) ──────────
+                      대기 줄에는 [비밀번호 변경 없이 처리 완료], 처리한 줄에는 [대기로
+                      되돌리기]가 섰다. **상자가 안내인데 그 안에 결정이 들어 있었다** —
+                      담당자가 이 창을 연 이유는 비밀번호를 넣어 주는 것이고, 그 일은 폼과
+                      [저장]이 맡는다. 안내 상자는 「왜 이 창을 열었는가」만 말하면 된다.
+
+                      게다가 둘은 **상태에 따라 갈리는 단추**라 창을 열 때마다 무엇이 서 있는지
+                      달랐다. 표의 관리 칸에서 같은 이유로 걷어낸 것을 창 안에 다시 만들어
+                      둔 셈이었다 (위 openFromReset 머리말).
+
+                      요청을 닫는 길은 **[저장] 하나**로 남는다. 계정이 없어 열 창조차 없는
+                      요청만 예외이고, 그 안내창이 [처리 완료로 표시]를 들고 간다 — 그러지
+                      않으면 오타로 들어온 요청이 대기로 영원히 남아 배지가 줄지 않는다. */}
                   <span style={{ display: "block", marginTop: draftReset.note ? 4 : 0 }}>
                     {isOpenReset(draftReset)
                       ? "새 비밀번호를 넣고 [저장]하면 이 요청이 처리 완료로 바뀝니다."
                       : "이미 처리한 요청입니다."}
                   </span>
-                  {/* 비밀번호를 바꾸지 않고 닫는 길 — 전화로 이미 알려 주었거나, 잘못 온
-                      요청일 때다. 바꾸면서 닫는 것은 [저장]이 알아서 한다 (위 onSave) */}
-                  <div style={{ marginTop: "var(--space-3)" }}>
-                    {isOpenReset(draftReset) ? (
-                      <Button variant="outline" size="sm"
-                        onClick={() => closeReset(draftReset, true)}>비밀번호 변경 없이 처리 완료</Button>
-                    ) : (
-                      <Button variant="ghost" size="sm"
-                        onClick={() => closeReset(draftReset, false)}>대기로 되돌리기</Button>
-                    )}
-                  </div>
                 </Notice>
               </div>
             ) : null} />
@@ -431,7 +446,7 @@ export function Accounts({ account, onToast }) {
           <>
             {blocked && blocked.resetRow ? (
               <Button variant="outline"
-                onClick={() => { closeReset(blocked.resetRow, true); setBlocked(null); }}>
+                onClick={() => { markResetDone(blocked.resetRow); setBlocked(null); }}>
                 처리 완료로 표시
               </Button>
             ) : null}
