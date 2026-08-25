@@ -11,10 +11,8 @@ import {
 import { useCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
-import {
-  removedTab, removedColumns, removedEmpty, undoToast, DEACTIVATE_ON_RESTORE,
-  VIEW_ALL, VIEW_REMOVED,
-} from "./RemovedItems.jsx";
+/* 여기서 `./RemovedItems.jsx` 의 「삭제된 항목 n」 탭 한 칸을 가져와 가운데에 끼웠다
+   (2026-08-24 삭제) — `data/store.js` 머리말 참조 */
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
 
@@ -68,8 +66,7 @@ import { EditorModal } from "./EditorModal.jsx";
  *
  * 자리를 이 화면에 둔 이유는 **요청을 처리하는 일이 곧 이 표의 일**이기 때문이다. 요청 줄을
  * 누르면 그 계정의 수정 창이 열리고 거기서 비밀번호를 넣는다 — 화면을 따로 만들면 담당자가
- * 아이디를 외워 이 표로 건너와 다시 찾아야 한다. 「휴지통 화면을 만들지 않는다」와 같은
- * 판단이다 (RemovedItems 머리말).
+ * 아이디를 외워 이 표로 건너와 다시 찾아야 한다.
  *
  * 요청은 지우지 않고 [처리 완료]로 닫는다 (`data/passwordResets.js`).
  */
@@ -80,10 +77,13 @@ import { EditorModal } from "./EditorModal.jsx";
 const SUPER_NOTE = `계정 관리 화면에 들어올 수 있는 계정은 최종 관리자(${SUPER_ID})뿐입니다. `
   + "이 계정이 없어지면 계정을 더하거나 지울 사람이 남지 않습니다.";
 
+/* 탭 두 칸. `VIEW_ALL` 은 `RemovedItems.jsx` 에 있던 상수인데 그 파일이 없어지면서
+   여기로 옮겨 왔다 (2026-08-24) — 이제 이 화면 하나만 쓴다 */
+const VIEW_ALL = "all";
 const VIEW_RESET = "reset";
 
 export function Accounts({ account, onToast }) {
-  const { rows, removed, upsert, remove, restore, patch } = useCollection("accounts", SEED_ACCOUNTS, null, "계정");
+  const { rows, upsert, remove, patch } = useCollection("accounts", SEED_ACCOUNTS, null, "계정");
   const resets = useResetRequests();
   const [view, setView] = React.useState(VIEW_ALL);
   /* 탭이 바뀌면 검색어와 쪽 번호를 비운다 — 계정 목록에서 「김」을 찾다 요청 탭으로
@@ -152,17 +152,15 @@ export function Accounts({ account, onToast }) {
      것은 「비밀번호 없애기」가 아니라 「건드리지 않기」다. */
   const openEdit = a => ed.openEdit({ ...a, id0: a.id, pw: a.pw || "" });
 
-  /* 「전체 | 삭제된 항목 | 비밀번호 초기화 요청」 — 탭이 바꾸는 것은 **거르기 전의
-     목록**뿐이다 (RemovedItems). 검색은 세 뷰에 똑같이 걸린다. 지운 것이 스무 건을 넘는
-     목록에서 검색이 안 되면 되돌릴 줄을 손으로 찾아야 하고, 뷰마다 검색이 붙었다
-     떨어지면 그것도 배울 거리가 된다. */
-  const inRemoved = view === VIEW_REMOVED;
+  /* 「전체 | 비밀번호 초기화 요청」 — 탭이 바꾸는 것은 **거르기 전의 목록**뿐이고,
+     검색은 두 뷰에 똑같이 걸린다. 뷰마다 검색이 붙었다 떨어지면 그것도 배울 거리가 된다.
+     가운데 있던 「삭제된 항목 n」은 2026-08-24 에 빠졌다 (`data/store.js` 머리말). */
   const inReset = view === VIEW_RESET;
 
   const filtered = inReset
     ? sortResets(resets.rows).filter(r => (!list0.term
       || `${r.loginId} ${r.note || ""}`.includes(list0.term)))
-    : (inRemoved ? removed : rows).filter(a => (!list0.term
+    : rows.filter(a => (!list0.term
       || `${a.id} ${a.name} ${a.email || ""} ${a.phone || ""}`.includes(list0.term)));
   const paged = list0.paginate(filtered);
 
@@ -189,7 +187,9 @@ export function Accounts({ account, onToast }) {
          영원히 남아 배지의 숫자가 줄지 않는다 */
       setBlocked({ name: r.loginId, plain: true, resetRow: r,
         why: "이 아이디로 등록된 계정이 없습니다. 비밀번호를 바꿔 줄 대상이 없습니다.",
-        note: "아이디를 잘못 적었거나 이미 삭제된 계정입니다. 삭제한 계정이라면 [삭제된 항목] 탭에서 먼저 되돌려 주세요." });
+        /* 「삭제한 계정이라면 [삭제된 항목] 탭에서 먼저 되돌려 주세요」가 뒤에 붙어 있었다
+           (2026-08-24) — 그 탭이 없어졌으므로 남은 길은 계정을 다시 등록하는 것뿐이다 */
+        note: "아이디를 잘못 적었거나 이미 삭제된 계정입니다. 계속 쓸 계정이라면 [계정 등록]으로 다시 만들어 주세요." });
       return;
     }
     openEdit(found);
@@ -206,12 +206,6 @@ export function Accounts({ account, onToast }) {
   const draftReset = ed.draft && !ed.draft.isNew
     ? (sortResets(resets.rows).find(r => r.loginId === ed.draft.values.id) || null)
     : null;
-
-  const undo = a => {
-    restore(a.id, a.name, DEACTIVATE_ON_RESTORE);
-    /* 계정은 사용자 화면과 무관하다 — 켜면 일어나는 일이 "노출"이 아니라 "로그인"이다 */
-    onToast(undoToast(`${a.name} 계정`, { field: "사용 여부", tail: "다시 로그인할 수 있습니다" }));
-  };
 
   const toggleActive = a => {
     if (isProtectedAccount(a.id)) {
@@ -249,14 +243,12 @@ export function Accounts({ account, onToast }) {
         note={`최종 관리자(아이디: ${SUPER_ID})만 접근할 수 있는 화면입니다. 관리자 페이지를 사용할 계정을 등록하거나 삭제할 수 있습니다.`}
         action={inReset ? null
           : <Button variant="primary" icon="user-plus" onClick={ed.openNew}>계정 등록</Button>}
-        /* 탭 줄이 셋이라 ViewTabs(전체 | 삭제된 항목) 대신 직접 짠다 — 공공시설이 유형
-           탭 줄 끝에 [삭제된 항목]을 이어 붙이는 것과 같은 모양이다. 요청 탭의 숫자는
-           **대기 건수**다: 처리한 것까지 세면 줄어들지 않는 숫자가 되어 아무 말도 못 한다 */
+        /* 요청 탭의 숫자는 **대기 건수**다: 처리한 것까지 세면 줄어들지 않는 숫자가 되어
+           아무 말도 못 한다. 가운데 있던 「삭제된 항목 n」은 2026-08-24 에 빠졌다 */
         tabs={
           <SegmentedTabs value={view} onChange={setView}
             items={[
               { id: VIEW_ALL, label: "전체" },
-              removedTab(removed.length),
               { id: VIEW_RESET,
                 label: openResets.length ? `비밀번호 초기화 요청 ${openResets.length}` : "비밀번호 초기화 요청" },
             ]} />
@@ -315,11 +307,10 @@ export function Accounts({ account, onToast }) {
         <DataTable
           caption="관리자 계정 목록"
           rows={paged.rows} rowKey="id"
-          /* 지운 줄은 열 수 없다 — 고쳐 봐야 목록에 없는 값이고, 되돌리기가 먼저다 */
-          onRowClick={inRemoved ? undefined : openEdit}
+          onRowClick={openEdit}
           rowTone={a => (a.active === false ? "warning" : null)}
-          empty={inRemoved ? removedEmpty("계정") : { title: "조건에 맞는 계정이 없습니다." }}
-          columns={(cols => (inRemoved ? removedColumns(cols, undo) : cols))([
+          empty={{ title: "조건에 맞는 계정이 없습니다." }}
+          columns={[
             { key: "id", label: "아이디", width: 160, sortable: true },
             /* 배지가 셋까지 붙는 칸이라 폭을 넉넉히 준다 (2026-08-24) — 접히면 그 줄만
                키가 자라고, 표의 행 높이가 줄마다 다르면 훑는 눈이 걸린다 */
@@ -350,7 +341,7 @@ export function Accounts({ account, onToast }) {
                 <Button variant="ghost" size="sm" icon="trash-2"
                   onClick={() => askRemove(a)} style={{ color: "var(--state-danger)" }}>삭제</Button>
               )) },
-          ])} />
+          ]} />
       )}
 
       <div style={{ marginTop: "var(--space-5)" }}>

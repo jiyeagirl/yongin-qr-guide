@@ -13,11 +13,24 @@ import { Icon } from "./Icon.jsx";
    필터 줄처럼 칩이 여럿 늘어서는 자리는 기본(md)을 쓴다. 거기서는 칩이 주인공이다. */
 /* pad 는 [아이콘 있을 때, 없을 때], padX 는 뒤에 ×가 붙었을 때의 같은 쌍이다.
    ×는 글자가 아니라 그림이라 오른쪽 여백이 그대로면 알약이 헐렁해 보인다 — 4px 줄인다. */
+/* ── dense (2026-08-24 신설) ────────────────────────────────────────────────
+   **가로 여백과 아이콘-글자 사이만 줄인다.** 알약 높이(pill) · 글자 크기 · 아이콘 크기 ·
+   44px 손가락 자리는 하나도 건드리지 않는다 — 작아 보이게 하려는 것이 아니라 **한 줄에
+   몇 개가 들어오느냐**를 늘리려는 것이다.
+
+   나온 자리는 필터 칩 줄이다 (FilterBar). 공공시설 탭이 [전체]까지 다섯 알약이 되면서
+   360px 화면에서 마지막 [화장실]이 가장자리 너머로 완전히 나가 버렸다. `size="sm"` 으로
+   내리면 들어오기는 하지만 글자가 12px 이 되어, 칩이 주인공인 줄에서 결과보다 조건이
+   작아진다 (size 머리말). 알약 하나에서 6~7px 씩만 걷어내면 다섯이 걸친다.
+
+   개당 md 기준 −7px: 왼쪽 9→7 · 오른쪽 11→8 · 아이콘 사이 5→4. */
 const CHIP_SIZES = {
   md: { pill: 34, pad: ["0 11px 0 9px", "0 12px"], padX: ["0 7px 0 9px", "0 8px 0 12px"],
-    font: "var(--fs-caption)", icon: 15, gap: 5 },
+    font: "var(--fs-caption)", icon: 15, gap: 5,
+    dense: { pad: ["0 8px 0 7px", "0 9px"], padX: ["0 5px 0 7px", "0 6px 0 9px"], gap: 4 } },
   sm: { pill: 28, pad: ["0 9px 0 7px", "0 10px"], padX: ["0 5px 0 7px", "0 6px 0 10px"],
-    font: "var(--fs-micro)", icon: 13, gap: 4 },
+    font: "var(--fs-micro)", icon: 13, gap: 4,
+    dense: { pad: ["0 7px 0 6px", "0 8px"], padX: ["0 4px 0 6px", "0 5px 0 8px"], gap: 3 } },
 };
 
 /* tint 는 **선택되지 않은** 쉼 상태에 색을 준다 (2026-08-19 추가). 칩 줄이 그대로
@@ -47,8 +60,9 @@ const SOLID_INK = { cream: true, sand: true };
    덕분에 켜짐/꺼짐이 색뿐 아니라 **형태**로도 갈린다 — 색약 사용자에게 그것이 유일한 단서다
    (OnnuriToggle 이 축소판 스위치를 달고 있던 것과 같은 이유). */
 export function Chip({ children, selected = false, tint, tintRest = true, icon, count, removable = false,
-  elevated = false, size = "md", onClick, style, ...rest }) {
-  const z = CHIP_SIZES[size] || CHIP_SIZES.md;
+  elevated = false, size = "md", dense = false, onClick, style, ...rest }) {
+  const base = CHIP_SIZES[size] || CHIP_SIZES.md;
+  const z = dense && base.dense ? { ...base, ...base.dense } : base;
   const t = CHIP_TINTS.includes(tint) ? tint : null;
   const showX = removable && selected;
   const skin = selected

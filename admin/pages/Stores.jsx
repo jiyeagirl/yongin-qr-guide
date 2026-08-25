@@ -13,9 +13,8 @@ import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
-import {
-  ViewTabs, removedColumns, removedEmpty, undoToast, HIDE_ON_RESTORE, VIEW_ALL, VIEW_REMOVED,
-} from "./RemovedItems.jsx";
+/* 여기서 `./RemovedItems.jsx` 의 「전체 | 삭제된 항목」 탭을 가져왔다 (2026-08-24 삭제).
+   삭제가 영구가 되면서 되돌리는 자리가 통째로 없어졌다 — `data/store.js` 머리말 참조 */
 
 /* M05 점포 목록 · M06 점포 등록·수정.
  *
@@ -75,7 +74,7 @@ export function createdAtOf(s) {
 }
 
 export function Stores({ onToast }) {
-  const { rows, removed, upsert, remove, restore, patch, patchMany } = useCollection("stores", STORES, null, "점포");
+  const { rows, upsert, remove, patch, patchMany } = useCollection("stores", STORES, null, "점포");
   const [major, setMajor] = React.useState("");
   const [onnuri, setOnnuri] = React.useState("");
   const [district, setDistrict] = React.useState("");
@@ -101,13 +100,7 @@ export function Stores({ onToast }) {
     ed.set(key, value);
   };
 
-  /* 「전체 | 삭제된 항목」 — 탭이 바꾸는 것은 거르기 전의 목록뿐이다 (RemovedItems).
-     335곳짜리 목록이라 여기서는 검색이 두 뷰에 다 걸리는 것이 특히 중요하다. */
-  const [view, setView] = React.useState(VIEW_ALL);
-  const inRemoved = view === VIEW_REMOVED;
-  const source = inRemoved ? removed : rows;
-
-  const filtered = React.useMemo(() => source.filter(s => {
+  const filtered = React.useMemo(() => rows.filter(s => {
     if (major && s.bizL !== major) return false;
     if (district && (s.districtId || CURRENT_DISTRICT_ID) !== district) return false;
     if (onnuri === "y" && !s.onnuri) return false;
@@ -115,11 +108,9 @@ export function Stores({ onToast }) {
     if (!list0.term) return true;
     /* 중분류(biz)도 훑는다. 표에는 안 적지만 담당자가 "노래방"으로 찾을 수 있어야 한다 */
     return `${s.name} ${s.branch || ""} ${s.addr} ${s.biz || ""} ${s.bizS || ""}`.includes(list0.term);
-  }), [source, list0.term, major, onnuri, district]);
+  }), [rows, list0.term, major, onnuri, district]);
 
   const paged = list0.paginate(filtered);
-
-  const undo = s => { restore(s.id, s.name, HIDE_ON_RESTORE); onToast(undoToast(s.name)); };
 
   const bulkVisible = on => {
     patchMany(list0.selected.map(id => [id, { visible: on }]), `점포 ${on ? "노출" : "숨김"}`);
@@ -134,12 +125,9 @@ export function Stores({ onToast }) {
           이 화면에서 할 일을 돕는 말이 아니다 — 명세서 번호는 만드는 쪽의 사정이고,
           기준일은 [데이터 갱신 현황]이 다루는 값이라 여기서는 읽기만 하던 줄이었다. */}
       <PageHeader title="점포 정보 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`}
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>점포 등록</Button>}
-        tabs={<ViewTabs value={view} onChange={setView} count={removed.length} />} />
+        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>점포 등록</Button>} />
 
-      {/* 일괄 처리는 「전체」에서만 선다. 지운 줄을 골라 노출·숨김을 바꾸는 일에는 뜻이 없다 —
-          어차피 사용자 화면에 없고, 되돌리기부터 하는 것이 순서다 (removedColumns 와 같은 규칙). */}
-      <Toolbar actions={!inRemoved && list0.selected.length ? (
+      <Toolbar actions={list0.selected.length ? (
         <>
           <span style={{ fontSize: "var(--fs-label)", color: "var(--text-body)", whiteSpace: "nowrap" }}>
             {list0.selected.length}건 선택
@@ -158,14 +146,13 @@ export function Stores({ onToast }) {
       <DataTable
         caption="등록된 점포 목록"
         rows={paged.rows} rowKey="id"
-        onRowClick={inRemoved ? undefined : ed.openEdit}
-        selectable={!inRemoved} selected={list0.selected} onSelectedChange={list0.setSelected}
+        onRowClick={ed.openEdit}
+        selectable selected={list0.selected} onSelectedChange={list0.setSelected}
         /* 제목 한 줄이다 (2026-08-24, 사용자 요청). "검색어나 업종 필터를 지워 보세요"가
            붙어 있었는데, 조건을 방금 건 담당자는 그 조건이 무엇인지 알고 있고 그것을 거는
-           칸은 바로 위 필터 줄에 값이 들어간 채로 서 있다. [삭제된 항목] 탭은 그대로 둔다 —
-           거기는 목록이 빈 이유가 조건이 아니라 **아직 아무것도 지우지 않아서**다 */
-        empty={inRemoved ? removedEmpty("점포") : { title: "조건에 맞는 점포가 없습니다." }}
-        columns={(cols => (inRemoved ? removedColumns(cols, undo) : cols))([
+           칸은 바로 위 필터 줄에 값이 들어간 채로 서 있다 */
+        empty={{ title: "조건에 맞는 점포가 없습니다." }}
+        columns={[
           { key: "name", label: "상호명", sortable: true },
           { key: "branch", label: "지점명", width: 110, render: s => s.branch || EMPTY_MARK },
           { key: "cat", label: "업종 칩", width: 130, sortable: true,
@@ -194,7 +181,7 @@ export function Stores({ onToast }) {
               <Button variant="ghost" size="sm" icon="trash-2"
                 onClick={() => ed.askRemove(s)} style={{ color: "var(--state-danger)" }}>삭제</Button>
             ) },
-        ])} />
+        ]} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
         <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />

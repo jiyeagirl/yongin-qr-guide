@@ -537,9 +537,18 @@ export const QR_FIELDS = [
     options: INSTALL_STATUS_OPTIONS, example: "설치완료" },
   { key: "installedAt", spec: "installed_at", label: "설치일자", required: "cond",
     when: v => v.installStatus === "설치완료", type: "date", example: "2026-03-14",
-    hint: "설치완료를 고르면 필수가 됩니다" },
-  { key: "active", spec: "is_active", label: "활성 여부", required: true, type: "switch",
-    hint: "끄면 이 코드로 들어온 사용자에게 교체 안내가 뜹니다. 기본값은 꺼짐입니다" },
+    /* 「설치완료를 고르면 필수가 됩니다」에서 고쳤다 (2026-08-24, 사용자 요청).
+       「설치완료」는 바로 위 칸에서 고르는 **선택지의 이름 그대로**여야 한다 —
+       띄어 적으면 목록에 없는 값을 가리키는 줄이 된다. */
+    hint: "설치완료를 선택하면 필수 항목으로 설정됩니다" },
+  /* 활성 여부의 hint 를 뺐다 (2026-08-24, 사용자 요청) — 「끄면 이 코드로 들어온 사용자에게
+     교체 안내가 뜹니다. 기본값은 꺼짐입니다」. 앞 문장은 **틀린 말이 됐다**: 시민 화면이
+     훼손·철거(S11)와 준비 중(S11-A)을 가르면서, 꺼져 있을 때 뜨는 것이 설치 상태에 따라
+     갈린다 — 설치완료인데 꺼져 있으면 「교체 안내」가 아니라 「아직 준비 중」이다.
+     그 조합은 이 창의 경고 상자가 실제 문구까지 그대로 적어 준다 (QrPoints.jsx).
+     뒷 문장(기본값)은 새로 만드는 자리의 이야기인데 **이 화면은 새로 만들지 않는다** —
+     붙어 있는 지점의 현황만 고친다 (아래 qrEntryUrl 위 주석). */
+  { key: "active", spec: "is_active", label: "활성 여부", required: true, type: "switch" },
 
   { key: "locationDetail", spec: "location_detail", label: "설치 상세 위치", required: false,
     type: "textarea", rows: 2, range: "최대 100자", maxLength: 100,

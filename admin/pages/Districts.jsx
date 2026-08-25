@@ -7,17 +7,14 @@ import { DISTRICTS, GU_ORDER, FESTIVALS, CURRENT_DISTRICT_ID } from "../../scree
 import { STORES } from "../../screens/main/data/dunjeon.js";
 import { QR_POINTS } from "../../screens/main/data/qr.js";
 import { DISTRICT_FIELDS } from "../data/fields.js";
-import {
-  useCollection, readCollection, removeRows, restoreRows, readRemoved,
-  linkRemoval, takeRemovalLinks,
-} from "../data/store.js";
+import { useCollection, readCollection, removeRows } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
-import {
-  ViewTabs, removedColumns, removedEmpty, undoToast, HIDE_ON_RESTORE, VIEW_ALL, VIEW_REMOVED,
-} from "./RemovedItems.jsx";
+/* 여기서 `./RemovedItems.jsx` 의 「전체 | 삭제된 항목」 탭과 되돌리기 짝(`restoreRows` ·
+   `readRemoved` · `linkRemoval` · `takeRemovalLinks`)을 가져왔다 (2026-08-24 삭제).
+   삭제가 영구가 되면서 통째로 없어졌다 — `data/store.js` 머리말 참조 */
 
 /* M03 상점가 목록 · M04 상점가 등록·수정 — 32개소.
  *
@@ -61,9 +58,14 @@ const QR_ROWS = QR_POINTS.map(p => ({ ...p, id: p.code }));
    다시 돌아와야 했다. 세 화면을 오가는 동안 무엇을 지웠는지 스스로 기억해야 하고,
    중간에 그만두면 **축제만 없어진 상태**가 남는다.
 
-   이제 **연결된 것이 함께 간다.** 지우기 전에 무엇이 함께 지워지는지 보여주고
-   (아래 ConfirmDialog), 되돌릴 때도 함께 돌아온다 (undo). 지우는 일이 한 번의 결정이 되고,
-   그 결정을 통째로 되돌릴 수 있으므로 막을 이유가 없어진다.
+   이제 **연결된 것이 함께 간다.** 지우기 전에 무엇이 함께 지워지는지 이름과 곳수로
+   보여준다 (아래 ConfirmDialog). 지우는 일이 한 번의 결정이 되므로 막을 이유가 없어진다.
+
+   **되돌리기는 없어졌다** (2026-08-24, 사용자 요청). 처음 이 길을 열 때의 근거 절반이
+   "그 결정을 통째로 되돌릴 수 있다"였는데 그 절반이 사라졌으므로, 남은 안전장치는
+   **지우기 전에 보여주는 목록 하나**다. 그래서 이 화면의 확인 창은 다른 화면보다
+   할 일이 많다 — 아래 `children` 이 함께 가는 셋을 이름으로 늘어놓고, QR 지점이 걸려
+   있으면 빠져나갈 길(소속을 먼저 옮기기)까지 적는다.
 
    ── 점포도 함께 간다 (2026-08-24, 같은 날 고침) ────────────────────────────
    처음에는 점포만 빼 두었다. "335곳을 한 번에 지우는 일은 이 화면이 할 일이 아니다"라고
@@ -89,7 +91,7 @@ function linkedOf(d, festivals, qrPoints, stores) {
 }
 
 export function Districts({ onToast }) {
-  const { rows, removed, upsert, remove, restore, patch } = useCollection("districts", DISTRICTS, null, "골목형 상점가");
+  const { rows, upsert, remove, patch } = useCollection("districts", DISTRICTS, null, "골목형 상점가");
   const storeRows = readCollection("stores", STORES);
   const qrRows = readCollection("qr", QR_ROWS);
   const festivalRows = readCollection("festivals", FESTIVALS);
@@ -137,12 +139,8 @@ export function Districts({ onToast }) {
     ed.openEdit({ ...row, storeCount: c.stores, onnuriCount: c.onnuri });
   };
 
-  /* 「전체 | 삭제된 항목」 — 탭이 바꾸는 것은 거르기 전의 목록뿐이다 (RemovedItems) */
-  const [view, setView] = React.useState(VIEW_ALL);
-  const inRemoved = view === VIEW_REMOVED;
-  const source = inRemoved ? removed : rows;
-
-  const filtered = source.filter(d => {
+  /* 제목 아래 「전체 | 삭제된 항목 n」 탭이 있었다 (2026-08-24 삭제) — 머리말 참조 */
+  const filtered = rows.filter(d => {
     if (gu && d.gu !== gu) return false;
     if (!list0.term) return true;
     return `${d.name} ${d.gu} ${d.area} ${d.addr}`.includes(list0.term);
@@ -158,45 +156,24 @@ export function Districts({ onToast }) {
      부른다 — 이 화면이 축제·QR·점포 컬렉션을 통째로 세울 이유가 없다 (그쪽 머리말).
      **여럿을 한 번에 넘기는 것이 중요하다** — 점포 335건을 한 건씩 지우면 이력이 그것만으로
      가득 찬다 (store.js 의 removeRows 머리말). 이력에는 상점가 이름을 적어 둔다:
-     「일괄 삭제 · 점포 · 둔전 골목형상점가 삭제」가 「335건」보다 나중에 읽힌다. */
+     「일괄 삭제 · 점포 · 둔전 골목형상점가 삭제」가 「335건」보다 나중에 읽힌다.
+
+     함께 지운 것을 적어 두던 `linkRemoval` 이 여기 있었다 (2026-08-24 삭제) — 그것은
+     **되돌릴 때 무엇을 함께 되살릴지** 정하는 값이었고, 되돌리는 자리가 없어졌다. */
   const removeWithLinked = (id, name) => {
     const d = rows.find(x => x.id === id);
     remove(id, name);
     if (!d) return;
     const l = linkedOf(d, festivalRows, qrRows, storeRows);
-    /* 이번 삭제로 **실제로 지워진 것**만 적어 둔다 (store.js 의 linkRemoval).
-       따로 지워져 있던 것은 removeRows 가 건너뛰므로 목록에 오르지 않고,
-       되돌리기가 그것까지 되살리는 일도 없다. */
-    linkRemoval("districts", id, {
-      festivals: removeRows("festivals", l.festivals, "축제", `${d.name} 삭제`),
-      qr: removeRows("qr", l.qr, "QR 지점", `${d.name} 삭제`),
-      stores: removeRows("stores", l.stores, "점포", `${d.name} 삭제`),
-    });
-  };
-
-  /* ── 함께 되돌린다 ───────────────────────────────────────────────────────
-     **이 상점가를 지울 때 함께 지워진 것**을 되돌린다 — 지금 이 상점가를 가리키면서
-     지워져 있는 것 전부가 아니다 (그 구분이 왜 필요한지는 store.js 의 linkRemoval).
-     규칙 한 줄로 적으면: **함께 지워진 것은 함께 돌아온다.** */
-  const undo = d => {
-    const took = takeRemovalLinks("districts", d.id) || {};
-    /* 상점가만 꺼진 채로 돌아온다. 함께 돌아오는 축제·QR·점포는 그대로다 —
-       상점가가 꺼져 있으면 그 아래는 어차피 사용자 화면에 없다 (store.js 의 restoreRows) */
-    restore(d.id, d.name, HIDE_ON_RESTORE);
-    const pick = (source, ids) => (ids || []).length
-      ? source.filter(r => ids.includes(r.id)) : [];
-    restoreRows("festivals", pick(readRemoved("festivals", FESTIVALS), took.festivals),
-      "축제", `${d.name} 복구`);
-    restoreRows("qr", pick(readRemoved("qr", QR_ROWS), took.qr), "QR 지점", `${d.name} 복구`);
-    restoreRows("stores", pick(readRemoved("stores", STORES), took.stores), "점포", `${d.name} 복구`);
-    onToast(undoToast(d.name));
+    removeRows("festivals", l.festivals, "축제", `${d.name} 삭제`);
+    removeRows("qr", l.qr, "QR 지점", `${d.name} 삭제`);
+    removeRows("stores", l.stores, "점포", `${d.name} 삭제`);
   };
 
   return (
     <>
       <PageHeader title="골목형 상점가 정보 관리" count={`${filtered.length}곳`}
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>골목형 상점가 등록</Button>}
-        tabs={<ViewTabs value={view} onChange={setView} count={removed.length} />} />
+        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>골목형 상점가 등록</Button>} />
 
       <Toolbar>
         <Select value={gu} options={GU_OPTIONS} onChange={e => setGu(e.target.value)} />
@@ -207,9 +184,9 @@ export function Districts({ onToast }) {
       <DataTable
         caption="등록된 골목형 상점가 목록"
         rows={paged.rows} rowKey="id"
-        onRowClick={inRemoved ? undefined : openEdit}
-        empty={inRemoved ? removedEmpty("골목형 상점가") : { title: "조건에 맞는 골목형 상점가가 없습니다." }}
-        columns={(cols => (inRemoved ? removedColumns(cols, undo) : cols))([
+        onRowClick={openEdit}
+        empty={{ title: "조건에 맞는 골목형 상점가가 없습니다." }}
+        columns={[
           { key: "name", label: "골목형 상점가명", sortable: true,
             render: d => (
               <Cell>
@@ -251,7 +228,7 @@ export function Districts({ onToast }) {
               <Button variant="ghost" size="sm" icon="trash-2"
                 onClick={() => ed.askRemove(d)} style={{ color: "var(--state-danger)" }}>삭제</Button>
             ) },
-        ])} />
+        ]} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
         <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />
@@ -327,15 +304,18 @@ export function Districts({ onToast }) {
                 </li>
               ) : null}
             </ul>
-            {/* 되돌릴 때도 함께 온다는 것을 여기서 말한다 — 이 목록을 보고 망설이는
-                사람에게 필요한 답이 그것이다 (아래 각주의 [삭제된 항목]과 이어진다) */}
-            <p style={{ marginTop: 8, fontSize: "var(--fs-caption)",
-              color: "var(--text-muted)", lineHeight: 1.5 }}>
-              되돌릴 때도 함께 돌아옵니다.
-              {linked.qr.length
-                ? " 안내판을 그대로 두려면 [QR 지점 관리]에서 소속 골목형 상점가를 먼저 옮겨 주세요."
-                : ""}
-            </p>
+            {/* 「되돌릴 때도 함께 돌아옵니다」가 여기 있었다 (2026-08-24) — 되돌리는 자리가
+                없어졌으므로 그 말도 없어진다. 대신 **QR 지점만은 빠져나갈 길을 적는다**:
+                안내판은 현장에 그대로 붙어 있어서, 지우면 그 코드를 찍은 시민이
+                「등록되지 않은 코드」를 보게 된다 (QrPoints.jsx 머리말). 이 줄이 그 창의
+                유일한 대안이라 QR 이 걸렸을 때만 서고, 그때는 반드시 선다. */}
+            {linked.qr.length ? (
+              <p style={{ marginTop: 8, fontSize: "var(--fs-caption)",
+                color: "var(--text-muted)", lineHeight: 1.5 }}>
+                안내판은 현장에 그대로 남습니다. 지점을 지우지 않으려면
+                [QR 지점 관리]에서 소속 골목형 상점가를 먼저 옮겨 주세요.
+              </p>
+            ) : null}
           </div>
         ) : null}
       </ConfirmDialog>

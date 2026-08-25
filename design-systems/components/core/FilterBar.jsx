@@ -24,20 +24,71 @@ import { Icon } from "./Icon.jsx";
    `value` 에 **배열**을 주면 칩이 켜고 끄는 스위치가 된다. 문자열을 주면 예전처럼 하나만
    골린다 — 부르는 쪽이 축의 성질에 따라 고른다.
 
-   배열 모드에서 **빈 배열은 "전체"** 다. 그래서 [전체] 칩을 따로 두지 않는다:
+   배열 모드에서 **빈 배열은 "전체"** 다. 이 규칙은 그대로다.
 
-     자리    5종이면 [전체]까지 여섯 알약이 되어 좁은 화면에서 마지막 칩이 화면 밖으로
-             밀렸다 (공공시설 탭의 [화장실]이 실제로 그랬다). 가로로 밀면 나오기는 하지만,
-             **밀 수 있다는 것 자체가 보이지 않는다** — 없는 칩과 구별되지 않는다.
-     뜻     여럿 고르기에서 [전체]는 칩이 아니라 **다른 종류의 동작**(모두 해제)이다.
-             같은 줄에 같은 모양으로 서 있으면서 혼자 다르게 동작하는 알약이 된다.
-     되돌리기 켠 칩을 다시 누르면 꺼진다. 전부 끄면 전체로 돌아오므로 길이 막히지 않는다.
+   ── [전체] 칩을 되살린다 (2026-08-24, 사용자 요청) ─────────────────────────
+   2026-08-20 에 뺐던 것이다. 뺀 이유는 둘이었는데, **하나는 지금 고쳤고 하나는 값을
+   다시 매겼다.**
+
+   ⑴ **자리** — 다섯 알약이 되면 좁은 화면에서 마지막 칩이 화면 밖으로 밀렸고
+      (공공시설 탭의 [화장실]이 실제로 그랬다), 가로로 밀면 나오기는 하지만
+      **밀 수 있다는 것 자체가 보이지 않았다.** 그때는 칩을 빼서 피했는데, 진짜 문제는
+      칩 수가 아니라 **칩 줄이 끝을 감추는 방식**이었다. 아래 두 가지로 고친다:
+
+        가장자리까지 흘린다   칩 줄이 오른쪽 여백에서 끊기지 않고 **화면 끝까지** 간다.
+                              그래서 넘치면 마지막 칩이 늘 **잘린 채 걸쳐 보인다** —
+                              잘린 알약은 "여기서 끝"이 아니라 "더 있다"고 말한다.
+        끝을 흐린다           오른쪽으로 더 밀 수 있는 동안만 끝 24px 에 페이드를 건다.
+                              칩 경계가 하필 화면 끝에 딱 맞아떨어져 잘린 자리가 안 생기는
+                              경우까지 덮는다. 다 밀면 페이드가 사라져 끝인 줄 안다.
+
+      (`floating` 이라 배경이 투명하므로 흰 그러데이션을 덧대지 못한다. 알파를 깎는
+       mask-image 라야 지도 위에서도 맞는다.)
+
+   ⑵ **뜻** — "여럿 고르기에서 [전체]는 칩이 아니라 다른 종류의 동작(모두 해제)이다"가
+      뺀 두 번째 이유였다. 맞는 말이지만 **그 대가가 더 컸다**: 칩을 세 개 켜 둔 사람이
+      전체로 돌아가려면 켠 것을 하나씩 다시 눌러야 했고, 돌아갈 자리가 화면에 없으니
+      「전체」라는 상태가 있다는 것 자체가 목록 머리 글자로만 남았다. [전체]는 켜져 있는
+      상태(빈 배열)를 **보여주기도** 한다 — 알약 하나가 상태와 되돌리기를 함께 맡는다.
+      대신 혼자 다르게 동작하는 것은 사실이므로 그만큼만 다르게 둔다: 켜져 있을 때
+      다시 눌러도 꺼지지 않는다 (이미 전체다). 나머지 칩은 그대로 켜고 꺼진다.
+
+   [전체]의 개수는 **보이는 칩들의 합**이다 — 부르는 쪽이 총계를 따로 넘기면 칩 줄의 합과
+   어긋날 길이 열린다 (0건이라 숨긴 칩이 총계에는 남는 식으로). 상점가 335, 공공시설은
+   그 QR 지점 둘레의 시설 수가 그대로 나온다.
 
    역할(role)도 함께 바뀐다. 하나만 고르는 줄은 tablist/tab 이지만, 여럿 고르는 줄에서
    그것은 틀린 이름이다 — 탭은 한 번에 하나만 선택되는 것을 뜻한다. 배열 모드에서는
    group + aria-pressed 로, 켜고 끄는 단추 묶음이라고 말한다. */
+/* ── 한 줄에 몇 개가 들어오느냐 (2026-08-24) ────────────────────────────────
+   [전체]를 되살리고 나니 공공시설 탭이 다섯 알약이 됐고, 360px 화면에서 마지막 [화장실]이
+   가장자리 너머로 **통째로** 나가 있었다. 잘린 칩과 페이드가 "더 있다"고는 말하지만,
+   유형이 넷뿐인 줄에서 그중 하나가 아예 안 보이는 것은 그것대로 손해다 — 밀기 전에는
+   화장실을 고를 수 있다는 사실 자체가 화면에 없다.
+
+   글자를 줄이지 않고 **여백만** 걷어낸다 (`size="sm"` 은 12px 글자가 되어 칩이 주인공인
+   줄에서 결과보다 조건이 작아진다). 세 자리에서 조금씩 가져온다:
+
+     INSET  칩 줄의 왼쪽 들여쓰기. 화면 여백(20)보다 좁게 잡아 줄 전체를 왼쪽으로 민다.
+            **위 검색창과 세로선이 어긋나지만** 그 대가로 알약 반쪽이 들어온다 — 칩 줄은
+            원래 가로로 흐르는 줄이라 왼쪽 끝이 고정선 노릇을 하지 않는다.
+     GAP    알약 사이. 6 → 5. 알약에 이미 테두리가 있어 1px 은 눈에 띄지 않는다.
+     dense  알약 안쪽 가로 여백 (Chip 머리말). 개당 −7px 이 가장 큰 몫이다.
+
+   합쳐서 다섯 알약 기준 50px 남짓을 번다. 360px 에서 [화장실]이 4분의 1쯤 걸치고,
+   390px 이상에서는 다섯이 다 들어온다 (그때는 넘치지 않으니 페이드도 꺼진다).
+
+   **페이드 폭은 걸치는 조각보다 좁아야 한다** (24 → 12 로 줄임). 페이드는 원래 잘린 자리가
+   안 생기는 경우를 덮으려고 둔 것인데, 24px 이면 방금 벌어 놓은 24px 짜리 조각을 **그
+   페이드가 통째로 지운다** — 보이라고 만든 것을 흐리게 하는 꼴이다. 12 면 조각의 앞 절반이
+   또렷하게 남고 끝만 풀리면서 사라진다. 그게 "잘렸다"의 생김새다. */
+const FADE = 12;
+const INSET = 12;
+const GAP = 5;
+
 export function FilterBar({ chips = [], value, onChange, active = [], sticky = true, floating = false, leading,
-  renderIcon, label = "업종 필터", gutter = "var(--gutter-screen)", style, ...rest }) {
+  renderIcon, label = "업종 필터", allChip = true, allLabel = "전체",
+  gutter = "var(--gutter-screen)", style, ...rest }) {
   const icon = renderIcon || (c => <CategoryIcon type={c.id} size={15} />);
 
   const multi = Array.isArray(value);
@@ -48,6 +99,45 @@ export function FilterBar({ chips = [], value, onChange, active = [], sticky = t
     if (!onChange) return;
     onChange(multi ? (value.includes(id) ? value.filter(v => v !== id) : [...value, id]) : id);
   };
+
+  /* 해당 상점가에 0건인 칩은 숨긴다 (U-ST-10). 공공시설 탭에서도 같은 규칙이 통한다 —
+     그 QR 지점 주변에 없는 시설 유형을 눌러 빈 결과를 보게 하지 않는다 */
+  const shown = chips.filter(c => c.count > 0);
+  const showAll = multi && allChip && shown.length > 0;
+  const allOn = multi && value.length === 0;
+  const allCount = showAll ? shown.reduce((n, c) => n + (c.count || 0), 0) : 0;
+
+  /* 오른쪽에 **아직 칩이 남았는가**. 페이드를 켜고 끄는 데만 쓴다 (머리말 ⑴).
+     끝의 여백 스페이서는 빼고 잰다 — 그러지 않으면 칩이 딱 맞게 들어찬 줄에서도 여백만큼
+     넘쳐 페이드가 켜지고, 있지도 않은 칩이 더 있다고 말하게 된다.
+     스크롤·리사이즈·칩 목록 변화에 다시 잰다 — 칩이 켜지면 개수 자리가 바뀌어 폭도 바뀐다.
+     1px 여유를 두는 것은 소수점 폭에서 scrollWidth 가 늘 1 미만으로 남기 때문이다. */
+  const strip = React.useRef(null);
+  const tail = React.useRef(null);
+  const [more, setMore] = React.useState(false);
+  React.useEffect(() => {
+    const node = strip.current;
+    if (!node) return;
+    const measure = () => {
+      const pad = tail.current ? tail.current.offsetWidth : 0;
+      setMore(node.scrollLeft + node.clientWidth < node.scrollWidth - pad - 1);
+    };
+    measure();
+    node.addEventListener("scroll", measure, { passive: true });
+    /* ResizeObserver 는 줄 자체(보이는 폭)의 변화만 잡는다 — 안쪽 칩이 넓어져 scrollWidth 만
+       달라지는 경우는 못 잡는데, 그 일이 실제로 일어나는 자리가 **웹폰트 로드**다.
+       처음 잰 값은 대체 글꼴 기준이라 폰트가 앉으면 넘침 여부가 뒤집힐 수 있다. */
+    if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(measure).catch(() => {});
+    }
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    if (ro) ro.observe(node);
+    return () => { node.removeEventListener("scroll", measure); if (ro) ro.disconnect(); };
+  }, [chips, value, allChip]);
+  const fade = more
+    ? `linear-gradient(to right, #000 calc(100% - ${FADE}px), transparent 100%)`
+    : undefined;
+
   return (
     <div style={{
       position: floating ? "static" : (sticky ? "sticky" : "static"), top: 0, zIndex: "var(--z-filter)",
@@ -59,25 +149,43 @@ export function FilterBar({ chips = [], value, onChange, active = [], sticky = t
           leading 은 칩과 함께 흐르면 안 되는 것의 자리 — 스크롤 바깥에 고정된다.
           지금 여기 서는 것은 조아용 한 마리다 (MainApp). 한때 온누리 컨트롤이 이 자리를
           썼는데, 그것은 목록 위 제어 줄로 내려갔다 (ListControls · OnnuriChip) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: `2px ${gutter} var(--space-1)` }}>
+      {/* 오른쪽 여백을 **칩 줄에 주지 않는다** (2026-08-24. 머리말 ⑴).
+          줄이 화면 끝까지 가야 넘칠 때 마지막 칩이 잘린 채 걸쳐 보인다 — 여백에서 끊으면
+          그 잘린 조각이 여백 뒤로 숨어 "끝났다"로 읽힌다. 다 밀었을 때의 오른쪽 여백은
+          줄 안의 스페이서가 맡는다 (아래). 왼쪽 여백은 그대로다 — 첫 칩은 위 검색창과
+          같은 세로선에서 시작해야 한다. */}
+      <div style={{ display: "flex", alignItems: "center", gap: GAP, padding: `2px 0 var(--space-1) ${INSET}px` }}>
         {leading ? <span style={{ flex: "0 0 auto", display: "inline-flex", paddingRight: 2 }}>{leading}</span> : null}
-        <div role={multi ? "group" : "tablist"} aria-label={label}
-          style={{ flex: 1, minWidth: 0, display: "flex", gap: 6,
-            overflowX: "auto", padding: "5px 0", margin: "-5px 0", scrollbarWidth: "none" }}>
-          {/* 해당 상점가에 0건인 칩은 숨긴다 (U-ST-10). 공공시설 탭에서도 같은 규칙이 통한다 —
-              그 QR 지점 주변에 없는 시설 유형을 눌러 빈 결과를 보게 하지 않는다 */}
-          {chips.filter(c => c.count > 0).map(c => (
-            <Chip key={c.id} selected={isOn(c.id)} count={c.count} elevated={floating}
+        <div ref={strip} role={multi ? "group" : "tablist"} aria-label={label}
+          style={{ flex: 1, minWidth: 0, display: "flex", gap: GAP,
+            overflowX: "auto", padding: "5px 0", margin: "-5px 0", scrollbarWidth: "none",
+            /* 끝을 흐려 "더 있다"고 말한다. 더 밀 수 없으면 undefined 라 아무것도 걸리지 않는다 */
+            maskImage: fade, WebkitMaskImage: fade }}>
+          {/* [전체] — 맨 왼쪽. 여럿 고르기에서만 선다 (하나 고르기 줄에서는 부르는 쪽이
+              chips 에 직접 넣는다). 켜져 있을 때 다시 눌러도 꺼지지 않는다 — 이미 전체다 */}
+          {showAll ? (
+            <Chip dense selected={allOn} count={allCount} elevated={floating} aria-pressed={allOn}
+              icon={icon({ id: "all", label: allLabel })}
+              onClick={() => { if (!allOn && onChange) onChange([]); }}>{allLabel}</Chip>
+          ) : null}
+          {shown.map(c => (
+            <Chip key={c.id} dense selected={isOn(c.id)} count={c.count} elevated={floating}
               role={multi ? undefined : "tab"}
               aria-selected={multi ? undefined : isOn(c.id)}
               aria-pressed={multi ? isOn(c.id) : undefined}
               icon={icon(c)} onClick={() => hit(c.id)}>{c.label}</Chip>
           ))}
+          {/* 끝까지 밀었을 때의 오른쪽 여백. 왼쪽 들여쓰기와 같은 값이라 다 밀면 줄이
+              양쪽 같은 자리에서 끝난다. 스크롤 컨테이너의 padding-right 대신 실제
+              엘리먼트를 쓰는 것은 그쪽이 브라우저마다 달리 먹기 때문이다 */}
+          <span ref={tail} aria-hidden="true" style={{ flex: "0 0 auto", width: INSET }} />
         </div>
       </div>
+      {/* 아래 pill 줄은 칩 줄과 달리 가로로 흐르지 않는다 (wrap 이다). 끝을 보일 이유가
+          없으므로 화면 여백을 그대로 지킨다 — 여기서 `gutter` 를 쓴다 */}
       {active.length > 0 ? (
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--space-2)",
-          padding: "0 var(--gutter-screen) var(--space-2)" }}>
+          padding: `0 ${gutter} var(--space-2)` }}>
           <span style={{ fontSize: "var(--fs-micro)", fontWeight: "var(--fw-medium)", color: "var(--text-muted)" }}>적용 중</span>
           {active.map(a => (
             <button key={a.key} onClick={a.onClear} aria-label={`${a.label} 필터 해제`}

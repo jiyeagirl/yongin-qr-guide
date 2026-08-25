@@ -3,12 +3,15 @@ import {
   PageHeader, StatTile, MiniChart, DataTable, Cell, Card, Badge, Notice, SegmentedTabs,
   Select, CategoryIcon, CATEGORY_LABELS, OnnuriBadge,
 } from "../../design-systems/admin.js";
+/* 여기 `TAB_SHARE` 가 있었다 — 그 카드가 나가면서 함께 뺐다 (2026-08-24).
+   값 자체는 stats.js 에 그대로 있다 */
 import {
-  PERIODS, DEFAULT_PERIOD, statsFor, TOTAL_SCANS, TAB_SHARE, FACILITY_SHARE,
+  PERIODS, DEFAULT_PERIOD, statsFor, TOTAL_SCANS, FACILITY_SHARE,
   SCANS_BY_POINT, API_USED_TODAY,
 } from "../data/stats.js";
 import { REPORTS } from "../data/reports.js";
-import { QR_POINTS } from "../../screens/main/data/qr.js";
+/* `QR_POINTS` 를 여기서 읽었다 — 「설치 미완료 QR」 배지가 나가면서 함께 빠졌다
+   (2026-08-24). 아래 지점별 스캔 표는 로그 통계(`SCANS_BY_POINT`)를 쓴다 */
 import { STORES, discoverPicks, DISCOVER_PICK } from "../../screens/main/data/dunjeon.js";
 import { DISTRICTS, CURRENT_DISTRICT_ID, GU_ORDER } from "../../screens/main/data/districts.js";
 import { FACILITIES } from "../../screens/main/data/facilities.js";
@@ -116,7 +119,9 @@ export function Dashboard({ onNavigate }) {
   /* 처리 대기 — 원본이 아니라 **덮개를 거친 지금 값**을 센다. 원본을 세면 검수 중에
      신고 하나를 처리해도 숫자가 그대로 남아, 눌러도 아무 일이 없는 배지가 된다 */
   const reports = readCollection("reports", REPORTS);
-  const qr = readCollection("qr", QR_POINTS.map(p => ({ ...p, id: p.code })));
+  /* `qr` 컬렉션을 여기서 읽던 줄이 있었다 — 「설치 미완료 QR」 배지가 나가면서 함께
+     빠졌다 (2026-08-24). 이 화면이 QR 지점에서 읽는 것은 이제 아래 지점별 스캔 표뿐이고,
+     그쪽은 로그 통계(`SCANS_BY_POINT`)라 덮개를 거치지 않는다 */
   const stores = readCollection("stores", STORES);
   const facilities = readCollection("facilities", FACILITIES);
   const districtRows = readCollection("districts", DISTRICTS);
@@ -131,13 +136,27 @@ export function Dashboard({ onNavigate }) {
      [오류신고 관리] 옆에 늘 붙어 있고**, 그쪽은 어느 화면에 있든 보인다. 같은 수를 한
      화면에 두 번 적으면 둘이 다를 때(한쪽만 늦게 갱신될 때)를 의심하게 되고, 대시보드를
      떠나면 사라지는 쪽이 아니라 늘 보이는 쪽이 남는 것이 맞다.
-     **명세서 6장은 이 배지를 셋으로 적고 있다** — 그 목록에서 하나를 뺀 것이라
-     명세서를 고칠 때 함께 반영해야 한다 (숫자가 사라진 것이 아니라 자리를 옮긴 것이다). */
+
+     2026-08-24 에 「설치 미완료 QR」까지 빠져 **남은 배지는 「좌표 누락 점포」 하나다**
+     (이유는 아래 삭제 자리에 적는다). 자료가 온전하면 그 하나도 0 이라, 이 줄은 대개
+     아무것도 그리지 않는다 — 그게 맞는 모습이다. 명세서 6장이 "0건이 아닐 때만 노출"과
+     "0건이라 배지가 하나도 없을 때 「처리 대기 없음」 같은 안내를 대신 세우지 않는다"를
+     함께 정해 둔 것이 이 자리를 위해서다. */
   const pending = [
-    /* 설치 미완료 = 아직 안 붙었거나, 붙었는데 아직 안 켠 것. 둘 다 "열리지 않은 안내판"이다 */
-    { key: "qr", page: "qr", label: "설치 미완료 QR", tone: "warning",
-      count: qr.filter(p => p.installStatus !== "철거"
-        && (p.installStatus !== "설치완료" || !p.active)).length },
+    /* ── 「설치 미완료 QR」이 여기 있었다 (2026-08-24 삭제, 사용자 요청) ──────────
+       철거가 아니면서 설치완료가 아니거나 활성이 꺼진 지점을 세던 배지다. **그것은
+       처리 대기가 아니라 정상 상태다** — 설치예정은 안내판이 아직 제작·부착 중이라는
+       뜻이고(그 일은 이 화면 밖, 개발·제작 쪽이다), 설치완료인데 꺼둔 것은 열 준비가
+       될 때까지 담당자가 **일부러** 꺼둔 것이다. 둘 다 지금 손대야 할 일이 아닌데
+       배지는 「밀린 일 n건」이라고 말하고 있었다.
+
+       0 이 되지도 않는다. 지점 셋 가운데 `dunjeon-03`(설치완료 · 활성 꺼짐)이 늘 걸려
+       「1」이 붙박이로 떠 있었다 — 그 지점은 S11-A 를 검수하려고 일부러 그렇게 둔 것이라
+       끄면 검수할 화면이 없어진다. **없어지지 않는 배지는 읽히지 않고**, 옆의 「좌표 누락
+       점포」가 진짜로 떴을 때 그것까지 같이 묻힌다.
+
+       QR 지점의 설치 현황은 M12 가 통째로 맡는다. 거기에는 설치 상태 칩도 목록도 있고,
+       설치완료인데 꺼진 조합에는 수정 창이 경고 상자까지 띄운다 (QrPoints.jsx). */
     /* 좌표가 없으면 지도에 찍히지 않고 거리 계산도 안 된다. 자료가 온전하면 0 건이고,
        그때는 배지가 아예 뜨지 않는다 — 명세서가 "0건이 아닐 때만 노출"이라고 정했다. */
     { key: "coord", page: "stores", label: "좌표 누락 점포", tone: "warning",
@@ -231,8 +250,13 @@ export function Dashboard({ onNavigate }) {
           tone={newReports ? "dark" : "plain"} />
       </div>
 
-      {/* ── 차트 3종 ───────────────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr)",
+      {/* ── 차트 2종 ─────────────────────────────────────────────────────
+             「탭별 조회 비중」이 여기 가운데 있었다 (2026-08-24 삭제, 사용자 요청).
+             자세한 이유는 아래 삭제 자리의 주석에 적는다. 열이 셋에서 둘이 되므로
+             일별 추이가 3분의 2를 쓴다 — 남은 칸을 시설 유형 카드로 늘리지 않는다.
+             그 카드는 막대 넷짜리라 가로가 늘어도 알려주는 것이 늘지 않고, 추이 그래프는
+             하루 막대가 넓어질수록 값이 읽힌다. */}
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)",
         gap: "var(--space-4)", marginBottom: "var(--space-7)" }}>
         <Card>
           <Section title="일별 스캔 추이">
@@ -245,11 +269,20 @@ export function Dashboard({ onNavigate }) {
           </Section>
         </Card>
 
-        <Card>
-          <Section title="탭별 조회 비중" note="QR 스캔 이후 처음으로 진입한 탭">
-            <ShareList items={TAB_SHARE} />
-          </Section>
-        </Card>
+        {/* ── 「탭별 조회 비중」이 여기 있었다 (2026-08-24 삭제, 사용자 요청) ──────
+               「QR 스캔 이후 처음으로 진입한 탭」을 상점가 46 · 공공시설 34 · 둘러보기 20
+               으로 적던 카드다. **담당자가 그 수를 보고 할 수 있는 일이 없다** — 탭 셋은
+               시민 화면의 고정 구조이고(하단 탭 3개), 비중이 어떻게 나오든 탭을 없애거나
+               차례를 바꾸는 것은 관리자 화면의 권한이 아니다. 이 화면의 범위는 개별 건의
+               조회·수정·등록과 오류신고 보정이다.
+
+               옆의 「시설 유형별 조회 비중」은 남는다. 겉모습이 같은 ShareList 라 함께
+               지울 것처럼 보이지만 성격이 다르다 — 화장실이 압도적인지 AED 가 실제로
+               열리는지는 **안내판 문구와 등록 우선순위**를 바꾸고, 그 둘 다 담당자가
+               이 화면에서 실제로 하는 일이다 (stats.js 의 FACILITY_SHARE 주석).
+
+               자료(`TAB_SHARE`)는 stats.js 에 그대로 둔다 — 되살릴 자리가 생기면
+               쓸 값이고, 지금 지우면 그때 다시 지어내야 한다. */}
 
         <Card>
           <Section title="시설 유형별 조회 비중" note="공공시설 탭에서 열어 본 시설의 유형">

@@ -13,9 +13,8 @@ import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
-import {
-  ViewTabs, removedColumns, removedEmpty, undoToast, HIDE_ON_RESTORE, VIEW_ALL, VIEW_REMOVED,
-} from "./RemovedItems.jsx";
+/* 여기서 `./RemovedItems.jsx` 의 「전체 | 삭제된 항목」 탭을 가져왔다 (2026-08-24 삭제).
+   삭제가 영구가 되면서 되돌리는 자리가 통째로 없어졌다 — `data/store.js` 머리말 참조 */
 
 /* M07 축제 목록 · M08 축제 등록·수정 — 6건.
  *
@@ -90,7 +89,7 @@ function periodOf(f) {
 }
 
 export function Festivals({ onToast }) {
-  const { rows, removed, upsert, remove, restore, patch } = useCollection("festivals", FESTIVALS, null, "축제");
+  const { rows, upsert, remove, patch } = useCollection("festivals", FESTIVALS, null, "축제");
   const [state, setState] = React.useState("");
   const list0 = useListState([state]);
 
@@ -147,19 +146,14 @@ export function Festivals({ onToast }) {
     return o;
   }, [rows, ed.draft]);
 
-  /* 「전체 | 삭제된 항목」 — 탭이 바꾸는 것은 거르기 전의 목록뿐이다 (RemovedItems) */
-  const [view, setView] = React.useState(VIEW_ALL);
-  const inRemoved = view === VIEW_REMOVED;
-  const source = inRemoved ? removed : rows;
-
-  const filtered = source.filter(f => {
+  /* 제목 아래 「전체 | 삭제된 항목 n」 탭이 있었다 (2026-08-24 삭제) — 삭제가 영구가
+     되면서 되돌리는 자리가 없어졌다 (`data/store.js` 머리말) */
+  const filtered = rows.filter(f => {
     if (state && stateOf(f) !== state) return false;
     if (!list0.term) return true;
     return `${f.name} ${DISTRICT_NAME[f.districtId] || ""} ${f.program || ""}`.includes(list0.term);
   });
   const paged = list0.paginate(filtered);
-
-  const undo = f => { restore(f.id, f.name, HIDE_ON_RESTORE); onToast(undoToast(f.name)); };
 
   return (
     <>
@@ -167,8 +161,7 @@ export function Festivals({ onToast }) {
           자동 판정되며 직접 고를 수 없습니다」가 있었다. 고를 수 없다는 것은 **고르는 칸이
           없다는 사실**이 이미 말하고 있고, 없는 기능을 설명하는 줄이 목록보다 먼저 읽힌다. */}
       <PageHeader title="축제 정보 관리" count={`${filtered.length}건`}
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>축제 등록</Button>}
-        tabs={<ViewTabs value={view} onChange={setView} count={removed.length} />} />
+        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>축제 등록</Button>} />
 
       <Toolbar>
         <Select value={state} options={STATE_OPTIONS} onChange={e => setState(e.target.value)} />
@@ -179,9 +172,9 @@ export function Festivals({ onToast }) {
       <DataTable
         caption="등록된 축제 목록"
         rows={paged.rows} rowKey="id"
-        onRowClick={inRemoved ? undefined : ed.openEdit}
-        empty={inRemoved ? removedEmpty("축제") : { title: "해당 상태의 축제가 없습니다." }}
-        columns={(cols => (inRemoved ? removedColumns(cols, undo) : cols))([
+        onRowClick={ed.openEdit}
+        empty={{ title: "해당 상태의 축제가 없습니다." }}
+        columns={[
           { key: "name", label: "축제명", sortable: true },
           { key: "pose", label: "조아용", width: 88, align: "center",
             render: f => (f.pose
@@ -204,7 +197,7 @@ export function Festivals({ onToast }) {
               <Button variant="ghost" size="sm" icon="trash-2"
                 onClick={() => ed.askRemove(f)} style={{ color: "var(--state-danger)" }}>삭제</Button>
             ) },
-        ])} />
+        ]} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
         <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />
@@ -259,10 +252,11 @@ export function Festivals({ onToast }) {
            대신 **종료**가 있는데 그것은 지울 이유가 아니라 카테고리가 바뀌는 일이다
            (명세서 2-3: 종료일이 지나도 삭제·숨김이 아니라 완료 카테고리로 옮겨 계속 노출).
            그 사실을 먼저 말해야 "끝났으니 지운다"를 막을 수 있다.
-           되돌리는 자리는 다른 화면과 같으므로 마지막 줄은 같은 문장이다. */
-        footnote={"종료된 축제는 삭제하지 않고 [완료] 카테고리로 이동하여 계속 노출합니다. "
-          + "잘못 등록된 경우에만 삭제해 주세요. "
-          + "삭제한 항목은 목록 위 [삭제된 항목]에서 되돌릴 수 있습니다."}
+           **첫 줄은 다른 화면과 같다** (2026-08-24) — 되돌릴 수 없다는 사실은 화면마다
+           다르게 적을 여지가 없고, 무엇보다 이 상자에서 가장 먼저 읽혀야 한다. */
+        footnote={"삭제한 항목은 영구적으로 지워지며 되돌릴 수 없습니다. "
+          + "종료된 축제는 삭제하지 않고 [완료] 카테고리로 이동하여 계속 노출합니다. "
+          + "잘못 등록된 경우에만 삭제해 주세요."}
         onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
     </>
   );
