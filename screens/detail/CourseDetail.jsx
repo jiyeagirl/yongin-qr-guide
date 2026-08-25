@@ -426,10 +426,17 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
                 fontWeight: "var(--fw-bold)", color: "var(--text-heading)", lineHeight: 1.4 }}>
                 {doneCount}/{stops.length} 방문
               </span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: "var(--fs-caption)", color: "var(--text-muted)",
-                lineHeight: 1.4, wordBreak: "keep-all" }}>
-                {allDone ? "다 도셨어요" : doneCount ? "들른 곳에 표시해 두세요" : "표시는 선택입니다"}
-              </span>
+              {/* 하나도 안 눌렀을 때는 옆에 아무 말도 붙이지 않는다 (2026-08-25, 사용자 요청).
+                  「표시는 선택입니다」가 있던 자리다 — 아래 목록의 어느 행도 아직 표시되지
+                  않았는데 표시가 의무가 아니라고 미리 말하면, 하지 않아도 되는 일을 **있다고
+                  알려주는** 줄이 된다. 실제로 한 곳을 누르고 나면 「들른 곳에 표시해 두세요」가
+                  붙는다. */}
+              {allDone || doneCount ? (
+                <span style={{ flex: 1, minWidth: 0, fontSize: "var(--fs-caption)", color: "var(--text-muted)",
+                  lineHeight: 1.4, wordBreak: "keep-all" }}>
+                  {allDone ? "다 도셨어요" : "들른 곳에 표시해 두세요"}
+                </span>
+              ) : null}
             </div>
             <ProgressBar value={doneCount} max={stops.length} tone={allDone ? "success" : "brand"}
               label={`${stops.length}곳 중 ${doneCount}곳 방문`} />
