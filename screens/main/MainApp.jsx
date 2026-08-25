@@ -101,6 +101,12 @@ const tabOf = id => TABS.find(t => t.id === id);
 /* 거리 문구 — 1km 를 넘으면 km 로 적는다 ("약 1400m"는 크기 감이 안 온다) */
 const km = m => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`);
 
+/* 시트 스냅 트랜지션(--dur-slow 320ms)이 끝나 시트가 멈출 때까지 — 한 프레임 여유를 둔다.
+   시트가 멈춘 **뒤에** 해야 하는 일이 둘이다: 미리보기 카드를 띄우는 것(pickOnMap)과
+   가려졌던 마커를 다시 시야로 끌어올리는 것(아래 useEffect). 두 곳이 서로 다른 값을 쓰면
+   한쪽은 아직 움직이는 시트를 기준으로 계산하게 되므로 값을 여기 한 곳에 둔다. */
+const SHEET_SETTLE = 340;
+
 /* 접수번호 — 서버가 없으므로 여기서 만든다. 실연동 때 서버가 돌려주는 값으로 바뀐다.
    날짜를 넣는 이유: 사용자가 나중에 문의할 때 "언제 신고한 것"인지가 번호만으로 읽혀야 한다. */
 function receiptNo(now = new Date()) {
@@ -168,13 +174,17 @@ export function MainApp({ qr = null, noDistrict = false }) {
   const [toast, setToast] = React.useState(null);
   const mapApi = React.useRef(null);
   const toastTimer = React.useRef(null);
+  const holdTimer = React.useRef(null);   /* 시트가 내려오기를 기다리는 중인 선택 (pickOnMap) */
 
   const say = React.useCallback(msg => {
     setToast(msg);
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2200);
   }, []);
-  React.useEffect(() => () => clearTimeout(toastTimer.current), []);
+  React.useEffect(() => () => {
+    clearTimeout(toastTimer.current);
+    clearTimeout(holdTimer.current);
+  }, []);
 
   const isFacility = tab === "facility";
   const isDistrict = tab === "district";
@@ -311,15 +321,38 @@ export function MainApp({ qr = null, noDistrict = false }) {
      카드가 없는데 그 높이가 남아 있으면 다음 계산의 씨앗이 된다. */
   const changeSnap = React.useCallback(next => {
     setSnap(next);
-    if (next === "full") { setSelected(null); setPreviewH(0); }
+    /* 기다리는 중인 선택도 함께 버린다 (pickOnMap 의 대기). 그대로 두면 시트를 도로
+       올린 뒤에 타이머가 깨어나 전체 스냅에서 selected 가 되살아난다 */
+    if (next === "full") { clearTimeout(holdTimer.current); setSelected(null); setPreviewH(0); }
   }, []);
 
   /* 마커 탭 — 카드를 띄우고 그 마커를 "보이는 지도 영역"의 중앙으로 올린다.
-     패딩 계산에는 방금 뜬 카드 높이도 들어가야 하므로 다음 프레임에 focus 한다. */
+     패딩 계산에는 방금 뜬 카드 높이도 들어가야 하므로 다음 프레임에 focus 한다.
+
+     ── 시트가 내려와야 하면 **내려온 다음에** 띄운다 (2026-08-25, 사용자 요청) ────────
+     전체 스냅에서 목록 행을 누르면 시트가 절반으로 내려가는데, 종전에는 그 전에 카드를
+     띄웠다. 그래서 카드가 **화면 맨 위에서 나타나 지도를 가로질러 흘러내렸다**:
+     카드는 `bottom={sheetH}` 로 시트 위 모서리에 얹혀 있고 sheetH 는 트랜지션이 도는
+     동안 프레임마다 갱신되는 값이라(Sheet 의 report_ 루프), 뜨는 순간의 앵커가 "아직
+     전체인 시트의 윗변" — 곧 필터 바 바로 아래였다. 카드가 제멋대로 움직인 것이 아니라
+     시트를 따라 내려온 것인데, 보는 쪽에는 위에서 떨어지는 한 장으로 보인다.
+
+     그래서 시트가 멈춘 자리에서 뜨게 한다. 늦어지는 320ms 동안 못 보는 것은 없다 —
+     전체 스냅은 시트가 지도를 통째로 덮은 상태라 그동안은 카드가 설 자리도, 켜진 마커도
+     화면에 없다. 시트가 이미 절반·접힘이면 기다릴 것이 없으므로 종전대로 즉시 뜬다
+     (지도 마커를 직접 누르는 경우가 전부 이쪽이다).
+
+     focus 도 함께 미룬다. 카드가 없는 사이에 마커를 잡으면 지도 가림 높이에 카드 높이가
+     빠져 있어(mapPadBottom) 곧 뜰 카드 뒤로 마커가 들어간다. */
   const pickOnMap = React.useCallback(item => {
-    setSelected(item);
-    if (snap === "full") setSnap("half");
-    requestAnimationFrame(() => requestAnimationFrame(() => focus(item.lat, item.lng)));
+    clearTimeout(holdTimer.current);
+    const show = () => {
+      setSelected(item);
+      requestAnimationFrame(() => requestAnimationFrame(() => focus(item.lat, item.lng)));
+    };
+    if (snap !== "full") { show(); return; }
+    setSnap("half");
+    holdTimer.current = setTimeout(show, SHEET_SETTLE);
   }, [snap, focus]);
 
   /* ── 목록 행을 눌러도 마커를 누른 것과 같다 (2026-08-18) ─────────────────────
@@ -356,7 +389,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
   /* 시트 높이가 바뀌면 선택된 마커를 다시 시야로 끌어올린다 (스냅 이동 후에도 안 가려지게) */
   React.useEffect(() => {
     if (!selected || snap === "full") return;
-    const t = setTimeout(() => focus(selected.lat, selected.lng), 340); /* --dur-slow 이후 */
+    const t = setTimeout(() => focus(selected.lat, selected.lng), SHEET_SETTLE);
     return () => clearTimeout(t);
   }, [snap, selected, focus]);
 

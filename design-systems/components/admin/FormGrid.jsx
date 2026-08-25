@@ -64,6 +64,15 @@ export function requiredKey(required) {
   return required ? "true" : "false";
 }
 
+/* 그 배지 하나. **폼 밖에서도 쓴다** (2026-08-25) — 축제 폼의 1:N 목록(프로그램 일정 ·
+   부스 위치)은 FormField 가 아니라 Repeater 인데, 같은 폼 안에서 어떤 자리는 필수/선택이
+   적혀 있고 어떤 자리는 아무 말이 없으면 담당자는 적히지 않은 쪽을 필수로 읽는다
+   (별표가 붙어 있는 열이 안에 있어 더 그렇다). 배지의 말과 색을 여기 한 곳에서 정한다. */
+export function RequiredBadge({ required = false }) {
+  const b = REQUIRED_BADGE[requiredKey(required)];
+  return <Badge tone={b.tone} size="sm">{b.label}</Badge>;
+}
+
 /* 항목 하나. children 을 주면 그것을 쓰고, 없으면 type 에 맞는 컨트롤을 만든다.
    타입 스위치를 여기에 두는 이유: 화면 열넷이 저마다 switch 문을 갖게 하면
    "select 는 어떻게 그리더라"가 열네 벌이 되고, 그중 하나는 반드시 달라진다. */
@@ -73,16 +82,21 @@ export function FormField({
   /* `type="password"` 칸에 눈 단추를 세울지 (Input 의 reveal). 항목표가 정한다 —
      같은 폼 안에서도 자기 비밀번호를 넣는 칸과 남의 것을 넣어 주는 칸은 사정이 다르다 */
   reveal = false,
-  editable = false, span = 1, children, style, ...rest
+  span = 1, children, style, ...rest
 }) {
   const set = v => { if (onChange) onChange(v); };
-  const badge = REQUIRED_BADGE[requiredKey(required)];
-  /* ⚙(자동)이면서 **고칠 수 있는** 항목이 있다 — 점포의 업종 칩이 그것이다 (명세서 2-2:
-     "자동 산출 후 수기 변경 가능"). 그때까지 ⚙ 는 「못 고침」과 한 몸이었는데, 둘은 다른
-     이야기다: ⚙ 는 **값이 어디서 왔는가**(규칙이 만들었다)이고, 읽기 전용은 **누가 고칠 수
-     있는가**다. `editable` 이 그 둘을 가른다 — 배지는 ⚙ 그대로 두고 칸만 열어 준다.
-     기본값이 false 라 나머지 ⚙ 항목(점포수 · 조회수 …)은 전과 같이 읽기 전용이다. */
-  const readOnly = type === "readonly" || (required === "auto" && !editable);
+  /* ── `editable` 이 여기 있었다 (2026-08-24 신설 → 2026-08-25 삭제) ────────────
+     ⚙ 이면서 고칠 수 있는 항목을 위한 예외였다 (점포의 업종 칩 · 상점가의 점포수 둘).
+     ⚙ 는 **값이 어디서 왔는가**이고 읽기 전용은 **누가 고칠 수 있는가**라, 둘은 다른
+     이야기라는 것이 근거였다. 맞는 말인데 **화면에서는 그 둘이 갈리지 않았다** — 담당자
+     눈에 들어오는 것은 「사람이 넣지 않는 값」이라는 배지와 그 밑에 열려 있는 입력칸,
+     서로 반대되는 두 신호다.
+
+     셋 다 ● 이 되면서(2026-08-25, 사용자 요청. fields.js 의 해당 자리) 쓰는 항목이
+     없어졌다. 다시 같은 것이 필요해지면 되살릴 것은 이 플래그가 아니라 그 판단이다:
+     담당자가 값을 정하는 칸이면 ● 이고, 규칙이 만들어 주는 값을 담당자가 **덮을 수도**
+     있는 것이라면 배지가 아니라 hint 가 그 사실을 적는다. */
+  const readOnly = type === "readonly" || required === "auto";
 
   /* 칸 안에 적을 수 있는 타입인가 — 위 머리말 참조 */
   const inline = !readOnly && !["select", "multiselect", "switch", "date"].includes(type);
@@ -186,7 +200,7 @@ export function FormField({
         <span style={{ fontSize: "var(--fs-label)", fontWeight: "var(--fw-semibold)", color: "var(--text-heading)" }}>
           {label}
         </span>
-        <Badge tone={badge.tone} size="sm">{badge.label}</Badge>
+        <RequiredBadge required={required} />
       </div>
       {control}
       {foot ? (

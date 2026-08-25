@@ -1,7 +1,7 @@
 import React from "react";
 import {
   PageHeader, Toolbar, DataTable, ConfirmDialog, Button, Select, Badge, Switch,
-  Pagination, AssetPicker, Repeater, Mascot,
+  Pagination, AssetPicker, Repeater, Mascot, RequiredBadge,
   FESTIVAL_STATES, festivalBadge, EMPTY_MARK,
 } from "../../design-systems/admin.js";
 import { DISTRICTS } from "../../screens/main/data/districts.js";
@@ -243,8 +243,15 @@ export function Festivals({ onToast }) {
                     이미 정해져 있으므로, 달력이 그 밖의 날을 흐리게 두면 담당자가 다른 달을
                     잘못 고르는 일 자체가 없어진다. 기간을 아직 안 넣었으면 묶지 않는다 —
                     아무 날도 못 고르는 달력이 되는 쪽이 나쁘다. */}
+                {/* 「선택」 배지를 단다 (2026-08-25, 사용자 요청). 두 목록은 명세서의
+                    조건부 항목이라(`C` — 자료가 오면 채운다) 축제 하나에 한 줄도 없을 수
+                    있는데, 위 폼의 칸들이 전부 필수/선택을 달고 있는 사이에서 이 둘만
+                    아무 말이 없었다. 게다가 안에 별표 붙은 열이 있어(시작·종료·이름)
+                    **목록 자체가 필수로 읽혔다** — 별표는 「줄을 만들었으면 채우라」는
+                    뜻이지 「줄을 만들라」가 아니다. 폼의 다른 칸과 같은 배지, 같은 말을
+                    쓴다 (design-systems 의 RequiredBadge). */}
                 <Repeater
-                  title="프로그램 일정"
+                  title="프로그램 일정" badge={<RequiredBadge />}
                   columns={withPeriod(PROGRAM_COLUMNS, ed.draft.values)}
                   rows={ed.draft.values.programs || []}
                   onChange={p => ed.set("programs", p)}
@@ -257,7 +264,7 @@ export function Festivals({ onToast }) {
                     그리고 지도 시절의 「번호」·「유형」까지 뺐다 — 세 칸이 그대로 시민 화면의
                     한 줄이 된다. 자세한 사정은 data/fields.js 의 BOOTH_COLUMNS 주석. */}
                 <Repeater
-                  title="부스 위치"
+                  title="부스 위치" badge={<RequiredBadge />}
                   columns={withPeriod(BOOTH_COLUMNS, ed.draft.values)}
                   rows={ed.draft.values.booths || []}
                   onChange={b => ed.set("booths", b)}

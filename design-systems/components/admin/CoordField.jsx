@@ -45,9 +45,17 @@ export function fixCoord(v) {
 
 export function CoordField({
   label = "좌표", lat, lng, name, appKey, onChange, span = 2, height = 240, note,
+  /* 항목표가 정한다 (fields.js 의 COORD). 2026-08-25 부터 ● 이다 — 이 값이 없으면 그
+     자료는 지도에 없는 것이나 같아서, 비운 채로 저장되면 안 된다 (그쪽 머리말).
+     화면이 직접 적지 않고 표에서 흘러온다 (RecordForm 의 coord 슬롯). */
+  required = "auto", error,
 }) {
   const has = lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
   const off = has && outOfBounds(lat, lng);
+  /* 좌표가 들어오면 오류는 스스로 사라진다. 이 칸의 오류는 「좌표 없음」 하나뿐이라
+     값이 생긴 순간 지난 이야기가 된다 — 다른 칸처럼 입력 이벤트로 지울 수가 없다
+     (지도를 누르는 것은 `lat`·`lng` 를 고치는 일이고 오류는 `coord` 에 달려 있다) */
+  const err = has ? null : error;
 
   const pick = React.useCallback((la, ln) => {
     if (onChange) onChange({ lat: fixCoord(la), lng: fixCoord(ln) });
@@ -57,7 +65,7 @@ export function CoordField({
     /* 「주소를 고르면 자동으로 들어옵니다」를 뺐다 (2026-08-20) — 빈 지도 자리가 이미
        같은 말을 하고 있고, 주소를 고르고 나면 그 말이 필요 없다. 남긴 한 줄은 설명이 아니라
        **보이지 않는 조작**이다: 지도를 눌러 옮기거나 핀을 끌 수 있다는 것은 화면만 봐서는 모른다. */
-    <FormField label={label} required="auto" span={span}
+    <FormField label={label} required={required} span={span} error={err}
       hint={note || "자리가 틀리면 지도를 눌러 옮기거나 핀을 끌어 맞춥니다."}>
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: 6 }}>
@@ -69,9 +77,11 @@ export function CoordField({
         </div>
 
         {/* KakaoMap 의 뿌리가 position:absolute 라 크기를 가진 relative 상자가 필요하다 */}
+        {/* 테두리가 상태를 말한다 — 오류(붉게)가 범위 경고(노랗게)보다 앞이다.
+            둘이 함께 뜰 수는 없다: 오류는 좌표가 없을 때이고 경고는 있을 때다 */}
         <div style={{ position: "relative", height, borderRadius: "var(--radius-md)", overflow: "hidden",
           border: "var(--stroke-hairline) solid "
-            + (off ? "var(--state-warning)" : "var(--border-default)") }}>
+            + (err ? "var(--state-danger)" : off ? "var(--state-warning)" : "var(--border-default)") }}>
           {has ? (
             /* key 를 주지 않는다. 시민용 셸에서 지도를 다시 만들지 않는 이유(U-CM-16)와는
                다른 이유인데, 여기서는 **핀을 끌 때마다 지도가 새로 생기면 안 되기** 때문이다.

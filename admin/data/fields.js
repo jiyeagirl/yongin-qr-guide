@@ -139,24 +139,30 @@ export const DISTRICT_FIELDS = [
     range: "최대 100자", maxLength: 100,
     example: "처인구 김량장동 133-37번지 일원", span: 2 },
 
-  /* ── ⚙ 이면서 고칠 수 있다 (2026-08-25, 사용자 요청) ───────────────────────
-     점포 목록에서 센 값이 늘 맞는 것은 아니다. **점포 자료가 있는 상점가가 32곳 중 한
-     곳뿐이라**(둔전) 나머지 31곳의 수는 애초에 세어 나온 값이 아니고, 현장에서 한두 곳이
-     새로 들어왔는데 점포 자료가 아직 안 들어온 사이에도 담당자가 게시값을 맞춰야 한다.
-     못 고치게 두면 그 사이 내내 사용자 화면 머리글이 틀린 수를 적는다.
+  /* ── ⚙ 였다가 ● 이 되었다 (2026-08-25, 사용자 요청. 같은 날 두 번 고친 자리다) ──
+     처음에는 못 고치는 값이었다. 그러면 **틀린 수를 고칠 자리가 없다** — 점포 자료가 있는
+     상점가가 32곳 중 한 곳뿐이라(둔전) 나머지 31곳의 수는 애초에 세어 나온 값이 아니고,
+     현장에 한두 곳이 새로 들어왔는데 점포 자료가 아직 안 들어온 사이에도 담당자가
+     게시값을 맞춰야 한다. 그래서 먼저 ⚙ 배지를 둔 채 칸만 열었다(`editable`).
 
-     업종 칩(`cat`)과 같은 처리다 — 배지는 ⚙ 그대로 두고(값을 만드는 것은 여전히 집계다)
-     칸만 연다. 담당자가 손으로 고치면 그 뒤로 집계가 그 값을 덮지 않는다
-     (Districts.jsx 의 `countManual`). 손으로 정한 값을 자동 규칙이 덮으면 화면을
+     그 절충을 걷어낸다. **배지가 ⚙ 인 채로 고칠 수 있는 칸은 담당자에게 두 가지를 동시에
+     말한다** — "사람이 넣지 않는 값"(배지)과 "여기 넣으세요"(열린 칸). 실제로 이 자리에서
+     일어나는 일은 담당자가 값을 정하는 것이고, 비워 두면 사용자 화면 머리글이 「0곳」이
+     되므로 비울 수 있는 칸도 아니다. 그러면 그냥 ● 이다.
+
+     **집계는 없어지지 않는다.** 수정 창을 열 때 센 값이 칸에 들어와 있고(Districts.jsx 의
+     `openEdit`), 담당자가 그것을 그대로 저장하면 계속 세는 값을 따라간다. 다르게 적으면
+     그때부터 그 값이 굳는다 (`countManual`) — 손으로 정한 값을 자동 규칙이 덮으면 화면을
      못 믿게 된다.
 
      **안내 줄은 두지 않는다** (2026-08-25, 사용자 요청). 「점포 목록에서 센 값입니다…」와
-     「위 점포수를 넘을 수 없습니다」 둘 다 뺐다 — 앞은 ⚙ 배지가 이미 하는 말이고,
-     뒤는 어겼을 때 그 칸에 오류가 뜬다 (앞머리 「화면 문구 원칙」의 마지막 두 항목). */
-  { key: "storeCount", spec: "store_count", label: "점포수", required: "auto",
-    type: "number", unit: "곳", min: 0, editable: true },
-  { key: "onnuriCount", spec: "onnuri_count", label: "온누리 가맹 점포수", required: "auto",
-    type: "number", unit: "곳", min: 0, editable: true },
+     「위 점포수를 넘을 수 없습니다」 둘 다 뺐다 — 앞은 담당자가 이 칸에서 하는 일과
+     상관없는 우리 쪽 사정이고, 뒤는 어겼을 때 그 칸에 오류가 뜬다 (앞머리 「화면 문구
+     원칙」의 마지막 두 항목). */
+  { key: "storeCount", spec: "store_count", label: "점포수", required: true,
+    type: "number", unit: "곳", min: 0 },
+  { key: "onnuriCount", spec: "onnuri_count", label: "온누리 가맹 점포수", required: true,
+    type: "number", unit: "곳", min: 0 },
 
   /* ── `onnuri_market_name`(온누리 원본 표기명)이 여기 없는 이유 (2026-08-20) ──
      온누리 가맹점은 주소가 아니라 원본의 `소속 시장명` 컬럼으로 걸러내고, 그 표기가
@@ -201,10 +207,21 @@ export const ONNURI_TYPE_OPTIONS = [
    표에서 빼면 그 항목이 어디로 갔는지 알 수 없다. 화면이 이 자리에 CoordField 를
    끼워 넣는다 (RecordForm 의 slots).
 
-   **점포와 공공시설이 같은 항목을 쓰므로 여기 한 번만 적는다.** 주소 바로 아래인 것도
-   이유가 있다: 좌표는 주소에서 나온 값이라 둘이 떨어져 있으면 지도가 왜 저기 있는지
-   알 수 없다. */
-const COORD = { key: "coord", spec: "lat · lng", label: "좌표", required: "auto", type: "coord", span: 2 };
+   **점포·공공시설·QR 지점 셋이 같은 항목을 쓰므로 여기 한 번만 적는다.** 주소 바로
+   아래인 것도 이유가 있다: 좌표는 주소에서 나온 값이라 둘이 떨어져 있으면 지도가 왜
+   저기 있는지 알 수 없다.
+
+   ── ⚙ 가 아니라 ● 이다 (2026-08-25, 사용자 요청) ───────────────────────────
+   「주소를 고르면 자동으로 들어온다」는 이유로 ⚙ 였다. 들어오는 길은 그대로지만 **없어도
+   저장되는 값이어서는 안 된다** — 이 서비스가 화면에 적는 거리와 그리는 핀이 전부 이
+   좌표에서 나온다. 좌표가 없는 점포는 지도에 없고, 좌표가 없는 QR 지점은 그 코드로 들어온
+   시민이 보는 모든 거리의 기준점이 없다는 뜻이다. 그런 줄이 목록에 조용히 섞이면 화면
+   어디에도 표시가 나지 않는다.
+
+   ⚙ 를 떼도 담당자가 하는 일은 늘지 않는다. 주소를 고르면 채워지고, 자리가 틀리면 지도를
+   눌러 옮긴다 — 지금까지와 똑같다. 달라지는 것은 **끝내 비어 있을 때 저장이 막힌다**는
+   것뿐이다. 검사는 `lat`·`lng` 를 본다 (아래 validate 의 coord 갈래). */
+const COORD = { key: "coord", spec: "lat · lng", label: "좌표", required: true, type: "coord", span: 2 };
 
 export const STORE_FIELDS = [
   { key: "name", spec: "name", label: "상호명", required: true, type: "text",
@@ -247,17 +264,20 @@ export const STORE_FIELDS = [
   { key: "onnuriType", spec: "onnuri_type", label: "온누리 상품권 종류", required: false,
     type: "multiselect", options: ONNURI_TYPE_OPTIONS },
 
-  /* ── 이 칸은 ⚙ 이면서 고칠 수 있다 (2026-08-24) ─────────────────────────────
-     명세서 2-2 의 `chip_category` 는 "자동 산출 후 수기 변경 가능"이고 화면도 그렇게
-     동작하려 했는데 (Stores.jsx 의 setField 가 chipManual 을 기억한다), **폼에서는 고칠
-     수가 없었다.** `required: "auto"` 한 값이 ⚙ 배지와 읽기 전용을 함께 뜻했기 때문이다.
-     설명 줄은 「아래에서 수기로 바꿀 수 있습니다」라고 적혀 있어, 없는 자리를 가리키면서
-     못 하는 일을 하라고 말하고 있었다.
+  /* ── ⚙ 였다가 ● 이 되었다 (2026-08-24 → 2026-08-25, 사용자 요청) ────────────
+     명세서 2-2 의 `chip_category` 는 "자동 산출 후 수기 변경 가능"이다. 처음에는 ⚙ 라
+     폼에서 아예 고칠 수가 없었고(`required: "auto"` 한 값이 배지와 읽기 전용을 함께
+     뜻했다), 2026-08-24 에 `editable` 로 그 둘을 갈라 배지는 ⚙ 로 둔 채 칸만 열었다.
 
-     `editable` 로 그 둘을 갈랐다 (FormGrid). 배지는 ⚙ 그대로 — 값을 만드는 것은 여전히
-     규칙이다 — 두고 칸만 열었다. 설명도 그 두 가지를 그대로 적는다. */
-  { key: "cat", spec: "chip_category", label: "표시 업종 칩", required: "auto", type: "select",
-    options: CHIP_OPTIONS, span: 2, editable: true,
+     이제 배지도 ● 이다. 상점가의 점포수 둘과 같은 이유다 — ⚙ 인 채로 열린 칸은 "사람이
+     넣지 않는 값"과 "여기 넣으세요"를 한 자리에서 함께 말한다. 그리고 이 칸은 **비울 수
+     없다**: 칩이 없는 점포는 상점가 탭의 업종 칩 어디에도 걸리지 않아, 335곳 목록에서
+     조건을 하나라도 걸면 사라진다.
+
+     자동 산출은 그대로다 — 대·중·소분류를 고치면 이 칸이 따라 바뀌고, 담당자가 칩을 직접
+     고른 뒤로는 멈춘다 (Stores.jsx 의 `chipManual`). 그 두 가지를 아래 hint 가 적는다. */
+  { key: "cat", spec: "chip_category", label: "표시 업종 칩", required: true, type: "select",
+    options: CHIP_OPTIONS, span: 2,
     hint: "상권업종 대·중·소분류에서 자동 산출된 값입니다. 관리자가 수기로 수정 가능합니다." },
 
   { key: "visible", spec: "is_visible", label: "노출 여부", required: true, type: "switch",
@@ -696,10 +716,28 @@ export function isRequired(field, values) {
   return !!field.required;
 }
 
+/* 좌표가 들어와 있는가. 항목표의 키는 `coord` 하나인데 값은 `lat`·`lng` 둘로 저장되므로
+   (지도 한 칸이 두 값을 다룬다 — CoordField), 이 칸만 자기 키를 보지 않는다.
+   오류는 `coord` 에 단다: 화면이 그 자리에 세우는 것도 지도 한 칸이다. */
+const hasCoord = v => {
+  const a = Number(v.lat), b = Number(v.lng);
+  return v.lat != null && v.lng != null && Number.isFinite(a) && Number.isFinite(b);
+};
+
 export function validate(fields, values, extra) {
   const bad = {};
   for (const f of fields) {
     if (f.required === "auto" || f.type === "readonly") continue;
+
+    if (f.type === "coord") {
+      /* 길이·형식을 볼 것이 없다. 범위를 벗어난 좌표는 **막지 않는다** — V-01 이 "경고 후
+         확인"이라 CoordField 가 그 자리에서 띠로 적는다 (그쪽 머리말) */
+      if (isRequired(f, values) && !hasCoord(values)) {
+        bad[f.key] = "도로명주소를 선택하거나 지도에서 위치를 지정해 주세요.";
+      }
+      continue;
+    }
+
     const raw = values[f.key];
     const empty = f.type === "multiselect"
       ? !(Array.isArray(raw) && raw.length)

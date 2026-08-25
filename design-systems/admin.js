@@ -31,7 +31,7 @@ export { DataTable, Cell } from "./components/admin/DataTable.jsx";
 export { Toolbar } from "./components/admin/Toolbar.jsx";
 export { Modal } from "./components/admin/Modal.jsx";
 export { ConfirmDialog, DELETE_NOTE } from "./components/admin/ConfirmDialog.jsx";
-export { FormGrid, FormField, FormSection, requiredKey } from "./components/admin/FormGrid.jsx";
+export { FormGrid, FormField, FormSection, RequiredBadge, requiredKey } from "./components/admin/FormGrid.jsx";
 export { MiniChart } from "./components/admin/MiniChart.jsx";
 
 /* ── 관리자 전용: 명세서의 특수 입력 항목 ────────────────────────────────── */

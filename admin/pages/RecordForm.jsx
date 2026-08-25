@@ -38,7 +38,19 @@ export function RecordForm({
     <FormGrid note={note} columns={columns}>
       {before}
       {fields.map(f => {
-        if (slots[f.key] !== undefined) return <React.Fragment key={f.key}>{slots[f.key]}</React.Fragment>;
+        if (slots[f.key] !== undefined) {
+          /* ── 좌표 칸에는 표의 값을 얹어 준다 (2026-08-25) ──────────────────────
+             슬롯은 화면이 통째로 만들어 넘기는 물건이라 보통은 손대지 않는다. 좌표만
+             예외인 이유: **필수 여부와 오류는 항목표가 정하는 것**인데(2026-08-25 부터
+             ● 이다) 슬롯을 세 화면이 각자 만들고 있어, 그대로 두면 세 곳이 같은 값을
+             베껴 적게 된다 — 표를 고쳐도 화면이 따라오지 않는 구조가 그것이다.
+             `type: "coord"` 로 좁혀 두어 다른 슬롯(축제의 조아용 그리드)은 지나간다. */
+          const slot = slots[f.key];
+          const filled = f.type === "coord" && React.isValidElement(slot)
+            ? React.cloneElement(slot, { required: f.required, error: errors[f.key] })
+            : slot;
+          return <React.Fragment key={f.key}>{filled}</React.Fragment>;
+        }
 
         if (f.type === "address") {
           return (
@@ -55,7 +67,7 @@ export function RecordForm({
             error={errors[f.key]}
             type={f.type} options={f.options} rows={f.rows} span={f.span} unit={f.unit}
             min={f.min} max={f.max} maxLength={f.maxLength} disabled={f.disabled}
-            editable={f.editable} reveal={f.reveal}
+            reveal={f.reveal}
             value={values[f.key]}
             onChange={v => onChange(f.key, v)} />
         );

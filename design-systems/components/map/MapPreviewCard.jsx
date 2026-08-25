@@ -11,6 +11,13 @@ import { OnnuriBadge } from "../core/OnnuriBadge.jsx";
    시트 상단에 앵커링되며(플로팅 컨트롤과 같은 규칙), 이 카드가 떠 있는 동안에는
    카드 높이까지 지도 가림 높이에 포함되어야 한다. 그래서 onHeightChange 로 실제 높이를 알린다.
 
+   ── bottom 에 트랜지션을 걸지 않는다 (2026-08-25) ────────────────────────────
+   앵커(bottom)로 받는 시트 높이는 이미 **프레임마다 갱신되는 값**이다 (Sheet 의 report_
+   루프가 스냅 트랜지션이 도는 내내 실측을 올려보낸다). 그 위에 같은 길이의 트랜지션을
+   한 번 더 걸면 카드가 시트를 320ms 뒤에서 쫓아가, 시트가 멈춘 뒤에도 혼자 미끄러진다.
+   손으로 끄는 동안에는 손가락과 카드 사이가 눈에 띄게 벌어졌다. 지금은 앵커가 시트의
+   윗변을 그대로 따라가므로, 카드는 붙어 있는 것처럼 움직인다.
+
    ── compact ────────────────────────────────────────────────────────────────
    지도가 작은 화면(S08 코스 상세는 지도가 화면의 절반 이하다)에서는 이 카드가 지도를
    거의 다 덮는다. compact 는 **덮는 높이를 줄이는 변형**이다:
@@ -50,8 +57,7 @@ export function MapPreviewCard({ item, icon, bottom = 0, compact = false, onClos
         display: "flex", alignItems: "flex-start", gap: compact ? "var(--space-2)" : "var(--space-3)",
         padding: compact ? "var(--space-3)" : "var(--space-4)", background: "var(--surface-card)",
         border: "var(--stroke-hairline) solid var(--border-default)", borderRadius: "var(--radius-card)",
-        boxShadow: "var(--shadow-raised)",
-        transition: "bottom var(--dur-slow) var(--ease-out)", ...style }} {...rest}>
+        boxShadow: "var(--shadow-raised)", ...style }} {...rest}>
       {/* 아이콘은 호출하는 쪽이 넘길 수 있다 — 점포는 CategoryIcon, 편의시설은 FacilityIcon 이어야 하고
           둘을 한 아이콘 체계로 뭉뚱그리면 5-2 의 아이콘 규칙이 깨진다 */}
       <span style={{ flex: "0 0 auto", paddingTop: 2, color: "var(--text-muted)" }}>
