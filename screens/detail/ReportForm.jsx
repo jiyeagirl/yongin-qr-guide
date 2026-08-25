@@ -204,9 +204,13 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
           <p style={{ display: "flex", gap: "var(--space-2)", fontSize: "var(--fs-caption)",
             color: "var(--text-muted)", lineHeight: 1.55 }}>
             <Icon name="shield-check" size={16} style={{ marginTop: 2 }} />
+            {/* 119 안내를 뺐다 (2026-08-25, 사용자 요청) — 「긴급한 상황이나 신고가 필요한
+                경우에는 119 등 공식 채널을 이용해 주세요」. 이 화면은 **자료가 틀렸다고
+                알리는 자리**이지 급한 일을 처리하는 자리가 아니다. 급한 사람은 애초에
+                이 폼을 열지 않고, 여기까지 온 사람에게는 걸릴 데 없이 떠 있는 문장이다 —
+                안전시설을 보여준 화면(S02·S08)에서 「그래도 급하면 119」로 잇는 것과 다르다 */}
             <span>
               접수된 내용은 안내 정보를 수정하는 데 활용됩니다. 개별 답변은 어려운 점 양해 부탁드립니다.
-              긴급한 상황이나 신고가 필요한 경우에는 119 등 공식 채널을 이용해 주세요.
             </span>
           </p>
         </DetailBody>

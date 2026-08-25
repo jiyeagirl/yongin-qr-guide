@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  SectionHeader, Notice, Pagination, FacilityRow, FACILITY_LABELS, SAFETY, CONVENIENCE,
+  SectionHeader, Notice, Pagination, FacilityRow, SAFETY, CONVENIENCE,
 } from "../../design-systems/index.js";
 import { FACILITY_PAGE_SIZE } from "./config.js";
 
@@ -54,25 +54,23 @@ const GROUPS = [
   { id: "comfort", title: "편의시설", types: CONVENIENCE },
 ];
 
-/* 기준일 문구 (입력 항목 정의서 3-2). **시설 4종이 각각 다른 값을 갖는다** — 표준데이터
-   갱신 주기가 유형마다 달라서다. 그래서 **화면에 깔린 유형만** 적는다: 한 종만 보고 있으면
-   그 값 하나를, 여럿이면 그 여럿을. 대표값 하나로 뭉치면 나머지 종에는 틀린 날짜가 붙고,
-   보이지도 않는 유형의 날짜까지 적으면 그 줄이 화면과 어긋난다. */
-function asOfLine(asOf, types, labels) {
-  if (types.length === 1) return `공공시설 정보 ${asOf[types[0]] || ""} 기준`;
-  const parts = types.map(t => `${labels[t] || t} ${asOf[t]}`);
-  return `공공시설 정보 ${parts.join(" · ")} 기준`;
-}
+/* ── 기준일 문구를 뺐다 (2026-08-25, 사용자 요청) ────────────────────────────
+   `asOfLine(asOf, types, labels)` 이 여기 있었다. 시설 4종이 각각 다른 값을 갖고(표준데이터
+   갱신 주기가 유형마다 다르다) 화면에 깔린 유형만 골라 적던 함수라, 전체를 보고 있으면
+   「공공시설 정보 AED 2026.05. · 화장실 2026.04. · 쉼터 2026.06. · 대피소 2026.03. 기준.」
+   이 참고용 고지 앞에 통째로 붙었다. **고지 한 줄이 날짜 넷을 이고 있으면 정작 읽어야 할
+   말(참고용 · 119)이 뒤로 밀린다.**
+
+   `asOf` prop 은 그대로 받는다 — 셸이 넘기는 값이고, 상세 화면(S08 FacilityDetail)은
+   그 유형 하나의 기준일을 여전히 적는다. 거기서는 값이 하나라 한 줄이 짧다. */
 
 export function FacilitySheet({
   rows,
-  /* 고른 유형들. **빈 배열이 전체**다 (2026-08-20). 2026-08-24 에 [전체] 칩이 돌아왔지만
-     그것이 바꾸는 것은 없다 — 그 칩은 새 상태를 만들지 않고 **이 빈 배열을 보여주고
-     되돌려 줄 뿐**이다 (FilterBar 머리말). 이 값은 목록을 거르는 데 쓰이지 않는다:
-     걸러진 결과는 셸이 rows 로 내려준다. 여기서는 **무엇을 보고 있는지**를 적는 데만 쓴다
-     (기준일 줄) — 거르는 자리가 둘이면 칩과 목록이 갈릴 길이 열린다. */
-  types = [],
-  selectedId, onPick, asOf,
+  /* `types`(고른 유형들)와 `asOf`(유형별 기준일)를 받던 자리다 (2026-08-25 삭제).
+     **거르는 데 쓰던 값이 아니었다** — 걸러진 결과는 셸이 `rows` 로 내려준다. 둘 다
+     하단 기준일 줄 하나만 위해 있었고 그 줄이 없어졌다. 거르는 자리가 둘이면 칩과
+     목록이 갈릴 길이 열리므로, 안 쓰는 값을 계속 받아 둘 이유도 없다. */
+  selectedId, onPick,
   /* 쪽 번호는 셸이 들고 있다 — 점포 목록과 같은 이유다. 쪽을 넘기면 목록을 맨 위로
      되돌려야 하는데 그 스크롤 컨테이너는 이 시트가 아니라 Sheet 이고, Sheet 는
      scrollKey 로만 되돌린다. 유형 칩이 바뀔 때 1쪽으로 되돌리는 것도 셸이 한다
@@ -153,11 +151,10 @@ export function FacilitySheet({
 
       {/* ── 고지 (U-CM-07 · U-CM-08) ───────────────────────────────────── */}
       <div style={{ padding: "var(--space-5) var(--gutter-screen) 0" }}>
+        {/* 한 줄이다 (2026-08-24, 사용자 요청. DistrictSheet 와 같은 이유).
+            앞에 붙던 기준일 열거는 2026-08-25 에 뺐다 (위 asOfLine 자리 주석) */}
         <p style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.55 }}>
-          {/* 고른 것이 없으면(=전체) 화면에 깔린 유형은 4종 전부다 */}
-          {/* 한 줄이다 (2026-08-24, 사용자 요청. DistrictSheet 와 같은 이유) */}
-          {asOfLine(asOf, types.length ? types : Object.keys(asOf), FACILITY_LABELS)}
-          {". 안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요."}
+          안내 정보는 참고용입니다. 응급 상황에는 119 등 공식 채널로 연락해 주세요.
         </p>
       </div>
     </div>

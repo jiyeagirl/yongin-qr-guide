@@ -67,23 +67,29 @@ import { Icon } from "./Icon.jsx";
    화장실을 고를 수 있다는 사실 자체가 화면에 없다.
 
    글자를 줄이지 않고 **여백만** 걷어낸다 (`size="sm"` 은 12px 글자가 되어 칩이 주인공인
-   줄에서 결과보다 조건이 작아진다). 세 자리에서 조금씩 가져온다:
+   줄에서 결과보다 조건이 작아진다). 두 자리에서 가져온다:
 
-     INSET  칩 줄의 왼쪽 들여쓰기. 화면 여백(20)보다 좁게 잡아 줄 전체를 왼쪽으로 민다.
-            **위 검색창과 세로선이 어긋나지만** 그 대가로 알약 반쪽이 들어온다 — 칩 줄은
-            원래 가로로 흐르는 줄이라 왼쪽 끝이 고정선 노릇을 하지 않는다.
      GAP    알약 사이. 6 → 5. 알약에 이미 테두리가 있어 1px 은 눈에 띄지 않는다.
      dense  알약 안쪽 가로 여백 (Chip 머리말). 개당 −7px 이 가장 큰 몫이다.
 
-   합쳐서 다섯 알약 기준 50px 남짓을 번다. 360px 에서 [화장실]이 4분의 1쯤 걸치고,
-   390px 이상에서는 다섯이 다 들어온다 (그때는 넘치지 않으니 페이드도 꺼진다).
-
    **페이드 폭은 걸치는 조각보다 좁아야 한다** (24 → 12 로 줄임). 페이드는 원래 잘린 자리가
-   안 생기는 경우를 덮으려고 둔 것인데, 24px 이면 방금 벌어 놓은 24px 짜리 조각을 **그
-   페이드가 통째로 지운다** — 보이라고 만든 것을 흐리게 하는 꼴이다. 12 면 조각의 앞 절반이
-   또렷하게 남고 끝만 풀리면서 사라진다. 그게 "잘렸다"의 생김새다. */
+   안 생기는 경우를 덮으려고 둔 것인데, 24px 이면 벌어 놓은 24px 짜리 조각을 **그 페이드가
+   통째로 지운다** — 보이라고 만든 것을 흐리게 하는 꼴이다. 12 면 조각의 앞 절반이 또렷하게
+   남고 끝만 풀리면서 사라진다. 그게 "잘렸다"의 생김새다.
+
+   ── 줄의 양 끝을 검색창에 맞춘다 (2026-08-25, 사용자 요청) ───────────────────
+   그 사이 이 줄은 왼쪽으로 8px 나가 있었고(`INSET` 12) 오른쪽은 화면 끝까지 흘렀다.
+   둘 다 **폭을 벌기 위한 것**이었는데, 벌어 놓은 폭이 실제로는 도움이 되지 않았다 —
+   상점가 탭에서 [쇼핑]이 딱 맞게 들어차고 [미용/생활]은 통째로 밖에 있어서, **밀 수
+   있다는 것이 화면에 보이지 않았다.** 잘린 조각이 없으면 페이드 12px 만 남는데 그것은
+   여백과 구별되지 않는다.
+
+   지금은 양쪽 다 `gutter` 다 — 위 검색창과 **같은 세로선에서 시작하고 같은 선에서 끝난다.**
+   줄이 8+20px 좁아지므로 넘침이 그만큼 커지고, 그래서 [쇼핑]이 잘린 채 걸친다.
+   목적이 바뀐 것이 아니라 방법이 바뀌었다: 폭을 벌어 한 칩을 더 넣는 대신, **잘린 칩을
+   확실히 만들어** 더 있다는 것을 보이게 한다. 오른쪽 끝의 여백 스페이서도 함께 없앴다 —
+   줄이 화면 끝까지 가지 않으므로 여백을 줄 안에서 만들 이유가 없다. */
 const FADE = 12;
-const INSET = 12;
 const GAP = 5;
 
 export function FilterBar({ chips = [], value, onChange, active = [], sticky = true, floating = false, leading,
@@ -108,19 +114,17 @@ export function FilterBar({ chips = [], value, onChange, active = [], sticky = t
   const allCount = showAll ? shown.reduce((n, c) => n + (c.count || 0), 0) : 0;
 
   /* 오른쪽에 **아직 칩이 남았는가**. 페이드를 켜고 끄는 데만 쓴다 (머리말 ⑴).
-     끝의 여백 스페이서는 빼고 잰다 — 그러지 않으면 칩이 딱 맞게 들어찬 줄에서도 여백만큼
-     넘쳐 페이드가 켜지고, 있지도 않은 칩이 더 있다고 말하게 된다.
      스크롤·리사이즈·칩 목록 변화에 다시 잰다 — 칩이 켜지면 개수 자리가 바뀌어 폭도 바뀐다.
-     1px 여유를 두는 것은 소수점 폭에서 scrollWidth 가 늘 1 미만으로 남기 때문이다. */
+     1px 여유를 두는 것은 소수점 폭에서 scrollWidth 가 늘 1 미만으로 남기 때문이다.
+     빼고 재던 끝 스페이서는 없어졌다 (2026-08-25. 머리말) — 줄이 여백에서 끝나므로
+     줄 안에 여백을 만들 것이 없다. */
   const strip = React.useRef(null);
-  const tail = React.useRef(null);
   const [more, setMore] = React.useState(false);
   React.useEffect(() => {
     const node = strip.current;
     if (!node) return;
     const measure = () => {
-      const pad = tail.current ? tail.current.offsetWidth : 0;
-      setMore(node.scrollLeft + node.clientWidth < node.scrollWidth - pad - 1);
+      setMore(node.scrollLeft + node.clientWidth < node.scrollWidth - 1);
     };
     measure();
     node.addEventListener("scroll", measure, { passive: true });
@@ -149,12 +153,10 @@ export function FilterBar({ chips = [], value, onChange, active = [], sticky = t
           leading 은 칩과 함께 흐르면 안 되는 것의 자리 — 스크롤 바깥에 고정된다.
           지금 여기 서는 것은 조아용 한 마리다 (MainApp). 한때 온누리 컨트롤이 이 자리를
           썼는데, 그것은 목록 위 제어 줄로 내려갔다 (ListControls · OnnuriChip) */}
-      {/* 오른쪽 여백을 **칩 줄에 주지 않는다** (2026-08-24. 머리말 ⑴).
-          줄이 화면 끝까지 가야 넘칠 때 마지막 칩이 잘린 채 걸쳐 보인다 — 여백에서 끊으면
-          그 잘린 조각이 여백 뒤로 숨어 "끝났다"로 읽힌다. 다 밀었을 때의 오른쪽 여백은
-          줄 안의 스페이서가 맡는다 (아래). 왼쪽 여백은 그대로다 — 첫 칩은 위 검색창과
-          같은 세로선에서 시작해야 한다. */}
-      <div style={{ display: "flex", alignItems: "center", gap: GAP, padding: `2px 0 var(--space-1) ${INSET}px` }}>
+      {/* 양쪽 다 화면 여백이다 (2026-08-25. 머리말) — 첫 칩이 위 검색창과 **같은 세로선에서
+          시작하고 같은 선에서 끝난다.** 잘린 칩은 그 오른쪽 선에서 끊기면서 보인다 */}
+      <div style={{ display: "flex", alignItems: "center", gap: GAP,
+        padding: `2px ${gutter} var(--space-1)` }}>
         {leading ? <span style={{ flex: "0 0 auto", display: "inline-flex", paddingRight: 2 }}>{leading}</span> : null}
         <div ref={strip} role={multi ? "group" : "tablist"} aria-label={label}
           style={{ flex: 1, minWidth: 0, display: "flex", gap: GAP,
@@ -175,10 +177,9 @@ export function FilterBar({ chips = [], value, onChange, active = [], sticky = t
               aria-pressed={multi ? isOn(c.id) : undefined}
               icon={icon(c)} onClick={() => hit(c.id)}>{c.label}</Chip>
           ))}
-          {/* 끝까지 밀었을 때의 오른쪽 여백. 왼쪽 들여쓰기와 같은 값이라 다 밀면 줄이
-              양쪽 같은 자리에서 끝난다. 스크롤 컨테이너의 padding-right 대신 실제
-              엘리먼트를 쓰는 것은 그쪽이 브라우저마다 달리 먹기 때문이다 */}
-          <span ref={tail} aria-hidden="true" style={{ flex: "0 0 auto", width: INSET }} />
+          {/* 끝의 여백 스페이서가 여기 있었다 (2026-08-25 삭제) — 줄이 화면 끝까지 흐르던
+              동안 다 밀었을 때의 오른쪽 여백을 만들던 자리다. 지금은 줄 자체가 여백에서
+              끝난다 */}
         </div>
       </div>
       {/* 아래 pill 줄은 칩 줄과 달리 가로로 흐르지 않는다 (wrap 이다). 끝을 보일 이유가

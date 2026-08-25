@@ -30,15 +30,31 @@ import { QR_POINTS } from "../../screens/main/data/qr.js";
    보이는 편이 안전하다 — 끄는 것은 담당자가 폐업을 확인하고 내리는 결정이다 (2-2). */
 const shown = r => r.visible !== false;
 
-/* 등록 시점 (⚙). 더미는 「기준월에서 뺀 개월 수」(agoMonths)만 갖고 있어 여기서 연월로 편다.
-   실데이터에서는 서버가 준 created_at 이 그대로 들어온다. */
+/* 등록 일자 (⚙). 더미는 「기준월에서 뺀 개월 수」(agoMonths)만 갖고 있어 여기서 날짜로 편다.
+   실데이터에서는 서버가 준 created_at 이 그대로 들어온다.
+
+   ── 일자까지 만든다 (2026-08-25) ───────────────────────────────────────────
+   폼의 칸이 연월(`month`)에서 **일자**(`date`)가 되면서 필요해졌다 (fields.js 의
+   `createdAt` 머리말 — 같은 달에 문을 연 가게가 여섯을 넘으면 신규 매장 여섯 자리를
+   담당자가 정할 수 없다). `2026-04` 를 날짜 칸에 넣으면 **칸이 통째로 빈 채로 뜬다** —
+   값이 있는데 없다고 하는 화면을 막 고쳐 놓고 같은 것을 다시 만들 수는 없다.
+
+   날짜를 **id 에서 뽑는다.** 더미에 없는 값을 만드는 것이지만, 전부 1일로 두면 방금 없애려던
+   같은 값 무더기가 그대로 남는다. 난수를 쓰지 않는 것은 **새로고침해도 같아야** 하기
+   때문이다 — 검수하는 사람이 어제 본 차례와 오늘 본 차례가 다르면 무엇을 확인했는지 알 수
+   없다 (stats.js 가 시드 난수를 쓰는 이유와 같다). */
 const BASE_YEAR = 2026, BASE_MONTH = 6;
+const dayOf = id => {
+  let n = 0;
+  for (let i = 0; i < String(id).length; i++) n = (n * 31 + String(id).charCodeAt(i)) % 28;
+  return n + 1;                                  /* 1~28 — 어느 달에도 있는 날짜만 쓴다 */
+};
 export function createdAtOf(s) {
   if (s.createdAt) return s.createdAt;
   if (s.agoMonths == null) return null;
   let y = BASE_YEAR, m = BASE_MONTH - Number(s.agoMonths);
   while (m < 1) { m += 12; y -= 1; }
-  return `${y}-${String(m).padStart(2, "0")}`;
+  return `${y}-${String(m).padStart(2, "0")}-${String(dayOf(s.id)).padStart(2, "0")}`;
 }
 
 /* 점포 — 채우는 것이 넷이다. `onnuriType` 이 여기 있는 것은 다중 선택 칸이 배열을 받기

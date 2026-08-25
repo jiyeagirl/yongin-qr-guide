@@ -181,7 +181,10 @@ export function Stores({ onToast }) {
       </div>
 
       <EditorModal ed={ed} size="lg"
-        title={ed.draft && ed.draft.isNew ? "점포 등록" : "점포 수정"}
+        /* 「점포 수정」에서 고쳤다 (2026-08-25, 사용자 요청) — 화면 이름이 「점포 정보
+           관리」라 창 제목도 같은 말로 받는다. 등록 쪽은 [점포 등록] 단추에서 열리므로
+           그 단추와 같은 말로 둔다 */
+        title={ed.draft && ed.draft.isNew ? "점포 등록" : "점포 정보 수정"}
         description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}>
         {/* 값을 손보지 않고 그대로 넘긴다 (2026-08-25) — 전에는 여기서 `createdAt` 을
             끼워 넣었는데, 그러면 **화면에 보이는 값이 폼 안에는 없는** 상태가 된다.

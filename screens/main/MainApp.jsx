@@ -927,10 +927,11 @@ export function MainApp({ qr = null, noDistrict = false }) {
           {isFacility ? (
             <FacilitySheet
               rows={facilityRows}
-              types={fcTypes}
+              /* `types` 와 `asOf` 를 넘기던 자리다 (2026-08-25 삭제) — 저 시트에서 그 둘을
+                 쓰던 곳은 하단 기준일 줄 하나뿐이었고 그 줄이 없어졌다. 유형별 기준일은
+                 상세(S08)가 그 유형 하나만 적는다 */
               page={fcPage} setPage={setFcPage}
               selectedId={selected ? selected.id : null}
-              asOf={FACILITY_AS_OF}
               /* 상세로 곧장 가지 않는다 — 마커를 누른 것과 같이 지도가 그리로 움직이고
                  카드가 뜬다. 상세는 그 카드의 [상세 보기]가 맡는다 (pickFacility 주석) */
               onPick={pickFacility} />

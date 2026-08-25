@@ -270,10 +270,18 @@ export const DISCOVER_PICK = 6;
    그때 `agoMonths` 를 0(=이번 달 등록)으로 읽는 것은 실제로 맞는 해석이다. */
 const viewsOf = s => Number(s.views || 0);
 
-/* 기준월에서 뺀 개월 수. **관리자가 고친 「등록 시점」이 있으면 그것이 이긴다** (2026-08-20) —
-   `createdAt` 은 "YYYY-MM" 이다. 이 한 줄이 없으면 관리자 폼에서 등록 시점을 고쳐도
-   신규 매장 목록이 그대로여서, 고친 것이 아무 일도 하지 않는다.
-   씨앗 점포에는 `createdAt` 이 없어 지금까지와 같이 `agoMonths` 로 떨어진다. */
+/* 등록 시점을 읽는 두 함수. 둘 다 **관리자가 고친 값이 있으면 그것이 이긴다** (2026-08-20) —
+   그 한 줄이 없으면 관리자 폼에서 고쳐도 신규 매장 목록이 그대로여서 고친 것이 아무 일도
+   하지 않는다. 씨앗 점포에는 `createdAt` 이 없어 지금까지와 같이 `agoMonths` 로 떨어진다.
+
+   `agoOf`    기준월에서 뺀 **개월 수**. 카드에 적는 연월("2026.06 등록")을 만드는 데 쓴다.
+   `openedKey` 늘어놓는 **차례**. 일자까지 본다 (2026-08-25).
+
+   둘을 가른 이유는 **관리자의 「등록 일자」가 연월에서 일자가 되었기 때문**이다 (fields.js).
+   같은 달에 문을 연 가게가 여섯을 넘으면 개월 수만으로는 전부 같은 값이라, 신규 매장
+   여섯 자리를 차지하는 것이 사실상 거리로 정해졌다 — 담당자가 세울 수 없는 차례다.
+   일자를 보면 그 줄이 담당자 손에 들어온다. 적는 말은 그대로 연월이다: 문 연 날짜까지
+   읽을 이유는 없고, 일자는 차례를 정하는 데만 쓴다. */
 const agoOf = s => {
   const m = String(s.createdAt || "").match(/^(\d{4})[-.](\d{1,2})/);
   if (m) {
@@ -281,6 +289,17 @@ const agoOf = s => {
     return Math.max(0, months);
   }
   return Number(s.agoMonths || 0);
+};
+
+/* 견줄 수 있는 "YYYY-MM-DD". 일자가 없으면 01 로 채운다 — 그러면 **같은 달에서 일자가
+   적힌 쪽이 늘 새 것**이 되는데, 그것이 맞는 해석이다: 담당자가 날짜를 적어 넣었다는 것은
+   그 가게의 자리를 세우겠다는 뜻이다. 씨앗 점포처럼 `createdAt` 이 아예 없으면 개월 수로
+   같은 모양의 열쇠를 만든다 */
+const openedKey = s => {
+  const m = String(s.createdAt || "").match(/^(\d{4})[-.](\d{1,2})(?:[-.](\d{1,2}))?/);
+  if (m) return `${m[1]}-${String(m[2]).padStart(2, "0")}-${String(m[3] || 1).padStart(2, "0")}`;
+  const t = MONTHS_AS_OF[0] * 12 + (MONTHS_AS_OF[1] - 1) - Number(s.agoMonths || 0);
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}-01`;
 };
 
 export function discoverPicks(stores) {
@@ -293,7 +312,8 @@ export function discoverPicks(stores) {
     /* `opened` 는 연월만("2026.06"), `note` 는 카드에 적히는 문장("2026.06 등록").
        열 이름이 「등록」인 표는 앞쪽을, 이름표가 없는 카드는 뒤쪽을 쓴다 */
     fresh: [...live]
-      .sort((a, b) => agoOf(a) - agoOf(b) || (a.dist || 0) - (b.dist || 0))
+      /* 최근이 앞 — 열쇠는 클수록 새 것이라 내림차순이다. 같은 날이면 가까운 순 */
+      .sort((a, b) => openedKey(b).localeCompare(openedKey(a)) || (a.dist || 0) - (b.dist || 0))
       .slice(0, DISCOVER_PICK)
       .map(s => {
         const opened = openedMonth(agoOf(s));
