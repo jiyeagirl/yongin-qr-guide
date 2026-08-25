@@ -19,6 +19,11 @@ import { loadKakaoMaps } from "../map/kakaoLoader.js";
  *   2. 좌표를 사람이 넣지 않는다. 검색 결과가 좌표를 함께 들고 오므로, 입력 원칙 3번의
  *      "좌표는 주소 입력 시 자동 변환되며 별도 입력란을 두지 않는다"가 저절로 지켜진다.
  *
+ * **1번은 화면이 넘겨주는 값에도 걸린다** (2026-08-25). 손으로 못 적게 해 놓고 검색 결과의
+ * 지번을 대신 넣어 주면 같은 흔들림이 다른 문으로 들어온다 — 담당자는 고른 적도 없는 표기를
+ * 갖게 되고, 그것이 검색으로 들어온 값이라 더 믿게 된다. 도로명이 없는 결과는 **버린다**
+ * (아래 fromPlace · fromAddress).
+ *
  * ── 검색은 카카오 지도 SDK 가 한다 ──────────────────────────────────────────
  * kakaoLoader 가 이미 `services` 라이브러리를 함께 받고 있다. REST 키가 필요한 API 가
  * 아니라 JavaScript 키로 도는 SDK 기능이므로 **서버 없이 실제로 동작한다** —
@@ -44,17 +49,31 @@ import { loadKakaoMaps } from "../map/kakaoLoader.js";
 const MAX_RESULTS = 8;
 
 /* 검색 결과 한 줄로 모양을 맞춘다. Places 와 Geocoder 의 응답 필드가 서로 달라
-   화면이 두 벌의 분기를 갖지 않도록 여기서 한 번에 눕힌다. */
+   화면이 두 벌의 분기를 갖지 않도록 여기서 한 번에 눕힌다.
+
+   ── 도로명이 없으면 **버린다** (2026-08-25, 사용자 요청) ─────────────────────
+   전에는 지번으로 대신했다 (`p.road_address_name || p.address_name`). 그러면 도로명이
+   없는 결과 — 신축 건물, 농촌 지번, 지번으로 검색한 경우 — 를 골랐을 때 **지번 주소가
+   「도로명주소」 칸에 그대로 들어가고 화면에는 아무 표시가 없다.**
+
+   이 칸이 타이핑까지 막으며 표기를 고정하는 이유가 위 머리말의 1번(도로명주소 문자열
+   매칭)이라, 지번이 한 줄 섞이는 순간 그 매칭이 조용히 실패한다. **없는 값보다 나쁜
+   종류의 값**이라 대체하지 않는다 — 고를 수 없게 하고, 왜 비었는지를 빈 목록이 적는다
+   (아래 `noRoad`). */
 function fromPlace(p) {
-  const road = p.road_address_name || p.address_name;
+  const road = p.road_address_name;
   if (!road) return null;
   return { key: `p-${p.id || road}`, road, name: p.place_name || null, lat: +p.y, lng: +p.x };
 }
 
 function fromAddress(a) {
-  const road = (a.road_address && a.road_address.address_name) || a.address_name;
-  if (!road) return null;
-  return { key: `a-${road}`, road, name: null, lat: +a.y, lng: +a.x };
+  /* Geocoder 는 지번(`address`)과 도로명(`road_address`)을 따로 담아 준다. 도로명 칸이
+     비어 있으면 그 주소에는 도로명이 없는 것이다.
+     좌표도 도로명 쪽 것을 먼저 쓴다 — 지번과 도로명의 대표 좌표가 갈리는 자리가 있다 */
+  const r = a.road_address;
+  if (!r || !r.address_name) return null;
+  return { key: `a-${r.address_name}`, road: r.address_name, name: null,
+    lat: +(r.y || a.y), lng: +(r.x || a.x) };
 }
 
 export function AddressField({
@@ -67,16 +86,21 @@ export function AddressField({
   const [busy, setBusy] = React.useState(false);
   const [sdkError, setSdkError] = React.useState(null);
   const [manual, setManual] = React.useState(false);
+  /* 「찾은 것은 있는데 도로명이 있는 줄이 없다」 — 빈 목록의 사유가 둘로 갈렸다
+     (2026-08-25). 못 찾은 것과 같은 문구를 쓰면 담당자는 같은 말을 다시 친다 */
+  const [noRoad, setNoRoad] = React.useState(false);
 
   const search = React.useCallback(() => {
     const q = term.trim();
     /* 두 글자 미만은 부르지 않는다. 한 글자로는 전국이 걸려 목록이 뜻을 잃고,
        목록 화면의 통합 검색과 같은 기준(최소 2자)이라 담당자가 두 규칙을 외울 필요가 없다 */
+    setNoRoad(false);
     if (q.length < 2) { setResults([]); return; }
     setBusy(true);
     loadKakaoMaps(appKey).then(kakao => {
       const svc = kakao.maps.services;
       const collect = [];
+      let raw = 0;              /* 응답에 들어온 줄 수. 남은 것과 견주어 사유를 가른다 */
       let left = 2;
       const done = () => {
         left -= 1;
@@ -88,15 +112,18 @@ export function AddressField({
           const prev = byRoad.get(r.road);
           if (!prev || (!prev.name && r.name)) byRoad.set(r.road, r);
         });
-        setResults([...byRoad.values()].slice(0, MAX_RESULTS));
+        const list = [...byRoad.values()].slice(0, MAX_RESULTS);
+        setResults(list);
+        /* 찾기는 했는데 전부 도로명이 없어 걸러졌다 (위 fromPlace · fromAddress) */
+        setNoRoad(list.length === 0 && raw > 0);
         setBusy(false);
       };
       new svc.Places().keywordSearch(q, (data, status) => {
-        if (status === svc.Status.OK) data.forEach(p => collect.push(fromPlace(p)));
+        if (status === svc.Status.OK) { raw += data.length; data.forEach(p => collect.push(fromPlace(p))); }
         done();
       });
       new svc.Geocoder().addressSearch(q, (data, status) => {
-        if (status === svc.Status.OK) data.forEach(a => collect.push(fromAddress(a)));
+        if (status === svc.Status.OK) { raw += data.length; data.forEach(a => collect.push(fromAddress(a))); }
         done();
       });
     }).catch(err => {
@@ -111,6 +138,7 @@ export function AddressField({
     setOpen(false);
     setTerm("");
     setResults(null);
+    setNoRoad(false);
   };
 
   return (
@@ -149,7 +177,11 @@ export function AddressField({
             border: "var(--stroke-hairline) solid var(--border-default)" }}>
             <div style={{ display: "flex", gap: "var(--space-2)" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <Input value={term} placeholder="건물명 · 도로명주소 (2자 이상)"
+                {/* 「도로명주소」 → 「도로명 + 건물번호」 (2026-08-25). 도로명만 치면 거의
+                    나오지 않는다 — `keywordSearch` 는 장소 **이름**을 찾는 것이라 도로명에
+                    걸리지 않고, `addressSearch` 도 번호 없는 도로명에는 대개 빈 결과를 준다.
+                    번호가 필요하다는 것은 검색어를 치는 이 자리에서 말해야 한다 */}
+                <Input value={term} placeholder="건물명 · 도로명 + 건물번호 (2자 이상)"
                   onChange={e => setTerm(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); search(); } }} />
               </div>
@@ -184,11 +216,16 @@ export function AddressField({
                   ))}
                 </ul>
               ) : (
+                /* 빈 이유가 셋이다 (2026-08-25). 하나로 뭉치면 담당자가 할 일이 달라지는데
+                   화면은 같은 말을 한다 — 도로명이 없어서 비었으면 **다르게 찾아야** 하고,
+                   못 찾았으면 **더 적어야** 한다 */
                 <p style={{ marginTop: "var(--space-3)", fontSize: "var(--fs-caption)",
-                  color: "var(--text-muted)", lineHeight: 1.55 }}>
+                  color: noRoad ? "var(--state-warning)" : "var(--text-muted)", lineHeight: 1.55 }}>
                   {sdkError
                     ? `주소 검색을 열지 못했습니다 — ${sdkError}`
-                    : "검색 결과가 없습니다. 건물명이나 도로명 일부로 다시 찾아 보세요."}
+                    : noRoad
+                      ? "찾은 곳에 도로명주소가 없습니다. 이 칸은 도로명주소만 받습니다 — 건물명이나 「도로명 + 건물번호」로 다시 찾아 보세요."
+                      : "검색 결과가 없습니다. 건물명이나 「도로명 + 건물번호」로 다시 찾아 보세요."}
                 </p>
               )
             ) : null}

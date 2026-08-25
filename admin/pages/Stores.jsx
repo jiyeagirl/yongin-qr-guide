@@ -179,8 +179,21 @@ export function Stores({ onToast }) {
           { key: "addr", label: "도로명주소", width: 190, align: "center", sortable: true,
             render: s => <span style={{ wordBreak: "keep-all" }}>{s.addr}</span> },
           /* 90 → 80. 머리글(「조회」+ 정렬 꺾쇠)이 차지하는 폭이 바닥이라 더는 못 줄인다.
-             다섯 자리 수(「12,345」)도 이 폭에 든다 */
-          { key: "views", label: "조회", width: 80, align: "right", sortable: true,
+             다섯 자리 수(「12,345」)도 이 폭에 든다.
+
+             ── 오른쪽이 아니라 가운데다 (2026-08-25, 사용자 요청) ────────────────
+             **정렬 꺾쇠가 있는 열이라서** 그렇다. 오른쪽 정렬은 머리글의 정렬 단추를
+             통째로 오른쪽 끝에 붙이는데, 그 단추는 「조회」 뒤에 꺾쇠(14px)를 달고 있어
+             **글자는 칸 끝에서 18px 쯤 안쪽에 선다.** 값은 칸 끝에 딱 붙으므로, 열
+             이름과 값이 한 세로선에 서지 않고 숫자만 오른쪽으로 밀려 보인다.
+             (대시보드의 같은 열은 정렬을 걸지 않아 이 어긋남이 없다 — 그래서 그쪽은
+             오른쪽 그대로다.)
+
+             자릿수를 맞춰 견주는 이득은 여기서 크지 않다. 이 값은 3~113 범위라
+             (`sources.js` 의 views) 자리가 한둘 차이고, 다섯 자리가 실제로 들어오는
+             날에는 그때 다시 본다. `tabular-nums` 는 그대로 둔다 — 정렬을 눌러 차례가
+             바뀔 때 숫자 폭이 흔들리지 않게 하는 것은 정렬 방향과 무관한 일이다. */
+          { key: "views", label: "조회", width: 80, align: "center", sortable: true,
             render: s => <span style={{ fontVariantNumeric: "tabular-nums" }}>{Number(s.views || 0).toLocaleString("ko-KR")}</span> },
           /* 104 는 목록 다섯이 함께 쓰는 값이다 (상점가 · 공공시설 · 축제도 같다).
              여기서만 좁히면 화면을 옮길 때 같은 열이 자리를 바꾼다 — 주소에 쓸 폭은
