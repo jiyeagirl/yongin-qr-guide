@@ -565,7 +565,9 @@ export const INSTALL_STATUS_OPTIONS = INSTALL_STATUS.map(v => ({ value: v, label
 
 export const QR_FIELDS = [
   { key: "code", spec: "qr_code", label: "QR 식별자", required: true, type: "text",
-    range: "4~12자 · 영문 소문자+숫자 · 전역 유일", pattern: V.qrCode,
+    /* 「· 전역 유일」을 뗐다 (2026-08-25 — ACCOUNT_FIELDS 의 `id` 머리말과 같은 이유).
+       같은 코드를 적으면 그 칸에 「이미 쓰는 QR 식별자입니다」가 뜬다 (QrPoints 의 중복 검사) */
+    range: "4~12자 · 영문 소문자+숫자", pattern: V.qrCode,
     minLength: 4, maxLength: 12, example: "dunjeon01",
     /* 2026-08-24 부터 이 칸을 고칠 수 있다 (사용자 요청. QrPoints.jsx 머리말). 고칠 수
        있게 된 순간 이 한 줄이 필요해진다 — **안내판은 옛 코드로 인쇄되어 현장에 붙어
@@ -679,8 +681,19 @@ export const REPORT_FIELDS = [
    생기고, 그 칸이 이 표와 명세서 항목표를 함께 늘린다. */
 
 export const ACCOUNT_FIELDS = [
+  /* ── 칸 안 범위는 **잘리지 않는 길이까지만** 적는다 (2026-08-25, 사용자 요청) ────
+     칸 안 흐린 글씨는 「예) 값 (범위)」 한 줄인데(FormField), 두 열 폼의 한 칸은 350px
+     남짓이라 규칙을 넷씩 이어 붙이면 뒷말이 잘려 나간다 — 「예) yongin01 (4~20자 · 영문
+     소문자+숫자 · 첫 글…」. **잘린 규칙은 없는 규칙보다 나쁘다**: 담당자는 못 읽은 말이
+     있다는 것만 알고 무엇인지는 모른 채 칸을 채운다.
+
+     떼어낸 둘은 **화면이 다른 자리에서 이미 말하는 것**이다. 「첫 글자 영문」은 어겼을
+     때 그 칸에 그대로 뜨고(V.loginId 의 문구), 「등록 후 수정 불가」는 수정 창에서 이
+     칸이 입력칸이 아닌 모양으로 서는 것이 곧 그 말이다. 명세서 항목표에서도 둘 다
+     「범위」가 아니라 「비고」 열에 있다 — 이제 표의 범위 열과 화면이 글자까지 같다.
+     같은 이유로 QR 식별자의 「전역 유일」과 연락처의 「숫자와 하이픈만」도 뗐다. */
   { key: "id", spec: "login_id", label: "아이디", required: true, type: "text",
-    range: "4~20자 · 영문 소문자+숫자 · 첫 글자 영문 · 등록 후 수정 불가",
+    range: "4~20자 · 영문 소문자+숫자",
     pattern: V.loginId, minLength: 4, maxLength: 20, example: "yongin01" },
   { key: "name", spec: "name", label: "이름", required: true, type: "text",
     range: "2~20자", minLength: 2, maxLength: 20, example: "김담당" },
@@ -703,8 +716,10 @@ export const ACCOUNT_FIELDS = [
   { key: "active", spec: "is_active", label: "사용 여부", required: true, type: "switch" },
   { key: "email", spec: "email", label: "이메일", required: true, type: "text",
     range: "최대 100자", maxLength: 100, pattern: V.email, example: "gis@yongin.go.kr" },
+  /* 「· 숫자와 하이픈만」을 뗐다 (2026-08-25 — 위 `id` 머리말과 같은 이유).
+     어기면 그 칸에 「숫자와 하이픈만, 9~13자입니다」가 뜬다 (V.phone) */
   { key: "phone", spec: "phone", label: "연락처", required: false, type: "text",
-    range: "최대 13자 · 숫자와 하이픈만", maxLength: 13, pattern: V.phone, example: "031-324-0000" },
+    range: "최대 13자", maxLength: 13, pattern: V.phone, example: "031-324-0000" },
 ];
 
 /* ══ 저장 검사 ═════════════════════════════════════════════════════════════
