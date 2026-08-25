@@ -144,7 +144,7 @@ export function Reports({ onToast, onNavigate }) {
         <Select value={kind} options={opt(REPORT_TYPES, "전체 신고 유형")} onChange={e => setKind(e.target.value)} />
         <Select value={targetType} options={opt(REPORT_TARGET_TYPES, "전체 대상 유형")}
           onChange={e => setTargetType(e.target.value)} />
-        <ListSearch state={list0} placeholder="내용 · 대상 · 접수번호 검색" />
+        <ListSearch state={list0} placeholder="내용, 대상, 접수번호 검색" />
         {/* ── 필터를 셋으로 줄였다 (2026-08-20, 사용자 요청) ──────────────────
                고르개가 여섯이라 필터 줄이 두 줄로 접혔고, 그 두 줄이 표보다 먼저 읽혔다.
                뺀 둘은 이 화면에서 짚어낼 것이 없는 축이다:
@@ -230,20 +230,31 @@ export function Reports({ onToast, onNavigate }) {
             ) : null}
 
             {/* 5-1 시민 제출 항목 — **읽기 전용**이다. 관리자가 고칠 수 있으면
-                그 목록은 더 이상 접수 기록이 아니다 */}
+                그 목록은 더 이상 접수 기록이 아니다.
+
+                ── 신고 내용이 같은 표 안으로 들어왔다 (2026-08-25, 사용자 요청) ──────
+                전에는 표 **밖**, 그 아래 회색 상자에 글만 덩그러니 놓였다. 이름표가 없으니
+                **그것이 신고 내용이라는 것을 화면이 말해 주지 않았다** — 담당자는 위 세 줄이
+                접수 기록이고 그 밑은 뭔가 다른 것이라고 읽거나, 아예 안내문으로 보고 건너뛴다.
+                이 창에서 가장 먼저 읽어야 하는 글이 그 취급을 받고 있었다.
+
+                넷 다 **시민이 제출한 한 벌**이라 한 표에 들어가는 것이 맞다. 표의 행은
+                이름표가 값 위에 얹히고 내용만큼 늘어나므로(`InfoList` 머리말) 문장 하나가
+                들어와도 모양이 깨지지 않는다. 차례는 제출 순서가 아니라 **읽는 순서**다 —
+                무엇에 대한 신고인지(대상 · 대상 ID · 접수 지점)를 알고 나서 내용을 읽는다. */}
             <InfoList items={[
               { label: "대상", value: open.target },
               { label: "대상 ID", value: open.targetId },
               { label: "접수 지점", value: open.qrCode },
+              /* 시민이 적은 글이라 **줄바꿈을 지운다** — 여러 줄로 적어 보낸 것을 한 줄로
+                 이어 붙이면 문단이 뒤섞인다. 더미 자료는 다 한 줄이지만 실제 제출은 아니다 */
+              { label: "신고 내용",
+                /* 비었으면 감싸지 않고 넘긴다 — 빈 <span> 은 표에게 「값이 있다」로 보여
+                   「-」가 서야 할 자리에 빈 줄이 선다 (`InfoList` 의 isEmpty) */
+                value: open.body ? <span style={{ whiteSpace: "pre-line" }}>{open.body}</span> : null },
               /* 「회신처」가 여기 있었다 (2026-08-24 삭제) — 회신을 하지 않으므로
                  시민 쪽 신고 폼이 애초에 연락처를 받지 않는다 (머리말) */
             ]} />
-
-            <div style={{ marginTop: "var(--space-4)", padding: "var(--space-4)",
-              background: "var(--surface-sunken)", borderRadius: "var(--radius-md)",
-              fontSize: "var(--fs-body)", color: "var(--text-body)", lineHeight: 1.65 }}>
-              {open.body}
-            </div>
 
             {/* 5-2 관리자 처리 항목 */}
             <div style={{ marginTop: "var(--space-5)", display: "grid",

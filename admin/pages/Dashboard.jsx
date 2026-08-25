@@ -34,6 +34,12 @@ import { readCollection } from "../data/store.js";
  * "+18%" 만 있으면 누적이 그만큼 늘었다는 뜻으로 읽히는데, 실제로는 **직전 같은 기간**과
  * 견준 값이다. 최근 7일이면 그 앞 7일과 견준다. 카드 안에 그 말을 적어 둔다.
  *
+ * 적을 때는 **견주는 기간의 이름을 그대로** 쓴다 — 「어제 대비」 · 「지난 7일 대비」 ·
+ * 「지난 30일 대비」 (2026-08-25, 사용자 요청). 고른 기간 이름 앞에 「직전 」을 붙여
+ * 지어내던 것을 걷어냈다: 그러면 「직전 오늘 대비」가 나오고, 「직전 최근 7일」은
+ * 「최근」이 두 기간에 동시에 걸려 어느 쪽이 최근인지 흐려진다. 이름은 `PERIODS` 의
+ * `vs` 가 갖는다 (`data/stats.js`).
+ *
  * ── 처리 대기 배지는 0 이면 뜨지 않는다 ─────────────────────────────────────
  * 명세서: "배지는 0건이 아닐 때만 노출하고 클릭 시 해당 화면으로 이동한다."
  * 없는 일에 표시를 붙이면 신호가 죽는다 — 늘 켜져 있는 빨간 점은 며칠 뒤 아무도 안 본다.
@@ -242,8 +248,11 @@ export function Dashboard({ onNavigate }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
         gap: "var(--space-4)", marginBottom: "var(--space-7)" }}>
         <StatTile label="누적 QR 스캔" value={n(TOTAL_SCANS)} unit="회" icon="qr-code" tone="brand" />
+        {/* 견주는 기간의 이름은 **표가 갖는다** (`PERIODS` 의 `vs`, 2026-08-25) — 여기서
+            「직전 」을 앞에 붙여 지어내던 것을 걷어냈다. 그 방식으로는 「직전 오늘 대비」가
+            나오고, 「직전 최근 7일」은 「최근」이 두 기간에 걸린다 (그쪽 머리말) */}
         <StatTile label={`${s.period.label} 스캔`} value={n(s.scans)} unit="회" icon="scan-line"
-          delta={s.delta == null ? undefined : `직전 ${s.period.label} 대비 ${s.delta > 0 ? "+" : ""}${s.delta}%`}
+          delta={s.delta == null ? undefined : `${s.period.vs} 대비 ${s.delta > 0 ? "+" : ""}${s.delta}%`}
           deltaTone={s.delta > 0 ? "up" : s.delta < 0 ? "down" : "flat"} />
         <StatTile label={`${s.period.label} 길찾기 실행`} value={n(s.routes)} unit="회" icon="route" />
         <StatTile label={`${s.period.label} 신규 오류신고`} value={n(newReports)} unit="건" icon="inbox"

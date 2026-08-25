@@ -184,7 +184,7 @@ export function Festivals({ onToast }) {
         </>
       ) : null}>
         <Select value={state} options={STATE_OPTIONS} onChange={e => setState(e.target.value)} />
-        <ListSearch state={list0} placeholder="축제명 · 골목형 상점가 검색" />
+        <ListSearch state={list0} placeholder="축제명, 골목형 상점가 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 

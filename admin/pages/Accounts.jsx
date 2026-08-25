@@ -262,7 +262,7 @@ export function Accounts({ account, onToast }) {
 
       <Toolbar>
         <ListSearch state={list0}
-          placeholder={inReset ? "아이디 · 사유 검색" : "아이디 · 이름 · 이메일 검색"} />
+          placeholder={inReset ? "아이디, 사유 검색" : "아이디, 이름, 이메일 검색"} />
         <SearchHint state={list0} />
       </Toolbar>
 

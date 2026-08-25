@@ -232,7 +232,7 @@ export function QrPoints({ onToast }) {
       ) : null}>
         <Select value={status} options={STATUS_OPTIONS} onChange={e => setStatus(e.target.value)} />
         <Select value={active} options={ACTIVE_OPTIONS} onChange={e => setActive(e.target.value)} />
-        <ListSearch state={list0} placeholder="식별자 · 지점명 · 주소 검색" />
+        <ListSearch state={list0} placeholder="식별자, 지점명, 주소 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 

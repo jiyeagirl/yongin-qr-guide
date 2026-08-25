@@ -131,7 +131,7 @@ export function Stores({ onToast }) {
         <Select value={district} options={DISTRICT_FILTER} onChange={e => setDistrict(e.target.value)} />
         <Select value={major} options={MAJOR_OPTIONS} onChange={e => setMajor(e.target.value)} />
         <Select value={onnuri} options={ONNURI_OPTIONS} onChange={e => setOnnuri(e.target.value)} />
-        <ListSearch state={list0} placeholder="상호명 · 주소 · 업종 검색" />
+        <ListSearch state={list0} placeholder="상호명, 주소, 업종 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 

@@ -217,7 +217,7 @@ export function Districts({ onToast }) {
         </>
       ) : null}>
         <Select value={gu} options={GU_OPTIONS} onChange={e => setGu(e.target.value)} />
-        <ListSearch state={list0} placeholder="골목형 상점가명 · 소재지 검색" />
+        <ListSearch state={list0} placeholder="골목형 상점가명, 소재지 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 

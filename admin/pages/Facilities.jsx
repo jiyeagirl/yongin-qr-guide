@@ -156,7 +156,7 @@ export function Facilities({ onToast }) {
       ) : null}>
         {/* 검색창 **왼쪽**이다 — 점포·축제·QR 지점의 고르개가 서는 자리와 같다 */}
         <Select value={type} options={TYPE_OPTIONS} onChange={e => setType(e.target.value)} />
-        <ListSearch state={list0} placeholder="명칭 · 주소 · 설치 위치 검색" />
+        <ListSearch state={list0} placeholder="명칭, 주소, 설치 위치 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
