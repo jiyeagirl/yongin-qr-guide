@@ -4,6 +4,7 @@ import { Select } from "../core/Select.jsx";
 import { Switch } from "../core/Switch.jsx";
 import { Button } from "../core/Button.jsx";
 import { IconButton } from "../core/IconButton.jsx";
+import { TextButton } from "../core/TextButton.jsx";
 import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
 
 /* 1:N 항목 편집기 — 한 레코드에 딸린 여러 줄을 그 자리에서 넣고 뺀다.
@@ -43,12 +44,39 @@ import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
  * 그 차이를 말로 설명하지 못하면서 「여기만 뭔가 다르다」고 느낀다 (EditorModal 머리말과
  * 같은 이야기다). 게다가 이름표가 56px 을 먼저 가져가 **칸의 오른쪽 끝이 윗줄 칸과
  * 어긋났다** — 문장을 적는 칸이라 그 어긋남이 가장 넓은 자리에서 보인다.
+ *
+ * ── 아랫줄은 접어 두고, 줄은 카드로 묶는다 (2026-08-25, 사용자 요청) ─────────
+ * 두 가지가 함께 지저분했다.
+ *
+ *   ① **설명 칸이 늘 펴져 있었다.** 프로그램 스무 줄이면 대개 비어 있는 문장 칸이
+ *      스무 개 서고, 줄마다 높이가 두 배가 된다. 이 칸은 「이름 밖의 정보」라
+ *      (BOOTH_COLUMNS 머리말) 있는 줄이 드물다 — 드문 것을 늘 펴 두면 흔한 것이 묻힌다.
+ *      이제 **값이 있으면 펴고, 없으면 「설명 추가」 한 줄로 접어 둔다.**
+ *      **값이 든 칸은 접지 않는다** — 접는 단추 자체를 내주지 않는다. 화면에 없는 값이
+ *      저장되어 있는 상태를 만들지 않는 것이 이 프로젝트가 오래 지켜온 규칙이다.
+ *
+ *   ② **줄을 가는 선으로 갈랐다.** 선 하나로 가르면 어디까지가 한 줄인지 눈으로
+ *      좇아야 한다 — 특히 아랫줄이 있는 줄과 없는 줄이 섞이면 선의 간격이 들쭉날쭉하다.
+ *      이제 줄 하나가 **가라앉은 바탕의 카드**다. 흰 입력칸이 그 위에 얹혀 어디까지가
+ *      한 줄인지 색으로 끝난다.
  */
 
 /* 오른쪽에 비워 두는 폭 — 삭제 버튼(36) + 그 앞의 gap. 열 이름 줄 · 아랫줄 · 예시 줄이
    **같은 값을 써야** 세 줄의 칸 끝이 한 자리에서 만난다. 전에는 40 이라고 적혀 있어
    4px 씩 어긋나 있었다 (2026-08-25). */
 const RESERVE = "calc(36px + var(--space-2))";
+
+/* 카드 안쪽 여백. **열 이름 줄이 이 값만큼 함께 들여져야** 머리글과 칸이 한 세로선에
+   선다 — 카드는 안쪽으로 밀려 있고 열 이름 줄은 카드 밖이다 (아래 head). */
+const CARD_PAD = "var(--space-3)";
+
+/* 줄 하나를 감싸는 카드. 바탕이 가라앉은 색이고 안의 입력칸은 흰색이라(Input · Select 의
+   기본 바탕), **어디까지가 한 줄인지 색으로 끝난다** — 선을 눈으로 좇지 않아도 된다. */
+const CARD = {
+  display: "flex", flexDirection: "column", gap: "var(--space-2)",
+  padding: CARD_PAD, background: "var(--surface-sunken)",
+  borderRadius: "var(--radius-md)",
+};
 
 /* 칸 안 예시에는 「예)」를 붙인다 — 흐린 글씨는 이미 값이 들어 있는 것처럼 보인다
    (FormField 와 같은 규칙) */
@@ -80,6 +108,23 @@ export function Repeater({
   const [pending, setPending] = React.useState(null);
   const asking = pending != null && pending < list.length ? pending : null;
 
+  /* ── 아랫줄을 편 줄 (머리말 ①) ─────────────────────────────────────────────
+     **값이 들어 있으면 목록에 없어도 펴진다** — `openLower` 는 「비어 있는데 펴 둔」
+     줄만 기억한다. 그래서 담당자가 글을 적는 순간 그 줄은 목록과 상관없이 계속 펴져
+     있고, 접는 단추도 사라진다 (값이 든 칸을 접을 길을 두지 않는다).
+
+     줄 번호로 기억하는 것은 이 목록의 다른 자리와 같다 (`pending` · `key={i}`) —
+     줄에 고유한 열쇠가 없다. 줄을 지우면 뒤 번호가 하나씩 당겨지므로 그때 비운다:
+     비어 있는 칸이 접히는 것뿐이라 잃는 것이 없다. */
+  const [openLower, setOpenLower] = React.useState([]);
+  const filledLower = row => bottom.some(c => row && String(row[c.key] == null ? "" : row[c.key]).trim());
+  const lowerOpen = (row, i) => filledLower(row) || openLower.includes(i);
+  const toggleLower = i => setOpenLower(cur => (cur.includes(i) ? cur.filter(n => n !== i) : cur.concat(i)));
+
+  /* 접는 단추의 글자는 **아랫줄 칸의 이름 그대로**다 — 지금은 「설명」 하나뿐이지만,
+     칼럼표가 늘면 「설명 · 비고 추가」가 된다 (여기서 이름을 지어내지 않는다) */
+  const lowerLabel = bottom.map(c => c.label).join(" · ");
+
   const set = (i, key, value) => {
     if (!onChange) return;
     onChange(list.map((r, n) => (n === i ? { ...r, [key]: value } : r)));
@@ -87,6 +132,7 @@ export function Repeater({
   const add = () => { setPending(null); if (onChange) onChange(list.concat(newRow())); };
   const drop = i => {
     setPending(null);
+    setOpenLower([]);            /* 뒤 번호가 당겨진다 — 위 openLower 머리말 */
     if (onChange) onChange(list.filter((_, n) => n !== i));
   };
   const nameOf = (row, i) => {
@@ -95,11 +141,13 @@ export function Repeater({
   };
 
   /* 열 이름 줄. 비었을 때도 그린다 — 아래 예시 줄이 어느 칸에 무엇을 넣는 자리인지
-     말해 주는 것이 이 줄이다. 오른쪽 40px 은 삭제 버튼 자리를 비워 둔 것이다.
-     **윗줄 칸만 가리킨다** — 아랫줄 칸은 자기 이름표를 앞에 달고 있다. */
+     말해 주는 것이 이 줄이다. 오른쪽은 삭제 버튼 자리(RESERVE)를, 양쪽은 카드 안쪽
+     여백(CARD_PAD)을 함께 비워 둔다 — 그래야 머리글과 카드 안의 칸이 한 세로선에 선다.
+     **윗줄 칸만 가리킨다** — 아랫줄 칸은 자기 이름표를 위에 달고 있다. */
   const head = (
     <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)",
-      paddingRight: RESERVE, fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
+      padding: `0 calc(${RESERVE} + ${CARD_PAD}) 0 ${CARD_PAD}`,
+      fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
       {top.map(c => (
         <span key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
           {c.label}{c.required ? <b style={{ color: "var(--state-danger)" }}> *</b> : null}
@@ -174,11 +222,9 @@ export function Repeater({
               화면 절반을 먹는다 */}
           {head}
 
-          {/* 한 항목이 두 줄일 수 있다 — 그때는 가는 줄로 항목을 가른다 (머리말) */}
+          {/* 줄 하나가 카드 하나다 (머리말 ②) — 가는 선으로 가르지 않는다 */}
           {list.map((row, i) => (
-            <div key={i} style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)",
-              paddingTop: i && bottom.length ? "var(--space-2)" : 0,
-              borderTop: i && bottom.length ? "var(--stroke-hairline) solid var(--border-default)" : "none" }}>
+            <div key={i} style={CARD}>
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                 {top.map(c => (
                   <div key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
@@ -195,7 +241,18 @@ export function Repeater({
                     onClick={() => setPending(i)} style={{ flex: "0 0 auto", color: "var(--state-danger)" }} />
                 )}
               </div>
-              {lower(row, i, false)}
+              {bottom.length && lowerOpen(row, i) ? lower(row, i, false) : null}
+              {/* 접는 단추는 **비어 있을 때만** 선다 (머리말 ①). 글이 들어 있으면 칸이
+                  그대로 서 있고 접을 길이 없다 — 화면에 없는 값이 저장되어 있는 상태를
+                  만들지 않는다. 높이를 32 로 줄인 것은 여기가 데스크톱 화면이고, 이
+                  단추가 카드 안에서 칸보다 커 보이면 안 되기 때문이다 */}
+              {bottom.length && !filledLower(row) ? (
+                <TextButton icon={openLower.includes(i) ? "chevron-up" : "plus"} tone="muted"
+                  onClick={() => toggleLower(i)}
+                  style={{ alignSelf: "flex-start", minHeight: 32, padding: "0 2px" }}>
+                  {lowerLabel} {openLower.includes(i) ? "접기" : "추가"}
+                </TextButton>
+              ) : null}
 
               {asking === i ? (
                 <div role="group" aria-label="삭제 확인"
@@ -226,20 +283,30 @@ export function Repeater({
            글자가 한다. 머리의 「0건」도 같은 말을 한다. */
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
           {head}
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            {/* 고르는 칸의 예시는 **첫 선택지**다. 빈 값으로 두면 예시 줄에서 그 칸만
-                비어 보여, 고르는 칸이라는 사실이 오히려 흐려진다 (cell 의 off 갈래) */}
-            {top.map(c => (
-              <div key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
-                {cell(c, {}, -1, true)}
-              </div>
-            ))}
-            {/* 삭제 버튼 자리를 비워 둔다 — 열 이름 줄의 paddingRight:40 과 맞춰야 칸이
-                어긋나지 않는다. 여기 「예시」라고 적었던 것을 뺐다 (2026-08-20): 칸 안이
-                이미 「예)」로 시작해 같은 말을 두 번 하고 있었다. */}
-            <span aria-hidden="true" style={{ flex: "0 0 36px" }} />
+          {/* 예시도 **카드 안에** 그린다 — [추가]를 눌렀을 때 실제로 생기는 모양 그대로여야
+              이 줄이 예시 노릇을 한다 */}
+          <div style={CARD}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              {/* 고르는 칸의 예시는 **첫 선택지**다. 빈 값으로 두면 예시 줄에서 그 칸만
+                  비어 보여, 고르는 칸이라는 사실이 오히려 흐려진다 (cell 의 off 갈래) */}
+              {top.map(c => (
+                <div key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
+                  {cell(c, {}, -1, true)}
+                </div>
+              ))}
+              {/* 삭제 버튼 자리를 비워 둔다 — 열 이름 줄의 RESERVE 와 맞춰야 칸이
+                  어긋나지 않는다. 여기 「예시」라고 적었던 것을 뺐다 (2026-08-20): 칸 안이
+                  이미 「예)」로 시작해 같은 말을 두 번 하고 있었다. */}
+              <span aria-hidden="true" style={{ flex: "0 0 36px" }} />
+            </div>
+            {/* 아랫줄은 **접힌 모양으로** 보여준다 — 새 줄이 실제로 그렇게 생긴다 */}
+            {bottom.length ? (
+              <TextButton icon="plus" tone="muted" disabled tabIndex={-1} aria-hidden="true"
+                style={{ alignSelf: "flex-start", minHeight: 32, padding: "0 2px", cursor: "default" }}>
+                {lowerLabel} 추가
+              </TextButton>
+            ) : null}
           </div>
-          {lower({}, -1, true)}
           {/* 눈으로 보는 사람에게는 위 한 줄이 곧 설명이다. 읽어주는 도구에는 그 줄이
               비활성 칸 더미로만 들리므로, 같은 뜻을 한 문장으로 남긴다 */}
           <VisuallyHidden>

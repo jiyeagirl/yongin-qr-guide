@@ -1,5 +1,6 @@
 import React from "react";
 import { Badge } from "../core/Badge.jsx";
+import { Button } from "../core/Button.jsx";
 import { Icon } from "../core/Icon.jsx";
 import { KakaoMap } from "../map/KakaoMap.jsx";
 import { FormField } from "./FormGrid.jsx";
@@ -61,12 +62,29 @@ export function CoordField({
     if (onChange) onChange({ lat: fixCoord(la), lng: fixCoord(ln) });
   }, [onChange]);
 
+  /* ── 핀을 잃어버렸을 때 되찾는 길 (2026-08-25, 사용자 요청) ──────────────────
+     이 지도는 끌어 움직일 수 있는데 되돌리는 길이 없었다. 자리를 확인하려고 주변을
+     둘러보다 핀이 화면 밖으로 나가면, 그때부터는 **좌표 숫자를 보고 손으로 찾아
+     돌아와야 한다.** 240px 짜리 상자에서 그것은 사실상 불가능하다.
+
+     줌은 건드리지 않고 **가운데만 옮긴다.** 핀을 정확히 놓으려고 깊이 당겨 둔 배율을
+     되돌리면, 되찾기가 곧 다시 맞추기가 된다 (시민 화면의 [QR 스캔 지점으로]는 줌까지
+     되돌리는데 그쪽은 탐색용 지도라 사정이 다르다). */
+  const mapApi = React.useRef(null);
+  const backToPin = () => {
+    if (mapApi.current && has) mapApi.current.focus(Number(lat), Number(lng));
+  };
+
   return (
     /* 「주소를 고르면 자동으로 들어옵니다」를 뺐다 (2026-08-20) — 빈 지도 자리가 이미
        같은 말을 하고 있고, 주소를 고르고 나면 그 말이 필요 없다. 남긴 한 줄은 설명이 아니라
-       **보이지 않는 조작**이다: 지도를 눌러 옮기거나 핀을 끌 수 있다는 것은 화면만 봐서는 모른다. */
+       **보이지 않는 조작**이다: 핀을 끌 수 있다는 것은 화면만 봐서는 모른다.
+       (2026-08-25, 사용자 요청 — 「자리가 틀리면 지도를 눌러 옮기거나 핀을 끌어 맞춥니다」
+       에서 고쳤다. 지도를 눌러도 핀이 옮겨 가는 것은 그대로지만, 그쪽은 **일부러 하지
+       않으면 일어나지 않는 조작**이라 굳이 권하지 않는다 — 자리를 살피다 무심코 누른
+       사람에게 핀이 따라오는 편이 낫지는 않다.) */
     <FormField label={label} required={required} span={span} error={err}
-      hint={note || "자리가 틀리면 지도를 눌러 옮기거나 핀을 끌어 맞춥니다."}>
+      hint={note || "핀 위치가 올바르지 않으면, 핀을 드래그해 수정할 수 있습니다."}>
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: 6 }}>
           <span style={{ fontSize: "var(--fs-label)", fontVariantNumeric: "tabular-nums",
@@ -86,9 +104,20 @@ export function CoordField({
             /* key 를 주지 않는다. 시민용 셸에서 지도를 다시 만들지 않는 이유(U-CM-16)와는
                다른 이유인데, 여기서는 **핀을 끌 때마다 지도가 새로 생기면 안 되기** 때문이다.
                중심은 처음 좌표에 맞추고, 이후 이동은 핀만 움직인다. */
-            <KakaoMap appKey={appKey} center={{ lat: Number(lat), lng: Number(lng) }}
-              anchorLabel={name || "지정 위치"} level={3}
-              pick={{ lat: Number(lat), lng: Number(lng), label: name }} onPick={pick} />
+            <>
+              <KakaoMap appKey={appKey} center={{ lat: Number(lat), lng: Number(lng) }}
+                anchorLabel={name || "지정 위치"} level={3} mapRef={mapApi}
+                pick={{ lat: Number(lat), lng: Number(lng), label: name }} onPick={pick} />
+              {/* 오른쪽 아래. 지도 위에 두는 단추는 이것 하나뿐이라 자리를 다툴 것이
+                  없고, 확대/축소를 손으로 하는 오른쪽 아래가 지도에서 늘 손이 가는 자리다.
+                  글자를 함께 적는다 — 그림쇠만으로는 「가운데로」인지 「전체 보기」인지
+                  갈리지 않는다 */}
+              <Button size="xs" variant="outline" icon="crosshair" onClick={backToPin}
+                style={{ position: "absolute", right: "var(--space-3)", bottom: "var(--space-3)",
+                  zIndex: 2, boxShadow: "var(--shadow-raised)" }}>
+                핀 위치로
+              </Button>
+            </>
           ) : (
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center", gap: 8, background: "var(--surface-sunken)",
