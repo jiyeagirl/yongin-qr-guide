@@ -32,6 +32,9 @@ import { eun, i } from "../core/josa.js";
    가장 알아야 할 사람(급히 대피소를 찾는 사람)이 그 배지를 못 보고 지나간다.
    한 번 닫으면 다시 열리지 않는다 — 같은 경고를 계속 들이밀지 않는다.
 
+   다시 여는 자리는 **아이콘과 그 위의 주의 배지뿐**이다 (2026-08-25). 이름과 「2곳」은
+   읽는 값이라 눌러도 아무 일이 없다 — 닫은 사람이 개수를 보다가 경고를 되살리지 않는다.
+
    ── "닫았다"를 이 컴포넌트가 기억할 수 없다 (2026-08-18) ────────────────────
    이 줄은 공공시설 탭일 때만 그려진다. 둘러보기 탭을 눌렀다가 돌아오면 **언마운트되었다가
    다시 마운트**되므로, 닫은 기억이 지역 상태에 있으면 그때마다 말풍선이 다시 열린다.
@@ -151,21 +154,27 @@ export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔
             const warn = warnOf(t);
             const label = FACILITY_LABELS[t];
 
-            const body = (
+            /* 꼬리는 이 덩어리를 기준으로 잰다 — 아래에서 이것을 단추가 감싸므로,
+               단추를 재면 그 여백만큼 꼬리가 옆으로 밀린다 */
+            const iconStack = (
+              <span ref={el => { btns.current[t] = el; }}
+                style={{ position: "relative", display: "inline-flex", flex: "0 0 auto" }}>
+                <FacilityIcon type={t} size={18} />
+                {warn ? (
+                  /* 주의 배지 — 아이콘 오른쪽 위 모서리. 흰 테두리로 아이콘 획과 떼어놓는다 */
+                  <span aria-hidden="true" style={{ position: "absolute", right: -6, top: -6,
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    width: 14, height: 14, borderRadius: 999,
+                    background: "var(--yong-amber-500)", color: "var(--yong-ink-900)",
+                    border: "var(--stroke-hairline) solid var(--surface-card)" }}>
+                    <Icon name="triangle-alert" size={9} strokeWidth={2.6} />
+                  </span>
+                ) : null}
+              </span>
+            );
+
+            const text = (
               <>
-                <span style={{ position: "relative", display: "inline-flex", flex: "0 0 auto" }}>
-                  <FacilityIcon type={t} size={18} />
-                  {warn ? (
-                    /* 주의 배지 — 아이콘 오른쪽 위 모서리. 흰 테두리로 아이콘 획과 떼어놓는다 */
-                    <span aria-hidden="true" style={{ position: "absolute", right: -6, top: -6,
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      width: 14, height: 14, borderRadius: 999,
-                      background: "var(--yong-amber-500)", color: "var(--yong-ink-900)",
-                      border: "var(--stroke-hairline) solid var(--surface-card)" }}>
-                      <Icon name="triangle-alert" size={9} strokeWidth={2.6} />
-                    </span>
-                  ) : null}
-                </span>
                 {label}
                 <b style={{ color: "var(--text-heading)", fontWeight: "var(--fw-bold)" }}>{counts[t] || 0}</b>곳
               </>
@@ -174,22 +183,36 @@ export function FacilitySummary({ counts = {}, warnings = [], basis = "QR 스캔
             const itemStyle = { display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
               fontFamily: "var(--font-sans)", fontSize: "var(--fs-body)", color: "var(--text-body)" };
 
-            if (!warn) return <span key={t} style={itemStyle}>{body}</span>;
+            if (!warn) return <span key={t} style={itemStyle}>{iconStack}{text}</span>;
 
             /* 어느 배지를 눌러도 **같은 말풍선**이 열린다 (문장이 하나이므로). 배지가
                갈라 놓는 것은 내용이 아니라 **꼬리가 가리키는 자리**다 — 누른 유형 밑에
                꼬리가 서서, 여러 유형이 걸린 줄에서 지금 무엇을 눌렀는지가 남는다.
                읽어주는 도구에는 배지마다 전체 문장을 들려준다: 열지 않고도 답을 얻어야
-               하는 사람에게 「AED 안내 보기」는 안내가 아니라 안내로 가는 길이다 */
+               하는 사람에게 「AED 안내 보기」는 안내가 아니라 안내로 가는 길이다.
+
+               ── 눌리는 것은 **아이콘과 그 위의 주의 배지뿐**이다 (2026-08-25, 사용자 요청) ──
+               전에는 줄 항목 전체(아이콘 · 이름 · 「2곳」)가 한 단추였다. 그러면 말풍선을
+               닫은 사람이 **개수를 확인하려고 그 자리를 봤다가** 다시 열게 된다 — 방금 닫은
+               경고가 되살아나는 것은 화면이 말을 듣지 않는 것으로 읽힌다. 이름과 개수는
+               읽는 값이지 누르는 값이 아니다.
+
+               대신 단추의 **누를 수 있는 넓이는 아이콘보다 넓다** — 여백을 8px 주고 같은
+               크기의 음수 바깥여백으로 되돌린다. 자리는 그대로고 손가락이 닿는 면만 커진다
+               (18px 짜리 과녁은 급히 찾는 사람에게 너무 작다). 오른쪽으로 늘어난 8px 은
+               이름과의 사이 간격까지이므로 글자를 덮지 않는다. */
             const on = open === t;
             return (
-              <button key={t} type="button" ref={el => { btns.current[t] = el; }}
-                onClick={() => (on ? close() : reopen(t))}
-                aria-expanded={on} aria-label={noticeText}
-                style={{ ...itemStyle, background: "none", border: "none", padding: 0, cursor: "pointer",
-                  textAlign: "left" }}>
-                {body}
-              </button>
+              <span key={t} style={itemStyle}>
+                <button type="button"
+                  onClick={() => (on ? close() : reopen(t))}
+                  aria-expanded={on} aria-label={noticeText}
+                  style={{ display: "inline-flex", flex: "0 0 auto", background: "none", border: "none",
+                    padding: "var(--space-2)", margin: "calc(var(--space-2) * -1)", cursor: "pointer" }}>
+                  {iconStack}
+                </button>
+                {text}
+              </span>
             );
           })}
 

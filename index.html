@@ -33,68 +33,30 @@
 <body>
 <main class="wrap">
   <h1>QR 기반 공공시설 및 골목형 상점가 위치 안내</h1>
-  <p class="sub">용인시 시민용 모바일 웹 · 기능명세서 v1.1 기준<br />앱 설치와 회원가입 없이 QR 하나로 들어오는 화면입니다.</p>
+  <!-- 「기능명세서 v1.1 기준」이 여기 붙어 있었다 (2026-08-25 삭제) — 그 사이 문서가 v1.6
+       이 되도록 이 줄만 v1.1 에 머물러 있었다. 입구에 적힌 판 번호는 낡으면 **틀린 말**이
+       되고, 검수하는 사람이 그 번호로 문서를 찾으면 없는 판을 찾게 된다. 부르는 이름도
+       아래 카드와 맞췄다 (시민용 → 사용자). -->
+  <p class="sub">용인시 사용자 모바일 웹 · 관리자 웹<br />앱 설치와 회원가입 없이 QR 하나로 들어오는 안내 서비스입니다.</p>
 
-  <h2>지금 볼 수 있는 화면</h2>
+  <!-- ── 문 하나로 들어간다 (2026-08-25, 사용자 요청) ────────────────────────────
+       「지금 볼 수 있는 화면」 아래에 카드가 일곱 장 있었다 (메인 · 시설 상세 · 점포 상세 ·
+       코스 상세 · 축제 상세 · 길찾기 · 오류 신고). 만든 쪽에서는 화면 목록이지만, 열어 보는
+       사람에게는 **서비스가 일곱 조각으로 나뉘어 보인다** — 실제로는 하나의 앱이고 뒤의
+       여섯은 전부 메인 화면 안에서 열리는 자리다. 상세로 바로 뛰어드는 링크는 그 화면이
+       **어디서 열리는지**를 건너뛰게 만들기도 한다.
+       이제 문은 하나다. 나머지는 그 안에서 실제로 쓰는 길로 들어간다. -->
   <a class="card" href="./screens/main/">
     <div>
-      <strong>메인 (S02 · S03 · S04)</strong>
-      <span>하단 탭 3개로 전환합니다. 공공시설 · 상점가는 지도와 바텀시트, 둘러보기는 지도 없는 정보 화면.</span>
+      <strong>사용자 모바일 웹</strong>
+      <span>하단 탭 3개(공공시설 · 골목형 상점가 · 둘러보기)로 오갑니다. 시설 · 점포 · 코스 · 축제 상세와 길찾기 · 오류 신고는 이 화면 안에서 열립니다.</span>
     </div>
     <div class="go">열기 →</div>
   </a>
 
-  <a class="card" href="./screens/main/#/facility/fc-001" style="margin-top: var(--space-2)">
-    <div>
-      <strong>시설 상세 (S05)</strong>
-      <span>목록이나 지도에서 시설을 누르면 열립니다. 이 링크는 둔전마을회관 AED 로 바로 들어갑니다.</span>
-    </div>
-    <div class="go">열기 →</div>
-  </a>
-
-  <a class="card" href="./screens/main/#/store/dj-001" style="margin-top: var(--space-2)">
-    <div>
-      <strong>점포 상세 (S06)</strong>
-      <span>상점가 탭에서 점포를 누르면 열립니다. 뒤로 가면 걸어둔 필터가 그대로 남아 있습니다.</span>
-    </div>
-    <div class="go">열기 →</div>
-  </a>
-
-  <a class="card" href="./screens/main/#/course/cs-eat" style="margin-top: var(--space-2)">
-    <div>
-      <strong>골목 한바퀴 코스 상세 (S08)</strong>
-      <span>둘러보기 탭의 코스 카드에서 열립니다. 순번 핀과 점선 경로가 있는 자기 지도를 갖습니다.</span>
-    </div>
-    <div class="go">열기 →</div>
-  </a>
-
-  <a class="card" href="./screens/main/#/festival/ft-dunjeon" style="margin-top: var(--space-2)">
-    <div>
-      <strong>축제 상세 (S09)</strong>
-      <span>둘러보기 탭 최상단 축제 목록에서 열립니다. 프로그램 아코디언과 조건부 부스·임시시설 섹션.</span>
-    </div>
-    <div class="go">열기 →</div>
-  </a>
-
-  <a class="card" href="./screens/main/#/route/facility/fc-001" style="margin-top: var(--space-2)">
-    <div>
-      <strong>길찾기 (S07)</strong>
-      <span>시설 · 점포 상세의 [길찾기]에서 열립니다. 출발지는 언제나 QR 스캔 지점입니다.</span>
-    </div>
-    <div class="go">열기 →</div>
-  </a>
-
-  <a class="card" href="./screens/main/#/report/facility/fc-001" style="margin-top: var(--space-2)">
-    <div>
-      <strong>오류 신고 (S10)</strong>
-      <span>시설 · 점포 상세의 [정보 오류 신고]에서 열립니다. 대상은 자동으로 채워집니다.</span>
-    </div>
-    <div class="go">열기 →</div>
-  </a>
-
-  <h2>상태만 보이는 화면</h2>
+  <h2>예외상황 화면</h2>
   <p class="sub" style="margin-bottom: var(--space-3)">
-    특정 조건에서만 나오는 화면입니다. 아래 주소로 그 조건을 만들어 볼 수 있습니다.
+    예외상황에서 나타나는 화면입니다. 아래 텍스트 링크로 확인 가능합니다.
   </p>
   <ul>
     <li class="todo"><code>S01</code><em><a href="./screens/main/">QR 진입 로딩</a> — 정상 진입 때 잠깐 지나갑니다</em></li>
@@ -105,16 +67,17 @@
     <li class="todo"><code>S13-S</code><em><a href="./screens/main/#/district/mohyeon">상점가 안내 준비 중</a> — 안내 주소가 없는 상점가</em></li>
   </ul>
 
+  <!-- ── 설명은 카드 한 줄로 (2026-08-25, 사용자 요청) ──────────────────────────
+       머리 문단과 카드 설명이 따로 있었고 둘을 합치면 여섯 줄이었다. 화면 이름 열다섯을
+       늘어놓고, 검수 계정과 메뉴가 9개/8개로 갈리는 사정까지 여기서 적고 있었는데 그것들은
+       전부 **들어가면 화면이 하는 말**이다(로그인 화면에 계정이 적혀 있고, 좌측 메뉴가
+       스스로 갈린다). 입구에서 할 말은 「무엇을 하는 자리이고 어디서 열어야 하는가」다.
+       위 카드와 같은 모양이 되어 둘을 나란히 견줄 수 있는 것도 이 편이 낫다. -->
   <h2>관리자 웹</h2>
-  <p class="sub" style="margin-bottom: var(--space-3)">
-    시민용과 완전히 분리된 별도 주소입니다. <strong>시민용 화면 어디에도 이 링크가 없습니다</strong> —
-    QR 을 찍고 들어온 시민이 관리자 화면으로 갈 수 있는 길은 두지 않았습니다.
-    데스크톱 전용이라 가로 1,024px 이상인 창에서 열어 주세요.
-  </p>
   <a class="card" href="./admin/">
     <div>
-      <strong>관리자 웹 (M01 ~ M15)</strong>
-      <span>로그인 · 대시보드 · 골목형 상점가 · 점포 · 축제 · 공공시설 · QR 지점 · 오류신고 · 데이터 갱신 현황 · 계정 관리. 한 건씩 고치고 새로 넣는 화면들이며, 데이터 일괄 적재·매칭·검수는 개발 쪽입니다. 검수용 계정 두 개는 로그인 화면에 적혀 있고, 계정에 따라 좌측 메뉴가 9개 / 8개로 갈립니다 — [계정 관리]는 최종 관리자에게만 보입니다.</span>
+      <strong>관리자 웹</strong>
+      <span>관리자가 정보를 관리하고 수정할 수 있는 페이지입니다. 데스크톱 전용 웹으로 가로 1,024px 이상인 창에서 열어주세요.</span>
     </div>
     <div class="go">열기 →</div>
   </a>
