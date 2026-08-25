@@ -369,10 +369,19 @@ export function Dashboard({ onNavigate }) {
                       render: r => <Badge tone="neutral" size="sm">{r.order}</Badge> },
                     { key: "name", label: "상호명", render: r => <StoreName store={r} /> },
                     { key: "biz", label: "업종", width: 110, render: r => r.biz || CATEGORY_LABELS[r.cat] },
-                    /* 열 이름이 「등록」이라 값은 연월만 적는다 ("2026.04").
-                       카드 쪽은 이름표가 없어 "2026.04 등록"을 그대로 쓴다 (dunjeon.js) */
-                    { key: "opened", label: "등록", width: 90, align: "right",
-                      render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.opened}</span> },
+                    /* ── 「등록」 → 「등록 일자」, 값도 일자까지 (2026-08-25, 사용자 요청) ──
+                       점포 폼이 일자까지 받게 된 뒤로 그 값을 확인하는 자리가 여기 하나인데
+                       (신규 매장을 가르는 것이 곧 이 값이다) 표만 연월이라, 같은 달에 문 연
+                       가게가 여럿이면 **왜 이 차례인지 화면에서 읽을 수 없었다.**
+
+                       가운데 정렬이다. 오른쪽으로 붙이면 열 이름이 값의 끝(「17」) 위에
+                       얹혀 한참 오른쪽에 가 있는 것처럼 보인다 — 숫자를 오른쪽에 붙이는
+                       것은 자릿수가 달라 견주는 값(조회수 · 곳수)의 규칙이고, 날짜는 늘
+                       같은 길이라 여기 해당하지 않는다.
+
+                       시민 카드는 그대로 연월이다 ("2026.04 등록") — dunjeon.js 의 note. */
+                    { key: "openedDay", label: "등록 일자", width: 120, align: "center",
+                      render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.openedDay}</span> },
                   ]} />
               </Section>
             </Card>

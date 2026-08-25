@@ -247,8 +247,9 @@ export const DISTRICT = {
    조회수 상위는 대개 오래된 가게다. 한 줄에 섞으면 어느 쪽 근거로 뽑힌 카드인지 알 수 없다.
    각 카드의 note 가 그 카드가 거기 있는 이유를 적는다. */
 /* 등록 시점을 연월로 되돌린다. **연월만** 돌려주고 「등록」은 붙이지 않는다 (2026-08-20) —
-   카드에는 "2026.06 등록"이 맞지만 관리자 표의 「등록」 열에서는 열 이름이 이미 그 말을
-   하고 있어 줄마다 같은 글자가 여섯 번 반복된다. 말을 붙이는 쪽이 그것을 붙인다. */
+   카드에는 "2026.06 등록"이 맞지만 관리자 표의 열에서는 열 이름이 이미 그 말을 하고 있어
+   줄마다 같은 글자가 여섯 번 반복된다. 말을 붙이는 쪽이 그것을 붙인다.
+   (관리자 표는 2026-08-25 부터 연월이 아니라 일자를 적는다 — 아래 `openedDay`.) */
 const MONTHS_AS_OF = [2026, 6]; /* 데이터 기준월 */
 const openedMonth = ago => {
   const t = MONTHS_AS_OF[0] * 12 + (MONTHS_AS_OF[1] - 1) - ago;
@@ -302,6 +303,19 @@ const openedKey = s => {
   return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}-01`;
 };
 
+/* 화면에 적는 **일자**("2026.04.17"). 관리자 대시보드의 「등록 일자」 열이 쓴다
+   (2026-08-25, 사용자 요청 — 폼이 일자까지 받게 된 뒤로 그 옆의 표만 연월이었다).
+
+   위 `openedKey` 와 달리 **일자가 없으면 지어내지 않는다.** 저쪽은 차례를 정하는 열쇠라
+   빈자리를 01 로 메워야 견줄 수 있지만, 이쪽은 담당자가 읽는 값이다 — 적힌 적 없는 날짜를
+   화면에 적으면 그것이 원천의 값으로 읽힌다. 없으면 연월만 적는다 (아래 `openedDay || opened`).
+   관리자 화면에서는 표(`admin/data/sources.js`)가 모든 줄에 `createdAt` 을 채워 주므로
+   이 갈래로 떨어지지 않는다. */
+const openedDay = s => {
+  const m = String(s.createdAt || "").match(/^(\d{4})[-.](\d{1,2})[-.](\d{1,2})/);
+  return m ? `${m[1]}.${String(m[2]).padStart(2, "0")}.${String(m[3]).padStart(2, "0")}` : null;
+};
+
 export function discoverPicks(stores) {
   const live = (stores || []).filter(s => s.visible !== false);
   return {
@@ -309,15 +323,19 @@ export function discoverPicks(stores) {
       .sort((a, b) => viewsOf(b) - viewsOf(a))
       .slice(0, DISCOVER_PICK)
       .map((s, i) => ({ ...s, note: i === 0 ? "이번 주 조회 1위" : `조회 ${viewsOf(s).toLocaleString()}회` })),
-    /* `opened` 는 연월만("2026.06"), `note` 는 카드에 적히는 문장("2026.06 등록").
-       열 이름이 「등록」인 표는 앞쪽을, 이름표가 없는 카드는 뒤쪽을 쓴다 */
+    /* 세 값이 나가고 읽는 쪽이 다르다.
+         opened     연월만 ("2026.06")        — 시민 카드가 문장을 만드는 재료
+         openedDay  일자까지 ("2026.06.14")   — 관리자 대시보드의 「등록 일자」 열
+         note       카드에 적히는 문장 ("2026.06 등록")
+       **시민 카드는 그대로 연월이다** — 문 연 날짜까지 읽을 이유가 없다. 일자는 차례를
+       정하는 데(openedKey)와 담당자가 값을 확인하는 자리에만 쓴다 */
     fresh: [...live]
       /* 최근이 앞 — 열쇠는 클수록 새 것이라 내림차순이다. 같은 날이면 가까운 순 */
       .sort((a, b) => openedKey(b).localeCompare(openedKey(a)) || (a.dist || 0) - (b.dist || 0))
       .slice(0, DISCOVER_PICK)
       .map(s => {
         const opened = openedMonth(agoOf(s));
-        return { ...s, opened, note: `${opened} 등록` };
+        return { ...s, opened, openedDay: openedDay(s) || opened, note: `${opened} 등록` };
       }),
   };
 }
