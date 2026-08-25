@@ -3,9 +3,11 @@ import { Input } from "../core/Input.jsx";
 import { Select } from "../core/Select.jsx";
 import { Switch } from "../core/Switch.jsx";
 import { Button } from "../core/Button.jsx";
+import { Icon } from "../core/Icon.jsx";
 import { IconButton } from "../core/IconButton.jsx";
 import { TextButton } from "../core/TextButton.jsx";
 import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
+import { OptionPicker } from "./OptionPicker.jsx";
 
 /* 1:N 항목 편집기 — 한 레코드에 딸린 여러 줄을 그 자리에서 넣고 뺀다.
  *
@@ -66,6 +68,38 @@ import { VisuallyHidden } from "../core/VisuallyHidden.jsx";
    4px 씩 어긋나 있었다 (2026-08-25). */
 const RESERVE = "calc(36px + var(--space-2))";
 
+/* ── 차례가 뜻을 갖는 목록 (`ordered`, 2026-08-25) ────────────────────────────
+   골목 한바퀴 코스가 그렇다. 프로그램·부스는 **시각이 차례를 정하므로** 줄이 어느 자리에
+   있든 시민 화면에서 같은 곳에 서지만, 코스는 목록의 차례가 곧 ①②③ 이고 걷는 길이다.
+   그런 목록에는 두 가지가 더 필요하다.
+
+     순번   지금 몇 번째인지. 없으면 담당자가 손가락으로 세어 가며 옮긴다
+     손잡이 끌어서 옮긴다. 없으면 차례를 고치는 유일한 방법이 지우고 다시 넣는 것이 된다
+
+   ── 끌어서 옮긴다 (2026-08-25 오후, 사용자 요청) ─────────────────────────────
+   처음에는 ↑ ↓ 단추 둘이었다. 「다이얼로그 안이라 끌다가 폼 밖으로 나가면 규칙이 하나
+   더 생긴다」가 근거였는데, 그 걱정은 **포인터를 손잡이에 가두면**(setPointerCapture)
+   생기지 않는다 — 손가락이 어디로 가든 이 손잡이의 이벤트로 계속 들어온다.
+   그리고 단추 둘로 넷째를 첫째로 보내려면 세 번을 눌러야 하는데, 그동안 목록이 세 번
+   다시 그려져 무엇이 어디로 갔는지 눈으로 좇을 수 없다.
+
+   **시민 화면 S08 과 같은 방식이다** (`screens/detail/CourseDetail.jsx` 의 startDrag).
+   같은 일(코스 순서 바꾸기)을 두 화면이 다른 손짓으로 하면, 담당자가 자기가 만든 화면을
+   쓸 때 한 번 더 배워야 한다. 끄는 동안 배열은 건드리지 않고 **손을 뗄 때 한 번만** 바꾼다.
+
+   **↑ ↓ 키는 그대로 있다.** 손잡이가 단추라 초점을 받고, 화살표 키로 한 칸씩 옮긴다 —
+   끌기가 마우스와 손가락에만 주는 것을 같은 자리에서 키보드에도 준다. 옮긴 결과는
+   화면을 봐야만 알 수 있으므로 읽어주는 도구에는 한 줄로 말한다.
+
+   ── 손잡이는 칸 **오른쪽**에 선다 (2026-08-25 오후, 사용자 요청) ────────────────
+   처음에는 줄 맨 앞이 손잡이였고 그 뒤가 순번이었다. 그러면 **줄 맨 앞에 오는 것이
+   누르는 것**이라, 차례를 읽으려는 눈이 손잡이를 한 번 넘어가야 ①②③ 에 닿는다.
+   순번이 맨 앞으로 오면 그 숫자들이 한 세로선에 서서 목록이 곧 차례로 읽히고,
+   **누르는 것 둘(손잡이 · 휴지통)은 오른쪽 끝에 모인다** — 읽는 값과 누르는 자리가
+   좌우로 갈린다. 칸의 왼쪽 끝도 24px 만 들여져 폼의 다른 칸과 더 가까워진다. */
+const LEAD = "calc(24px + var(--space-2))";                        /* 순번 + gap */
+const TAIL_ORDERED = `calc(36px + var(--space-2) + ${RESERVE})`;   /* 손잡이 + gap + 삭제 */
+
 /* 카드 안쪽 여백. **열 이름 줄이 이 값만큼 함께 들여져야** 머리글과 칸이 한 세로선에
    선다 — 카드는 안쪽으로 밀려 있고 열 이름 줄은 카드 밖이다 (아래 head).
    테두리를 두르면서 그 한 줄(1px)도 함께 밀어내므로 `CARD_INSET` 이 둘을 더한 값이다 —
@@ -107,7 +141,15 @@ export function Repeater({
   /* 지울 때 무엇을 지우는지 이름으로 적기 위한 열쇠 (아래 `pending`). 목록마다 이름 칸이
      다르다 — 프로그램은 `title`, 부스는 `name`. 없으면 「n번째 줄」로 부른다 */
   nameKey = "name",
-  minRows = 0, error, span = 2,
+  /* 차례가 뜻을 갖는 목록이면 켠다 — 순번 배지와 ↑ ↓ 가 붙는다 (위 LEAD 머리말) */
+  ordered = false,
+  /* ── 줄 수가 정해진 목록 (`maxRows`, 2026-08-25 오후, 사용자 요청) ──────────────
+     골목 한바퀴 코스가 넷으로 고정이다. 다 채우고 나면 **[추가]를 내주지 않는다** —
+     눌러 놓고 저장할 때 「넷이어야 합니다」로 되돌리면, 담당자는 화면이 시킨 일을
+     하고 나서 야단맞는다. 누를 수 없는 채로 세워 두지도 않는다: 회색 단추는 「지금은
+     안 되지만 언젠가 된다」는 말인데 여기서는 영영 되지 않는다. */
+  maxRows = 0,
+  error, span = 2,
 }) {
   const list = Array.isArray(rows) ? rows : [];
   const top = columns.filter(c => !c.row2);
@@ -116,6 +158,11 @@ export function Repeater({
      여기에 따라간다 — 카드가 없으면 들일 것이 없다 */
   const carded = bottom.length > 0;
   const inset = carded ? CARD_INSET : "0px";
+  /* 열 이름 줄·아랫줄·예시 줄이 **한 값을 함께 본다** (RESERVE 머리말과 같은 이유).
+     차례가 있는 목록은 오른쪽 끝에 손잡이가 하나 더 서므로 그만큼 더 비운다 */
+  const tail = ordered ? TAIL_ORDERED : RESERVE;
+  const lead = ordered ? LEAD : "0px";
+  const full = maxRows > 0 && list.length >= maxRows;
 
   /* ── 지우기 전에 한 번 묻는다 (2026-08-25, 사용자 요청) ──────────────────────
      휴지통이 칸 바로 옆에 있어 위치를 고치려다 누르기 쉽다. 다른 목록과 달리 이 줄은
@@ -163,13 +210,96 @@ export function Repeater({
     return v && String(v).trim() ? String(v).trim() : `${i + 1}번째 줄`;
   };
 
+  /* 한 자리에서 다른 자리로 옮긴다. 목록 밖으로는 나가지 않는다 — 감싸 돌게 두면
+     위로 옮기다가 맨 아래에 가 붙는다.
+     지움 확인과 펴 둔 아랫줄을 함께 비우는 것은 삭제와 같은 이유다 — 둘 다 **줄 번호로**
+     기억하는데 여기서 번호가 서로 바뀐다 (위 openLower 머리말). */
+  const move = (i, to) => {
+    if (!onChange || to < 0 || to >= list.length || i === to) return;
+    setPending(null);
+    setOpenLower([]);
+    const out = list.slice();
+    out.splice(to, 0, out.splice(i, 1)[0]);
+    onChange(out);
+  };
+
+  /* ── 끌어서 옮기기 (위 LEAD 머리말) ─────────────────────────────────────────
+     시민 화면 S08 과 같은 방식이다. 끄는 동안 화면이 하는 일은 셋이고 **배열은 손을 뗄 때
+     한 번만** 바뀐다:
+
+       잡은 줄     transform 으로 손가락을 1:1 로 따라간다. transition 을 걸지 않는다 —
+                   한 프레임이라도 늦으면 손가락과 줄이 어긋나 끌리는 느낌이 사라진다
+       나머지 줄   놓일 자리를 비우려고 잡은 줄의 높이만큼 밀린다. 이쪽에는 transition 을
+                   건다 — **벌어지는 틈이 곧 「여기 들어갑니다」**라 그 과정이 보여야 한다
+       순번        놓았을 때 붙을 번호로 미리 바뀐다. 틈은 자리를 그림으로, 번호는 같은
+                   것을 숫자로 말한다
+
+     자리는 잡는 순간 한 번 재둔 **다른 줄들의 중심선**으로 정한다. 손가락보다 위에 남은
+     중심선의 수가 곧 끼워질 자리다. 끄는 동안 배열도 레이아웃도 그대로라 이 기준이
+     발밑에서 움직이지 않는다 — px 차이로 칸수를 세면 줄 높이가 저마다 달라(아랫줄이 펴진
+     줄이 있다) 어긋난다. 잡은 줄의 중심선은 셈에서 뺀다: 그 줄은 손가락을 따라다녀
+     자기 상자 안에 손가락이 늘 들어 있으므로 넣어두면 언제나 제자리가 답으로 나온다. */
+  const rowEls = React.useRef(new Map());
+  const grabRef = React.useRef(null);
+  const [drag, setDrag] = React.useState(null);   /* { from, h, y, to } */
+  /* 옮긴 결과를 소리로 알린다. 끌기는 화면을 봐야 아는 동작이라, 키보드로 옮긴 사람에게는
+     이 한 줄이 유일한 응답이다 */
+  const [say, setSay] = React.useState("");
+
+  const startDrag = (i, e) => {
+    const el = rowEls.current.get(i);
+    if (!el) return;
+    grabRef.current = {
+      y0: e.clientY,
+      mids: list.map((_, n) => {
+        if (n === i) return null;
+        const el2 = rowEls.current.get(n);
+        if (!el2) return null;
+        const r2 = el2.getBoundingClientRect();
+        return (r2.top + r2.bottom) / 2;
+      }).filter(m => m != null),
+    };
+    setPending(null);
+    setDrag({ from: i, h: el.getBoundingClientRect().height, y: 0, to: i });
+  };
+
+  const moveDrag = e => {
+    const g = grabRef.current;
+    if (!g) return;
+    const y = e.clientY - g.y0;
+    let to = 0;
+    g.mids.forEach(mid => { if (e.clientY > mid) to += 1; });
+    /* 값이 그대로면 새 객체를 만들지 않는다 — 끌기는 초당 수십 번 들어온다 */
+    setDrag(d => (d && (d.y !== y || d.to !== to) ? { ...d, y, to } : d));
+  };
+
+  const endDrag = () => {
+    const d = drag;
+    grabRef.current = null;
+    setDrag(null);
+    if (!d || d.to === d.from) return;
+    move(d.from, d.to);
+    setSay(`${list.length}개 중 ${d.to + 1}번으로 옮겼습니다.`);
+  };
+
+  const onHandleKey = (i, e) => {
+    const delta = e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0;
+    if (!delta) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const to = i + delta;
+    if (to < 0 || to >= list.length) return;
+    move(i, to);
+    setSay(`${list.length}개 중 ${to + 1}번으로 옮겼습니다.`);
+  };
+
   /* 열 이름 줄. 비었을 때도 그린다 — 아래 예시 줄이 어느 칸에 무엇을 넣는 자리인지
      말해 주는 것이 이 줄이다. 오른쪽은 삭제 버튼 자리(RESERVE)를, 양쪽은 카드 안쪽
      여백(CARD_PAD)을 함께 비워 둔다 — 그래야 머리글과 카드 안의 칸이 한 세로선에 선다.
      **윗줄 칸만 가리킨다** — 아랫줄 칸은 자기 이름표를 위에 달고 있다. */
   const head = (
     <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)",
-      padding: `0 calc(${RESERVE} + ${inset}) 0 ${inset}`,
+      padding: `0 calc(${tail} + ${inset}) 0 calc(${inset} + ${lead})`,
       fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
       {top.map(c => (
         <span key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
@@ -181,6 +311,17 @@ export function Repeater({
 
   /* 칸 하나. `disabled` 면 예시 줄용이다 (값 없이 모양만 보여준다) */
   const cell = (c, row, i, off) => {
+    /* 선택지가 많은 칸 — 고르개 대신 **검색해서 고른다** (2026-08-25, 사용자 요청).
+       한 상점가의 점포가 335곳이라 `<select>` 로는 손가락으로 훑게 된다 (OptionPicker 머리말).
+       예시 줄에서는 값도 목록도 없는 채로 모양만 보여준다 */
+    if (c.type === "picker") {
+      return (
+        <OptionPicker options={off ? [] : c.options} value={off ? "" : row[c.key]}
+          disabled={off} ariaLabel={off ? undefined : c.label}
+          placeholder={c.placeholder || "이름을 입력해 찾습니다"}
+          onChange={off ? undefined : v => set(i, c.key, v)} />
+      );
+    }
     if (c.type === "select") {
       return (
         <Select options={c.options} disabled={off} tabIndex={off ? -1 : undefined}
@@ -214,7 +355,7 @@ export function Repeater({
      자리라 이름을 직접 달되, 붙이는 자리는 윗줄·폼의 나머지 칸과 같다.
      오른쪽을 비워 두는 폭은 윗줄과 같은 RESERVE 다 — 그래야 칸 끝이 한 자리에서 만난다. */
   const lower = (row, i, off) => (bottom.length ? (
-    <div style={{ display: "flex", gap: "var(--space-2)", paddingRight: RESERVE }}>
+    <div style={{ display: "flex", gap: "var(--space-2)", paddingLeft: lead, paddingRight: tail }}>
       {bottom.map(c => (
         <div key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
           <div style={{ marginBottom: 4, fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
@@ -235,7 +376,7 @@ export function Repeater({
         {badge}
         <span style={{ marginLeft: "auto", fontSize: "var(--fs-caption)", color: "var(--text-muted)",
           fontVariantNumeric: "tabular-nums" }}>
-          {list.length}건{minRows ? ` · 최소 ${minRows}건` : ""}
+          {list.length}건
         </span>
       </div>
 
@@ -246,14 +387,85 @@ export function Repeater({
           {head}
 
           {/* 줄 하나가 카드 하나다 (머리말 ②) — 가는 선으로 가르지 않는다 */}
-          {list.map((row, i) => (
-            <div key={i} style={carded ? CARD : PLAIN}>
+          {list.map((row, i) => {
+            /* 끄는 동안의 이 줄 (위 startDrag 머리말)
+                 dragging  잡힌 줄. 손가락을 따라간다
+                 moved     비켜 주려고 위(-1)/아래(+1)로 한 칸 밀리는 줄
+                 num       놓았을 때 붙을 번호 — 배열은 그대로이므로 화면용으로만 센다 */
+            const dragging = !!drag && drag.from === i;
+            const moved = !drag || dragging ? 0
+              : (drag.to > drag.from && i > drag.from && i <= drag.to) ? -1
+              : (drag.to < drag.from && i >= drag.to && i < drag.from) ? 1 : 0;
+            const num = dragging ? drag.to + 1 : i + 1 + moved;
+            const shiftY = dragging ? drag.y : moved * (drag ? drag.h : 0);
+
+            return (
+            <div key={i}
+              ref={el => { if (el) rowEls.current.set(i, el); else rowEls.current.delete(i); }}
+              style={{ ...(carded ? CARD : PLAIN),
+                ...(ordered ? {
+                  position: "relative",
+                  /* 들어올린 것처럼 보여야 한다 — 아래 줄들과 층을 나눈다. 크기는 건드리지
+                     않는다: 줄 높이가 변하면 잡을 때 재둔 h 와 어긋나 비워둔 틈이 실제
+                     줄보다 크거나 작아진다 */
+                  background: dragging ? "var(--surface-card)" : (carded ? CARD.background : undefined),
+                  boxShadow: dragging ? "var(--shadow-raised)" : undefined,
+                  borderColor: dragging ? "var(--border-strong)" : undefined,
+                  zIndex: dragging ? 2 : undefined,
+                  transform: shiftY ? `translateY(${shiftY}px)` : undefined,
+                  transition: drag && !dragging
+                    ? "transform var(--dur-fast) var(--ease-standard)" : "none",
+                  willChange: drag ? "transform" : undefined,
+                  /* 끄는 동안에는 글자가 잡히지 않는다 — 손잡이에서 시작한 끌기가 옆 칸의
+                     글자를 파랗게 칠하며 지나가면 무엇을 하고 있는지 흐려진다 */
+                  userSelect: drag ? "none" : undefined,
+                } : null) }}>
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                {/* 순번 — 시민 화면의 ①②③ 과 같은 수다. 눌리지 않는 표시라 배지 모양이
+                    아니라 숫자 하나로 둔다 (알약을 쓰면 필터 칩으로 읽힌다).
+                    **줄 맨 앞이다** — 읽는 값이 먼저고 누르는 것은 오른쪽 끝이다 (LEAD 머리말) */}
+                {ordered ? (
+                  <span aria-hidden="true" style={{ flex: "0 0 24px", textAlign: "center",
+                    fontSize: "var(--fs-label)", fontWeight: "var(--fw-bold)",
+                    color: dragging ? "var(--brand-primary)" : "var(--text-muted)",
+                    fontVariantNumeric: "tabular-nums" }}>
+                    {num}
+                  </span>
+                ) : null}
                 {top.map(c => (
                   <div key={c.key} style={{ flex: c.width ? `0 0 ${c.width}px` : 1, minWidth: 0 }}>
                     {cell(c, row, i, false)}
                   </div>
                 ))}
+                {/* ── 손잡이 — 칸 오른쪽, 휴지통 앞 (위 LEAD 머리말) ─────────────
+                    `touch-action: none` 이 **여기에만** 걸린다 — 이 36px 안에서만 브라우저의
+                    스크롤을 끄고, 손잡이 밖에서는 폼이 예전처럼 흐른다.
+                    단추라 초점을 받고 ↑/↓ 키로도 옮긴다. 이름에 지금 자리를 적는다 —
+                    소리로 훑으면 「순서 옮기기」가 줄줄이 지나갈 뿐이라, 무엇이 몇 번째인지가
+                    이름 안에 있어야 한다. */}
+                {ordered ? (
+                  <button type="button"
+                    aria-label={`${nameOf(row, i)} 순서 옮기기, ${list.length}개 중 ${num}번. 위아래 화살표 키로 옮깁니다`}
+                    onKeyDown={e => onHandleKey(i, e)}
+                    onPointerDown={e => {
+                      /* 포인터를 이 단추에 가둔다 — 손가락이 폼 밖으로 나가도 아래
+                         onPointerMove 로 계속 들어온다. `preventDefault` 는 하지 않는다:
+                         그러면 단추가 초점을 받지 못해 놓자마자 ↑/↓ 키를 쓸 수 없다 */
+                      e.currentTarget.setPointerCapture(e.pointerId);
+                      startDrag(i, e);
+                    }}
+                    onPointerMove={e => { if (dragging) moveDrag(e); }}
+                    onPointerUp={endDrag}
+                    onPointerCancel={endDrag}
+                    style={{ flex: "0 0 36px", height: 36, display: "inline-flex",
+                      alignItems: "center", justifyContent: "center",
+                      background: "none", border: "none", borderRadius: "var(--radius-sm)",
+                      touchAction: "none", userSelect: "none",
+                      cursor: dragging ? "grabbing" : "grab",
+                      color: dragging ? "var(--text-heading)" : "var(--text-muted)" }}>
+                    <Icon name="grip-vertical" size={18} />
+                  </button>
+                ) : null}
                 {/* 묻고 있는 동안에는 휴지통을 자리째 비운다 — 같은 줄에 「지울까요?」와
                     다시 누를 수 있는 삭제 단추가 함께 서면 어느 쪽이 지금 할 일인지
                     흐려진다. 폭은 그대로 잡아 두어야 칸이 흔들리지 않는다 */}
@@ -293,7 +505,10 @@ export function Repeater({
                 </div>
               ) : null}
             </div>
-          ))}
+            );
+          })}
+          {/* 옮긴 결과를 소리로 알린다 (위 startDrag 머리말) */}
+          {ordered ? <VisuallyHidden role="status">{say}</VisuallyHidden> : null}
         </div>
       ) : (
         /* ── 비었을 때는 글로 설명하지 않고 **한 줄을 그려 보인다** (2026-08-20) ──
@@ -310,6 +525,13 @@ export function Repeater({
               모양 그대로여야 이 줄이 예시 노릇을 한다 */}
           <div style={carded ? CARD : PLAIN}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              {/* 차례가 있는 목록이면 순번 자리도 그려 둔다 — 눌러서 생기는 줄이 그
+                  모양이다. 첫 줄이므로 1 번이다 */}
+              {ordered ? (
+                <span aria-hidden="true" style={{ flex: "0 0 24px", textAlign: "center",
+                  fontSize: "var(--fs-label)", fontWeight: "var(--fw-bold)",
+                  color: "var(--text-disabled)", fontVariantNumeric: "tabular-nums" }}>1</span>
+              ) : null}
               {/* 고르는 칸의 예시는 **첫 선택지**다. 빈 값으로 두면 예시 줄에서 그 칸만
                   비어 보여, 고르는 칸이라는 사실이 오히려 흐려진다 (cell 의 off 갈래) */}
               {top.map(c => (
@@ -317,9 +539,17 @@ export function Repeater({
                   {cell(c, {}, -1, true)}
                 </div>
               ))}
-              {/* 삭제 버튼 자리를 비워 둔다 — 열 이름 줄의 RESERVE 와 맞춰야 칸이
-                  어긋나지 않는다. 여기 「예시」라고 적었던 것을 뺐다 (2026-08-20): 칸 안이
-                  이미 「예)」로 시작해 같은 말을 두 번 하고 있었다. */}
+              {/* 손잡이도 칸 오른쪽에 그려 둔다 — 실제 줄과 같은 자리다 */}
+              {ordered ? (
+                <span aria-hidden="true" style={{ flex: "0 0 36px", height: 36,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  color: "var(--text-disabled)" }}>
+                  <Icon name="grip-vertical" size={18} />
+                </span>
+              ) : null}
+              {/* 삭제 단추 자리를 비워 둔다 — 열 이름 줄의 tail 과 맞춰야 칸이 어긋나지
+                  않는다. 여기 「예시」라고 적었던 것을 뺐다 (2026-08-20): 칸 안이 이미
+                  「예)」로 시작해 같은 말을 두 번 하고 있었다. */}
               <span aria-hidden="true" style={{ flex: "0 0 36px" }} />
             </div>
             {/* 아랫줄은 **접힌 모양으로** 보여준다 — 새 줄이 실제로 그렇게 생긴다 */}
@@ -338,9 +568,12 @@ export function Repeater({
         </div>
       )}
 
-      <div style={{ marginTop: "var(--space-3)" }}>
-        <Button variant="outline" size="sm" icon="plus" onClick={add}>{addLabel}</Button>
-      </div>
+      {/* 다 찬 목록에는 [추가]가 없다 (위 maxRows 머리말) — 자리째 비운다 */}
+      {full ? null : (
+        <div style={{ marginTop: "var(--space-3)" }}>
+          <Button variant="outline" size="sm" icon="plus" onClick={add}>{addLabel}</Button>
+        </div>
+      )}
 
       {error ? (
         <p style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--state-danger)", lineHeight: 1.5 }}>

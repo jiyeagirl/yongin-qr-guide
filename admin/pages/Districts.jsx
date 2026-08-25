@@ -31,7 +31,9 @@ import { EditorModal } from "./EditorModal.jsx";
  * 남은 것은 상점가 한 곳의 기본 정보를 고치는 일이다. 명세서 M04 의 기능란도
  * "기본 정보 입력" 한 줄로 줄었다.
  *
- * ── 점포수는 읽기만 한다 ────────────────────────────────────────────────────
+ * ── 점포수는 읽기만 한다 (2026-08-25 오후, 사용자 요청으로 되돌아왔다) ──────
+ * 하루 사이에 열렸다가 다시 닫혔다. 두 수의 출처는 **점포 정보 하나**이고, 같은 사실을
+ * 두 곳에서 받으면 반드시 어긋난다 (fields.js 의 그 자리에 이유가 적혀 있다).
  * `store_count` · `onnuri_count` 는 ⚙ 다. 관리자가 32개소 숫자를 옮겨 적을 일이 없다.
  * 점포 자료가 있는 상점가(지금은 둔전 하나)는 **노출 상태인 점포를 실제로 세어** 보여준다 —
  * 명세서가 정의한 그대로("구역 주소 매칭 결과 중 노출 상태인 건수")이고, 점포 관리에서
@@ -44,6 +46,9 @@ import { EditorModal } from "./EditorModal.jsx";
  */
 
 const GU_OPTIONS = [{ value: "", label: "전체 구" }].concat(GU_ORDER.map(g => ({ value: g, label: g })));
+
+/* 등록 창에서 빼는 두 칸 (아래 `fieldsFor`) */
+const COUNT_KEYS = new Set(["storeCount", "onnuriCount"]);
 
 /* QR 원본을 관리자 쪽 모양으로 바꾸던 한 줄이 여기 있었다 (2026-08-25 에 `data/sources.js`
    로 옮겼다) — QrPoints.jsx 가 같은 줄을 따로 갖고 있었다. 원천 표를 관리자 쪽 모양으로
@@ -112,43 +117,36 @@ export function Districts({ onToast }) {
     return o;
   }, [storeRows]);
 
-  /* 화면에 적을 점포수 — **담당자가 손으로 고쳤으면 그 값**, 아니면 센 값,
-     둘 다 없으면(점포 자료가 없는 31곳) 레코드에 적힌 값.
+  /* 화면에 적을 점포수 — 센 값, 셀 것이 없으면(점포 자료가 없는 31곳) 레코드에 적힌 값.
 
-     `countManual` 이 그 「손으로 고쳤다」는 기억이다 (2026-08-25. 점포의 `chipManual` 과
-     같은 성격이다). 이 갈래가 없으면 고칠 수 있게 열어 놓아도 **둔전에서는 아무 일도
-     일어나지 않는다** — 세는 쪽이 매 렌더 다시 이겨서, 담당자가 보기에는 저장이 안 된
-     화면이 된다. 이 화면이 오래 지켜온 규칙이 그것이다: 화면에서 고쳤는데 목록이
-     그대로면 고친 것이 아니다. */
+     「손으로 고쳤으면 그 값」이라는 갈래가 여기 있었다 (`countManual`. 2026-08-25 오후에
+     없어졌다) — 두 칸이 ⚙ 로 돌아가면서 손으로 고치는 길 자체가 사라졌다. 옛 자료에
+     `countManual` 이 남아 있어도 이제 아무도 보지 않는다. */
   const countOf = d => {
     const c = counts[d.id];
-    if (d.countManual || !c) {
-      return { stores: Number(d.stores || 0), onnuri: Number(d.onnuri || 0) };
-    }
-    return { stores: c.stores, onnuri: c.onnuri };
+    return c ? { stores: c.stores, onnuri: c.onnuri }
+      : { stores: Number(d.stores || 0), onnuri: Number(d.onnuri || 0) };
   };
 
   const ed = useRecordEditor({
-    fieldsFor: () => DISTRICT_FIELDS,
-    /* 새 상점가에는 셀 점포가 없다. 두 칸을 빈 채로 두면 「값이 없는 것」과 「0곳」이
-       구별되지 않는데, 이 자리에서 맞는 쪽은 0 이다 — 아직 아무것도 안 들어왔다 */
-    initial: () => ({ gu: GU_ORDER[0], visible: true, storeCount: 0, onnuriCount: 0 }),
-    /* 폼의 두 칸(`storeCount` · `onnuriCount`)은 레코드의 `stores` · `onnuri` 로 들어간다 —
-       이름이 다른 것은 항목표가 명세서의 필드명을 그대로 쓰기 때문이다.
-
-       **센 값과 같으면 손댄 것으로 치지 않는다.** 열어보기만 하고 저장한 경우까지 수기로
-       굳으면 그 뒤로 점포를 더해도 수가 그대로다. 같은 이유로, 수기 값을 다시 센 값과
-       같게 적으면 자동으로 돌아간다 — 되돌리는 길이 따로 필요 없다. */
-    onSave: ({ storeCount, onnuriCount, ...values }) => {
-      const stores = Math.max(0, Number(storeCount) || 0);
-      const onnuri = Math.max(0, Number(onnuriCount) || 0);
-      const auto = counts[values.id];
-      const countManual = !!auto && (stores !== auto.stores || onnuri !== auto.onnuri);
-      upsert({ ...values, stores, onnuri, countManual });
-    },
-    /* 항목 하나만 봐서는 알 수 없는 검사 — 가맹 점포는 점포의 부분집합이다 */
-    extraValidate: v => (Number(v.onnuriCount) > Number(v.storeCount)
-      ? { onnuriCount: "점포수보다 많을 수 없습니다." } : {}),
+    /* ── 등록 창에는 점포수 두 칸이 없다 (2026-08-25 오후, 사용자 요청) ──────────
+       새 상점가에는 셀 점포가 없어 답이 늘 0 이다. 고칠 수 없는 0 을 두 칸이나 세워
+       두면 담당자는 그것을 「채워야 하는데 채워지지 않는 칸」으로 읽고 채울 방법을
+       찾는다 — 없는 방법이다. 수정 창에서는 센 값이 ⚙ 로 서 있다.
+       새 줄인지는 `id` 로 안다: 식별자는 저장할 때 붙는다 (data/store.js 의 upsert). */
+    fieldsFor: v => (v && v.id ? DISTRICT_FIELDS : DISTRICT_FIELDS.filter(f => !COUNT_KEYS.has(f.key))),
+    /* 레코드에는 두 수가 0 으로 들어간다 — 목록의 「점포수」 열이 셀 것이 없을 때
+       읽는 값이라(위 countOf), 없으면 그 자리가 빈 칸이 된다 */
+    initial: () => ({ gu: GU_ORDER[0], visible: true, stores: 0, onnuri: 0 }),
+    /* 폼의 두 칸(`storeCount` · `onnuriCount`)은 **보여주기만 하는 값**이라 저장할 때
+       버린다. 레코드가 갖는 `stores` · `onnuri` 는 열 때 들고 온 그대로 지나간다 —
+       점포 자료가 없는 31곳의 게시값이 그 자리에 있다.
+       손으로 고친 기억(`countManual`)도 함께 버린다: 고치는 길이 없어졌으므로 옛 값이
+       남아 있으면 목록의 수를 영영 굳혀 놓는 플래그가 된다 */
+    onSave: ({ storeCount, onnuriCount, countManual, ...values }) => upsert(values),
+    /* 「온누리 가맹 점포수가 점포수보다 많을 수 없습니다」 검사가 여기 있었다
+       (2026-08-25 오후 삭제) — 두 수를 따로 받을 때만 생기는 어긋남이고, 세는 쪽에서는
+       가맹이 점포의 부분집합인 것이 셈 자체로 보장된다 */
     /* 상점가 하나가 아니라 거기 걸린 것까지 함께 지운다 (아래 removeWithLinked) */
     onRemove: (id, name) => removeWithLinked(id, name),
     onToast, label: "골목형 상점가",
@@ -242,18 +240,15 @@ export function Districts({ onToast }) {
           { key: "area", label: "소재지", sortable: true },
           /* 「노출 상태 기준」이라고 적어 두었던 열 밑 설명을 뺐다 (2026-08-20) —
              머리줄은 어느 칸이 무엇인지만 가리킨다. 세는 규칙은 명세서 2-1 이 갖는다. */
-          { key: "stores", label: "점포수", width: 150, align: "right", sortable: true,
+          /* 「수기」 배지가 여기 있었다 (2026-08-25 오후 삭제) — 손으로 고친 줄에 붙던
+             표시다. 고치는 길이 없어졌으니 붙을 줄도 없다. 배지가 나란히 서던 자리를
+             비우면서 폭도 150 에서 110 으로 돌아간다 (「1,234곳」이 드는 폭이다) */
+          { key: "stores", label: "점포수", width: 110, align: "right", sortable: true,
             sortValue: d => countOf(d).stores,
-            /* 수기로 고친 줄은 그렇다고 적는다 (2026-08-25) — 적지 않으면 점포 목록의
-               건수와 이 수가 어긋났을 때 어느 쪽이 고장인지 알 수 없다. 점포 목록의
-               「업종 칩 · 수기」 배지와 같은 말, 같은 모양이다 */
             render: d => (
-              <Cell align="right" style={{ flexWrap: "nowrap" }}>
-                {d.countManual ? <Badge tone="info" size="sm">수기</Badge> : null}
-                <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
-                  {countOf(d).stores.toLocaleString("ko-KR")}곳
-                </span>
-              </Cell>
+              <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                {countOf(d).stores.toLocaleString("ko-KR")}곳
+              </span>
             ) },
           { key: "onnuri", label: "온누리", width: 100, align: "right", sortable: true,
             sortValue: d => countOf(d).onnuri,

@@ -38,6 +38,7 @@ export { MiniChart } from "./components/admin/MiniChart.jsx";
 export { AddressField } from "./components/admin/AddressField.jsx";
 export { CoordField, COORD_BOUNDS, outOfBounds, fixCoord } from "./components/admin/CoordField.jsx";
 export { Repeater } from "./components/admin/Repeater.jsx";
+export { OptionPicker } from "./components/admin/OptionPicker.jsx";
 export { AssetPicker } from "./components/admin/AssetPicker.jsx";
 
 /* ── 공용: 기본 부품 ─────────────────────────────────────────────────────── */

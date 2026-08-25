@@ -45,11 +45,13 @@ const SUPER_ONLY = ["accounts"];
 /* 화면 키 전체. 라우터·내비·권한 셋이 같은 이 목록을 본다 */
 export const ALL_PAGES = [
   "dashboard",
-  "districts", "stores", "festivals",
+  "districts", "stores", "festivals", "courses",
   "facilities",
   "qr",
   "reports",
-  "asof", "accounts",   /* "settings" 가 여기 있었다 (2026-08-24. AdminApp 머리말) */
+  /* "asof"(데이터 갱신 현황)가 여기 있었다 (2026-08-25 삭제) — 그 앞줄의 "settings"
+     (환경 설정)와 같은 이유다. 둘 다 AdminApp 의 NAV 주석이 사연을 적는다 */
+  "accounts",
 ];
 
 /* 검수용 계정 두 벌 — 최종 관리자와 담당자. 화면이 갈리는 자리가 하나(계정 관리)뿐이라

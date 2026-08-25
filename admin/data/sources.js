@@ -1,4 +1,4 @@
-import { STORES } from "../../screens/main/data/dunjeon.js";
+import { STORES, COURSES } from "../../screens/main/data/dunjeon.js";
 import { DISTRICTS, FESTIVALS, CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
 import { FACILITIES } from "../../screens/main/data/facilities.js";
 import { QR_POINTS } from "../../screens/main/data/qr.js";
@@ -58,18 +58,57 @@ export function createdAtOf(s) {
 }
 
 /* 점포 — 채우는 것이 넷이다. `onnuriType` 이 여기 있는 것은 다중 선택 칸이 배열을 받기
-   때문이다: `undefined` 를 넘기면 그 칸이 아무것도 못 그린다 */
+   때문이다: `undefined` 를 넘기면 그 칸이 아무것도 못 그린다.
+
+   ── 가맹 점포에는 **지류 · 디지털 둘 다**를 넣는다 (2026-08-25 오후) ───────────
+   원천에는 종류가 없다(가맹 여부 하나뿐이다). 그런데 시민 화면 상세는 가맹 점포마다
+   **「지류 및 디지털 온누리상품권 가맹점입니다」**라고 적는다 (StoreDetail.jsx) —
+   그러니 빈 배열로 두면 같은 점포를 두 화면이 다르게 말하게 된다: 저쪽은 둘 다 된다고
+   적고, 관리자 목록의 배지는 종류 없이 「가맹」이라고만 선다.
+
+   비어 있는 채로 두면 걸리는 자리가 하나 더 있다. 종류는 **가맹이면 필수**가 되었으므로
+   (fields.js 의 `onnuriType`), 가맹 점포 139곳이 전부 「고쳐서 저장할 수 없는 줄」이 된다 —
+   전화번호 한 자리를 고치러 연 담당자가 자기가 모르는 값을 먼저 골라야 한다. */
 export const STORE_ROWS = STORES.map(s => ({
   ...s,
   districtId: s.districtId || CURRENT_DISTRICT_ID,
   visible: shown(s),
-  onnuriType: s.onnuriType || [],
+  onnuriType: s.onnuriType || (s.onnuri ? ["paper", "digital"] : []),
   createdAt: createdAtOf(s),
 }));
 
 export const FACILITY_ROWS = FACILITIES.map(f => ({ ...f, visible: shown(f) }));
 export const DISTRICT_ROWS = DISTRICTS.map(d => ({ ...d, visible: shown(d) }));
 export const FESTIVAL_ROWS = FESTIVALS.map(f => ({ ...f, visible: shown(f) }));
+
+/* ── 골목 한바퀴 코스 (2026-08-25) ───────────────────────────────────────────
+   여기서 하는 일이 다른 표와 다르다. 저것들은 **빠진 기본값을 채우는** 일이지만,
+   코스는 시민 화면에서 **규칙이 만들어 내던 것**을 담당자가 고칠 수 있는 줄로 굳힌다.
+
+   지금까지 코스는 자료가 아니라 계산이었다 — 300~500m 밴드에서 세 축(업종 · 온누리 ·
+   조건 없음)으로 갈라 가까운 순 넷을 잇는다 (dunjeon.js 의 COURSE_PLAN, U-DC-03).
+   시민용 명세서 6장이 그 자리를 이렇게 적어 두었다: "자동 생성 **또는 관리자 큐레이션**.
+   현재 화면은 자동 생성 쪽으로 서 있다. 큐레이션으로 결정되면 이 규칙 한 블록만 서버
+   응답으로 바꾼다." 관리 화면이 생겼으니 **큐레이션 쪽으로 정해진 것**이고, 이 표가
+   그 서버 응답 자리에 서는 첫 판이다.
+
+   그래서 씨앗은 **지금 규칙이 뽑아 놓은 결과 그대로**다. 손으로 다른 넷을 골라 적으면
+   검수하는 사람이 시민 화면과 관리자 화면에서 다른 코스를 보게 된다 — 서버가 없어
+   여기서 고친 것이 저쪽에 가지 않는 것과는 **다른 종류의 어긋남**이다(그쪽은 상단
+   띠가 늘 적는다).
+
+   저장하는 것은 **점포의 id 뿐**이다. 이름·좌표·거리를 함께 굳히면 점포를 고쳤을 때
+   코스만 옛 이름을 들고 남는다 — 코스가 갖는 것은 「어느 가게를 어떤 차례로」이고,
+   그 가게가 무엇인지는 점포 표가 답한다. 구간 거리와 도보 시간도 여기 없다: QR 지점을
+   기준으로 재는 값이라 시민 화면이 그 자리에서 계산한다 (coursePlan.js). */
+export const COURSE_ROWS = COURSES.map(c => ({
+  id: c.id,
+  districtId: CURRENT_DISTRICT_ID,
+  name: c.name,
+  desc: c.desc,
+  visible: shown(c),
+  stops: c.stops.map(s => ({ storeId: s.id })),
+}));
 
 /* QR 지점만 채우는 것이 기본값이 아니라 **열쇠**다. qr.js 의 표는 `code` 를 열쇠로 쓰고
    덮개 저장소는 `id` 를 쓴다 — 저쪽 데이터의 모양을 바꾸지 않고 여기서 맞춘다.

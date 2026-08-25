@@ -78,6 +78,8 @@ export function Stores({ onToast, focus }) {
     onSave: values => upsert(values),
     onRemove: remove,
     onToast, label: "점포",
+    /* 가맹인데 종류가 없으면 저장이 막힌다 — 그 검사는 항목표에 있다 (fields.js 의
+       `onnuriType` 은 ◐ 이고, 조건이 「가맹여부가 켜짐」이다) */
     /* 오류신고에서 한 건을 지목해 들어올 수 있다 (`#/stores/dj-004`) */
     focus, rows,
   });
@@ -86,6 +88,29 @@ export function Stores({ onToast, focus }) {
      chipManual 플래그가 그 기억이다 */
   const setField = (key, value) => {
     if (key === "cat") { ed.setMany({ cat: value, chipManual: true }); return; }
+
+    /* ── 온누리 두 칸은 한 항목이다 (2026-08-25 오후, 사용자 요청) ───────────────
+       전에는 서로를 몰랐다. 그래서 **가맹 여부가 꺼진 채로 「지류」가 체크된** 점포를
+       만들 수 있었고, 그 값은 어느 쪽이 맞는지 화면이 답하지 못한다 — 목록의 온누리 열은
+       토글만 보고 비어 있는데, 폼을 열면 종류가 골라져 있다.
+
+       두 칸을 붙인다. 종류를 하나라도 고르면 토글이 켜지고, 마지막 하나를 풀면 꺼진다 —
+       「지류를 받는다」는 곧 「가맹이다」라서, 그 둘을 따로 누르게 하면 담당자가 같은
+       사실을 두 번 말하다가 한 번 빠뜨린다. 반대로 토글을 끄면 종류도 함께 비운다:
+       가맹이 아닌 점포에 상품권 종류가 남아 있을 자리가 없다.
+
+       **토글을 켜는 쪽만 자동으로 채우지 않는다** — 지류인지 디지털인지는 담당자만
+       안다. 고르지 않고 저장하면 위 extraValidate 가 그 칸에서 막는다. */
+    if (key === "onnuriType") {
+      const types = Array.isArray(value) ? value : [];
+      ed.setMany({ onnuriType: types, onnuri: types.length > 0 });
+      return;
+    }
+    if (key === "onnuri") {
+      ed.setMany(value ? { onnuri: true } : { onnuri: false, onnuriType: [] });
+      return;
+    }
+
     if (["bizL", "biz", "bizS"].includes(key) && !ed.draft.values.chipManual) {
       const next = { ...ed.draft.values, [key]: value };
       ed.setMany({ [key]: value, cat: deriveChip(next) });
@@ -175,9 +200,19 @@ export function Stores({ onToast, focus }) {
             ) },
           { key: "bizL", label: "상권업종대분류명", width: 150, sortable: true },
           { key: "bizS", label: "상권업종소분류명", width: 150, render: s => s.bizS || EMPTY_MARK },
-          { key: "onnuri", label: "온누리", width: 110, align: "center", sortable: true,
+          /* ── 배지 글자는 `label` 로 넘긴다 (2026-08-25 오후) ────────────────────
+             children 으로 넘기고 있었는데 **한 글자도 화면에 나오지 않았다** —
+             `OnnuriBadge` 는 자기 안에서 아이콘과 `label` 을 children 으로 직접 그리고,
+             JSX 는 그렇게 적은 children 이 넘겨받은 children 을 덮는다. 그래서 어떤
+             점포든 배지에 「온누리」라고만 서 있었고, 종류를 적으려던 이 자리는 아무 일도
+             하지 않았다. 폭 110 은 그 「온누리」에 맞춘 값이라 130 으로 넓힌다
+             (12 아이콘 + 5 + 「지류·디지털」 65 + 좌우 여백 14 = 96, 칸 여백 24 → 120). */
+          { key: "onnuri", label: "온누리", width: 130, align: "center", sortable: true,
             render: s => (s.onnuri
-              ? <OnnuriBadge size="sm">{(s.onnuriType || []).length ? (s.onnuriType || []).map(t => (t === "paper" ? "지류" : "디지털")).join("·") : "가맹"}</OnnuriBadge>
+              ? <OnnuriBadge size="sm"
+                  label={(s.onnuriType || []).length
+                    ? (s.onnuriType || []).map(t => (t === "paper" ? "지류" : "디지털")).join("·")
+                    : "가맹"} />
               : <span style={{ color: "var(--text-muted)" }}>{EMPTY_MARK}</span>) },
           /* ── 주소는 두 줄 안에 들어간다 (2026-08-25, 사용자 요청) ─────────────
              폭을 정해 두지 않았더니 남는 자리를 상호명과 나눠 가졌는데, 앞의 고정 열

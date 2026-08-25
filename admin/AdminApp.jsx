@@ -11,13 +11,14 @@ import { Dashboard } from "./pages/Dashboard.jsx";
 import { Districts } from "./pages/Districts.jsx";
 import { Stores } from "./pages/Stores.jsx";
 import { Festivals } from "./pages/Festivals.jsx";
+import { Courses } from "./pages/Courses.jsx";
 import { Facilities } from "./pages/Facilities.jsx";
 import { QrPoints } from "./pages/QrPoints.jsx";
 import { Reports } from "./pages/Reports.jsx";
-import { DataAsOf } from "./pages/DataAsOf.jsx";
+/* `./pages/DataAsOf.jsx` 가 여기 있었다 (2026-08-25 삭제. 아래 NAV 주석) */
 import { Accounts } from "./pages/Accounts.jsx";
 
-/* 관리자 웹 진입점 (/admin/) — 관리자 웹 기능명세서의 **화면 열다섯**.
+/* 관리자 웹 진입점 (/admin/) — 관리자 웹 기능명세서의 **화면 열여섯**.
  *
  * ── [환경 설정]을 없앴다 (2026-08-24, 사용자 요청) ─────────────────────
  * 두 구획이 있었다. **서비스 운영 설정**(안내 범위 2km · 배너 기준 1km · 상점가 임계
@@ -89,6 +90,11 @@ const NAV = [
   { key: "districts", label: "골목형 상점가 정보 관리", icon: "store" },
   { key: "stores", label: "점포 정보 관리", icon: "shopping-bag" },
   { key: "festivals", label: "축제 정보 관리", icon: "party-popper" },
+  /* 축제 **바로 밑**이다 (2026-08-25, 사용자 요청). 코스는 점포를 골라 잇는 것이라
+     점포 옆에 두는 편이 자료의 계통으로는 맞지만, 담당자가 여기서 하는 일은 「이 골목을
+     어떻게 돌게 할까」이고 그것은 축제와 같은 종류의 일이다 — 둘 다 상점가 위에 얹는
+     기획이고, 둘 다 시민 화면의 둘러보기 탭에 나란히 나간다. */
+  { key: "courses", label: "골목 한바퀴 코스 관리", icon: "route" },
   { key: "facilities", label: "공공시설 정보 관리", icon: "life-buoy" },
   { key: "qr", label: "QR 지점 관리", icon: "qr-code" },
 
@@ -96,10 +102,13 @@ const NAV = [
   { key: "reports", label: "오류신고 관리", icon: "inbox" },
 
   { section: "시스템 운영" },
-  /* 「데이터 기준일 관리」였다 (2026-08-24) — 고치는 화면에서 보는 화면이 되면서
-     이름도 바뀌었다. 기준일은 자료를 적재하는 개발 쪽이 함께 갱신한다 (DataAsOf 머리말) */
-  { key: "asof", label: "데이터 갱신 현황", icon: "calendar-clock" },
-  /* [환경 설정]이 여기 있었다 (2026-08-24 삭제. 위 머리말 참조) */
+  /* ── [데이터 갱신 현황]이 여기 있었다 (2026-08-25 삭제, 사용자 요청) ──────────
+     카테고리별 기준일과 그것이 시민 화면 하단에 어떤 문장으로 나가는지를 **보여주기만**
+     하던 화면이다 (v1.3 에서 고치는 기능이 빠지면서 조회 전용이 됐다). 보고 나서 담당자가
+     할 수 있는 일이 화면에 없었다 — 기준일은 자료를 적재하는 개발 쪽이 함께 갱신한다.
+     [환경 설정]이 같은 이유로 먼저 나간 자리이기도 하다 (2026-08-24. 위 머리말).
+     값 자체는 그대로 돈다: `config.js` 의 `STORE_AS_OF` · `FACILITY_AS_OF` 를 시민 화면의
+     하단 고지가 읽는다. 없어진 것은 **보는 자리**이지 값이 아니다. */
   { key: "accounts", label: "계정 관리", icon: "users" },
 ];
 
@@ -108,10 +117,10 @@ const PAGES = {
   districts: Districts,
   stores: Stores,
   festivals: Festivals,
+  courses: Courses,
   facilities: Facilities,
   qr: QrPoints,
   reports: Reports,
-  asof: DataAsOf,
   accounts: Accounts,
 };
 
