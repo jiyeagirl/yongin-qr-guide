@@ -160,9 +160,25 @@ export function Stores({ onToast }) {
             render: s => (s.onnuri
               ? <OnnuriBadge size="sm">{(s.onnuriType || []).length ? (s.onnuriType || []).map(t => (t === "paper" ? "지류" : "디지털")).join("·") : "가맹"}</OnnuriBadge>
               : <span style={{ color: "var(--text-muted)" }}>{EMPTY_MARK}</span>) },
-          { key: "addr", label: "도로명주소", sortable: true },
-          { key: "views", label: "조회", width: 90, align: "right", sortable: true,
+          /* ── 주소는 두 줄 안에 들어간다 (2026-08-25, 사용자 요청) ─────────────
+             폭을 정해 두지 않았더니 남는 자리를 상호명과 나눠 가졌는데, 앞의 고정 열
+             여덟이 940px 을 먼저 가져가 노트북 폭에서는 둘 다 최소치까지 눌렸다 —
+             그러면 주소가 낱말마다 끊겨 「처인구 / 포곡읍 / 에버랜드로 / 34」 넉 줄이
+             된다. 표는 훑는 물건이라 한 줄이 넉 줄이 되면 한 화면에 스무 곳이 안 들어온다.
+
+             190 은 **가장 흔한 주소가 한 줄에 들어가는 폭**이다(「처인구 포곡읍 둔전로
+             42」). 가장 긴 것(「처인구 포곡읍 에버랜드로 34」)이 두 줄이고, 그보다 긴
+             주소는 이 자료에 없다. `keep-all` 은 그 두 줄이 **띄어쓰기에서** 갈라지게
+             한다 — 없으면 「에버랜드」와 「로」가 갈린다. */
+          { key: "addr", label: "도로명주소", width: 190, sortable: true,
+            render: s => <span style={{ wordBreak: "keep-all" }}>{s.addr}</span> },
+          /* 90 → 80. 머리글(「조회」+ 정렬 꺾쇠)이 차지하는 폭이 바닥이라 더는 못 줄인다.
+             다섯 자리 수(「12,345」)도 이 폭에 든다 */
+          { key: "views", label: "조회", width: 80, align: "right", sortable: true,
             render: s => <span style={{ fontVariantNumeric: "tabular-nums" }}>{Number(s.views || 0).toLocaleString("ko-KR")}</span> },
+          /* 104 는 목록 다섯이 함께 쓰는 값이다 (상점가 · 공공시설 · 축제도 같다).
+             여기서만 좁히면 화면을 옮길 때 같은 열이 자리를 바꾼다 — 주소에 쓸 폭은
+             조회 칸에서 낸다 */
           { key: "visible", label: "노출 여부", width: 104, align: "center",
             render: s => (
               <Switch checked={s.visible} aria-label={`${s.name} 노출 여부`}
