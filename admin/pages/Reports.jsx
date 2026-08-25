@@ -58,8 +58,19 @@ const STATE_ORDER = { 접수: 0, 확인중: 1, 처리완료: 2, 반려: 3, 중�
 
 const opt = (list, all) => [{ value: "", label: all }].concat(list.map(v => ({ value: v, label: v })));
 
-/* 대상 유형 → 그 자료를 고치는 화면 (명세서 5장 "상세에서 대상 데이터로 바로 이동") */
-const TARGET_PAGE = { 공공시설: "facilities", 점포: "stores", 상점가: "districts", 축제: "festivals" };
+/* 대상 유형 → 그 자료를 고치는 화면 (명세서 5장 "상세에서 대상 데이터로 바로 이동")
+   ── 화면 이름을 여기 적어 둔다 (2026-08-25, 사용자 요청) ────────────────────────
+   전에는 대상 유형(점포 · 공공시설)에 「관리로 이동」을 붙여 버튼 글자를 지어냈다.
+   그렇게 나온 「점포 관리로 이동」은 **왼쪽 메뉴에 없는 이름**이다 — 거기 서 있는 것은
+   「점포 정보 관리」다. 누르면 가는 자리의 이름을 그 자리의 이름 그대로 적는다
+   (AdminApp 의 NAV 라벨과 한 글자도 다르지 않아야 한다. 「상점가」가 아니라
+   「골목형 상점가 정보 관리」인 것도 그래서다). */
+const TARGET_PAGE = {
+  공공시설: { page: "facilities", label: "공공시설 정보 관리" },
+  점포: { page: "stores", label: "점포 정보 관리" },
+  상점가: { page: "districts", label: "골목형 상점가 정보 관리" },
+  축제: { page: "festivals", label: "축제 정보 관리" },
+};
 
 const DUP_THRESHOLD = 3;
 
@@ -124,11 +135,20 @@ export function Reports({ onToast, onNavigate }) {
     close();
   };
 
+  /* ── 화면까지만 데려다 놓는다 (2026-08-25, 사용자 요청) ───────────────────────
+     대상 한 건의 수정 창을 곧장 여는 길을 만들었다가 같은 판에서 걷어냈다. 신고가
+     가리키는 자료와 이 화면의 목록이 늘 맞물리는 것이 아니다 — **대상 유형이 「기타」인
+     신고**가 있고, 유형은 적혀 있어도 **대상 ID 가 비어 있는 신고**가 있다. 그러면 같은
+     버튼이 어떤 신고에서는 창을 열고 어떤 신고에서는 목록에 내려놓는데, 그 갈림을
+     담당자가 누르기 전에 알 방법이 화면에 없다.
+
+     버튼은 하나의 일만 한다 — **그 자료를 다루는 화면을 연다.** 어느 줄을 고칠지는
+     담당자가 그 화면에서 정한다. */
   const goTarget = () => {
-    const page = TARGET_PAGE[open && open.targetType];
-    if (!page) return;
+    const t = TARGET_PAGE[open && open.targetType];
+    if (!t) return;
     close();
-    if (onNavigate) onNavigate(page);
+    if (onNavigate) onNavigate(t.page);
   };
 
   return (
@@ -212,7 +232,7 @@ export function Reports({ onToast, onNavigate }) {
           <>
             {TARGET_PAGE[open.targetType] ? (
               <Button variant="outline" icon="arrow-right" onClick={goTarget} style={{ marginRight: "auto" }}>
-                {open.targetType} 관리로 이동
+                {TARGET_PAGE[open.targetType].label}로 이동
               </Button>
             ) : null}
             <Button variant="ghost" onClick={close}>닫기</Button>

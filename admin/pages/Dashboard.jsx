@@ -345,7 +345,9 @@ export function Dashboard({ onNavigate }) {
             gap: "var(--space-4)" }}>
             <Card>
               <Section title="조회수 상위 점포" variant="sub"
-                note={`둘러보기 탭의 「인기 매장」 ${DISCOVER_PICK}곳`}>
+                /* 「사용자 모바일 웹」을 앞에 세운다 (2026-08-25, 사용자 요청) — 「둘러보기 탭」은
+                   관리자 화면에 없는 자리라, 그것만 적으면 이 화면 어딘가를 가리키는 말로 읽힌다 */
+                note={`사용자 모바일 웹 '둘러보기' 탭의 '인기 매장' ${DISCOVER_PICK}곳`}>
                 <DataTable
                   caption={`${district ? district.name : ""} 인기 매장 ${DISCOVER_PICK}곳`}
                   rows={picks.popular.map((s, i) => ({ ...s, rank: i + 1 }))} rowKey="id"
@@ -364,7 +366,7 @@ export function Dashboard({ onNavigate }) {
 
             <Card>
               <Section title="신규 점포" variant="sub"
-                note={`둘러보기 탭의 「신규 매장」 ${DISCOVER_PICK}곳`}>
+                note={`사용자 모바일 웹 '둘러보기' 탭의 '신규 매장' ${DISCOVER_PICK}곳`}>
                 <DataTable
                   caption={`${district ? district.name : ""} 신규 매장 ${DISCOVER_PICK}곳`}
                   rows={picks.fresh.map((s, i) => ({ ...s, order: i + 1 }))} rowKey="id"

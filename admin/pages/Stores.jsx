@@ -65,7 +65,7 @@ const DISTRICT_FILTER = [{ value: "", label: "전체 골목형 상점가" }].con
    같은 파일이 「노출 여부」와 「소속 골목형 상점가」의 빈자리도 함께 채운다 — 그 셋은 다
    **원천에 없는 값**이고, 화면마다 다르게 메우다가 목록과 폼이 갈렸다 (저쪽 머리말). */
 
-export function Stores({ onToast }) {
+export function Stores({ onToast, focus }) {
   const { rows, upsert, remove, patch, patchMany } = useCollection("stores", STORE_ROWS, null, "점포");
   const [major, setMajor] = React.useState("");
   const [onnuri, setOnnuri] = React.useState("");
@@ -78,6 +78,8 @@ export function Stores({ onToast }) {
     onSave: values => upsert(values),
     onRemove: remove,
     onToast, label: "점포",
+    /* 오류신고에서 한 건을 지목해 들어올 수 있다 (`#/stores/dj-004`) */
+    focus, rows,
   });
 
   /* 분류를 고치면 업종 칩 산출값이 따라간다. **담당자가 칩을 직접 고른 뒤에는 멈춘다** —
@@ -147,10 +149,27 @@ export function Stores({ onToast }) {
         columns={[
           { key: "name", label: "상호명", sortable: true },
           { key: "branch", label: "지점명", width: 110, render: s => s.branch || EMPTY_MARK },
-          { key: "cat", label: "업종 칩", width: 130, sortable: true,
+          /* ── 130 → 180, 아이콘과 이름은 한 덩어리다 (2026-08-25, 사용자 요청) ────
+             130 은 **가장 긴 이름이 아슬아슬하게 넘치는 폭**이었다. 여백 32 를 빼면
+             98px 인데 아이콘(16) + 사이(6) + 「카페/디저트」가 그보다 한두 픽셀 넓다.
+             `Cell` 은 넘치면 감싸므로 그 줄만 **아이콘 홀로 윗줄, 이름은 아랫줄**이
+             됐다 — 같은 열에서 「음식」·「쇼핑」은 한 줄이고 카페 줄만 두 줄이라,
+             행마다 높이가 달라지는 것보다 **홀로 남은 아이콘이 아무 말도 하지 않는
+             것**이 문제였다. 업종 칩은 그림과 이름이 함께여야 하나의 칩이다.
+
+             그래서 둘을 nowrap 한 덩어리로 묶어 **어떤 폭에서도 갈라지지 않게** 하고,
+             폭은 거기에 「수기」 배지까지 나란히 서는 값으로 잡았다(16+6+76+6+38=142,
+             여백 32 를 더해 174 → 180). 배지는 담당자가 칩을 손으로 고른 뒤부터
+             붙으므로 처음 화면에는 없지만, 그때 가서 두 줄이 되면 같은 일을 두 번
+             고치게 된다. */
+          { key: "cat", label: "업종 칩", width: 180, sortable: true,
             render: s => (
               <Cell>
-                <CategoryIcon type={s.cat} size={16} />{CATEGORY_LABELS[s.cat] || "기타"}
+                {/* 안쪽도 `Cell` 이다 — 손으로 span 을 적으면 같은 줄을 다시 짓게 된다.
+                    감싸지 않는 것만 덮어쓴다 */}
+                <Cell style={{ flexWrap: "nowrap", whiteSpace: "nowrap" }}>
+                  <CategoryIcon type={s.cat} size={16} />{CATEGORY_LABELS[s.cat] || "기타"}
+                </Cell>
                 {s.chipManual ? <Badge tone="info" size="sm">수기</Badge> : null}
               </Cell>
             ) },
