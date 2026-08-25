@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>용인시 QR 위치안내 · 화면 목록</title>
+<title>용인시 QR 위치안내 화면 목록</title>
 <link rel="stylesheet" href="./design-systems/styles.css" />
 <style>
   /* 이 페이지는 산출물이 아니라 **입구**다. 배포 주소 루트로 들어온 사람이
@@ -26,8 +26,8 @@
     border-bottom: var(--stroke-hairline) solid var(--border-default); font-size: var(--fs-label); }
   li.todo code { flex: 0 0 4.2em; font-weight: var(--fw-bold); color: var(--text-heading); }
   li.todo em { font-style: normal; color: var(--text-muted); }
-  .note { margin-top: var(--space-7); padding: var(--space-4); background: var(--surface-sunken);
-    border-radius: var(--radius-md); font-size: var(--fs-caption); color: var(--text-muted); line-height: 1.6; }
+  /* `.note` 가 여기 있었다 — 맨 아래 카카오맵 안내 상자와 함께 나갔다 (2026-08-25).
+     쓰는 데가 없는 규칙은 남겨 두면 다음 사람이 「이 상자를 다시 쓰라는 뜻인가」를 묻는다 */
 </style>
 </head>
 <body>
@@ -35,9 +35,12 @@
   <h1>QR 기반 공공시설 및 골목형 상점가 위치 안내</h1>
   <!-- 「기능명세서 v1.1 기준」이 여기 붙어 있었다 (2026-08-25 삭제) — 그 사이 문서가 v1.6
        이 되도록 이 줄만 v1.1 에 머물러 있었다. 입구에 적힌 판 번호는 낡으면 **틀린 말**이
-       되고, 검수하는 사람이 그 번호로 문서를 찾으면 없는 판을 찾게 된다. 부르는 이름도
-       아래 카드와 맞췄다 (시민용 → 사용자). -->
-  <p class="sub">용인시 사용자 모바일 웹 · 관리자 웹<br />앱 설치와 회원가입 없이 QR 하나로 들어오는 안내 서비스입니다.</p>
+       되고, 검수하는 사람이 그 번호로 문서를 찾으면 없는 판을 찾게 된다.
+       그 자리에 잠깐 세웠던 「용인시 사용자 모바일 웹 · 관리자 웹」도 같은 판에서 뺐다
+       (사용자 요청) — 바로 아래 두 절 제목이 그 둘을 이미 늘어놓는다. -->
+  <p class="sub">앱 설치와 회원가입 없이 QR코드 하나로 들어오는 공공시설 및 골목형 상점가 안내 서비스입니다.</p>
+
+  <h2>사용자 모바일 웹</h2>
 
   <!-- ── 문 하나로 들어간다 (2026-08-25, 사용자 요청) ────────────────────────────
        「지금 볼 수 있는 화면」 아래에 카드가 일곱 장 있었다 (메인 · 시설 상세 · 점포 상세 ·
@@ -49,7 +52,7 @@
   <a class="card" href="./screens/main/">
     <div>
       <strong>사용자 모바일 웹</strong>
-      <span>하단 탭 3개(공공시설 · 골목형 상점가 · 둘러보기)로 오갑니다. 시설 · 점포 · 코스 · 축제 상세와 길찾기 · 오류 신고는 이 화면 안에서 열립니다.</span>
+      <span>하단 탭 3개(공공시설, 골목형 상점가, 둘러보기)로 오갑니다. 시설, 점포, 코스, 축제 상세와 길찾기, 오류 신고는 이 화면 안에서 열립니다.</span>
     </div>
     <div class="go">열기 →</div>
   </a>
@@ -59,12 +62,12 @@
     예외상황에서 나타나는 화면입니다. 아래 텍스트 링크로 확인 가능합니다.
   </p>
   <ul>
-    <li class="todo"><code>S01</code><em><a href="./screens/main/">QR 진입 로딩</a> — 정상 진입 때 잠깐 지나갑니다</em></li>
-    <li class="todo"><code>S03-E</code><em><a href="./screens/main/?district=none">가까운 상점가가 없을 때</a> — 상점가 탭</em></li>
-    <li class="todo"><code>S11</code><em><a href="./screens/main/?qr=zzz">등록되지 않은 QR</a> · <a href="./screens/main/?qr=dunjeon-2019-04">철거된 안내판</a></em></li>
-    <li class="todo"><code>S11-A</code><em><a href="./screens/main/?qr=dunjeon-03">아직 준비 중인 QR</a> — 설치는 끝났고 아직 켜지 않은 지점</em></li>
-    <li class="todo"><code>S11-B</code><em><a href="./screens/main/?net=fail">네트워크 오류</a> — 첫 조회만 실패하므로 [다시 시도]를 누르면 들어갑니다</em></li>
-    <li class="todo"><code>S13-S</code><em><a href="./screens/main/#/district/mohyeon">상점가 안내 준비 중</a> — 안내 주소가 없는 상점가</em></li>
+    <li class="todo"><code>S01</code><em><a href="./screens/main/">QR 진입 로딩</a> - 정상 진입 때 잠깐 지나갑니다</em></li>
+    <li class="todo"><code>S03-E</code><em><a href="./screens/main/?district=none">가까운 상점가가 없을 때</a> - 상점가 탭</em></li>
+    <li class="todo"><code>S11</code><em><a href="./screens/main/?qr=zzz">등록되지 않은 QR</a>, <a href="./screens/main/?qr=dunjeon-2019-04">철거된 안내판</a></em></li>
+    <li class="todo"><code>S11-A</code><em><a href="./screens/main/?qr=dunjeon-03">아직 준비 중인 QR</a> - 설치는 끝났고 아직 켜지 않은 지점</em></li>
+    <li class="todo"><code>S11-B</code><em><a href="./screens/main/?net=fail">네트워크 오류</a> - 첫 조회만 실패하므로 [다시 시도]를 누르면 들어갑니다</em></li>
+    <li class="todo"><code>S13-S</code><em><a href="./screens/main/#/district/mohyeon">상점가 안내 준비 중</a> - 안내 주소가 없는 상점가</em></li>
   </ul>
 
   <!-- ── 설명은 카드 한 줄로 (2026-08-25, 사용자 요청) ──────────────────────────
@@ -82,11 +85,13 @@
     <div class="go">열기 →</div>
   </a>
 
-  <p class="note">
-    지도는 목업이 아니라 카카오맵 SDK 실연동입니다. 지도 자리에 안내 문구가 뜬다면
-    카카오 개발자 콘솔의 <strong>SDK 도메인</strong>에 지금 보고 있는 주소가 등록되지 않은 것입니다
-    (화면에 등록해야 할 주소가 그대로 표시됩니다).
-  </p>
+  <!-- ── 맨 아래 안내 상자를 뺐다 (2026-08-25, 사용자 요청) ─────────────────────
+       「지도는 목업이 아니라 카카오맵 SDK 실연동입니다. 지도 자리에 안내 문구가 뜬다면
+       카카오 개발자 콘솔의 SDK 도메인에 지금 보고 있는 주소가 등록되지 않은 것입니다」였다.
+       입구에 서 있을 말이 아니었다 — 들어가 보기도 전에 **고장났을 때의 이야기**를 먼저
+       읽히고, 그 고장을 고칠 수 있는 사람은 카카오 콘솔을 가진 개발 쪽뿐이다.
+       실제로 그 일이 나면 **지도 자리가 그 자리에서 등록할 주소까지 적어 준다**
+       (`KakaoMap` 의 오류 안내). 알아야 할 사람에게 알아야 할 때 닿는 말이 이미 있다. -->
 </main>
 </body>
 </html>
