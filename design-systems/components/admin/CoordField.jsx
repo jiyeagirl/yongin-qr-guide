@@ -1,7 +1,7 @@
 import React from "react";
 import { Badge } from "../core/Badge.jsx";
-import { Button } from "../core/Button.jsx";
 import { Icon } from "../core/Icon.jsx";
+import { FloatingControls } from "../feedback/FloatingControls.jsx";
 import { KakaoMap } from "../map/KakaoMap.jsx";
 import { FormField } from "./FormGrid.jsx";
 
@@ -105,18 +105,20 @@ export function CoordField({
                다른 이유인데, 여기서는 **핀을 끌 때마다 지도가 새로 생기면 안 되기** 때문이다.
                중심은 처음 좌표에 맞추고, 이후 이동은 핀만 움직인다. */
             <>
+              {/* `anchor={false}` — 파란 점과 말풍선을 그리지 않는다 (2026-08-25, 사용자
+                  요청). 시민 화면에서 그 표시는 「내 위치」인데, 여기서 center 는 지금
+                  고치고 있는 **그 좌표**다. 켜 두면 끌 수 있는 핀 바로 밑에 같은 자리를
+                  가리키는 점이 하나 더 서고 말풍선이 시설 이름을 적어, 무엇을 끌어야
+                  하는지 화면이 스스로 흐린다. 여기 있어야 하는 것은 핀뿐이다. */}
               <KakaoMap appKey={appKey} center={{ lat: Number(lat), lng: Number(lng) }}
-                anchorLabel={name || "지정 위치"} level={3} mapRef={mapApi}
+                anchorLabel={name || "지정 위치"} anchor={false} level={3} mapRef={mapApi}
                 pick={{ lat: Number(lat), lng: Number(lng), label: name }} onPick={pick} />
-              {/* 오른쪽 아래. 지도 위에 두는 단추는 이것 하나뿐이라 자리를 다툴 것이
-                  없고, 확대/축소를 손으로 하는 오른쪽 아래가 지도에서 늘 손이 가는 자리다.
-                  글자를 함께 적는다 — 그림쇠만으로는 「가운데로」인지 「전체 보기」인지
-                  갈리지 않는다 */}
-              <Button size="xs" variant="outline" icon="crosshair" onClick={backToPin}
-                style={{ position: "absolute", right: "var(--space-3)", bottom: "var(--space-3)",
-                  zIndex: 2, boxShadow: "var(--shadow-raised)" }}>
-                핀 위치로
-              </Button>
+              {/* 시민 지도의 [QR 스캔 지점으로]와 **같은 부품**이다 (2026-08-25, 사용자
+                  요청). 하는 일이 같으므로 — 끌어 움직인 지도를 기준점으로 되돌린다 —
+                  모양도 같아야 한다. 글자 없이 그림쇠 하나이고, 이름은 보조기기와
+                  마우스 툴팁에 간다 */}
+              <FloatingControls bottom={0}
+                items={[{ icon: "crosshair", label: "핀 위치로 이동", onClick: backToPin }]} />
             </>
           ) : (
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",

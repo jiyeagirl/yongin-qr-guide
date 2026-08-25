@@ -77,6 +77,15 @@ export function KakaoMap({
   appKey,
   center,                     /* {lat, lng} — QR 스캔 지점 */
   anchorLabel = "QR 지점",
+  /* 그 지점을 **파란 점 + 말풍선**으로 그릴지 (2026-08-25 추가).
+     시민 화면에서 이 표시는 「내 위치」다 — QR 을 찍은 자리이고, 화면의 모든 거리가
+     거기서 잰 값이다. 그래서 늘 켜져 있어야 한다.
+
+     관리자의 좌표 지정 지도(CoordField)에서는 **꺼야 한다.** 거기서 center 는 「내
+     위치」가 아니라 **지금 고치고 있는 그 좌표**라, 켜 두면 끌 수 있는 핀 바로 밑에
+     같은 자리를 가리키는 파란 점이 하나 더 서고 말풍선이 시설 이름을 적는다 —
+     둘 중 무엇을 끌어야 하는지 화면이 스스로 흐린다. 거기 있어야 하는 것은 핀뿐이다. */
+  anchor = true,
   level = 4,
   /* 레이어 셋. U-CM-17 에 따라 한 번에 하나만 채운다 — 탭이 소유한 레이어만 그린다 */
   stores = [],                /* [{id, name, lat, lng, onnuri}] — 상점가 탭. 클러스터링(U-ST-13) */
@@ -235,32 +244,35 @@ export function KakaoMap({
 
       /* QR 스캔 지점 앵커 — 마커가 아니라 "내 위치" 점이다. 점포 핀과 형태·색이 겹치면 안 된다.
          점과 말풍선을 두 개의 오버레이로 나눈다. 하나로 묶으면 yAnchor 하나로는
-         점을 좌표에 정확히 앉히면서 말풍선을 그 위에 띄울 수 없다. */
-      const anchorPos = new kakao.maps.LatLng(center.lat, center.lng);
+         점을 좌표에 정확히 앉히면서 말풍선을 그 위에 띄울 수 없다.
+         `anchor={false}` 인 화면에서는 아예 그리지 않는다 (위 prop 주석). */
+      if (anchor) {
+        const anchorPos = new kakao.maps.LatLng(center.lat, center.lng);
 
-      const dot = document.createElement("div");
-      dot.style.cssText = "width:18px;height:18px;border-radius:999px;background:var(--pin-anchor);"
-        + "border:var(--stroke-bold) solid var(--pin-stroke);box-shadow:0 0 0 6px var(--pin-anchor-halo)";
-      new kakao.maps.CustomOverlay({ map: m, position: anchorPos, content: dot, yAnchor: 0.5, zIndex: 3 });
+        const dot = document.createElement("div");
+        dot.style.cssText = "width:18px;height:18px;border-radius:999px;background:var(--pin-anchor);"
+          + "border:var(--stroke-bold) solid var(--pin-stroke);box-shadow:0 0 0 6px var(--pin-anchor-halo)";
+        new kakao.maps.CustomOverlay({ map: m, position: anchorPos, content: dot, yAnchor: 0.5, zIndex: 3 });
 
-      /* 말풍선 — 검은 알약은 지도 위에서 너무 무겁게 읽혔다. 흰 바탕에 꼬리를 달아
-         어느 지점을 가리키는지 형태로 드러내고, 글자는 bold 를 빼고 medium 으로 낮춘다.
-         paddingBottom 이 점과의 간격이 된다 (yAnchor 1 이라 콘텐츠 아래끝이 좌표에 닿는다). */
-      const bubble = document.createElement("div");
-      bubble.style.cssText = "position:relative;padding-bottom:15px";
-      bubble.innerHTML =
-        `<span style="display:block;position:relative;padding:5px 10px;border-radius:var(--radius-sm);`
-        + `background:var(--surface-card);color:var(--text-heading);`
-        + `border:var(--stroke-hairline) solid var(--border-default);box-shadow:var(--shadow-raised);`
-        + `font-family:var(--font-sans);font-size:var(--fs-micro);font-weight:var(--fw-medium);`
-        + `line-height:1.35;letter-spacing:var(--ls-normal);white-space:nowrap">${anchorLabel}</span>`
-        /* 꼬리: 45도 돌린 정사각형에 아래·오른쪽 테두리만 남겨 말풍선 테두리와 이어 붙인다 */
-        + `<span style="position:absolute;left:50%;bottom:11px;width:9px;height:9px;`
-        + `margin-left:-4.5px;background:var(--surface-card);`
-        + `border-right:var(--stroke-hairline) solid var(--border-default);`
-        + `border-bottom:var(--stroke-hairline) solid var(--border-default);`
-        + `transform:rotate(45deg)"></span>`;
-      new kakao.maps.CustomOverlay({ map: m, position: anchorPos, content: bubble, yAnchor: 1, zIndex: 4 });
+        /* 말풍선 — 검은 알약은 지도 위에서 너무 무겁게 읽혔다. 흰 바탕에 꼬리를 달아
+           어느 지점을 가리키는지 형태로 드러내고, 글자는 bold 를 빼고 medium 으로 낮춘다.
+           paddingBottom 이 점과의 간격이 된다 (yAnchor 1 이라 콘텐츠 아래끝이 좌표에 닿는다). */
+        const bubble = document.createElement("div");
+        bubble.style.cssText = "position:relative;padding-bottom:15px";
+        bubble.innerHTML =
+          `<span style="display:block;position:relative;padding:5px 10px;border-radius:var(--radius-sm);`
+          + `background:var(--surface-card);color:var(--text-heading);`
+          + `border:var(--stroke-hairline) solid var(--border-default);box-shadow:var(--shadow-raised);`
+          + `font-family:var(--font-sans);font-size:var(--fs-micro);font-weight:var(--fw-medium);`
+          + `line-height:1.35;letter-spacing:var(--ls-normal);white-space:nowrap">${anchorLabel}</span>`
+          /* 꼬리: 45도 돌린 정사각형에 아래·오른쪽 테두리만 남겨 말풍선 테두리와 이어 붙인다 */
+          + `<span style="position:absolute;left:50%;bottom:11px;width:9px;height:9px;`
+          + `margin-left:-4.5px;background:var(--surface-card);`
+          + `border-right:var(--stroke-hairline) solid var(--border-default);`
+          + `border-bottom:var(--stroke-hairline) solid var(--border-default);`
+          + `transform:rotate(45deg)"></span>`;
+        new kakao.maps.CustomOverlay({ map: m, position: anchorPos, content: bubble, yAnchor: 1, zIndex: 4 });
+      }
 
       /* 좌표 지정 — 지도를 누르면 그 자리가 새 좌표가 된다. 리스너를 여기(생성 1회)에
          두는 이유는 onPick 이 인라인 함수로 들어와도 지도를 다시 만들지 않기 위해서다.
