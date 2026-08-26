@@ -184,6 +184,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
      떨어져 서므로 자리로는 묶이지 않고 크기로만 묶인다.
      한쪽만 재면 되는 이유는 **글자가 긴 [스캔 위치로]가 늘 넓기** 때문이다. */
   const [pillW, setPillW] = React.useState(0);
+  /* QR 지점 앵커가 지도 칸 밖으로 나갔는가 (`KakaoMap` 의 `onAnchorOffscreen`).
+     [스캔 위치로] 단추가 이 값일 때만 뜬다 — 아래 그 단추 주석. */
+  const [anchorOff, setAnchorOff] = React.useState(false);
   const [filterH, setFilterH] = React.useState(0);        /* 상단 필터 바 실측 높이(px) */
   const [toast, setToast] = React.useState(null);
   const mapApi = React.useRef(null);
@@ -922,6 +925,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
           facilities={facilityMarkers}
           districts={districtMarkers}
           selectedId={selected ? selected.id : null}
+          /* 앵커가 지도 칸을 벗어났는지. [스캔 위치로]가 이 값일 때만 뜬다 */
+          onAnchorOffscreen={setAnchorOff}
           topPad={mapPadTop}
           bottomPad={mapPadBottom}
           mapRef={mapApi}
@@ -992,9 +997,21 @@ export function MainApp({ qr = null, noDistrict = false }) {
             /* 시트에게 넘기는 것과 **같은 실측값**이다 — 막지 않으면 시트를 끝까지 올렸을
                때 기둥 윗머리가 상단 필터 바 위로 올라선다 (단추가 z 400, 필터가 z 300) */
             topInset={sheetTopInset}
-            /* 전체 스냅에서는 감춘다 — 시트가 지도를 다 덮은 상태라 지도를 옮기는 단추가
-               할 일이 없다 */
-            hidden={snap === "full"}
+            /* ── **앵커를 놓쳤을 때만 뜬다** (2026-08-26, 사용자 요청) ────────────────
+                  이 단추가 하는 일은 지도를 QR 지점으로 되돌리는 것 하나뿐이다. 그러니
+                  **지점이 화면에 보이는 동안에는 눌러도 아무 일이 일어나지 않는다** —
+                  그동안은 지도를 가리기만 하는 알약이고, 진입 직후의 화면이 바로 그
+                  상태다(카메라가 앵커에 맞춰 서 있다). 처음 보는 화면에서 아무 일도
+                  하지 않는 단추가 먼저 눈에 드는 것이 이 화면의 마지막 군더더기였다.
+
+                  전체 스냅에서 감추는 것은 그대로다 — 시트가 지도를 다 덮은 상태라
+                  역시 할 일이 없다. 두 조건은 **같은 이야기의 두 경우**다.
+
+                  `hidden` 은 언마운트가 아니라 `opacity` + `pointer-events` 라
+                  (`FloatingControls`) 뜨고 사라지는 것이 보이고, 감춰져 있는 동안에도
+                  자리를 차지하므로 **재둔 폭(`onWidthChange`)이 살아 있다** — 반경
+                  고르개가 그 값으로 제 폭을 맞추는데 단추가 없어지면 함께 무너진다. */
+            hidden={snap === "full" || !anchorOff}
             /* ── 반경 고르개와 **같은 알약** (2026-08-26 오후, 사용자 요청) ─────────
                   이 단추와 위 안내 반경 고르개는 같은 지도 위에 함께 떠 있는 둘인데
                   **서로 다른 부품처럼 보였다** — 한쪽은 34px 알약에 13px 글자, 이쪽은

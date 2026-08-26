@@ -86,6 +86,15 @@ export function KakaoMap({
      같은 자리를 가리키는 파란 점이 하나 더 서고 말풍선이 시설 이름을 적는다 —
      둘 중 무엇을 끌어야 하는지 화면이 스스로 흐린다. 거기 있어야 하는 것은 핀뿐이다. */
   anchor = true,
+  /* ── `onAnchorOffscreen(off)` — 앵커가 화면 밖으로 나갔는지 (2026-08-26, 사용자 요청) ──
+     [스캔 위치로] 단추가 **늘 떠 있을 이유가 없다.** 그 단추가 하는 일은 지도를 QR 지점으로
+     되돌리는 것 하나뿐이라, **지점이 화면에 보이는 동안에는 눌러도 아무 일이 일어나지
+     않는다** — 그때는 지도를 가리기만 하는 알약이다. 나갔을 때만 뜨게 하려면 「나갔다」를
+     아는 쪽이 알려야 하고, 그것은 지도를 든 이 부품이다.
+
+     `anchor={false}` 인 화면(관리자 좌표 지정)에서는 부르지 않는다 — 거기서 `center` 는
+     「내 위치」가 아니라 지금 고치고 있는 좌표다. */
+  onAnchorOffscreen,
   /* ── `radius` 가 있었다 (2026-08-26 아침 신설 → 같은 날 오후 삭제, 사용자 요청) ──
      `center` 를 중심으로 점선 원을 그렸다. 공공시설 탭의 안내 반경 고르개(U-FC-08)에서
      고른 수가 지도 위에서 얼마나 넓은 자리인지 보여주려던 것이다.
@@ -166,7 +175,7 @@ export function KakaoMap({
 
   /* 콜백은 ref 로 — 부모가 인라인 함수를 넘겨도 지도를 다시 만들지 않는다 */
   const cb = React.useRef({});
-  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onSelectCourseStop, onSelectDest, onSelectTurn, onReady, onError, onPick };
+  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onSelectCourseStop, onSelectDest, onSelectTurn, onReady, onError, onPick, onAnchorOffscreen };
   const pickMarker = React.useRef(null);
 
   /* 실제로 보이는 띠 = 상단 필터 바 아래 ~ 시트 위. 그 한가운데로 마커를 옮긴다.
@@ -326,6 +335,42 @@ export function KakaoMap({
     if (item.type && FACILITY_PIN[item.type]) return im[item.type] || im.neutral;
     return item.onnuri ? im.onnuri : im.store;
   }, []);
+
+  /* ── 앵커가 화면 밖으로 나갔는지 지켜본다 (2026-08-26, 사용자 요청) ────────────
+     [스캔 위치로] 단추를 **나갔을 때만** 띄우기 위한 신호다 (위 `onAnchorOffscreen`).
+
+     **보이는 띠(topPad ~ bottomPad)가 아니라 지도 칸 전체로 잰다.** 시트가 덮어 가려진
+     것과 지도를 끌어 놓친 것은 다른 일이다 — 앞의 것은 시트를 내리면 되고 이 단추가
+     할 일이 아닌데, 띠로 재면 **시트를 끌어올리는 동안 단추가 떴다 사라진다.**
+
+     여백 `EDGE` 는 앵커 그림의 크기다. 좌표가 칸 안이어도 가장자리에 붙으면 점 위에 얹힌
+     말풍선이 잘리는데, **잘린 핀은 「보인다」가 아니다.** */
+  React.useEffect(() => {
+    const k = kakaoRef.current, m = map.current;
+    if (!ready || !k || !m || !anchor || !center) return undefined;
+    const EDGE = 28;
+    const at = new k.maps.LatLng(center.lat, center.lng);
+    /* 값이 뒤집힐 때만 부모를 깨운다 — `bounds_changed` 는 끄는 동안 프레임마다 온다 */
+    let was = null;
+    const check = () => {
+      const box = host.current && host.current.getBoundingClientRect();
+      /* 둘러보기 탭에서는 지도가 `display:none` 이라 칸이 0 이다. 그 상태의 좌표는
+         뜻이 없으므로 마지막 값을 그대로 두고 지나간다 (탭이 돌아올 때 `setView` 가
+         카메라를 옮기고, 그 이벤트에 다시 재게 된다) */
+      if (!box || !box.width || !box.height) return;
+      const pt = m.getProjection().containerPointFromCoords(at);
+      const off = pt.x < EDGE || pt.x > box.width - EDGE
+        || pt.y < EDGE || pt.y > box.height - EDGE;
+      if (off === was) return;
+      was = off;
+      if (cb.current.onAnchorOffscreen) cb.current.onAnchorOffscreen(off);
+    };
+    check();
+    /* `idle` 이 아니라 `bounds_changed` 로 듣는다 — `idle` 은 손을 뗀 뒤에야 오므로
+       끌고 있는 내내 단추가 옛 상태로 서 있게 된다 */
+    k.maps.event.addListener(m, "bounds_changed", check);
+    return () => k.maps.event.removeListener(m, "bounds_changed", check);
+  }, [ready, anchor, center]);
 
   /* 점포 마커 — 필터 결과가 바뀔 때마다 클러스터러 내용을 교체한다 */
   React.useEffect(() => {
