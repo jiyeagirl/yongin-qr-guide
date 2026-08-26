@@ -27,12 +27,20 @@ import { Icon } from "./Icon.jsx";
  * `icon` 은 무엇을 고르는 축인지 그림으로 말한다 — 정렬은 ⇅, 출발지는 핀이다. 단추 글자가
  * 값("거리순"·"QR 지점")만 적기 때문에, 아이콘이 없으면 그 낱말이 무엇에 관한 것인지
  * 화면에서 사라진다 (보조기기에는 aria-label 이 같은 일을 한다).
+ * `icon={null}` 이면 떼어낸다 — `buttonLabel` 이 축을 이미 적는 자리를 위한 길이다.
  *
- * **`icon={null}` 이면 떼어낸다** (2026-08-26, 사용자 요청). 위 근거가 서지 않는 자리가
- * 있다 — `buttonLabel` 이 축을 이미 적는 경우다. 안내 반경 고르개의 단추 글자는 값만
- * 적는 「2km」가 아니라 **「반경 2km」**라, 그 앞의 그림은 낱말이 이미 한 말을 한 번 더
- * 하는 것이고 지도 위에서는 그 한 번이 알약 폭 18px 이다. 꺾쇠는 남는다 — 누를 수 있다는
- * 말은 글자가 하지 못한다. */
+ * > **`floating` 이 여기 있었다** (2026-08-26 낮 신설 → 같은 날 저녁 삭제, 사용자 요청).
+ * > 지도 위에 홀로 뜨는 모양이다 — 34px 알약 · `--surface-float-translucent`(.82) + 흐림.
+ * > 손님은 공공시설 탭의 안내 반경 고르개 하나였고, **그 고르개가 지도에서 내려와 시트
+ * > 헤더 오른쪽(`Sheet` 의 `titleAside`)에 서면서** 이 모양을 쓰는 곳이 없어졌다.
+ * > 함께 나간 것: 짝이 되는 알약의 실측 폭을 받던 `faceMinWidth`, 그 모양에서만 쓰던
+ * > 채운 삼각형(`Icon` 의 `caret-down`).
+ * >
+ * > 남기는 한 줄 — **지도 위에서는 글자에 흰 테를 두르는 것으로 바닥을 대신할 수 없다.**
+ * > 그 판에서 알약을 걷고 halo 만 둘렀다가 화면에서 읽히지 않아 되돌렸다: 테는 획 둘레
+ * > 1~2px 만 밝히므로 글자와 배경의 밝기가 비슷하면 덩어리가 배경에서 떨어지지 않는다.
+ * > **그리고 그 모든 궁리는 바탕이 흰 카드가 되는 순간 통째로 필요 없어졌다** — 이 부품이
+ * > 원래 서던 자리(줄 안)로 돌아가는 것이 답이었다. */
 export function InlineSelect({
   value, options = [], onChange,
   label,
@@ -44,43 +52,6 @@ export function InlineSelect({
      있다는 사실은 눈으로 훑을 때의 이야기이고, 소리로는 앞뒤가 붙어 오지 않는다. */
   buttonLabel,
   icon = "arrow-up-down",
-  /* ── `floating` — 지도 위에 홀로 떠 있을 때 (2026-08-26, 사용자 요청) ──────────
-     이 부품은 원래 **줄 안에** 선다 (목록 위 제어 줄, 길찾기 헤더). 그런 자리는 바탕이
-     이미 흰 카드라 단추가 배경 없이 글자만으로 서도 읽힌다.
-
-     지도 위는 다르다. 공공시설 탭의 안내 반경 고르개가 상단 필터 바의 칩 줄 아래에
-     서는데(`MapFilterOverlay` 의 `trailing`), 배경 없이 두면 지도의 초록·회색 위에서
-     글자가 그때그때 다르게 읽힌다. 그래서 **필터 칩과 같은 알약**을 두른다 — 같은 바
-     안에 서는 것이라 모양이 같아야 한다: 34px · `--fs-caption`. 손가락 자리는 위아래
-     투명 여백으로 44px 을 지킨다 (Chip 과 같은 수법).
-
-     ── 바탕: **비쳐 보이되 있다** (2026-08-26, 사용자 요청) ─────────────────────
-     하루에 네 번 고친 자리다 — 흰 판(`--surface-card` + `--border-strong`) → .70 + 흐림
-     → **완전 투명** → 지금. 세 번째에서 알약을 통째로 걷고 글자에 흰 테를 둘렀는데
-     (`--halo-on-map`, 지도 라벨의 수법), 화면에서 **읽히지 않았다.** 테는 획 둘레
-     1~2px 를 밝히는 것이라 글자와 배경의 밝기가 비슷하면 획만 도드라지고 **덩어리가
-     배경에서 떨어지지 않는다** — 지도 라벨이 그걸로 버티는 것은 획이 굵고 자간이 넓어서다.
-
-     그래서 막이 돌아왔고, 값은 [스캔 위치로]와 **같은 것을 쓴다** —
-     `--surface-float-translucent`(.82) + `--blur-glass` + `--border-float-translucent`.
-     요청은 「80% 정도」였고 .82 가 그 값이다: **2 포인트 차이로 토큰을 하나 더 두는 것보다
-     지도 위에 떠 있는 둘이 같은 바탕인 편이 낫다.** 흐림을 함께 거는 이유는 비치는 만큼
-     글자가 흔들려 보이기 때문이다.
-
-     남은 교훈: **막을 얇게 하는 것과 없애는 것은 다른 일이다.** 얇은 막은 뒤를 보여주면서
-     글자를 앉힐 바닥을 남기지만, 없앤 자리에는 바닥이 없다. */
-  floating = false,
-  /* `floating` 알약의 **최소 폭**(px). 지도 위에 함께 떠 있는 다른 알약의 실측 폭을
-     받는다 — 시민 지도에서는 [스캔 위치로](`FloatingControls` 의 `onWidthChange`)다.
-     둘은 화면의 반대쪽 끝에 떨어져 서므로 **덩어리 크기가 같아야** 한 벌로 읽힌다.
-
-     상수가 아니라 **잰 값을 받는 것**이 요점이다. 처음에는 토큰(`--float-pill-min:108px`)
-     으로 박았는데 한글 글자 폭을 눈대중으로 셈한 수라 이쪽에는 20px 짜리 빈 자리가
-     생기고 저쪽은 그 수를 넘겨 **둘이 어긋났다.** 글꼴이 무엇으로 잡히는지 · 2차 글자
-     확대가 걸렸는지에 따라 달라지는 값은 상수로 적을 수 없다.
-
-     0 이면 제 글자만큼이다 (첫 프레임과 지도 없는 화면). */
-  faceMinWidth = 0,
   align = "right",     /* 단추가 줄 오른쪽 끝에 서는 자리가 많아 목록도 오른쪽에 맞춘다 */
   /* 상자를 글자에 맞춘다. 104 는 "거리순" 세 글자 기준이고, 더 긴 후보를 담는 자리
      (출발지의 상호명 등)는 부르는 쪽이 올려 잡는다 — 높이는 줄이지 않는다.
@@ -127,50 +98,21 @@ export function InlineSelect({
         aria-label={`${label}: ${current ? current.label : ""}`}
         style={{
           display: "inline-flex", alignItems: "center",
-          minHeight: "var(--tap-min)", padding: floating ? "5px 0" : 0,
+          minHeight: "var(--tap-min)", padding: 0,
           background: "none", border: "none", cursor: "pointer",
           fontFamily: "var(--font-sans)", letterSpacing: "var(--ls-normal)",
           color: "var(--text-body)", whiteSpace: "nowrap",
         }}>
-        {/* 보이는 것과 눌리는 것을 나눈다. `floating` 이면 이 span 이 **보이는 34px**
-            이고 바깥 button 이 44px 손가락 자리다 (Chip 과 같은 수법). 알약이던 시절의
-            나눔인데 바탕이 없어진 지금 더 중요해졌다 — 보이는 것이 글자뿐이라도
-            **눌리는 넓이는 여전히 44px** 이라는 것을 이 두 겹이 지킨다.
-            `floating` 이 아니면 종전 그대로 — 글꼴 값이 button 에서 여기로 내려왔을
-            뿐 보이는 것은 같다 */}
-        <span style={floating
-          ? { display: "inline-flex", alignItems: "center", gap: 4,
-              /* 남는 폭은 **양옆으로 고르게** 나눈다 (`center`). `space-between` 으로
-                 글자를 왼쪽, 삼각형을 오른쪽 끝으로 밀어 봤는데 — 둘 사이에 생긴 빈
-                 자리가 **알약 한가운데 뚫린 구멍**으로 읽혔다. 같은 폭이어도 저쪽은
-                 글자가 꽉 찬 알약이라 둘이 같아 보이지 않는다. 가운데로 모으면 남는
-                 폭이 좌우 여백이 되어 **그냥 조금 넉넉한 알약**이 된다 */
-              minWidth: faceMinWidth || undefined, justifyContent: "center",
-              minHeight: 34,
-              /* 왼쪽 아이콘을 뗀 자리는 여백이 대신 채운다 — 10px 로 두면 글자가 알약
-                 왼쪽 벽에 붙어 오른쪽 삼각형 쪽만 헐거워 보인다 */
-              padding: icon ? "0 8px 0 10px" : "0 8px 0 12px",
-              background: "var(--surface-float-translucent)",
-              backdropFilter: "var(--blur-glass)",
-              WebkitBackdropFilter: "var(--blur-glass)",
-              border: "var(--stroke-hairline) solid var(--border-float-translucent)",
-              borderRadius: "var(--radius-pill)", boxShadow: "var(--shadow-card)",
-              fontSize: "var(--fs-caption)", fontWeight: "var(--fw-semibold)" }
-          : { display: "inline-flex", alignItems: "center", gap: 5,
-              padding: "0 var(--space-1) 0 var(--space-2)",
-              fontSize: "var(--fs-label)", fontWeight: "var(--fw-semibold)" }}>
-          {icon ? <Icon name={icon} size={floating ? 14 : 15} color="var(--text-muted)" /> : null}
+        {/* 보이는 것과 눌리는 것을 나눈다 — 글꼴 값이 button 이 아니라 여기 있다 */}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5,
+          padding: "0 var(--space-1) 0 var(--space-2)",
+          fontSize: "var(--fs-label)", fontWeight: "var(--fw-semibold)" }}>
+          {icon ? <Icon name={icon} size={15} color="var(--text-muted)" /> : null}
           {buttonLabel || (current ? current.label : "")}
           {/* 꺾쇠를 단다 (2026-08-19). 아이콘 하나로는 "지금 값"인지 "누를 수 있는 것"인지
               갈리지 않았다 — 정렬 자리에서는 ⇅ 가 그 일까지 했지만, 출발지의 핀은 값을
-              가리키는 그림이라 누를 수 있다는 말을 하지 못한다.
-              `floating` 에서만 **채운 삼각형**이다 (2026-08-26, 사용자 요청) —
-              `caret-down` 은 채우기 아이콘이라 `color` prop 이 걸리지 않으므로 CSS
-              `color` 로 준다 (Icon 의 `LOCAL` 표 머리말). 줄 안에 서는 쪽은 흰 카드
-              위라 꺾쇠 그대로다 — 같은 부품의 두 모양이 갈리는 자리가 바탕이다 */}
-          {floating
-            ? <Icon name="caret-down" size={13} style={{ color: "var(--text-muted)" }} />
-            : <Icon name="chevron-down" size={15} color="var(--text-muted)" />}
+              가리키는 그림이라 누를 수 있다는 말을 하지 못한다 */}
+          <Icon name="chevron-down" size={15} color="var(--text-muted)" />
         </span>
       </button>
 

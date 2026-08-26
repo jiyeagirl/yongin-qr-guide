@@ -21,12 +21,14 @@ import { Icon } from "../core/Icon.jsx";
    opacity 는 그대로 둔다. 그쪽은 프레임마다 오는 값이 아니라 전체 스냅에서 한 번
    0/1 로 바뀌는 값이라 트랜지션이 있어야 켜지고 꺼지는 것이 보인다.
 
-   ── `subtle` — **반경 고르개와 같은 알약** (2026-08-26, 사용자 요청) ─────────────
+   ── `subtle` — **지도 위에 뜨는 것들과 같은 알약** (2026-08-26, 사용자 요청) ───────
    시민 지도의 [스캔 위치로]가 쓴다. 이 단추와 안내 반경 고르개는 **같은 지도 위에 함께
    떠 있는 둘**인데 서로 다른 부품처럼 보였다 — 한쪽은 34px 알약에 13px 글자, 다른 쪽은
-   48×44 짜리 둥근 네모에 아이콘을 이고 선 12px 글자였다. 이제 `InlineSelect` 의
-   `floating` 과 **같은 값을 쓴다**: 34px · 알약 · `--surface-float-translucent`(.82) +
-   `--blur-glass` · `--border-float-translucent` · `--shadow-card` · `--text-body`.
+   48×44 짜리 둥근 네모에 아이콘을 이고 선 12px 글자였다. 값은 이제 한 벌이다: 34px ·
+   알약 · `--surface-float-translucent`(.82) + `--blur-glass` ·
+   `--border-float-translucent` · `--shadow-card` · `--text-body`. **반경 고르개가 지도에서
+   내려간 뒤로는 지도 위에 뜨는 것이 이 단추 하나뿐**이고(그것도 앵커를 놓쳤을 때만 뜬다),
+   맞출 짝이 없어졌어도 값은 그대로 둔다 — 필터 칩과 한 벌인 값이다.
 
      쌓기   **없어졌다.** 아이콘 위 · 글자 아래로 쌓았던 것은 같은 날 아침 「스캔 위치로」를
             옆에 붙였더니 알약이 120px 을 넘어 지도 오른쪽 아래를 덮었기 때문이다. 지금은
@@ -34,8 +36,8 @@ import { Icon } from "../core/Icon.jsx";
             **100px 남짓**이다 — 높이가 48 에서 34 로 내려간 만큼을 폭으로 돌려준 셈이고,
             그 값에서는 두 부품이 같은 것으로 읽히는 편이 낫다
      두 겹   보이는 34px 과 눌리는 44px 을 나눈다 (바깥 button 이 위아래 5px 투명 여백을
-            갖는다). `InlineSelect.floating` 과 Chip 이 쓰는 그 수법이다 — **작아 보이는
-            것과 손가락 자리는 다른 이야기다**
+            갖는다). Chip · `InlineSelect` 가 쓰는 그 수법이다 —
+            **작아 보이는 것과 손가락 자리는 다른 이야기다**
 
    글자를 다시 떼지는 않는다 (v1.9 가 그림만으로 말하는 것을 그만둔 판이다) — 작아졌을 뿐
    어디로 가는 단추인지는 여전히 글자가 적는다.
@@ -50,23 +52,21 @@ import { Icon } from "../core/Icon.jsx";
    > 화면에서 위쪽이 통째로 막히는 것이 v1.11 이 내내 고쳐 온 문제다. 대신 **폭을 맞췄다**
    > (아래 `onWidthChange`) — 통일감은 자리가 아니라 모양이 낸다.
 
-   ── `onWidthChange` — 이 기둥의 실측 **폭** (2026-08-26, 사용자 요청) ─────────────
-   [스캔 위치로]와 안내 반경 고르개는 화면의 반대쪽 끝에 떨어져 서므로 **덩어리 크기가
-   같아야** 한 벌로 읽힌다. 두 알약 중 **글자가 긴 이쪽이 늘 넓으므로** 이 값을 재서
-   고르개에 넘기고, 고르개는 그 값을 제 최소 폭으로 삼는다 (`InlineSelect` 의
-   `faceMinWidth`). 이쪽은 늘 제 폭 그대로라 **여백이 붙지 않는다.**
-
-   > 처음에는 토큰 상수로 했다가(`--float-pill-min:108px`) 같은 날 이 방식으로 바꿨다.
-   > 한글 글자 폭을 눈대중으로 셈해 박은 수라 **고르개에는 20px 짜리 빈 자리가 생기고
-   > 단추는 그 수를 넘겨** 둘이 어긋났다. 글꼴이 무엇으로 잡히는지 · 2차 글자 확대가
-   > 걸렸는지에 따라 달라지는 값을 상수로 적을 수는 없다 — **재야 하는 값이다.**
+   > `onWidthChange` 가 여기 있었다 (2026-08-26 낮 신설 → 같은 날 저녁 삭제). 이 기둥의
+   > 실측 폭을 재서 안내 반경 **알약**에 넘기던 값이다 — 화면의 반대쪽 끝에 떨어져 선
+   > 두 알약은 덩어리 크기가 같아야 한 벌로 읽히므로, 글자가 긴 이쪽의 폭을 저쪽이
+   > 최소 폭으로 받았다 (`InlineSelect` 의 `faceMinWidth`). **고르개가 지도에서 내려가
+   > 시트 헤더로 가면서 맞출 짝이 없어졌다.** 남는 교훈은 그 자리에서 배운 것 하나다:
+   > 처음에는 토큰 상수(`--float-pill-min:108px`)로 박았는데 한글 글자 폭을 눈대중으로
+   > 셈한 수라 둘이 어긋났다 — **글꼴과 2차 글자 확대에 따라 달라지는 값은 토큰이 아니라
+   > 재야 하는 값이다.**
 
    `children` 슬롯이 여기 있었다 (2026-08-26 아침 신설 → 같은 날 삭제). 세로 반경
    고르개(`RadiusSlider`)를 이 기둥에 세우려고 열었는데, 그 고르개가 **지도 오른쪽을 너무
    많이 차지해** 상단 필터 바의 칩 줄 아래로 내려갔다 (사용자 요청. `MapFilterOverlay` 의
    `trailing`). 손님이 없어진 슬롯은 함께 닫는다. */
 export function FloatingControls({ bottom = "var(--sheet-half)", hidden = false, topInset = 0,
-  subtle = false, items = [], onWidthChange, style, ...rest }) {
+  subtle = false, items = [], style, ...rest }) {
   const anchor = typeof bottom === "number" ? `${bottom}px` : bottom;
   const top = typeof topInset === "number" ? `${topInset}px` : topInset;
 
@@ -77,19 +77,10 @@ export function FloatingControls({ bottom = "var(--sheet-half)", hidden = false,
      모르고, 2차 글자 확대에서는 잰 값만이 따라온다. */
   const col = React.useRef(null);
   const [h, setH] = React.useState(0);
-  /* 폭을 알리는 쪽은 ref 로 든다 — 부모가 인라인 함수를 넘겨도 관찰자를 다시 달지 않는다 */
-  const reportW = React.useRef(onWidthChange);
-  reportW.current = onWidthChange;
   React.useEffect(() => {
     const el = col.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const send = () => {
-      setH(el.offsetHeight);
-      /* 기둥은 절대 배치라 폭이 없다 — 안에 선 단추 중 가장 넓은 것의 폭이 그대로 나온다.
-         `getBoundingClientRect` 로 재는 이유는 소수점이다: `offsetWidth` 는 반올림한
-         정수라 두 알약이 1px 어긋난 채 서는 일이 생긴다 */
-      if (reportW.current) reportW.current(el.getBoundingClientRect().width);
-    };
+    const send = () => setH(el.offsetHeight);
     const ro = new ResizeObserver(send);
     ro.observe(el);
     send();
@@ -107,15 +98,14 @@ export function FloatingControls({ bottom = "var(--sheet-half)", hidden = false,
       {items.map(it => {
         const on = !!it.active;
         /* `subtle` 이면 **보이는 것**은 이 알약이고 바깥 button 은 손가락 자리다.
-           값은 `InlineSelect.floating`(안내 반경 고르개)에서 그대로 가져왔다 — 두 부품이
-           같은 지도 위에 함께 서므로 여기서 조금이라도 다르게 적으면 그만큼 어긋난다.
+           같은 화면의 필터 칩과 같은 값이다 — 여기서 조금이라도 다르게 적으면
+           그만큼 어긋난다.
            켜진 상태(`active`)만 브랜드 초록으로 덮는다: 그때는 「지금 이 상태다」가
            비켜서 있는 것보다 먼저다 (지금 시민 화면에 켜지는 단추는 없다 — 관리자
            `CoordField` 가 `subtle` 없이 쓰는 길이 그쪽이다). */
         const face = {
           display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-          /* 폭은 **제 글자만큼**이다 — 둘 중 넓은 쪽이라 여백을 붙일 이유가 없고,
-             이 폭을 `onWidthChange` 가 고르개에 넘겨 그쪽이 맞춰 온다 (위 머리말) */
+          /* 폭은 **제 글자만큼**이다 (위 머리말의 `onWidthChange` 자리) */
           minHeight: 34, padding: "0 12px 0 10px",
           background: on ? "var(--brand-primary)" : "var(--surface-float-translucent)",
           backdropFilter: on ? undefined : "var(--blur-glass)",

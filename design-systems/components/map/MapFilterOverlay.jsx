@@ -41,22 +41,17 @@ import { FilterBar } from "../core/FilterBar.jsx";
  * 지도의 `topPad`(마커를 탭했을 때 위쪽 가림 높이)와 시트의 `topInset`.
  * 검색창 유무로 높이가 달라지므로 이 값은 반드시 measure 여야 한다 (상수로 박으면 어긋난다).
  *
- * ── `trailing` — 칩 줄 **아래 오른쪽**에 서는 것 (2026-08-26, 사용자 요청) ────────
- * 공공시설 탭의 안내 반경 고르개가 첫 손님이다 (U-FC-08). 처음에는 지도 오른쪽에 세로로
- * 세웠는데(`RadiusSlider`) **지도의 한쪽을 통째로 차지했다** — 2·3·4km 세 칸이 각각
- * 손가락 자리를 가지려니 200px 짜리 기둥이 됐고, 그 기둥이 서 있는 내내 지도의 오른쪽
- * 3분의 1이 가려졌다. 고를 것이 셋뿐이면 **접어 두는 편**이 맞다: 평소에는 지금 값 한
- * 마디만 서 있고 누를 때만 펼쳐진다 (`InlineSelect`).
- *
- * 칩과 **같은 줄에 두지 않는다.** 칩 줄은 화면 끝까지 흘러 마지막 칩이 잘린 채 걸치는
- * 것으로 「더 있다」를 말하는데(v1.4), 오른쪽 끝에 무언가를 고정하면 그 신호가 사라진다.
- * 제 줄을 갖되 오른쪽 끝에 붙어, 그 줄의 나머지로는 지도가 그대로 보인다.
+ * > **`trailing` 이 여기 있었다** (2026-08-26 낮 신설 → 같은 날 저녁 삭제, 사용자 요청).
+ * > 칩 줄 아래 오른쪽에 한 줄을 더 여는 슬롯이고, 손님은 공공시설 탭의 안내 반경
+ * > 고르개 하나였다 (U-FC-08). 그 고르개가 **시트 헤더 오른쪽으로 내려가면서**
+ * > (`Sheet` 의 `titleAside`) 이 바는 다시 검색창과 칩 줄 둘로 돌아간다 — 공공시설 탭에서는
+ * > 검색창도 없으므로 **칩 한 줄**이다. 바가 낮아진 만큼 시트의 상한(`topInset`)이
+ * > 올라가고 지도의 위 여백이 줄어든다. 손님이 없어진 슬롯은 함께 닫는다.
  */
 export function MapFilterOverlay({
   showSearch = true,
   q, onQueryChange, onQueryClear,
   chips = [], cat, onCatChange, renderIcon, filterLabel,
-  trailing,
   onHeightChange,
   style, ...rest
 }) {
@@ -72,10 +67,10 @@ export function MapFilterOverlay({
     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(send) : null;
     if (ro) ro.observe(node);
     return () => { if (ro) ro.disconnect(); };
-    /* `trailing` 도 의존성이다 — 그 줄이 생기고 없어지면 바의 높이가 달라지는데, 그 값을
-       지도 패딩과 시트 상한이 함께 본다. ResizeObserver 가 어차피 잡지만 탭을 옮긴 첫
-       프레임에는 옛 높이가 나가 카메라가 한 번 어긋난 자리를 잡는다 */
-  }, [showSearch, !!trailing]);
+    /* `showSearch` 가 의존성인 이유 — 검색창이 생기고 없어지면 바의 높이가 달라지는데,
+       그 값을 지도 패딩과 시트 상한이 함께 본다. ResizeObserver 가 어차피 잡지만 탭을
+       옮긴 첫 프레임에는 옛 높이가 나가 카메라가 한 번 어긋난 자리를 잡는다 */
+  }, [showSearch]);
 
   return (
     <div ref={el}
@@ -93,15 +88,6 @@ export function MapFilterOverlay({
         <FilterBar floating sticky={false} chips={chips} value={cat} onChange={onCatChange}
           renderIcon={renderIcon} label={filterLabel} />
       </div>
-
-      {/* 오른쪽 끝은 위 검색창·칩 줄과 **같은 세로선**이다 (`--gutter-screen`).
-          왼쪽은 비워 둔다 — 이 줄에서 지도가 보이는 자리다 */}
-      {trailing ? (
-        <div style={{ display: "flex", justifyContent: "flex-end",
-          padding: `0 var(--gutter-screen)`, marginTop: "var(--space-1)" }}>
-          <div style={{ pointerEvents: "auto" }}>{trailing}</div>
-        </div>
-      ) : null}
     </div>
   );
 }

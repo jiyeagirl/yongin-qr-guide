@@ -63,10 +63,16 @@ export { MapCanvas } from "./components/map/MapCanvas.jsx";
 export { KakaoMap } from "./components/map/KakaoMap.jsx";
 export { MapPreviewCard } from "./components/map/MapPreviewCard.jsx";
 export { MapFilterOverlay } from "./components/map/MapFilterOverlay.jsx";
-/* `RadiusSlider` 가 여기 있었다 (2026-08-26 아침 신설 → 같은 날 삭제, 사용자 요청).
-   지도 오른쪽에 세로로 서던 반경 고르개다 — 자리를 너무 많이 차지해 상단 필터 바의
-   칩 줄 아래로 내려갔고, 거기서는 `InlineSelect` 하나면 된다 (MapFilterOverlay 의
-   `trailing`). 부품을 남겨 두지 않는 이유는 쓰는 곳이 없어서다 */
+/* 안내 반경 고르개를 위한 지도 부품이 여기 둘 있었고, 2026-08-26 하루에 둘 다 나갔다 —
+   `RadiusSlider`(지도 오른쪽 세로 기둥, 아침)와 `RadiusScale`(같은 자리의 세로 눈금자,
+   저녁). 셋째 자리였던 상단 필터 바의 드롭다운(`MapFilterOverlay` 의 `trailing` +
+   `InlineSelect` 의 `floating`)도 함께 없어졌다.
+
+   **셋 다 지도 위였고, 그래서 셋 다 같은 값을 치렀다** — 지도를 보라고 만든 화면에서
+   지도를 가린다. 고르개는 시트 헤더 오른쪽으로 내려갔다 (`Sheet` 의 `titleAside`):
+   **반경은 지도의 조작이 아니라 목록의 조건**이고, 그 조건이 결과와 같은 판에 있으면
+   누른 것과 달라진 것이 한눈에 들어온다. 거기서는 줄 안에 서는 `InlineSelect` 그대로라
+   전용 부품이 필요 없다 — 지도 위에서 읽히게 하려고 두르던 것이 전부 필요 없어진다. */
 export { loadKakaoMaps } from "./components/map/kakaoLoader.js";
 
 /* facility — 공공시설 도메인 (AED · 화장실 · 쉼터 · 대피소) */

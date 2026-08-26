@@ -73,14 +73,45 @@ function stateOf(f) {
 /* 명세서 2-3 의 노출 카테고리(진행 / 완료)를 내던 `categoryOf` 가 여기 있었다.
    2026-08-24 에 없앴다 — 아래 머리말 참조. */
 
-/* 1:N 목록의 날짜 칸을 축제 기간 안으로 묶는다. `datetime-local` 의 min/max 는
-   달력에서 그 밖의 날을 고르지 못하게 한다 — 값이 이미 폼 위쪽에 있는데 아래에서
-   아무 날이나 고를 수 있으면, 그 둘이 어긋난 상태가 저장까지 간다.
-   기간이 아직 비어 있으면 묶지 않는다 (아무 날도 못 고르는 달력이 더 나쁘다). */
+/* ── 1:N 목록의 일시 칸은 **연도를 묻지 않는다** (2026-08-26, 사용자 요청) ──────────
+   전에는 `datetime-local` 한 칸이 연·월·일과 시각을 함께 받고, 여기서 `min`/`max` 로
+   기간 밖의 날을 흐리게 했다. 그런데 **연도는 언제나 위 폼의 시작일과 같은 해**다 —
+   답이 정해진 것을 묻는 칸이었다.
+
+   이제 이 함수가 **축제 기간의 날들을 그대로 목록으로 만들어** 넘기고, 칸은 「어느 날」과
+   「몇 시」 둘만 묻는다 (`Repeater` 의 `daytime`). 축제가 하루면 고를 것이 하나뿐이라
+   사실상 시각만 넣게 되고, 사흘이어도 셋이다. **기간을 넘어가지 못하는 것이 min/max 보다
+   강해진다** — 달력은 밖의 날을 흐리게 보여줄 뿐이지만 목록에는 그 날이 없다.
+
+   여러 해에 걸치는 축제(12/28~1/3)도 이 길로 저절로 풀린다. 「연도가 같다」는 것은
+   대개 맞지만 늘 맞지는 않은 짐작인데, **날을 통째로 목록으로 만들면 짐작할 것이 없다.**
+
+   기간이 아직 비어 있으면 목록을 넘기지 않는다 — 그때 칸은 종전 `datetime-local` 로
+   떨어진다 (고를 날이 하나도 없는 고르개보다는 낫다). */
+const DOW = ["일", "월", "화", "수", "목", "금", "토"];
+
+/* 날짜를 **UTC 자정으로 못박고 UTC 로만 셈한다.** 하루를 더하는 일과 요일을 내는 일이
+   둘 다 시간대에 걸리는 계산이라, 한쪽만 못박으면 브라우저 시간대에 따라 요일이 하루씩
+   밀린다. `Date.UTC` 로 만들고 `getUTCDate`/`getUTCDay` 로만 읽으면 걸릴 것이 없다. */
+function daysBetween(start, end) {
+  const at = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+  const last = at(end);
+  const out = [];
+  for (const d = new Date(at(start)); d.getTime() <= last; d.setUTCDate(d.getUTCDate() + 1)) {
+    const iso = d.toISOString().slice(0, 10);
+    out.push({ value: iso, label: `${+iso.slice(5, 7)}.${+iso.slice(8, 10)} (${DOW[d.getUTCDay()]})` });
+    /* 종료일을 시작일보다 앞으로 적어 둔 중간 상태에서는 빈 목록이 나오고, 그때는
+       위 규칙대로 종전 칸으로 떨어진다. 400 은 그 밖의 실수를 막는 빗장이다 */
+    if (out.length > 400) break;
+  }
+  return out;
+}
+
 function withPeriod(columns, v) {
   if (!v.start || !v.end) return columns;
-  const min = `${v.start}T00:00`, max = `${v.end}T23:59`;
-  return columns.map(c => (c.type === "datetime-local" ? { ...c, min, max } : c));
+  const days = daysBetween(v.start, v.end);
+  if (!days.length) return columns;
+  return columns.map(c => (c.type === "daytime" ? { ...c, days } : c));
 }
 
 function periodOf(f) {

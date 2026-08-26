@@ -352,6 +352,60 @@ export function Repeater({
           onChange={off ? () => {} : e => set(i, c.key, e.target.value)} />
       );
     }
+    /* ── `daytime` — **연도를 묻지 않는 일시 칸** (2026-08-26, 사용자 요청) ─────────
+       축제의 프로그램·부스가 쓴다. `datetime-local` 한 칸이었는데, 그 칸은 연·월·일을
+       모두 물어 놓고 **연도는 언제나 위 폼의 시작일과 같은 해**였다 — 답이 정해진 것을
+       묻는 칸이다.
+
+       나누면 물음이 둘로 준다: **축제 기간 중 어느 날**(`c.days` 가 그 목록이다)과
+       **몇 시**. 여러 날짜에 걸치는 축제도 사흘이 고작이라 고르개에 서는 것이 두셋이고,
+       하루짜리 축제면 **칸 하나에 답이 하나**라 사실상 시각만 넣게 된다.
+
+       고르개가 기간을 넘어가지 못하는 것은 종전 `min`/`max` 보다 강하다 — 달력은 밖의
+       날을 흐리게 보여줄 뿐이지만 여기에는 **그 날이 목록에 없다.**
+
+       저장되는 값은 그대로 `2026-10-17T15:00` 이다. 두 조각을 그때그때 잇는 것이지
+       값의 모양을 바꾸는 것이 아니다 — 시민 화면과 서버 응답이 보는 것이 이 문자열이다.
+       한쪽만 든 값(`2026-10-18T`)이 잠깐 생기는데, 고른 날을 시각 없이도 붙들고 있어야
+       하기 때문이다. **그 반쪽은 저장으로 나가지 못한다** — `missingInRows` 가 「비어
+       있는가」가 아니라 「다 찼는가」로 본다 (data/fields.js 의 `filled`).
+
+       `c.days` 가 비면(위 폼의 기간이 아직 비었다) 종전 `datetime-local` 로 떨어진다 —
+       고를 날이 하나도 없는 고르개보다는 낫다. */
+    if (c.type === "daytime") {
+      const days = c.days || [];
+      if (days.length) {
+        const raw = off ? "" : String(row[c.key] || "");
+        const cut = raw.indexOf("T");
+        const day = cut < 0 ? raw : raw.slice(0, cut);
+        const time = cut < 0 ? "" : raw.slice(cut + 1);
+        /* 고른 날이 목록에 없으면 그 값을 앞에 세운다 — 기간을 나중에 좁히면 이미
+           들어간 줄이 그 밖에 남는데, 목록에서 빼 버리면 **담당자가 모르는 사이에
+           다른 날로 바뀐다.** 보이게 두고 고치게 한다 */
+        const opts = day && !days.some(d => d.value === day)
+          ? [{ value: day, label: `${day.slice(5).replace("-", ".")} (기간 밖)` }].concat(days)
+          : days;
+        /* 비어 있는 줄은 **첫날**을 보여준다. 값은 아직 쓰지 않는다 — 시각을 넣는
+           순간 그 날과 이어진다. 하루짜리 축제에서는 이것이 곧 정답이다 */
+        const shown = day || days[0].value;
+        const join = (d, t) => (t ? `${d}T${t}` : (d ? `${d}T` : ""));
+        return (
+          <div style={{ display: "flex", gap: 4, minWidth: 0 }}>
+            <Select options={opts} disabled={off} tabIndex={off ? -1 : undefined}
+              aria-hidden={off ? "true" : undefined}
+              aria-label={off ? undefined : `${c.label} 날짜`}
+              value={shown} style={{ flex: "1 1 0", minWidth: 0 }}
+              onChange={off ? () => {} : e => set(i, c.key, join(e.target.value, time))} />
+            <Input type="time" value={time}
+              readOnly={off} disabled={off} tabIndex={off ? -1 : undefined}
+              aria-hidden={off ? "true" : undefined}
+              aria-label={off ? undefined : `${c.label} 시각`}
+              style={{ flex: "0 0 104px", minWidth: 0 }}
+              onChange={off ? undefined : e => set(i, c.key, join(shown, e.target.value))} />
+          </div>
+        );
+      }
+    }
     if (c.type === "switch") {
       return (
         <div style={{ minHeight: "var(--tap-comfortable)", display: "flex", alignItems: "center" }}>
@@ -362,7 +416,10 @@ export function Repeater({
       );
     }
     return (
-      <Input type={c.type === "number" ? "number" : c.type || "text"}
+      /* `daytime` 은 고를 날이 없을 때 여기로 떨어진다 (위 머리말) — 그때는 연도까지
+         받는 종전 칸이 그나마 답을 넣을 수 있는 유일한 모양이다 */
+      <Input type={c.type === "daytime" ? "datetime-local"
+        : c.type === "number" ? "number" : c.type || "text"}
         value={off ? "" : (row[c.key] == null ? "" : row[c.key])}
         readOnly={off} disabled={off} tabIndex={off ? -1 : undefined}
         aria-hidden={off ? "true" : undefined} aria-label={off ? undefined : c.label}

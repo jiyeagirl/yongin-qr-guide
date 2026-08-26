@@ -272,13 +272,23 @@ function stateOf(start, end) {
   return "진행중";
 }
 
-/* "10.17 (금)" — 하루짜리는 한 날짜, 여러 날은 범위로 적는다 */
+/* "10.17 (토)" — 하루짜리는 한 날짜, 여러 날은 범위로 적는다.
+
+   ── 요일이 하루씩 밀려 있었다 (2026-08-26 고침) ────────────────────────────────
+   `new Date("2026-10-17T00:00:00+09:00")` 은 **UTC 로는 10월 16일 15시**다. 거기에
+   `getUTCDay()` 를 물으면 돌아오는 것은 16일의 요일이라, 화면이 10.17 을 「(금)」이라고
+   적었다 — 실제로는 토요일이고, 이 파일의 다른 주석("10-17 이 토요일이다")이 이미 그렇게
+   적고 있었다. **KST 로 못박는 것과 UTC 로 읽는 것을 한 줄에 섞은 것**이 원인이다.
+
+   지금은 `Date.UTC` 로 만들고 `getUTCDay()` 로 읽는다 — 만드는 쪽과 읽는 쪽이 같은
+   시간대라 브라우저가 어디에 있든 걸릴 것이 없다. 관리자 축제 폼의 날짜 고르개
+   (`admin/pages/Festivals.jsx` 의 `daysBetween`)가 같은 수법을 쓴다. */
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 function label(start, end) {
-  const d = s => new Date(`${s}T00:00:00+09:00`);
+  const dow = s => DOW[new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10))).getUTCDay()];
   const fmt = s => `${+s.slice(5, 7)}.${+s.slice(8, 10)}`;
-  const head = `${fmt(start)} (${DOW[d(start).getUTCDay()]})`;
-  return start === end ? head : `${head} ~ ${fmt(end)} (${DOW[d(end).getUTCDay()]})`;
+  const head = `${fmt(start)} (${dow(start)})`;
+  return start === end ? head : `${head} ~ ${fmt(end)} (${dow(end)})`;
 }
 
 /* ── 프로그램·부스의 시각 (2026-08-24) ──────────────────────────────────────
