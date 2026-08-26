@@ -48,14 +48,25 @@ import { Icon } from "../core/Icon.jsx";
    > 반경 고르개 밑에 붙이려던 것이다. **같은 날 되돌렸다** (사용자 요청): 붙여 놓고 보니
    > 화면 오른쪽 위가 검색창·칩 줄·고르개·단추로 **넉 줄**이 됐고, 지도를 보라고 만든
    > 화면에서 위쪽이 통째로 막히는 것이 v1.11 이 내내 고쳐 온 문제다. 대신 **폭을 맞췄다**
-   > (아래 `--float-pill-min`) — 통일감은 자리가 아니라 모양이 낸다.
+   > (아래 `onWidthChange`) — 통일감은 자리가 아니라 모양이 낸다.
+
+   ── `onWidthChange` — 이 기둥의 실측 **폭** (2026-08-26, 사용자 요청) ─────────────
+   [스캔 위치로]와 안내 반경 고르개는 화면의 반대쪽 끝에 떨어져 서므로 **덩어리 크기가
+   같아야** 한 벌로 읽힌다. 두 알약 중 **글자가 긴 이쪽이 늘 넓으므로** 이 값을 재서
+   고르개에 넘기고, 고르개는 그 값을 제 최소 폭으로 삼는다 (`InlineSelect` 의
+   `faceMinWidth`). 이쪽은 늘 제 폭 그대로라 **여백이 붙지 않는다.**
+
+   > 처음에는 토큰 상수로 했다가(`--float-pill-min:108px`) 같은 날 이 방식으로 바꿨다.
+   > 한글 글자 폭을 눈대중으로 셈해 박은 수라 **고르개에는 20px 짜리 빈 자리가 생기고
+   > 단추는 그 수를 넘겨** 둘이 어긋났다. 글꼴이 무엇으로 잡히는지 · 2차 글자 확대가
+   > 걸렸는지에 따라 달라지는 값을 상수로 적을 수는 없다 — **재야 하는 값이다.**
 
    `children` 슬롯이 여기 있었다 (2026-08-26 아침 신설 → 같은 날 삭제). 세로 반경
    고르개(`RadiusSlider`)를 이 기둥에 세우려고 열었는데, 그 고르개가 **지도 오른쪽을 너무
    많이 차지해** 상단 필터 바의 칩 줄 아래로 내려갔다 (사용자 요청. `MapFilterOverlay` 의
    `trailing`). 손님이 없어진 슬롯은 함께 닫는다. */
 export function FloatingControls({ bottom = "var(--sheet-half)", hidden = false, topInset = 0,
-  subtle = false, items = [], style, ...rest }) {
+  subtle = false, items = [], onWidthChange, style, ...rest }) {
   const anchor = typeof bottom === "number" ? `${bottom}px` : bottom;
   const top = typeof topInset === "number" ? `${topInset}px` : topInset;
 
@@ -66,12 +77,22 @@ export function FloatingControls({ bottom = "var(--sheet-half)", hidden = false,
      모르고, 2차 글자 확대에서는 잰 값만이 따라온다. */
   const col = React.useRef(null);
   const [h, setH] = React.useState(0);
+  /* 폭을 알리는 쪽은 ref 로 든다 — 부모가 인라인 함수를 넘겨도 관찰자를 다시 달지 않는다 */
+  const reportW = React.useRef(onWidthChange);
+  reportW.current = onWidthChange;
   React.useEffect(() => {
     const el = col.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => setH(el.offsetHeight));
+    const send = () => {
+      setH(el.offsetHeight);
+      /* 기둥은 절대 배치라 폭이 없다 — 안에 선 단추 중 가장 넓은 것의 폭이 그대로 나온다.
+         `getBoundingClientRect` 로 재는 이유는 소수점이다: `offsetWidth` 는 반올림한
+         정수라 두 알약이 1px 어긋난 채 서는 일이 생긴다 */
+      if (reportW.current) reportW.current(el.getBoundingClientRect().width);
+    };
+    const ro = new ResizeObserver(send);
     ro.observe(el);
-    setH(el.offsetHeight);
+    send();
     return () => ro.disconnect();
   }, []);
   const tall = h ? `${h}px` : "var(--tap-min)";
@@ -93,10 +114,8 @@ export function FloatingControls({ bottom = "var(--sheet-half)", hidden = false,
            `CoordField` 가 `subtle` 없이 쓰는 길이 그쪽이다). */
         const face = {
           display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-          /* 폭도 고르개와 같다 — 둘은 화면의 반대쪽 끝에 떨어져 서므로 높이만 같아서는
-             한 벌로 읽히지 않는다 (layers.css 의 `--float-pill-min` 머리말). 이쪽이
-             둘 중 넓은 쪽이라 대개 제 폭 그대로다 */
-          minWidth: "var(--float-pill-min)",
+          /* 폭은 **제 글자만큼**이다 — 둘 중 넓은 쪽이라 여백을 붙일 이유가 없고,
+             이 폭을 `onWidthChange` 가 고르개에 넘겨 그쪽이 맞춰 온다 (위 머리말) */
           minHeight: 34, padding: "0 12px 0 10px",
           background: on ? "var(--brand-primary)" : "var(--surface-float-translucent)",
           backdropFilter: on ? undefined : "var(--blur-glass)",

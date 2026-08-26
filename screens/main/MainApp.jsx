@@ -179,6 +179,11 @@ export function MainApp({ qr = null, noDistrict = false }) {
 
   const [sheetH, setSheetH] = React.useState(0);          /* 시트 실측 높이(px) */
   const [previewH, setPreviewH] = React.useState(0);      /* 미리보기 카드 실측 높이(px) */
+  /* [스캔 위치로] 단추의 실측 폭(px). 반경 고르개가 이 값을 제 최소 폭으로 삼아 **두
+     알약의 덩어리 크기가 같아진다** — 둘은 화면의 반대쪽 끝(위 필터 바 · 아래 지도)에
+     떨어져 서므로 자리로는 묶이지 않고 크기로만 묶인다.
+     한쪽만 재면 되는 이유는 **글자가 긴 [스캔 위치로]가 늘 넓기** 때문이다. */
+  const [pillW, setPillW] = React.useState(0);
   const [filterH, setFilterH] = React.useState(0);        /* 상단 필터 바 실측 높이(px) */
   const [toast, setToast] = React.useState(null);
   const mapApi = React.useRef(null);
@@ -332,6 +337,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
               움직이는 쪽은 사람이다. */
         trailing: (
           <InlineSelect floating icon={null} label="안내 반경"
+            /* 아래 [스캔 위치로]의 실측 폭. 둘이 같은 덩어리로 보이게 하는 값이고,
+               상수로 박았다가 어긋나 실측으로 바꾼 자리다 (`InlineSelect` 의 그 prop 주석) */
+            faceMinWidth={pillW}
             /* `km()` 를 쓰지 않는다 — 그쪽은 「2.0km」로 소수 한 자리를 적는다. 거리를
                **재서 알려주는** 자리라 그 자리가 필요하지만(「1.4km 떨어져 있습니다」),
                여기 셋은 재는 값이 아니라 **고르는 눈금**이라 「2km」가 맞다 */
@@ -1000,13 +1008,17 @@ export function MainApp({ qr = null, noDistrict = false }) {
                   남짓**이다. 높이가 48 에서 34 로 내려간 만큼을 폭으로 돌려준 셈이고,
                   그 값에서는 **둘이 같은 것으로 읽히는 편**이 낫다.
 
-                  **폭도 같다** (`--float-pill-min`) — 둘이 화면의 다른 자리에 떨어져 서므로
-                  높이만 같아서는 한 벌로 읽히지 않는다. 나란히 놓으면 오른쪽 끝만 맞춰도
-                  같아 보이지만, 떨어져 있으면 **각자의 덩어리 크기**가 유일한 단서다.
+                  **폭도 같다** — 둘이 화면의 다른 자리에 떨어져 서므로 높이만 같아서는
+                  한 벌로 읽히지 않는다. 나란히 놓으면 오른쪽 끝만 맞춰도 같아 보이지만,
+                  떨어져 있으면 **각자의 덩어리 크기**가 유일한 단서다. 맞추는 방향은
+                  **이쪽 → 고르개**다 (`onWidthChange` → `faceMinWidth`): 글자가 긴 이쪽이
+                  늘 넓으므로 이 단추는 제 폭 그대로이고 고르개가 따라온다.
 
                   글자를 다시 떼지는 않는다 — 그림 하나로는 어디로 가는 단추인지 배워야
                   알기 때문에 붙인 글자다 (v1.9). 손가락 자리도 44px 그대로다. */
             subtle
+            /* 잰 폭을 위 반경 고르개가 받아 간다 (위 주석) */
+            onWidthChange={setPillW}
             items={[{ icon: "qr-code", label: "스캔 위치로", text: "스캔 위치로", onClick: backToAnchor }]} />
         )}
 
