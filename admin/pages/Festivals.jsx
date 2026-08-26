@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, ConfirmDialog, Button, Select, Badge, Switch,
+  PageHeader, Toolbar, DataTable, Button, Select, Badge, Switch,
   Pagination, AssetPicker, Repeater, Mascot, RequiredBadge,
   FESTIVAL_STATES, festivalBadge, EMPTY_MARK,
 } from "../../design-systems/admin.js";
@@ -90,7 +90,7 @@ function periodOf(f) {
 }
 
 export function Festivals({ onToast }) {
-  const { rows, upsert, remove, patch, patchMany } = useCollection("festivals", FESTIVAL_ROWS, null, "축제");
+  const { rows, upsert, patch, patchMany } = useCollection("festivals", FESTIVAL_ROWS, null, "축제");
   const [state, setState] = React.useState("");
   const list0 = useListState([state]);
 
@@ -101,7 +101,7 @@ export function Festivals({ onToast }) {
       pose: CHARACTER_DEFAULT, visible: true, programs: [], booths: [],
     }),
     onSave: values => upsert(values),
-    onRemove: remove,
+    /* `onRemove` 가 여기 있었다 (2026-08-25 오후) — [삭제]가 없어졌다 */
     onToast, label: "축제",
     /* 항목 하나만 봐서는 알 수 없는 검사들 */
     extraValidate: v => {
@@ -152,7 +152,10 @@ export function Festivals({ onToast }) {
   const filtered = rows.filter(f => {
     if (state && stateOf(f) !== state) return false;
     if (!list0.term) return true;
-    return `${f.name} ${DISTRICT_NAME[f.districtId] || ""} ${f.program || ""}`.includes(list0.term);
+    /* **축제명만 본다** (2026-08-26, 사용자 요청). 소속 상점가는 왼쪽 고르개가 하는
+       일이고, 프로그램 본문까지 훑으면 축제명과 아무 글자도 겹치지 않는 축제가
+       프로그램 한 줄 때문에 목록에 남는다 — 왜 걸렸는지 표에서 읽을 수 없는 행이다 */
+    return f.name.includes(list0.term);
   });
   const paged = list0.paginate(filtered);
 
@@ -184,7 +187,7 @@ export function Festivals({ onToast }) {
         </>
       ) : null}>
         <Select value={state} options={STATE_OPTIONS} onChange={e => setState(e.target.value)} />
-        <ListSearch state={list0} placeholder="축제명, 골목형 상점가 검색" />
+        <ListSearch state={list0} placeholder="축제명 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
@@ -212,11 +215,11 @@ export function Festivals({ onToast }) {
               <Switch checked={f.visible} aria-label={`${f.name} 노출 여부`}
                 onChange={() => patch(f.id, { visible: !f.visible }, f.name)} />
             ) },
-          { key: "manage", label: "관리", width: 96, align: "center",
-            render: f => (
-              <Button variant="ghost" size="sm" icon="trash-2"
-                onClick={() => ed.askRemove(f)} style={{ color: "var(--state-danger)" }}>삭제</Button>
-            ) },
+          /* 「관리」 열이 여기 있었다 — 안에 [삭제] 하나뿐이라 열째 없앴다
+             (2026-08-25 오후, 사용자 요청). **[축제 등록]은 남는다** — 축제는 원천 자료가
+             아니라 담당자가 이 화면에서 만드는 것이라 만들 자리가 있어야 한다. 다만 끝난
+             축제를 치우는 일은 지우는 것이 아니라 [노출 여부]를 끄는 일이다: 지난 축제는
+             기록이고, 내년에 같은 축제를 열 때 그 줄을 열어 날짜만 고치면 된다 */
         ]} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
@@ -275,18 +278,10 @@ export function Festivals({ onToast }) {
         ) : null}
       </EditorModal>
 
-      <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
-        description="축제를 삭제합니다."
-        /* 여기만 기본 각주(DELETE_NOTE)를 쓰지 않는다. 축제에는 「폐업·폐쇄」가 없고,
-           대신 **종료**가 있는데 그것은 지울 이유가 아니라 카테고리가 바뀌는 일이다
-           (명세서 2-3: 종료일이 지나도 삭제·숨김이 아니라 완료 카테고리로 옮겨 계속 노출).
-           그 사실을 먼저 말해야 "끝났으니 지운다"를 막을 수 있다.
-           **첫 줄은 다른 화면과 같다** (2026-08-24) — 되돌릴 수 없다는 사실은 화면마다
-           다르게 적을 여지가 없고, 무엇보다 이 상자에서 가장 먼저 읽혀야 한다. */
-        footnote={"삭제한 항목은 복구할 수 없습니다. "
-          + "종료된 축제는 삭제하지 않고 [완료] 카테고리로 이동하여 계속 노출합니다. "
-          + "잘못 등록된 경우에만 삭제해 주세요."}
-        onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
+      {/* 삭제 확인 창이 여기 있었다 (2026-08-25 오후 삭제). 그 각주가 적던 것 —
+          「종료된 축제는 삭제하지 않고 [완료] 카테고리로 이동하여 계속 노출합니다」 —
+          은 이제 규칙이 아니라 **유일한 길**이다: 지우는 자리가 없으므로 끝난 축제는
+          그대로 완료로 넘어가고, 잘못 등록한 줄은 [노출 여부]를 끈다 */}
     </>
   );
 }

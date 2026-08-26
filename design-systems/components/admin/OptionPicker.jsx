@@ -28,6 +28,18 @@ import { Icon } from "../core/Icon.jsx";
  * `AddressField` 의 검색 패널은 칸 아래 흐름 안에 서서 폼을 밀어낸다. 저기는 칸 하나가
  * 여는 패널이라 그래도 되지만, 여기는 **목록의 줄마다** 있는 칸이다. 흐름 안에 두면 셋째
  * 줄의 목록이 넷째·다섯째 줄을 아래로 밀어 그 줄들이 화면 밖으로 나간다.
+ *
+ * ── 고를 수 없는 줄을 **감추지 않고 적는다** (2026-08-26) ────────────────────
+ * 선택지에 `disabled` 와 `note` 를 열었다. QR ID 를 고르는 자리에서 처음 필요해졌다 —
+ * 50개 중 이미 다른 지점에 걸린 ID 는 고를 수 없는데, 목록에서 **빼 버리면** 그 ID 가
+ * 인쇄된 안내판을 손에 든 담당자가 검색해 놓고 「찾는 것이 없습니다」를 읽는다. 없는 것과
+ * 이미 쓰는 것은 할 일이 다르다 — 앞은 잘못 읽은 것이고, 뒤는 **다른 안내판을 집어야**
+ * 한다. 그래서 줄은 남기고, 오른쪽에 왜 못 고르는지를 적는다 (`note`).
+ *
+ * 고를 수 없는 줄은 **뒤로 보내지 않는다** — 순서는 넘겨준 쪽이 정한다. 다 걸린 목록에서
+ * 고를 수 있는 몇 개가 잘려 안 보이는 일이 생기므로, 그것을 아는 쪽(화면)이 고를 수 있는
+ * 것을 앞에 세워 넘긴다. 여기서 정렬하면 넘겨준 차례가 뜻을 갖는 목록(코스의 점포)이
+ * 제멋대로 섞인다.
  */
 
 /* 한 번에 보여주는 줄 수. 넘으면 아래에 몇이 더 있는지 적는다.
@@ -41,6 +53,9 @@ const real = o => o && o.value !== "" && o.value != null;
 export function OptionPicker({
   options = [], value, onChange,
   placeholder = "이름을 입력해 찾습니다", emptyText = "찾는 이름이 없습니다.",
+  /* 잘린 뒤에 적는 한 마디. 기본은 상호를 찾는 자리의 말이라, 고르는 것이 이름이 아닌
+     자리(QR ID)에서는 화면이 바꿔 넘긴다 */
+  moreHint = "이름을 더 적어 보세요.",
   ariaLabel, disabled, style, ...rest
 }) {
   const [open, setOpen] = React.useState(false);
@@ -65,6 +80,14 @@ export function OptionPicker({
   const shown = matched.slice(0, MAX_SHOWN);
   const rest_ = matched.length - shown.length;
 
+  /* 짚을 수 있는 첫 줄. 못 고르는 줄에 짚개가 앉으면 Enter 가 아무 일도 하지 않는데,
+     화면에는 그 줄이 강조되어 있어 눌리지 않는 이유가 보이지 않는다 */
+  const nextActive = (from, d) => {
+    for (let i = from; i >= 0 && i < shown.length; i += d) if (!shown[i].disabled) return i;
+    return -1;
+  };
+  const firstPickable = Math.max(shown.findIndex(o => !o.disabled), 0);
+
   /* 밖을 누르면 닫는다. 닫을 때 검색어를 비우는 것이 요점이다 — 다시 열었을 때 지난번
      검색어가 남아 있으면 그때 걸러진 목록이 전부인 줄로 읽는다 */
   const close = React.useCallback(() => { setOpen(false); setTerm(""); setActive(0); }, []);
@@ -82,14 +105,18 @@ export function OptionPicker({
     if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest" });
   }, [active, open]);
 
-  const pick = o => { if (onChange) onChange(o.value); close(); };
+  /* 목록이 갈릴 때마다(검색어 · 넘어온 선택지) 짚개를 고를 수 있는 첫 줄로 되돌린다.
+     `matched` 는 memo 라 실제로 목록이 바뀔 때만 도는데, 화살표로 옮긴 자리는 그대로 남는다 */
+  React.useEffect(() => { setActive(firstPickable); }, [matched, open]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pick = o => { if (o.disabled) return; if (onChange) onChange(o.value); close(); };
 
   const onKeyDown = e => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       if (!open) { setOpen(true); return; }
       const d = e.key === "ArrowDown" ? 1 : -1;
-      setActive(i => Math.min(Math.max(i + d, 0), Math.max(shown.length - 1, 0)));
+      setActive(i => { const n = nextActive(i + d, d); return n < 0 ? i : n; });
       return;
     }
     if (e.key === "Enter") {
@@ -138,8 +165,15 @@ export function OptionPicker({
         )
       ) : null}
 
+      {/* ── z 는 **표에 있는 값**이다 (2026-08-26) ──────────────────────────────
+          아래 목록에 임의로 정한 `5` 가 박혀 있었고, 그래서 관리자 폼에서 **목록의
+          아랫부분이 지도 밑으로 들어가 잘렸다** — 좌표 지도가 폼의 한 칸으로 들어앉아
+          있는데 그 뿌리가 z 100(`--z-map`), 그 위의 [핀 위치로 이동]이 z 400
+          (`--z-float`)이다. 표 밖의 값을 쓰면 그 규칙 안에서 겨룰 수가 없다
+          (layers.css 머리말). 같은 판에서 지도 칸이 자기 층을 폼 밖으로 흘리지 않게
+          막았다 (CoordField 의 `zIndex:0`) */}
       {open ? (
-        <div style={{ position: "absolute", zIndex: 5, left: 0, right: 0, top: "calc(100% + 4px)",
+        <div style={{ position: "absolute", zIndex: "var(--z-popover)", left: 0, right: 0, top: "calc(100% + 4px)",
           background: "var(--surface-card)", borderRadius: "var(--radius-md)",
           border: "var(--stroke-hairline) solid var(--border-strong)",
           boxShadow: "var(--shadow-raised)", overflow: "hidden" }}>
@@ -147,23 +181,33 @@ export function OptionPicker({
             <ul ref={listRef} role="listbox" style={{ listStyle: "none", margin: 0, padding: 4,
               maxHeight: 240, overflowY: "auto" }}>
               {shown.map((o, i) => {
-                const on = i === active;
+                const off = !!o.disabled;
+                const on = i === active && !off;
                 const isChosen = String(o.value) === String(value);
                 return (
-                  <li key={o.value} role="option" aria-selected={isChosen}>
-                    <button type="button"
+                  <li key={o.value} role="option" aria-selected={isChosen} aria-disabled={off || undefined}>
+                    <button type="button" disabled={off}
                       /* 포인터가 눌리는 순간 위 바깥 클릭 감지가 먼저 닫아 버리지 않도록
                          `pointerdown` 에서 막는다 — 그 리스너도 pointerdown 이다 */
                       onPointerDown={e => e.preventDefault()}
-                      onMouseEnter={() => setActive(i)}
+                      onMouseEnter={() => { if (!off) setActive(i); }}
                       onClick={() => pick(o)}
-                      style={{ width: "100%", display: "block", textAlign: "left", cursor: "pointer",
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: "var(--space-3)",
+                        textAlign: "left", cursor: off ? "default" : "pointer",
                         minHeight: 34, padding: "6px 10px", borderRadius: "var(--radius-sm)",
                         border: "none", background: on ? "var(--brand-primary-tint)" : "transparent",
                         fontFamily: "var(--font-sans)", fontSize: "var(--fs-label)",
                         fontWeight: isChosen ? "var(--fw-semibold)" : "var(--fw-regular)",
-                        color: "var(--text-body)" }}>
-                      {o.label}
+                        color: off ? "var(--text-muted)" : "var(--text-body)" }}>
+                      <span style={{ flex: 1, minWidth: 0, overflow: "hidden",
+                        textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.label}</span>
+                      {/* 못 고르는 줄에 **왜**를 적는다 (머리말). 고를 수 있는 줄에도 붙일 수
+                          있지만 지금 쓰는 자리는 없다 — 오른쪽 끝, 흐린 작은 글씨다 */}
+                      {o.note ? (
+                        <span style={{ flex: "0 1 auto", maxWidth: "60%", overflow: "hidden",
+                          textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>{o.note}</span>
+                      ) : null}
                     </button>
                   </li>
                 );
@@ -179,7 +223,7 @@ export function OptionPicker({
           {rest_ > 0 ? (
             <p style={{ padding: "6px 12px 8px", borderTop: "var(--stroke-hairline) solid var(--border-default)",
               fontSize: "var(--fs-micro)", color: "var(--text-muted)" }}>
-              {rest_.toLocaleString("ko-KR")}개 더 있습니다. 이름을 더 적어 보세요.
+              {rest_.toLocaleString("ko-KR")}개 더 있습니다. {moreHint}
             </p>
           ) : null}
         </div>

@@ -63,9 +63,10 @@ import { OptionPicker } from "./OptionPicker.jsx";
  *      좇을 것이 없다.
  */
 
-/* 오른쪽에 비워 두는 폭 — 삭제 버튼(36) + 그 앞의 gap. 열 이름 줄 · 아랫줄 · 예시 줄이
+/* 오른쪽에 비워 두는 폭 — 단추 하나(36) + 그 앞의 gap. 열 이름 줄 · 아랫줄 · 예시 줄이
    **같은 값을 써야** 세 줄의 칸 끝이 한 자리에서 만난다. 전에는 40 이라고 적혀 있어
-   4px 씩 어긋나 있었다 (2026-08-25). */
+   4px 씩 어긋나 있었다 (2026-08-25). 오른쪽 끝에 서는 단추가 목록마다 다르므로
+   (삭제 · 손잡이 · 둘 다 · 아무것도 없음) 아래 `tail` 이 이 값을 몇 벌 쓸지 정한다. */
 const RESERVE = "calc(36px + var(--space-2))";
 
 /* ── 차례가 뜻을 갖는 목록 (`ordered`, 2026-08-25) ────────────────────────────
@@ -143,15 +144,31 @@ export function Repeater({
   nameKey = "name",
   /* 차례가 뜻을 갖는 목록이면 켠다 — 순번 배지와 ↑ ↓ 가 붙는다 (위 LEAD 머리말) */
   ordered = false,
-  /* ── 줄 수가 정해진 목록 (`maxRows`, 2026-08-25 오후, 사용자 요청) ──────────────
-     골목 한바퀴 코스가 넷으로 고정이다. 다 채우고 나면 **[추가]를 내주지 않는다** —
-     눌러 놓고 저장할 때 「넷이어야 합니다」로 되돌리면, 담당자는 화면이 시킨 일을
-     하고 나서 야단맞는다. 누를 수 없는 채로 세워 두지도 않는다: 회색 단추는 「지금은
-     안 되지만 언젠가 된다」는 말인데 여기서는 영영 되지 않는다. */
-  maxRows = 0,
+  /* ── 줄 수가 정해진 목록 (`fixedRows`, 2026-08-25 오후, 사용자 요청) ────────────
+     골목 한바퀴 코스가 넷으로 고정이다. 넷이 **늘 서 있고 늘리거나 줄이지 않는다** —
+     [추가]도 휴지통도 없다.
+
+     한 판 앞에서는 [추가]를 눌러 넷을 채우게 하고 넷째부터 단추를 감췄는데, 그러면
+     담당자가 **정해져 있는 수를 손으로 맞추는 일**을 한다 — 세 번 눌러 네 줄을 만들고,
+     하나를 바꾸려면 지웠다가 다시 만든다. 줄 수가 값이 아니라 **틀**이면 틀은 처음부터
+     서 있어야 한다. 빈 줄 넷이 곧 「여기 넷을 고르세요」라는 말이고, 고르는 칸이 그
+     자리에 이미 있으므로 무엇을 해야 하는지 읽을 것도 없다.
+
+     지우는 단추가 없어도 잃는 것이 없다 — 한 곳을 빼는 일은 **다른 곳으로 바꾸는
+     일**이고, 그것은 그 줄에서 다시 고르면 된다. 비우고 싶으면 고르개를 비운다.
+     넘겨받은 줄이 넷보다 적으면 화면에서 채워 그린다 (아래 `list`) — 첫 편집에서
+     그 줄들이 그대로 저장된다. */
+  fixedRows = 0,
   error, span = 2,
 }) {
-  const list = Array.isArray(rows) ? rows : [];
+  const fixed = fixedRows > 0;
+  const given = Array.isArray(rows) ? rows : [];
+  /* 정해진 수만큼 채워서 그린다. **줄이 모자란 채로 열리는 일이 없어야** 담당자가
+     [추가]를 찾지 않는다. 넘치는 줄은 자르지 않는다 — 저장된 값을 화면이 조용히
+     버리지 않는다 (그 상태는 화면을 여는 쪽에서 맞춘다) */
+  const list = fixed && given.length < fixedRows
+    ? given.concat(Array.from({ length: fixedRows - given.length }, () => newRow()))
+    : given;
   const top = columns.filter(c => !c.row2);
   const bottom = columns.filter(c => c.row2);
   /* 아랫줄이 있는 목록만 카드를 두른다 (위 PLAIN 머리말). 열 이름 줄의 들여쓰기도
@@ -159,10 +176,12 @@ export function Repeater({
   const carded = bottom.length > 0;
   const inset = carded ? CARD_INSET : "0px";
   /* 열 이름 줄·아랫줄·예시 줄이 **한 값을 함께 본다** (RESERVE 머리말과 같은 이유).
-     차례가 있는 목록은 오른쪽 끝에 손잡이가 하나 더 서므로 그만큼 더 비운다 */
-  const tail = ordered ? TAIL_ORDERED : RESERVE;
+     오른쪽 끝에 서는 단추가 몇이냐에 따라 비우는 폭이 갈린다 — 손잡이와 휴지통 둘,
+     둘 중 하나, 또는 아무것도 없음(줄 수가 정해진 목록에는 휴지통이 없다) */
+  const tail = ordered
+    ? (fixed ? RESERVE : TAIL_ORDERED)
+    : (fixed ? "0px" : RESERVE);
   const lead = ordered ? LEAD : "0px";
-  const full = maxRows > 0 && list.length >= maxRows;
 
   /* ── 지우기 전에 한 번 묻는다 (2026-08-25, 사용자 요청) ──────────────────────
      휴지통이 칸 바로 옆에 있어 위치를 고치려다 누르기 쉽다. 다른 목록과 달리 이 줄은
@@ -176,7 +195,8 @@ export function Repeater({
      그래서 **그 줄 아래에 확인 줄을 편다.** 지울 줄이 위에 그대로 보이는 채로 묻는 것이
      상자를 띄우는 것보다 오히려 정확하다 — 어느 줄인지 이름으로도 적고 눈으로도 보인다. */
   const [pending, setPending] = React.useState(null);
-  const asking = pending != null && pending < list.length ? pending : null;
+  /* 줄 수가 정해진 목록에는 지우는 길이 없으므로 물을 일도 없다 */
+  const asking = !fixed && pending != null && pending < list.length ? pending : null;
 
   /* ── 아랫줄을 편 줄 (머리말 ①) ─────────────────────────────────────────────
      **값이 들어 있으면 목록에 없어도 펴진다** — `openLower` 는 「비어 있는데 펴 둔」
@@ -466,10 +486,11 @@ export function Repeater({
                     <Icon name="grip-vertical" size={18} />
                   </button>
                 ) : null}
-                {/* 묻고 있는 동안에는 휴지통을 자리째 비운다 — 같은 줄에 「지울까요?」와
-                    다시 누를 수 있는 삭제 단추가 함께 서면 어느 쪽이 지금 할 일인지
-                    흐려진다. 폭은 그대로 잡아 두어야 칸이 흔들리지 않는다 */}
-                {asking === i ? (
+                {/* 줄 수가 정해진 목록에는 휴지통이 없다 (위 fixedRows 머리말).
+                    묻고 있는 동안에는 자리째 비운다 — 같은 줄에 「지울까요?」와 다시 누를
+                    수 있는 삭제 단추가 함께 서면 어느 쪽이 지금 할 일인지 흐려진다.
+                    폭은 그대로 잡아 두어야 칸이 흔들리지 않는다 */}
+                {fixed ? null : asking === i ? (
                   <span aria-hidden="true" style={{ flex: "0 0 36px" }} />
                 ) : (
                   <IconButton name="trash-2" label={`${i + 1}번째 줄 삭제`} size={36}
@@ -568,8 +589,8 @@ export function Repeater({
         </div>
       )}
 
-      {/* 다 찬 목록에는 [추가]가 없다 (위 maxRows 머리말) — 자리째 비운다 */}
-      {full ? null : (
+      {/* 줄 수가 정해진 목록에는 [추가]가 없다 (위 fixedRows 머리말) — 자리째 비운다 */}
+      {fixed ? null : (
         <div style={{ marginTop: "var(--space-3)" }}>
           <Button variant="outline" size="sm" icon="plus" onClick={add}>{addLabel}</Button>
         </div>

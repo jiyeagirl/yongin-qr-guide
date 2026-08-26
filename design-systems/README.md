@@ -38,7 +38,7 @@ No component library was supplied, so the inventory is derived from the 13-scree
 3. **Floating controls** — anchored to the sheet's top edge (`--z-float`), so 목록 토글 and QR-복귀 ride up with it instead of disappearing behind it.
 4. **Filter fixing (S07)** — only the **category chip row** is sticky. 검색창 and 온누리 칩 sit in the scrolling sheet header, so filters never occupy 40% of the screen.
 5. **List/map switch** — one surface, not two routes: 목록 raises the sheet to full, QR-복귀 drops it to collapsed.
-6. **Overlay stack** — `--z-map 100 / --z-marker 200 / --z-filter 300 / --z-float 400 / --z-sheet 500 / --z-modal 600 / --z-toast 700`, identical on all six map screens.
+6. **Overlay stack** — `--z-map 100 / --z-marker 200 / --z-filter 300 / --z-float 400 / --z-tabbar 450 / --z-sheet 500 / --z-popover 550 / --z-modal 600 / --z-toast 700`, identical on all six map screens. `--z-popover` (added 2026-08-26) is for lists a field opens beneath itself — above the page's own content, never above a modal.
 7. **조아용 boundary** — 홈 진입부(S02), 빈 상태(S13), 안내 일러스트, and the **QR 스캔 지점 ContextBar** (amended 2026.08). Information screens (시설 상세, 경로 안내, 점포 목록, 지도 마커) stay neutral. In the ContextBar the character *replaces* the `qr-code` glyph rather than sitting beside it, so the "never mixes into an icon row" rule still holds. Max one character per screen, ~38px, face-forward pose only.
 8. **2차 자리 비우기** — 언어·음성·글자 크기 버튼은 화면에 노출하지 않는다. AppBar's `actions` slot is where they will land later; no disabled buttons, no placeholders.
 9. **고정 높이 금지** — every control uses `min-height`, so a 1.5× text scale grows the layout instead of clipping it.

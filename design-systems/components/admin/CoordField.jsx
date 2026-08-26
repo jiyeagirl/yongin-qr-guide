@@ -134,7 +134,15 @@ export function CoordField({
         {/* KakaoMap 의 뿌리가 position:absolute 라 크기를 가진 relative 상자가 필요하다 */}
         {/* 테두리가 상태를 말한다 — 오류(붉게)가 범위 경고(노랗게)보다 앞이다.
             둘이 함께 뜰 수는 없다: 오류는 좌표가 없을 때이고 경고는 있을 때다 */}
-        <div style={{ position: "relative", height, borderRadius: "var(--radius-md)", overflow: "hidden",
+        {/* ── 지도의 층이 이 상자 밖으로 새지 않게 한다 (`zIndex: 0`, 2026-08-26) ──
+            `position:relative` 만 있으면 이 상자는 **쌓임 맥락을 만들지 않아**, 안쪽의
+            지도(z 100)와 [핀 위치로 이동](z 400)이 폼의 다른 칸들과 **같은 자리에서**
+            겨룬다. 그래서 바로 위 칸이 열어 내린 목록이 지도 밑으로 들어가 잘렸다.
+            100 과 400 은 지도가 화면 전체를 덮는 시민 화면의 셈이지, 폼 한 칸으로
+            들어앉은 260px 짜리 상자가 주장할 높이가 아니다 — `zIndex:0` 이 그 층들을
+            이 상자 안의 이야기로 가둔다. 상자 자신은 여전히 0 이라 폼 안에서의 차례는
+            달라지지 않는다. */}
+        <div style={{ position: "relative", zIndex: 0, height, borderRadius: "var(--radius-md)", overflow: "hidden",
           border: "var(--stroke-hairline) solid "
             + (err ? "var(--state-danger)" : off ? "var(--state-warning)" : "var(--border-default)") }}>
           {has ? (
@@ -150,10 +158,12 @@ export function CoordField({
               <KakaoMap appKey={appKey} center={{ lat: Number(lat), lng: Number(lng) }}
                 anchorLabel={name || "지정 위치"} anchor={false} level={LEVEL} mapRef={mapApi}
                 pick={{ lat: Number(lat), lng: Number(lng), label: name }} onPick={pick} />
-              {/* 시민 지도의 [QR 스캔 지점으로]와 **같은 부품**이다 (2026-08-25, 사용자
+              {/* 시민 지도의 [스캔 위치로]와 **같은 부품**이다 (2026-08-25, 사용자
                   요청). 하는 일이 같으므로 — 끌어 움직인 지도를 기준점으로 되돌린다 —
-                  모양도 같아야 한다. 글자 없이 그림쇠 하나이고, 이름은 보조기기와
-                  마우스 툴팁에 간다 */}
+                  알약 모양과 서는 자리가 같다. 다만 **글자는 붙이지 않는다**: 시민 쪽은
+                  「스캔 위치」가 무엇인지 설명이 필요해 글자를 달았지만(2026-08-26),
+                  여기서 되돌아가는 곳은 화면 안에서 지금 끌고 있는 그 핀이다.
+                  이름은 보조기기와 마우스 툴팁에 간다 */}
               <FloatingControls bottom={0}
                 items={[{ icon: "crosshair", label: "핀 위치로 이동", onClick: backToPin }]} />
             </>

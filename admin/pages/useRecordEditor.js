@@ -25,15 +25,23 @@ import { validate } from "../data/fields.js";
  *
  * fieldsFor(values) 가 값에 따라 항목을 바꾼다 — 공공시설은 유형에 따라 폼이 통째로 갈린다.
  */
+/* ── 삭제 기계가 여기 있었다 (2026-08-26 삭제, 사용자 요청) ────────────────────
+ * `onRemove` prop 과 `pending` 상태, `askRemove` · `cancelRemove` · `confirmRemove`.
+ * **화면 열여섯 중 어느 하나도 더 이상 부르지 않는다** — 정보 관리 다섯이 v1.15 에서,
+ * QR 지점과 계정 관리가 2026-08-26 에 [삭제]를 닫았다. 부르는 곳 없는 기계를 남겨 두면
+ * 다음 사람이 「여기 있으니 써도 되는 것」으로 읽는다.
+ *
+ * `leaving`(이탈 확인)은 그대로다 — 그쪽은 지우는 일이 아니라 **고치다 만 것을 버리는**
+ * 일이고, 화면 전부가 쓴다.
+ */
 export function useRecordEditor({
-  fieldsFor, initial, onSave, onRemove, onToast, label = "항목",
+  fieldsFor, initial, onSave, onToast, label = "항목",
   /* 항목 하나만 봐서는 알 수 없는 검사 — 기간 역전(V-07), 아이디 중복, 최소 1건 같은 것들.
      항목표에 적을 수가 없어 화면이 넘긴다. { key: "메시지" } 를 돌려주면 그 칸에 붙는다 */
   extraValidate,
 }) {
   const [draft, setDraft] = React.useState(null);      /* { values, base, isNew } */
   const [errors, setErrors] = React.useState({});
-  const [pending, setPending] = React.useState(null);  /* 삭제 확인 중인 행 */
   const [leaving, setLeaving] = React.useState(false); /* 이탈 확인 중 */
 
   const openNew = React.useCallback(() => {
@@ -101,18 +109,10 @@ export function useRecordEditor({
     discard();
   }, [draft, fieldsFor, onSave, onToast, label, discard, extraValidate]);
 
-  const confirmRemove = React.useCallback(() => {
-    if (!pending) return;
-    onRemove(pending.id, pending.name);
-    if (onToast) onToast(`${label}을(를) 삭제했습니다.`);
-    setPending(null);
-  }, [pending, onRemove, onToast, label]);
-
   return {
-    draft, errors, pending, leaving, dirty,
+    draft, errors, leaving, dirty,
     openNew, openEdit, close, discard, set, setMany, save,
     cancelLeave: () => setLeaving(false),
-    askRemove: setPending, cancelRemove: () => setPending(null), confirmRemove,
     fields: draft ? fieldsFor(draft.values) : [],
   };
 }

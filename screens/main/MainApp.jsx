@@ -1,11 +1,11 @@
 import React from "react";
 import {
-  ContextBar, KakaoMap, MapPreviewCard, MapFilterOverlay, Sheet, Toast, TabBar, FloatingControls,
+  ContextBar, KakaoMap, MapPreviewCard, MapFilterOverlay, InlineSelect, Sheet, Toast, TabBar, FloatingControls,
   DistrictSummary, FacilitySummary, FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, SAFETY,
   Icon, Mascot, token, VisuallyHidden,
 } from "../../design-systems/index.js";
 import { DUNJEON } from "./data/dunjeon.js";
-import { FACILITIES, NEAR_LIMIT, NEAR_ENOUGH } from "./data/facilities.js";
+import { FACILITIES, RADIUS_STEPS, RADIUS_DEFAULT, NEAR_ENOUGH } from "./data/facilities.js";
 import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalNear,
   CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT,
   byDistrictNear, GU_ORDER } from "./data/districts.js";
@@ -155,7 +155,16 @@ export function MainApp({ qr = null, noDistrict = false }) {
      상점가에서 3쪽을 보다가 공공시설 탭으로 옮겼을 때 있지도 않은 3쪽이 열린다.
      셸이 드는 이유는 점포와 같다 (위 page 주석). */
   const [fcPage, setFcPage] = React.useState(1);
-  React.useEffect(() => { setFcPage(1); }, [fcTypes]);
+
+  /* 안내 반경 (U-FC-08). **고정 2km 였던 것을 사용자가 고른다** (2026-08-26, 사용자 요청).
+     지도 우측의 세로 고르개가 2 · 3 · 4km 중 하나를 준다 (facilities.js 의 RADIUS_STEPS).
+     셸이 드는 이유는 위 둘과 같다 — 목록(시트) · 마커(지도) · 원(지도) 셋이 같은 수를
+     봐야 하는데 그 셋의 공통 조상이 여기다. 탭을 옮겨도 고른 값은 남는다: 상점가를
+     들렀다 돌아왔다고 4km 가 2km 로 되돌아가면 고른 사람이 그것을 알 방법이 없다. */
+  const [radius, setRadius] = React.useState(RADIUS_DEFAULT);
+
+  /* 조건이 바뀌면 1쪽으로. 반경도 같다 — 4km 에서 3쪽을 보다 2km 로 좁히면 그 쪽이 빈다 */
+  React.useEffect(() => { setFcPage(1); }, [fcTypes, radius]);
 
   /* U-FC-09 원거리 안내 말풍선을 닫았는지. **셸이 들고 있어야 한다** —
      그 말풍선을 그리는 FacilitySummary 는 공공시설 탭일 때만 존재해서, 탭을 옮기면
@@ -219,21 +228,24 @@ export function MainApp({ qr = null, noDistrict = false }) {
   }, [d.stores, cats, onnuriOnly, q, sort]);
 
   /* ── S02 공공시설: 안내 반경 (U-FC-08) ─────────────────────────────────
-     4종이 같은 선을 쓴다 (2026-08-19 통일. 근거는 facilities.js 의 NEAR_LIMIT 머리말).
-     반경은 **사용자에게 노출하지 않는다** (화면 어디에도 "2km"라고 적지 않는다).
+     4종이 같은 선을 쓴다 (2026-08-19 통일. 근거는 facilities.js 의 머리말).
+     그 선은 이제 **사용자가 고른 값**이다 (2026-08-26) — 고정 2km 이던 시절에는 화면
+     어디에도 적지 않는 값이었지만, 고를 수 있게 되면 고르개가 그 수를 적는다.
 
      반경 안에 하나도 없으면 반경을 무시하고 최근접 2건까지 되살린다 (U-FC-09).
      빈 결과 화면을 만들지 않는 것이 이 규칙의 핵심이고, AED·대피소에 상한을 두지 않던
-     이유도 그것이었다 — 보장이 이 한 줄에 있으므로 무제한까지는 필요하지 않다. */
+     이유도 그것이었다 — 보장이 이 한 줄에 있으므로 무제한까지는 필요하지 않다.
+     고르개의 하한이 2km 인 것도 이 폴백 때문이다: 더 좁게 열어주면 고른 값과 어긋나는
+     목록(반경 밖의 최근접 2건)이 일상이 된다 (facilities.js 의 RADIUS_STEPS 머리말). */
   const facilityByType = React.useMemo(() => {
     const out = {};
     for (const t of FACILITY_TYPES) {
       const all = FACILITIES.filter(f => f.type === t);                 /* 이미 거리순 */
-      const within = all.filter(f => f.dist <= NEAR_LIMIT);
+      const within = all.filter(f => f.dist <= radius);
       out[t] = within.length ? within : all.slice(0, 2);                /* U-FC-09 폴백 */
     }
     return out;
-  }, []);
+  }, [radius]);
 
   /* 칩 개수는 상한을 적용한 뒤의 개수다 — 칩에 6이라 적고 목록에 5줄이 나오면
      사용자는 한 곳이 사라졌다고 읽는다. 0건인 유형은 FilterBar 가 칩째로 숨긴다 (U-ST-10 과 같은 규칙) */
@@ -297,7 +309,36 @@ export function MainApp({ qr = null, noDistrict = false }) {
         filterLabel: "시설 유형 필터",
         /* 칩에서는 색이 선택 상태를 뜻하므로 안전시설 적색 강조를 끈다 (emphasis={false}).
            아이콘 표는 FacilityIcon 한 곳에만 있다 (U-CM-05) */
-        renderIcon: c => <FacilityIcon type={c.id} size={15} emphasis={false} /> }
+        renderIcon: c => <FacilityIcon type={c.id} size={15} emphasis={false} />,
+        /* ── 안내 반경 고르개 (U-FC-08) ─────────────────────────────────────
+              2026-08-26 아침에 **지도 오른쪽 세로 고르개**로 먼저 만들었다가 같은 날
+              여기로 내려왔다 (사용자 요청). 세 칸이 각각 손가락 자리를 가지려니 200px
+              짜리 기둥이 됐고, 그것이 서 있는 내내 지도 오른쪽이 가려졌다 — **고를 것이
+              셋뿐이면 접어 두는 편**이 맞다: 평소에는 지금 값 한 마디만 서 있다.
+
+              **아이콘이 없다** (2026-08-26 오후, 사용자 요청). `circle-dot` 이 서 있었다 —
+              가운데 점이 스캔 위치, 두른 원이 반경이라는 그림인데, 그 원이 지도에서
+              없어지면서(아래) 가리킬 것이 사라졌고 단추 글자가 이미 「반경」이라고 적는다.
+
+              **고르면 값만 바뀐다 — 카메라는 그 자리에 그대로다** (2026-08-26 오후,
+              사용자 요청). 여기서 `fitRadius` 로 축척을 원에 맞췄었다. 근거는 「4km 를
+              고른 사람이 반경 500m 짜리 화면을 보고 있으면 곤란하다」였는데, 실제로
+              일어난 일은 그 반대였다: **보고 있던 자리가 통째로 작아진다.** 넓히려고
+              누른 것이지 멀어지려고 누른 것이 아니라, 사람들은 곧바로 지도를 다시
+              확대했다 — 한 번 누를 때마다 두 손동작이 딸려온다.
+
+              넓어졌다는 것은 **목록이 말한다** — 곳수가 늘고 새 마커가 화면 가장자리에
+              나타난다. 그것을 보고 더 멀리 보고 싶으면 지도를 줄이면 된다. 화면을
+              움직이는 쪽은 사람이다. */
+        trailing: (
+          <InlineSelect floating icon={null} label="안내 반경"
+            /* `km()` 를 쓰지 않는다 — 그쪽은 「2.0km」로 소수 한 자리를 적는다. 거리를
+               **재서 알려주는** 자리라 그 자리가 필요하지만(「1.4km 떨어져 있습니다」),
+               여기 셋은 재는 값이 아니라 **고르는 눈금**이라 「2km」가 맞다 */
+            value={radius} options={RADIUS_STEPS.map(m => ({ id: m, label: `${m / 1000}km` }))}
+            buttonLabel={`반경 ${radius / 1000}km`} menuMinWidth={96}
+            onChange={setRadius} />
+        ) }
     : { q, onQueryChange: e => setQ(e.target.value), onQueryClear: () => setQ(""),
         chips: d.chips, cat: cats, onCatChange: setCats };
 
@@ -319,8 +360,18 @@ export function MainApp({ qr = null, noDistrict = false }) {
 
      previewH 도 함께 0 으로 되돌린다. 카드를 [x] 로 닫을 때와 같은 처리다 —
      카드가 없는데 그 높이가 남아 있으면 다음 계산의 씨앗이 된다. */
+  /* ── 카드를 닫으면 시트가 있던 자리로 돌아간다 (2026-08-26, 사용자 요청) ────────
+     카드가 뜰 때 시트를 접힘으로 내리므로(pickOnMap), 내리기 직전의 스냅을 여기 적어
+     둔다. 카드의 [x] 를 눌렀을 때만 읽는다 — 목록에서 한 곳을 눌러 본 사람은 **보던
+     목록으로 돌아가려는 것**이지 접힌 시트를 원한 것이 아니다.
+
+     담당자가 그 사이에 시트를 직접 끌었으면 지운다 (아래 changeSnap). 그때는 시트의
+     자리를 사람이 새로 정한 것이라, 카드를 닫으며 되돌리면 방금 한 일을 취소하는 셈이다. */
+  const restoreSnap = React.useRef(null);
+
   const changeSnap = React.useCallback(next => {
     setSnap(next);
+    restoreSnap.current = null;
     /* 기다리는 중인 선택도 함께 버린다 (pickOnMap 의 대기). 그대로 두면 시트를 도로
        올린 뒤에 타이머가 깨어나 전체 스냅에서 selected 가 되살아난다 */
     if (next === "full") { clearTimeout(holdTimer.current); setSelected(null); setPreviewH(0); }
@@ -344,14 +395,28 @@ export function MainApp({ qr = null, noDistrict = false }) {
 
      focus 도 함께 미룬다. 카드가 없는 사이에 마커를 잡으면 지도 가림 높이에 카드 높이가
      빠져 있어(mapPadBottom) 곧 뜰 카드 뒤로 마커가 들어간다. */
+  /* ── 카드가 뜨면 시트는 **접힘**이다 (2026-08-26, 사용자 요청) ──────────────────
+     전에는 전체 스냅에서만 절반으로 내렸다. 그러면 카드가 뜬 화면이 시트 37% + 카드
+     + 탭바라 지도가 3분의 1도 남지 않는다 — **지금 무엇을 보고 있는가는 카드가 말하고
+     있고**, 그 아래 목록은 방금 그중 하나를 고른 목록이라 지금 읽을 것이 아니다.
+     접힘(18%)은 시트 헤더 딱 그만큼이라 「목록이 아래 있다」는 것만 남는다.
+
+     내리기 전 자리를 적어 두고, 카드를 [x] 로 닫을 때 되돌린다 (restoreSnap). */
   const pickOnMap = React.useCallback(item => {
     clearTimeout(holdTimer.current);
     const show = () => {
       setSelected(item);
       requestAnimationFrame(() => requestAnimationFrame(() => focus(item.lat, item.lng)));
     };
+    if (snap === "collapsed") { show(); return; }
+    restoreSnap.current = snap;
+    setSnap("collapsed");
+    /* 전체에서 올 때만 기다린다. 카드는 `bottom={sheetH}` 로 시트 윗변에 얹혀 있고
+       sheetH 는 트랜지션이 도는 동안 프레임마다 갱신되는 값이라(Sheet 의 report_ 루프),
+       전체에서 뜨면 **필터 바 바로 아래에서 나타나 지도를 가로질러 흘러내린다.**
+       절반에서 접힘은 그 거리가 카드 한 장 남짓이라 시트와 함께 자리를 잡는 것으로
+       보인다 — 거기에 320ms 를 걸면 마커를 눌러도 한참 아무 일이 없는 화면이 된다. */
     if (snap !== "full") { show(); return; }
-    setSnap("half");
     holdTimer.current = setTimeout(show, SHEET_SETTLE);
   }, [snap, focus]);
 
@@ -393,8 +458,18 @@ export function MainApp({ qr = null, noDistrict = false }) {
     return () => clearTimeout(t);
   }, [snap, selected, focus]);
 
+  /* 카드의 [x] — 골라 본 것을 끄고 **시트를 있던 자리로 되돌린다** (2026-08-26).
+     목록에서 한 곳을 눌러 본 사람이 카드를 닫는 것은 「그 목록으로 돌아간다」는 뜻이다.
+     지도 마커를 직접 누른 사람은 절반에서 왔으므로 절반으로 돌아간다. */
+  const closePreview = React.useCallback(() => {
+    setSelected(null);
+    setPreviewH(0);
+    if (restoreSnap.current) { setSnap(restoreSnap.current); restoreSnap.current = null; }
+  }, []);
+
   const backToAnchor = () => {
     setSelected(null);
+    restoreSnap.current = null;
     setSnap("collapsed");
     if (mapApi.current) mapApi.current.reset();
     say("QR스캔 위치로 이동했습니다");
@@ -468,12 +543,21 @@ export function MainApp({ qr = null, noDistrict = false }) {
     if (id === tab) return;
     setTab(id);
     setSelected(null);
+    /* 되돌릴 자리 기억도 함께 버린다 — 저 탭에서 접혔던 사정이 이 탭의 시트에 남으면 안 된다 */
+    restoreSnap.current = null;
     setSnap("half");
     if (!mapApi.current) return;
     /* 둘러보기는 지도를 쓰지 않으므로 카메라를 건드리지 않는다. 지도는 감춰진 채
        공공시설·상점가가 마지막으로 두고 간 자리를 그대로 유지하고, 그 탭으로 돌아올 때
        아래 줄이 다시 QR 지점으로 맞춘다. */
-    if (id !== "discover") mapApi.current.setView(d.anchor.lat, d.anchor.lng, TAB_MAP_LEVEL[id]);
+    /* **반경은 이 셈에 들어오지 않는다** (2026-08-26 오후, 사용자 요청). 잠깐
+       「반경을 넓혀둔 상태면 그 반경에 맞춘다」였다 — 4km 짜리 목록의 뒤쪽이 레벨 4
+       에서는 화면 밖이라는 것이 근거였는데, 반경 고르개 자체가 축척을 건드리지 않게
+       되면서(위 `trailing`) 이 줄만 남으면 **탭을 다녀오는 것이 축척을 바꾸는 길**이
+       된다. 5-3 #6 이 되돌리는 것은 탭마다 정해진 한 자리다. */
+    if (id !== "discover") {
+      mapApi.current.setView(d.anchor.lat, d.anchor.lng, TAB_MAP_LEVEL[id]);
+    }
   };
 
   /* U-CM-17 — 시설 마커와 점포 마커를 동시에 노출하지 않는다. 탭이 소유한 레이어만 그린다.
@@ -817,6 +901,14 @@ export function MainApp({ qr = null, noDistrict = false }) {
           appKey={KAKAO_APP_KEY}
           center={d.anchor}
           anchorLabel={d.anchor.name}
+          /* 안내 반경 원은 넘기지 않는다 — 그리는 쪽도 함께 없어졌다 (2026-08-26 오후,
+             사용자 요청. `KakaoMap` 의 지운 자리 주석). 공공시설 탭에 점선 원을 그렸었다:
+             고른 반경이 지도에서 얼마나 넓은 자리인지 보여주려던 것인데, 그 원이 화면에
+             다 들어오게 하려면 축척을 원에 맞춰야 하고 그것이 「누를 때마다 지도가
+             작아진다」의 원인이었다 (위 `trailing`). 축척을 그대로 두면 3·4km 짜리 원은
+             대개 화면 밖이라, 원만 남기면 **가장자리에 걸친 호(弧) 한 조각**이 된다 —
+             무엇의 일부인지 알 수 없는 선이다. 반경이 하는 일은 목록의 곳수를 정하는
+             것이고, 그것은 목록이 적는다. */
           level={MAP_LEVEL}
           stores={storeMarkers}
           facilities={facilityMarkers}
@@ -844,7 +936,7 @@ export function MainApp({ qr = null, noDistrict = false }) {
               : selected.kind === "district" ? <Icon name="store" size={22} /> : undefined}
             bottom={sheetH}
             onHeightChange={setPreviewH}
-            onClose={() => { setSelected(null); setPreviewH(0); }}
+            onClose={closePreview}
             routeLabel={selected.kind === "district" ? "상점가 보기" : "길찾기"}
             detailLabel={selected.kind === "district" && selected.festival ? "축제 보기" : "상세 보기"}
             /* 상점가 마커 자체는 갈 곳이 없다 — 상점가는 점이 아니라 구역이라 상세 페이지가
@@ -877,8 +969,29 @@ export function MainApp({ qr = null, noDistrict = false }) {
         {isDiscover ? null : (
           <FloatingControls
             bottom={sheetH + (showPreview ? previewH + gap : 0)}
+            /* 시트에게 넘기는 것과 **같은 실측값**이다 (2026-08-26). 막지 않으면 시트를
+               끝까지 올렸을 때 기둥 윗머리가 상단 필터 바 위로 올라선다 (단추가 z 400,
+               필터가 z 300). 지금은 단추가 딱 44px 이라 여유가 있지만, 2차 글자 확대에서
+               높아지는 만큼은 이 값이 받아낸다 */
+            topInset={sheetTopInset}
             hidden={snap === "full"}
-            items={[{ icon: "crosshair", label: "QR 스캔 지점으로", onClick: backToAnchor }]} />
+            /* ── 반경 고르개와 **같은 알약** (2026-08-26 오후, 사용자 요청) ─────────
+                  이 단추와 위 안내 반경 고르개는 같은 지도 위에 함께 떠 있는 둘인데
+                  **서로 다른 부품처럼 보였다** — 한쪽은 34px 알약에 13px 글자, 이쪽은
+                  48×44 둥근 네모에 아이콘을 이고 선 12px 글자였다. `subtle` 이 이제
+                  `InlineSelect.floating` 과 같은 값을 쓴다 (34px · 알약 · .82 + 흐림 ·
+                  같은 테두리·그림자·글자색).
+
+                  같은 날 아침에 「스캔 위치로」를 옆에 붙였다가 알약이 120px 을 넘어
+                  지도 오른쪽 아래를 덮은 적이 있어 세로로 쌓았었는데, 글자를
+                  `--fs-micro`(12px) 로 두고 아이콘을 14px 로 줄이니 **옆에 붙여도 100px
+                  남짓**이다. 높이가 48 에서 34 로 내려간 만큼을 폭으로 돌려준 셈이고,
+                  그 값에서는 **둘이 같은 것으로 읽히는 편**이 낫다.
+
+                  글자를 다시 떼지는 않는다 — 그림 하나로는 어디로 가는 단추인지 배워야
+                  알기 때문에 붙인 글자다 (v1.9). 손가락 자리도 44px 그대로다. */
+            subtle
+            items={[{ icon: "qr-code", label: "스캔 위치로", text: "스캔 위치로", onClick: backToAnchor }]} />
         )}
 
         {/* ── 둘러보기 탭 (S04) — 시트가 아니라 화면 전체를 쓰는 정보 패널 ────────
@@ -889,7 +1002,8 @@ export function MainApp({ qr = null, noDistrict = false }) {
             /* 기본 뷰는 진행중·예정만이다. 종료를 포함한 전체는 [전체보기] → S12 가 맡는다 */
             festivals={FESTIVALS_OPEN}
             onOpenAllFestivals={() => go("#/festivals")}
-            newStores={d.newStores}
+            /* `newStores={d.newStores}` 가 여기 있었다 — 신규 매장 레일이 없어졌다
+               (2026-08-25, 사용자 요청. DiscoverPanel 의 그 자리 주석) */
             popular={d.popular}
             courses={d.courses}
             /* 여기서는 현재 상점가를 뺀다 — 지금 서 있는 곳이라 "다른 상점가"가 아니다.
@@ -932,7 +1046,9 @@ export function MainApp({ qr = null, noDistrict = false }) {
              [다음]을 누르면 새 쪽의 끝줄 근처가 열린다 — 방금 넘긴 쪽의 위쪽을 보지 못한
              채 다시 올려야 한다. 조건이 바뀔 때와 같은 이유이고 같은 장치로 푼다. */
           scrollKey={isFacility
-            ? `facility|${fcTypes.join(",")}|${fcPage}`
+            /* 반경도 조건이다 (2026-08-26) — 4km 로 늘려 아래까지 읽다가 2km 로 되돌리면
+               목록의 뒤쪽이 통째로 없어지는데, 스크롤만 남으면 빈 자리에 서 있게 된다 */
+            ? `facility|${fcTypes.join(",")}|${radius}|${fcPage}`
             : `district|${cats.join(",")}|${onnuriOnly}|${sort}|${q}|${page}`}
           /* U-ST-02 구역 안내 — 제목 줄 **오른쪽**이다 (2026-08-18). 제목 아래 한 줄로
              두면 절반 스냅에서 그 한 줄이 점포 한 줄을 먹어, 시트를 열었는데 가게가

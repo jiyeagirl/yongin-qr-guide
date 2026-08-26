@@ -63,6 +63,10 @@ export { MapCanvas } from "./components/map/MapCanvas.jsx";
 export { KakaoMap } from "./components/map/KakaoMap.jsx";
 export { MapPreviewCard } from "./components/map/MapPreviewCard.jsx";
 export { MapFilterOverlay } from "./components/map/MapFilterOverlay.jsx";
+/* `RadiusSlider` 가 여기 있었다 (2026-08-26 아침 신설 → 같은 날 삭제, 사용자 요청).
+   지도 오른쪽에 세로로 서던 반경 고르개다 — 자리를 너무 많이 차지해 상단 필터 바의
+   칩 줄 아래로 내려갔고, 거기서는 `InlineSelect` 하나면 된다 (MapFilterOverlay 의
+   `trailing`). 부품을 남겨 두지 않는 이유는 쓰는 곳이 없어서다 */
 export { loadKakaoMaps } from "./components/map/kakaoLoader.js";
 
 /* facility — 공공시설 도메인 (AED · 화장실 · 쉼터 · 대피소) */

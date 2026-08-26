@@ -1,9 +1,11 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, Cell, Modal, Button, Select, Badge, Notice, Pagination,
+  PageHeader, Toolbar, DataTable, Modal, Button, Select, Badge, Pagination,
   InfoList, Textarea, EMPTY_MARK,
 } from "../../design-systems/admin.js";
-import { REPORTS, isOpen } from "../data/reports.js";
+/* `isOpen`(접수·확인중인가)을 함께 가져왔었다 — 누적 강조가 세던 조건이라 함께 나갔다.
+   그 함수는 좌측 메뉴 [오류신고 관리] 옆의 미처리 배지가 계속 쓴다 (`AdminApp.jsx`) */
+import { REPORTS } from "../data/reports.js";
 import {
   REPORT_STATES, REPORT_TYPES, REPORT_TARGET_TYPES, REPORT_CLOSING_STATES,
 } from "../data/fields.js";
@@ -31,16 +33,18 @@ import { useListState, ListSearch, SearchHint } from "./useListState.js";
  * 답장이지 기록이 아니다 — 처리완료·반려는 이 신고를 더 보지 않겠다는 결정이라,
  * 왜 그렇게 정했는지가 없으면 석 달 뒤 같은 신고가 다시 들어왔을 때 처음부터 다시 본다.
  *
- * ── 같은 대상에 세 건이 쌓이면 세운다 ───────────────────────────────────────
- * 명세서 5장의 규칙인데, 이유는 **판단이 달라지기 때문**이다. 한 건이면 신고한 사람의
- * 착각일 수 있지만 세 명이 같은 말을 하면 자료가 틀린 것이다. 그때 담당자가 할 일은
- * "답을 적는다"가 아니라 "자료를 고친다"로 바뀐다.
+ * ── 누적 강조를 없앴다 (2026-08-25 오후, 사용자 요청) ───────────────────────
+ * 같은 대상에 미처리 세 건이 쌓이면 **줄이 붉게 서고 접수번호 옆에 「3건 누적」 배지**가
+ * 붙었으며, 상세를 열면 붉은 안내 상자가 「자료가 틀렸을 가능성이 큽니다」라고 적었다
+ * (명세서 5장의 규칙이었다). 셋 다 없앴다.
  *
- * **손 뗀 건은 세지 않는다** (2026-08-25, 사용자 요청). 전에는 상태와 무관하게 셌더니
- * 세 건을 다 처리완료로 옮겨도 그 줄들이 계속 붉게 서 있었다 — 남은 일이 없는데 남은
- * 일처럼 보이는 표시라 담당자가 끌 방법이 없었다. 지금은 `isOpen`(접수 · 확인중)만
- * 세므로 하나를 닫는 순간 셋이 둘이 되고 강조가 그 자리에서 풀린다. 닫힌 줄 자신도
- * 세지 않으니 붉게 서지 않는다 — 처리 상태 칸의 초록 배지와 어긋나지 않는다.
+ * 이 표시가 하던 말은 **담당자가 이미 목록에서 읽는 것**이다 — 같은 대상 이름이 세 줄
+ * 나란히 서 있는 것이 곧 그 사실이고, 대상으로 걸러 보면 몇 건인지도 그 자리에서 보인다.
+ * 그 위에 붉은 줄과 배지를 얹으면 **끌 수 없는 표시가 목록에 상주한다**: 붉은색은
+ * 「지금 손대라」는 말인데 신고 셋이 쌓인 것 자체는 담당자가 없앨 수 있는 상태가 아니고,
+ * 처리 상태 칸이 이미 색으로 말하고 있어 한 줄에 서로 다른 두 색이 서게 된다.
+ * 강조를 미처리만 세도록 좁혀 본 것이 하루 전인데(그 전에는 다 처리하고도 붉게 남았다),
+ * 좁혀도 남는 문제가 그것이다.
  *
  * ── 개인정보 보관 문제가 함께 없어졌다 ──────────────────────────────────────
  * 명세서 5장의 "회신처는 개인정보이므로 처리 완료 후 90일 보관 뒤 자동 파기"는 화면이
@@ -72,7 +76,7 @@ const TARGET_PAGE = {
   축제: { page: "festivals", label: "축제 정보 관리" },
 };
 
-const DUP_THRESHOLD = 3;
+/* 누적 강조의 문턱값(`DUP_THRESHOLD = 3`)이 여기 있었다 (2026-08-25 오후 삭제 — 머리말) */
 
 export function Reports({ onToast, onNavigate }) {
   const { rows, patch } = useCollection("reports", REPORTS, null, "오류신고");
@@ -89,18 +93,8 @@ export function Reports({ onToast, onNavigate }) {
   const ASSIGNEE_OPTIONS = [{ value: "", label: "— 담당자 없음 —" }]
     .concat(accounts.map(a => ({ value: a.name, label: a.name })));
 
-  /* 같은 대상에 **아직 남은** 건이 몇인가. 둘을 세지 않는다:
-     targetId 가 없는 건(기타 문의) — 대상이 없는 신고끼리는 "같은 대상"이 성립하지 않는다.
-     손 뗀 건(처리완료 · 반려 · 중복) — 머리말 참조 */
-  const dupCount = React.useMemo(() => {
-    const o = {};
-    rows.forEach(r => { if (r.targetId && isOpen(r)) o[r.targetId] = (o[r.targetId] || 0) + 1; });
-    return o;
-  }, [rows]);
-
-  /* 강조가 걸리는 조건 한 곳. 줄 자신이 닫혀 있으면 0 이다 — 대상에 남은 것이 셋이어도
-     이 줄에서 할 일은 끝났다 */
-  const dupOf = r => (r && r.targetId && isOpen(r) ? dupCount[r.targetId] || 0 : 0);
+  /* 같은 대상에 남은 건을 세던 `dupCount` 와 `dupOf` 가 여기 있었다
+     (2026-08-25 오후 삭제 — 머리말) */
 
   const filtered = React.useMemo(() => rows
     .filter(r => {
@@ -108,7 +102,12 @@ export function Reports({ onToast, onNavigate }) {
       if (kind && r.kind !== kind) return false;
       if (targetType && r.targetType !== targetType) return false;
       if (!list0.term) return true;
-      return `${r.body} ${r.target || ""} ${r.id}`.includes(list0.term);
+      /* **내용만 본다** (2026-08-26, 사용자 요청). 「내용 + 대상 + 접수번호」였다.
+         대상 유형은 왼쪽 고르개가 이미 가르고, 대상 이름으로 훑는 일은 **그 자료를
+         다루는 화면**의 몫이다 (상세의 [○○ 정보 관리로 이동]이 그 길이다).
+         접수번호는 뺐지만 닿는 길이 없어지지는 않는다 — 「접수번호」 열이 정렬 가능한
+         열이고 차례가 늘 같은 형식(rp-016)이라 눈으로 훑어 찾는다. */
+      return r.body.includes(list0.term);
     })
     .sort((a, b) => (STATE_ORDER[a.state] - STATE_ORDER[b.state]) || b.at.localeCompare(a.at)),
   [rows, state, kind, targetType, list0.term]);
@@ -164,7 +163,7 @@ export function Reports({ onToast, onNavigate }) {
         <Select value={kind} options={opt(REPORT_TYPES, "전체 신고 유형")} onChange={e => setKind(e.target.value)} />
         <Select value={targetType} options={opt(REPORT_TARGET_TYPES, "전체 대상 유형")}
           onChange={e => setTargetType(e.target.value)} />
-        <ListSearch state={list0} placeholder="내용, 대상, 접수번호 검색" />
+        <ListSearch state={list0} placeholder="내용 검색" />
         {/* ── 필터를 셋으로 줄였다 (2026-08-20, 사용자 요청) ──────────────────
                고르개가 여섯이라 필터 줄이 두 줄로 접혔고, 그 두 줄이 표보다 먼저 읽혔다.
                뺀 둘은 이 화면에서 짚어낼 것이 없는 축이다:
@@ -172,31 +171,32 @@ export function Reports({ onToast, onNavigate }) {
                담당자     계정이 하나뿐이라(9장) 고를 것이 사실상 없다. 담당자를 나눠 맡는
                           날이 오면 그때 세운다
                접수 기간   날짜 두 칸이 필터 줄에서 가장 넓은데, 담당자가 이 화면을 여는
-                          이유는 "언제 것"이 아니라 "남은 일"이다. 차례가 이미 미처리 먼저이고,
-                          특정 날짜는 접수번호(YYYYMMDD-n) 검색으로 바로 닿는다 */}
+                          이유는 "언제 것"이 아니라 "남은 일"이다. 차례가 이미 미처리 먼저다.
+                          (「접수일 열을 정렬해 찾는다」로 근거를 바꿨다 — 2026-08-26 에
+                          검색이 내용만 보게 되면서, 그 전까지 적어 두었던 「접수번호
+                          검색으로 바로 닿는다」가 성립하지 않는다) */}
         <SearchHint state={list0} />
       </Toolbar>
 
       <DataTable
         caption="접수된 오류신고 목록"
         rows={paged.rows} rowKey="id" onRowClick={openOne}
-        /* 같은 대상에 남은 것이 세 건 이상이면 세운다 (명세서 5장) */
-        rowTone={r => (dupOf(r) >= DUP_THRESHOLD ? "danger" : null)}
+        /* ── 열 폭을 적은 그대로 쓴다 (2026-08-26, 사용자 요청) ────────────────
+           「내용」 열이 **칸에 맞춰** 잘리게 하려고 켠다. 기본(auto)에서는 칸의 폭이
+           내용에서 나오므로 「칸에 맞춰 자르기」가 순환 참조가 되어 320px 상수로 잘랐고,
+           그 값은 1440px 화면에 맞춰 고른 수였다 — 넓은 화면에서는 열이 700px 이 넘는데
+           글자는 여전히 320px 에서 끊겼다. 이 표는 「내용」 말고 **일곱 열이 전부 폭을
+           적고 있어** 고정 배치가 딱 맞는다: 적은 폭이 그대로 서고 남는 자리를 내용이
+           전부 가져간다 */
+        fixed
+        /* 줄을 붉게 세우던 `rowTone` 이 여기 있었다 (2026-08-25 오후 삭제 — 머리말) */
         empty={{ title: "조건에 맞는 접수 건이 없습니다." }}
         columns={[
-          /* 누적 배지가 여기 붙는다 (2026-08-25 이동). 「대상」 칸(200px)에 있을 때는
-             이름이 길면 배지가 아랫줄로 내려가 그 행만 키가 자랐다 — 훑는 눈이 걸린다.
-             접수번호는 글자 수가 늘 같아(rp-016) 배지가 설 자리를 미리 낼 수 있고,
-             그래서 nowrap 으로 못 박아도 잘릴 것이 없다 (접수일 칸과 같은 처리) */
-          { key: "id", label: "접수번호", width: 176, sortable: true,
-            render: r => (
-              <Cell style={{ flexWrap: "nowrap", whiteSpace: "nowrap" }}>
-                {r.id}
-                {dupOf(r) >= DUP_THRESHOLD ? (
-                  <Badge tone="danger" size="sm">{dupOf(r)}건 누적</Badge>
-                ) : null}
-              </Cell>
-            ) },
+          /* 「n건 누적」 배지가 이 칸에 붙어 있었다 (2026-08-25 오후 삭제 — 머리말).
+             배지가 없어지면서 폭도 176 에서 112 로 돌아간다 — 접수번호(rp-016)는 글자 수가
+             늘 같아 딱 그만큼이면 된다 */
+          { key: "id", label: "접수번호", width: 112, sortable: true,
+            render: r => <span style={{ whiteSpace: "nowrap" }}>{r.id}</span> },
           /* 접수일은 통째로만 읽힌다. 104px 에서는 「2026-」 / 「10-15」 로 갈렸다 —
              `.admin-web` 의 overflow-wrap:break-word 가 붙임표를 끊을 자리로 보기 때문이다.
              날짜가 들어갈 만큼 넓히고 그 칸에서는 줄바꿈을 막는다 (열 하나가 두 줄이 되면
@@ -207,11 +207,17 @@ export function Reports({ onToast, onNavigate }) {
           { key: "target", label: "대상", width: 200,
             render: r => r.target || EMPTY_MARK },
           { key: "kind", label: "신고 유형", width: 120, sortable: true },
+          /* 폭을 적지 않는 **유일한 열**이다 — 고정 배치에서 남는 자리를 전부 가져간다.
+             1920px 화면에서는 700px 이 넘고 1440px 에서는 260px 남짓이라, 화면이 넓을수록
+             더 읽힌다. 하한은 `DataTable` 의 `FLEX_MIN`(240) 이 잡고 그보다 좁아지면
+             표가 가로로 스크롤된다 */
           { key: "body", label: "내용",
             /* 표에서는 한 줄로 자른다. 전문은 눌러서 본다 — 신고 내용은 길이가 제각각이라
-               그대로 두면 한 행이 다섯 줄이 되고 목록을 훑을 수 없다 */
+               그대로 두면 한 행이 다섯 줄이 되고 목록을 훑을 수 없다.
+               **`maxWidth: 320` 상수가 `width: 100%` 가 됐다** (2026-08-26, 사용자 요청) —
+               자르는 자리를 화면이 아니라 칸이 정한다 (위 `fixed` 주석) */
             render: r => (
-              <span style={{ display: "block", maxWidth: 320, overflow: "hidden",
+              <span style={{ display: "block", width: "100%", overflow: "hidden",
                 textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.body}</span>
             ) },
           { key: "assignee", label: "담당자", width: 130, sortable: true,
@@ -241,14 +247,7 @@ export function Reports({ onToast, onNavigate }) {
         ) : null}>
         {open ? (
           <>
-            {dupOf(open) >= DUP_THRESHOLD ? (
-              <Notice tone="danger" size="sm" title={`같은 대상에 ${dupOf(open)}건이 쌓였습니다`}
-                style={{ marginBottom: "var(--space-4)" }}>
-                한 사람의 착각이 아니라 자료가 틀렸을 가능성이 큽니다. 답을 적기 전에
-                대상 자료를 먼저 확인해 주세요.
-              </Notice>
-            ) : null}
-
+            {/* 누적 안내 상자가 여기 있었다 (2026-08-25 오후 삭제 — 머리말) */}
             {/* 5-1 시민 제출 항목 — **읽기 전용**이다. 관리자가 고칠 수 있으면
                 그 목록은 더 이상 접수 기록이 아니다.
 

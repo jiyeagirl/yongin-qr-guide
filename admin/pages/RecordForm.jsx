@@ -44,10 +44,20 @@ export function RecordForm({
              예외인 이유: **필수 여부와 오류는 항목표가 정하는 것**인데(2026-08-25 부터
              ● 이다) 슬롯을 세 화면이 각자 만들고 있어, 그대로 두면 세 곳이 같은 값을
              베껴 적게 된다 — 표를 고쳐도 화면이 따라오지 않는 구조가 그것이다.
-             `type: "coord"` 로 좁혀 두어 다른 슬롯(축제의 조아용 그리드)은 지나간다. */
+             `type: "coord"` 로 좁혀 두어 다른 슬롯(축제의 조아용 그리드)은 지나간다.
+
+             ── `type: "picker"` 도 같은 자리다 (2026-08-26) ────────────────────
+             QR ID 는 **고를 수 있는 값이 지금 등록된 지점들에 달려 있어**(이미 매칭된 ID 는
+             고를 수 없다) 항목표가 목록을 미리 적을 수 없다. 화면이 목록을 만들어 슬롯으로
+             넘기되, **이름·필수·오류·안내 줄은 항목표에서 얹는다** — 그러지 않으면 화면이
+             표의 문구를 베껴 적게 되고, 표를 고쳐도 화면이 따라오지 않는다. */
           const slot = slots[f.key];
-          const filled = f.type === "coord" && React.isValidElement(slot)
-            ? React.cloneElement(slot, { required: f.required, error: errors[f.key] })
+          const owned = ["coord", "picker"].includes(f.type) && React.isValidElement(slot);
+          const filled = owned
+            ? React.cloneElement(slot, f.type === "coord"
+              /* CoordField 는 자기 이름표를 스스로 그린다 */
+              ? { required: f.required, error: errors[f.key] }
+              : { label: f.label, required: f.required, hint: f.hint, error: errors[f.key] })
             : slot;
           return <React.Fragment key={f.key}>{filled}</React.Fragment>;
         }

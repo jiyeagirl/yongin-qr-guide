@@ -21,7 +21,7 @@ function App() {
           clusters={[{ label: "128", x: "30%", y: "26%" }, { label: "76", x: "68%", y: "20%" }, { label: "41", x: "52%", y: "34%" }]}
           pins={[{ label: "AED", icon: "heart-pulse", x: "22%", y: "40%", emergency: true }, { label: "화장실", icon: "toilet", x: "76%", y: "38%" }]} />
         <FloatingControls hidden={snap === "full"} bottom={{ collapsed: "var(--sheet-collapsed)", half: "var(--sheet-half)", full: "var(--sheet-full)" }[snap]}
-          items={[{ icon: "list", label: "목록으로", text: "목록", onClick: () => setSnap("full") }, { icon: "qr-code", label: "QR 지점으로", onClick: () => { setSnap("collapsed"); say("QR 지점으로 이동했습니다"); } }]} />
+          items={[{ icon: "list", label: "목록으로", text: "목록", onClick: () => setSnap("full") }, { icon: "qr-code", label: "스캔 위치로", text: "스캔 위치로", onClick: () => { setSnap("collapsed"); say("QR 지점으로 이동했습니다"); } }]} />
         <Sheet title={d.district.name} subtitle={`${d.district.area} · 점포 ${d.district.stores} · 온누리 ${d.district.onnuri}`} snap={snap} onSnapChange={setSnap}>
           <window.DistrictSheet data={d} cat={cat} setCat={setCat} onnuriOnly={onnuriOnly} setOnnuriOnly={setOnnuriOnly} q={q} setQ={setQ}
             onPickStore={() => say("점포 상세로 (S08)")} onOpenFestival={() => say("축제 상세로 (S11)")} />

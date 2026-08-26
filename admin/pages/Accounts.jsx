@@ -1,6 +1,8 @@
 import React from "react";
+/* `ConfirmDialog` 를 아래 줄에서 뺐다 (2026-08-26) — 삭제 확인 창이 없어졌다.
+   이탈 확인은 `EditorModal` 이 제 안에서 띄운다 */
 import {
-  PageHeader, Toolbar, DataTable, Cell, ConfirmDialog, Button, Badge, Switch, Notice,
+  PageHeader, Toolbar, DataTable, Cell, Button, Badge, Switch, Notice,
   Pagination, Modal, SegmentedTabs, EMPTY_MARK,
 } from "../../design-systems/admin.js";
 import { ACCOUNT_FIELDS, checkPassword, V } from "../data/fields.js";
@@ -21,26 +23,33 @@ import { EditorModal } from "./EditorModal.jsx";
  *
  * ── 이 화면만 갈라진다 (2026-08-24) ────────────────────────────────────────
  * 업무 화면 아홉 개는 v1.1 그대로 모든 계정이 똑같이 본다. 여기만 다른 것은 업무의
- * 경중이 아니라 **자물쇠이기 때문**이다 — 모두가 계정을 지울 수 있으면 서로를 지울 수
+ * 경중이 아니라 **자물쇠이기 때문**이다 — 모두가 계정을 끌 수 있으면 서로를 잠글 수
  * 있고, 마지막 하나를 쓰던 사람이 떠나면 아무도 못 들어온다. 판정은 `can()` 이 하고
  * (`data/account.js`), 다른 계정에게는 좌측 내비에서 이 항목이 아예 없다.
  *
- * ── 최종 관리자를 지우지도 끄지도 못한다 ────────────────────────────────────
- * `admin` 이 사라지면 계정 관리로 들어올 사람이 없어지므로, 그 계정만은 [삭제]와
- * [사용 여부] 양쪽이 다 막힌다. 표에서 [삭제] 버튼 자리를 비우고 토글을 잠근다 —
- * 눌러 보고 안내창을 만나는 것보다 **처음부터 누를 것이 없는 편**이 낫다. 어느 계정이
- * 왜 그런지는 이름 옆 배지와 표 아래 안내가 적는다.
+ * ── 지우는 자리가 없다 (2026-08-26, 사용자 요청) ─────────────────────────────
+ * 표의 [삭제]와 그 확인 창이 함께 나갔다. 각주가 「잠시 쓰지 않는 것이라면 삭제하지
+ * 말고 [사용 여부]를 해제해주세요」를 적고 있었는데, **각주는 누르고 들어온 사람에게
+ * 하는 말**이라 읽든 안 읽든 그 다음에 일어나는 일은 영구 삭제였다. 권하는 것이
+ * 「끄기」라면 화면에는 끄는 스위치만 있으면 된다.
  *
- * 그래도 `toggleActive` · `askRemove` · `onSave` 셋이 각자 한 번 더 본다. 잠긴 컨트롤은
- * **모양이지 규칙이 아니고**, 이 화면에서 계정을 없애는 길이 셋이라 흩어 두면 언젠가
- * 하나가 빠진다. 판정 자체는 `isProtectedAccount()` 한 곳에 있다.
+ * 계정에는 **지워야 할 이유가 특히 없다.** 떠난 담당자의 계정은 끄면 로그인이 막히고,
+ * **변경 이력의 「누가」는 그 아이디를 그대로 가리켜야 한다** — 지워 버리면 지난 기록의
+ * 주체가 없는 사람이 된다 (아래 「아이디를 등록 후 고칠 수 없다」와 같은 이유다).
+ * 정보 관리 다섯이 v1.15 에서, QR 지점이 같은 날 함께 같은 길을 갔다.
+ *
+ * ── 최종 관리자를 끄지 못한다 ───────────────────────────────────────────────
+ * `admin` 이 잠기면 계정 관리로 들어올 사람이 없어지므로, 그 계정만은 [사용 여부]
+ * 토글이 잠긴다. 어느 계정이 왜 그런지는 이름 옆 배지가 적는다.
+ *
+ * 그래도 `toggleActive` 와 `onSave` 가 각자 한 번 더 본다. 잠긴 컨트롤은 **모양이지
+ * 규칙이 아니다.** 판정 자체는 `isProtectedAccount()` 한 곳에 있다.
  *
  * ── 마지막 계정을 막는다 ────────────────────────────────────────────────────
- * 쓸 수 있는 계정이 하나 남았을 때 그것을 지우거나 끄면 **아무도 들어오지 못한다.**
+ * 쓸 수 있는 계정이 하나 남았을 때 그것을 끄면 **아무도 들어오지 못한다.**
  * 서버가 없는 지금은 그 상태를 되돌리는 방법이 소스 수정뿐이라 화면에서 막는다.
- * 삭제만 막으면 [사용]을 끄는 것으로 같은 상태가 되므로 둘 다 막는다.
  * `admin` 보호가 생긴 뒤에도 이 규칙은 남는다 — 둘이 겹치는 것이 아니다.
- * 마지막 계정 보호는 계정이 **0이 되는 것**만 막고, *누가* 남는지는 정하지 못한다.
+ * 마지막 계정 보호는 쓸 수 있는 계정이 **0이 되는 것**만 막고, *누가* 남는지는 정하지 못한다.
  *
  * ── 아이디를 등록 후 고칠 수 없다 ───────────────────────────────────────────
  * 아이디가 **변경 이력의 주체**로 남기 때문이다. 아이디를 바꾸면 지난 이력의 「누가」가
@@ -84,7 +93,8 @@ const VIEW_ALL = "all";
 const VIEW_RESET = "reset";
 
 export function Accounts({ account, onToast }) {
-  const { rows, upsert, remove, patch } = useCollection("accounts", SEED_ACCOUNTS, null, "계정");
+  /* `remove` 를 더 이상 꺼내지 않는다 (2026-08-26) — 이 화면에 지우는 자리가 없다 (머리말) */
+  const { rows, upsert, patch } = useCollection("accounts", SEED_ACCOUNTS, null, "계정");
   const resets = useResetRequests();
   const [view, setView] = React.useState(VIEW_ALL);
   /* 탭이 바뀌면 검색어와 쪽 번호를 비운다 — 계정 목록에서 「김」을 찾다 요청 탭으로
@@ -132,7 +142,7 @@ export function Accounts({ account, onToast }) {
           .forEach(r => resets.patch(r.id, { status: RESET_DONE, doneBy: account.id }, r.loginId));
       }
     },
-    onRemove: remove,
+    /* `onRemove` 가 여기 있었다 (2026-08-26 삭제) — 지우는 대신 [사용 여부]를 끈다 (머리말) */
     onToast, label: "계정",
     extraValidate: v => {
       const bad = {};
@@ -164,11 +174,15 @@ export function Accounts({ account, onToast }) {
      가운데 있던 「삭제된 항목 n」은 2026-08-24 에 빠졌다 (`data/store.js` 머리말). */
   const inReset = view === VIEW_RESET;
 
+  /* ── 두 뷰 모두 **아이디만 본다** (2026-08-26, 사용자 요청) ────────────────────
+     전체는 「아이디 + 이름 + 이메일 + 연락처」, 요청 뷰는 「아이디 + 사유」였다.
+     계정을 찾는 담당자가 손에 들고 있는 것은 언제나 아이디다 — 요청 줄도 아이디로 오고,
+     변경 이력에 남는 주체도 아이디다. 이름으로 훑는 길을 남겨 두면 동명이인이 생기는
+     날 두 줄 중 어느 쪽인지를 이름이 답해주지 못한다. 사유 본문 검색은 그보다 더 멀다 —
+     사유는 읽는 값이지 찾는 값이 아니다. */
   const filtered = inReset
-    ? sortResets(resets.rows).filter(r => (!list0.term
-      || `${r.loginId} ${r.note || ""}`.includes(list0.term)))
-    : rows.filter(a => (!list0.term
-      || `${a.id} ${a.name} ${a.email || ""} ${a.phone || ""}`.includes(list0.term)));
+    ? sortResets(resets.rows).filter(r => (!list0.term || r.loginId.includes(list0.term)))
+    : rows.filter(a => (!list0.term || a.id.includes(list0.term)));
   const paged = list0.paginate(filtered);
 
   /* 요청 줄이 가리키는 계정. 오타나 이미 지운 계정이면 없다 — 그 사실이 표에 배지로 뜬다 */
@@ -234,27 +248,19 @@ export function Accounts({ account, onToast }) {
     patch(a.id, { active: a.active === false }, a.name);
   };
 
-  const askRemove = a => {
-    if (isProtectedAccount(a.id)) {
-      setBlocked({ name: a.name, why: "최종 관리자 계정입니다. 삭제할 수 없습니다.",
-        note: SUPER_NOTE });
-      return;
-    }
-    if (a.id === account.id) {
-      setBlocked({ name: a.name, why: "지금 로그인한 계정입니다. 다른 계정으로 들어와 지워 주세요." });
-      return;
-    }
-    if (isLastAccount(rows, a.id)) {
-      setBlocked({ name: a.name, why: "쓸 수 있는 계정이 이것 하나뿐입니다. 삭제할 수 없습니다." });
-      return;
-    }
-    ed.askRemove(a);
-  };
+  /* `askRemove` 가 여기 있었다 (2026-08-26 삭제) — 최종 관리자 · 지금 로그인한 계정 ·
+     마지막 계정 셋을 각각 다른 문구로 막고 나서 삭제 확인 창을 열던 관문이다.
+     지우는 길이 없어지면서 그 관문도 함께 나갔다. **막던 규칙 셋 중 둘은 그대로다** —
+     `toggleActive` 가 최종 관리자와 마지막 계정을 같은 자리에서 막는다. 「지금 로그인한
+     계정」만 없어졌는데, 자기 계정을 끄는 것은 지우는 것과 달리 되돌릴 수 있다
+     (다른 계정으로 들어와 다시 켠다). 그 하나를 막는 것이 곧 마지막 계정 보호다. */
 
   return (
     <>
       <PageHeader title="계정 관리" count={inReset ? `${filtered.length}건` : `${filtered.length}개`}
-        note={`최종 관리자(아이디: ${SUPER_ID})만 접근할 수 있는 화면입니다. 관리자 페이지를 사용할 계정을 등록하거나 삭제할 수 있습니다.`}
+        /* 「등록하거나 삭제할 수 있습니다」였다 (2026-08-26 고침) — 지우는 자리가
+           없어졌다. 할 수 있는 일을 그대로 적는다 */
+        note={`최종 관리자(아이디: ${SUPER_ID})만 접근할 수 있는 화면입니다. 관리자 페이지를 사용할 계정을 등록하고 사용 여부를 관리할 수 있습니다.`}
         action={inReset ? null
           : <Button variant="primary" icon="user-plus" onClick={ed.openNew}>계정 등록</Button>}
         /* 요청 탭의 숫자는 **대기 건수**다: 처리한 것까지 세면 줄어들지 않는 숫자가 되어
@@ -269,8 +275,9 @@ export function Accounts({ account, onToast }) {
         } />
 
       <Toolbar>
-        <ListSearch state={list0}
-          placeholder={inReset ? "아이디, 사유 검색" : "아이디, 이름, 이메일 검색"} />
+        {/* 두 뷰가 같은 문구다 (2026-08-26) — 거르는 것이 양쪽 다 아이디 하나라,
+            뷰에 따라 문구가 바뀌면 검색이 하는 일도 달라지는 것처럼 읽힌다 */}
+        <ListSearch state={list0} placeholder="아이디 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
@@ -350,13 +357,9 @@ export function Accounts({ account, onToast }) {
                   aria-label={`${a.name} 사용 여부`}
                   onChange={() => toggleActive(a)} />
               ) },
-            /* 최종 관리자 행은 [삭제] 자리를 비운다. 눌러 보고 「할 수 없습니다」를 만나는
-               것보다 처음부터 누를 것이 없는 편이 낫다 — 안내창은 토글 쪽 통로에 남는다 */
-            { key: "manage", label: "관리", width: 96, align: "center",
-              render: a => (isProtectedAccount(a.id) ? EMPTY_MARK : (
-                <Button variant="ghost" size="sm" icon="trash-2"
-                  onClick={() => askRemove(a)} style={{ color: "var(--state-danger)" }}>삭제</Button>
-              )) },
+            /* 「관리」 열이 여기 있었다 (2026-08-26 삭제, 사용자 요청) — 안에 [삭제]
+               하나뿐이었고, 최종 관리자 행에서는 그 자리를 비워 두고 있었다.
+               정보 관리 다섯이 v1.15 에서, QR 지점이 같은 날 함께 같은 자리를 비웠다 */
           ]} />
       )}
 
@@ -425,23 +428,10 @@ export function Accounts({ account, onToast }) {
         ) : null}
       </EditorModal>
 
-      <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
-        description="계정을 삭제합니다."
-        /* 여기도 기본 각주를 쓰지 않는다 — 계정에는 「폐업·폐쇄」도 「사용자 화면」도 없다.
-           대신 권하는 것이 [노출 여부]가 아니라 [사용 여부]다. **첫 문장은 다른 화면과
-           같다** (2026-08-25). 그 자리에 「삭제한 계정은 목록 위 [삭제된 항목]에서 되돌릴
-           수 있습니다」가 맨 뒤에 붙어 있었는데, 그 탭은 v1.7 에서 없어졌다 — 화면이
-           있지도 않은 자리를 가리키며 되돌릴 수 있다고 적고 있었다.
-
-           ── 가운데 문장을 뺐다 (2026-08-25, 사용자 요청) ────────────────────────
-           「이 계정으로 로그인할 수 없게 되며, 지난 변경 이력에 남은 이름은 그대로
-           유지됩니다」였다. 앞 절은 **계정을 지우면 일어나는 당연한 일**이고, 뒤 절은
-           묻지도 않은 걱정에 답한다 — 이력이 어떻게 되는지를 여기서 처음 떠올리게 만드는
-           줄이다. 이 창이 답해야 하는 것은 둘뿐이다: 되돌릴 수 없다는 것과, 되돌릴 수
-           없는 일을 피하는 길이 있다는 것. */
-        footnote={"삭제한 항목은 복구할 수 없습니다. "
-          + "계정을 잠시 쓰지 않는 것이라면 삭제하지 말고 [사용 여부]를 해제해주세요."}
-        onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
+      {/* 삭제 확인 창이 여기 있었다 (2026-08-26 삭제, 사용자 요청). 각주가 「계정을 잠시
+          쓰지 않는 것이라면 삭제하지 말고 [사용 여부]를 해제해주세요」를 적던 자리다 —
+          권하는 것이 「끄기」였는데 창이 열린다는 것은 이미 [삭제]를 누른 뒤라, 각주를
+          읽든 안 읽든 다음에 일어나는 일은 영구 삭제였다. 이제 화면에 끄는 스위치만 있다 */}
 
       <Modal open={!!blocked} size="md" title="할 수 없습니다"
         description={blocked ? blocked.name : undefined}

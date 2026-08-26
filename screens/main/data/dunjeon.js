@@ -239,82 +239,33 @@ export const DISTRICT = {
   topCategories: ["음식", "쇼핑", "미용/생활"],
 };
 
-/* ── 신규 및 인기 매장 (U-DC-02) — **둘러보기 탭(S04)** 소유다 ──────────────────
+/* ── 인기 매장 (U-DC-02) — **둘러보기 탭(S04)** 소유다 ─────────────────────────
    상점가 탭(S03)은 카드 섹션 대신 정렬 토글(U-ST-15)로 인기 매장을 다룬다.
    목록과 경쟁할 요소가 없는 둘러보기 탭에서만 카드로 펼친다 (기능명세서 4장 각주).
 
-   두 줄로 나눈 이유: "신규"와 "인기"는 겹치지 않는다. 새로 생긴 가게는 아직 조회수가 낮고,
-   조회수 상위는 대개 오래된 가게다. 한 줄에 섞으면 어느 쪽 근거로 뽑힌 카드인지 알 수 없다.
-   각 카드의 note 가 그 카드가 거기 있는 이유를 적는다. */
-/* 등록 시점을 연월로 되돌린다. **연월만** 돌려주고 「등록」은 붙이지 않는다 (2026-08-20) —
-   카드에는 "2026.06 등록"이 맞지만 관리자 표의 열에서는 열 이름이 이미 그 말을 하고 있어
-   줄마다 같은 글자가 여섯 번 반복된다. 말을 붙이는 쪽이 그것을 붙인다.
-   (관리자 표는 2026-08-25 부터 연월이 아니라 일자를 적는다 — 아래 `openedDay`.) */
-const MONTHS_AS_OF = [2026, 6]; /* 데이터 기준월 */
-const openedMonth = ago => {
-  const t = MONTHS_AS_OF[0] * 12 + (MONTHS_AS_OF[1] - 1) - ago;
-  return `${Math.floor(t / 12)}.${String((t % 12) + 1).padStart(2, "0")}`;
-};
+   ── 「신규 매장」 레일이 함께 있었다 (2026-08-25 삭제, 사용자 요청) ──────────────
+   `fresh` 와 그것을 만들던 넷(`MONTHS_AS_OF` · `openedMonth` · `agoOf` · `openedKey` ·
+   `openedDay`), 그리고 `NEW_STORES` 가 여기 있었다. 뽑는 근거가 **등록 일자**였는데 그
+   값은 원천의 `created_at` 이라 「최근에 문을 열었다」가 아니라 **「최근에 자료에
+   들어왔다」**에 가깝다 — 몇 해 전에 문을 연 가게가 자료 갱신 한 번에 신규로 올라온다.
+   같은 표를 미리 보던 관리자 대시보드의 「신규 점포」도 같은 날 함께 나갔다.
 
-/* 몇 곳을 뽑나. 화면 셋(둘러보기 두 레일 · 관리자 대시보드 미리보기)이 같은 수를 써야 한다 */
+   **점포의 `createdAt` 자체는 그대로다** — 관리자 폼이 받고 저장한다 (fields.js 의
+   `created_at`). 없어진 것은 그 값으로 뽑아 만들던 목록이다. */
+
+/* 몇 곳을 뽑나. 화면 둘(둘러보기 인기 매장 레일 · 관리자 대시보드 미리보기)이 같은 수를 쓴다 */
 export const DISCOVER_PICK = 6;
 
 /* ── 뽑는 규칙을 함수로 둔다 (2026-08-20) ──────────────────────────────────
-   관리자 대시보드가 **상점가를 골라 같은 두 목록을 미리 본다.** 규칙을 그쪽에 한 벌 더
+   관리자 대시보드가 **상점가를 골라 같은 목록을 미리 본다.** 규칙을 그쪽에 한 벌 더
    적으면 정렬 기준이 언젠가 갈리고, 그때 관리자 화면과 시민 화면이 서로 다른 여섯 곳을
-   "신규 매장"이라 부른다. 어느 쪽이 틀렸는지는 화면만 보고 알 수 없다.
+   "인기 매장"이라 부른다. 어느 쪽이 틀렸는지는 화면만 보고 알 수 없다.
 
    `visible === false` 를 빼는 것은 **관리자에서 숨긴 점포가 이 목록에도 안 나온다**는
    뜻이다. 씨앗 데이터에는 `visible` 키가 아예 없어 시민 화면의 결과는 지금과 같다.
 
-   값이 없는 점포도 견딘다 — 관리자에서 새로 등록한 점포에는 조회수도 등록 시점도 없다.
-   그때 `agoMonths` 를 0(=이번 달 등록)으로 읽는 것은 실제로 맞는 해석이다. */
+   값이 없는 점포도 견딘다 — 관리자에서 고친 점포에 조회수가 없으면 0 으로 읽는다. */
 const viewsOf = s => Number(s.views || 0);
-
-/* 등록 시점을 읽는 두 함수. 둘 다 **관리자가 고친 값이 있으면 그것이 이긴다** (2026-08-20) —
-   그 한 줄이 없으면 관리자 폼에서 고쳐도 신규 매장 목록이 그대로여서 고친 것이 아무 일도
-   하지 않는다. 씨앗 점포에는 `createdAt` 이 없어 지금까지와 같이 `agoMonths` 로 떨어진다.
-
-   `agoOf`    기준월에서 뺀 **개월 수**. 카드에 적는 연월("2026.06 등록")을 만드는 데 쓴다.
-   `openedKey` 늘어놓는 **차례**. 일자까지 본다 (2026-08-25).
-
-   둘을 가른 이유는 **관리자의 「등록 일자」가 연월에서 일자가 되었기 때문**이다 (fields.js).
-   같은 달에 문을 연 가게가 여섯을 넘으면 개월 수만으로는 전부 같은 값이라, 신규 매장
-   여섯 자리를 차지하는 것이 사실상 거리로 정해졌다 — 담당자가 세울 수 없는 차례다.
-   일자를 보면 그 줄이 담당자 손에 들어온다. 적는 말은 그대로 연월이다: 문 연 날짜까지
-   읽을 이유는 없고, 일자는 차례를 정하는 데만 쓴다. */
-const agoOf = s => {
-  const m = String(s.createdAt || "").match(/^(\d{4})[-.](\d{1,2})/);
-  if (m) {
-    const months = MONTHS_AS_OF[0] * 12 + (MONTHS_AS_OF[1] - 1) - (Number(m[1]) * 12 + (Number(m[2]) - 1));
-    return Math.max(0, months);
-  }
-  return Number(s.agoMonths || 0);
-};
-
-/* 견줄 수 있는 "YYYY-MM-DD". 일자가 없으면 01 로 채운다 — 그러면 **같은 달에서 일자가
-   적힌 쪽이 늘 새 것**이 되는데, 그것이 맞는 해석이다: 담당자가 날짜를 적어 넣었다는 것은
-   그 가게의 자리를 세우겠다는 뜻이다. 씨앗 점포처럼 `createdAt` 이 아예 없으면 개월 수로
-   같은 모양의 열쇠를 만든다 */
-const openedKey = s => {
-  const m = String(s.createdAt || "").match(/^(\d{4})[-.](\d{1,2})(?:[-.](\d{1,2}))?/);
-  if (m) return `${m[1]}-${String(m[2]).padStart(2, "0")}-${String(m[3] || 1).padStart(2, "0")}`;
-  const t = MONTHS_AS_OF[0] * 12 + (MONTHS_AS_OF[1] - 1) - Number(s.agoMonths || 0);
-  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}-01`;
-};
-
-/* 화면에 적는 **일자**("2026.04.17"). 관리자 대시보드의 「등록 일자」 열이 쓴다
-   (2026-08-25, 사용자 요청 — 폼이 일자까지 받게 된 뒤로 그 옆의 표만 연월이었다).
-
-   위 `openedKey` 와 달리 **일자가 없으면 지어내지 않는다.** 저쪽은 차례를 정하는 열쇠라
-   빈자리를 01 로 메워야 견줄 수 있지만, 이쪽은 담당자가 읽는 값이다 — 적힌 적 없는 날짜를
-   화면에 적으면 그것이 원천의 값으로 읽힌다. 없으면 연월만 적는다 (아래 `openedDay || opened`).
-   관리자 화면에서는 표(`admin/data/sources.js`)가 모든 줄에 `createdAt` 을 채워 주므로
-   이 갈래로 떨어지지 않는다. */
-const openedDay = s => {
-  const m = String(s.createdAt || "").match(/^(\d{4})[-.](\d{1,2})[-.](\d{1,2})/);
-  return m ? `${m[1]}.${String(m[2]).padStart(2, "0")}.${String(m[3]).padStart(2, "0")}` : null;
-};
 
 export function discoverPicks(stores) {
   const live = (stores || []).filter(s => s.visible !== false);
@@ -323,25 +274,10 @@ export function discoverPicks(stores) {
       .sort((a, b) => viewsOf(b) - viewsOf(a))
       .slice(0, DISCOVER_PICK)
       .map((s, i) => ({ ...s, note: i === 0 ? "이번 주 조회 1위" : `조회 ${viewsOf(s).toLocaleString()}회` })),
-    /* 세 값이 나가고 읽는 쪽이 다르다.
-         opened     연월만 ("2026.06")        — 시민 카드가 문장을 만드는 재료
-         openedDay  일자까지 ("2026.06.14")   — 관리자 대시보드의 「등록 일자」 열
-         note       카드에 적히는 문장 ("2026.06 등록")
-       **시민 카드는 그대로 연월이다** — 문 연 날짜까지 읽을 이유가 없다. 일자는 차례를
-       정하는 데(openedKey)와 담당자가 값을 확인하는 자리에만 쓴다 */
-    fresh: [...live]
-      /* 최근이 앞 — 열쇠는 클수록 새 것이라 내림차순이다. 같은 날이면 가까운 순 */
-      .sort((a, b) => openedKey(b).localeCompare(openedKey(a)) || (a.dist || 0) - (b.dist || 0))
-      .slice(0, DISCOVER_PICK)
-      .map(s => {
-        const opened = openedMonth(agoOf(s));
-        return { ...s, opened, openedDay: openedDay(s) || opened, note: `${opened} 등록` };
-      }),
   };
 }
 
 export const POPULAR = discoverPicks(STORES).popular;
-export const NEW_STORES = discoverPicks(STORES).fresh;
 
 /* ── 골목 한바퀴 추천 코스 (U-DC-03) ─────────────────────────────────────────
    "반경 300~500m 내 매장을 묶은 코스". 300~500m 는 **내부 로직 값이며 사용자 필터가 아니다**
@@ -413,6 +349,7 @@ export const COURSES = COURSE_PLAN.map(({ pick, ...c }) => {
    `data/districts.js` 가 소유한다. 상점가 탭의 우리 축제 배너(U-FT-03)도 거기서
    `CURRENT_FESTIVAL` 로 가져온다 — 두 탭이 같은 축제를 다른 상태로 말하면 안 된다. */
 
+/* `newStores` 가 여기 있었다 (2026-08-25 삭제 — 위 인기 매장 머리말) */
 export const DUNJEON = { anchor: ANCHOR, district: DISTRICT, chips: CHIPS, stores: STORES,
-  popular: POPULAR, newStores: NEW_STORES, courses: COURSES };
+  popular: POPULAR, courses: COURSES };
 export default DUNJEON;

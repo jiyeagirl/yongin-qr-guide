@@ -1,11 +1,10 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, Cell, ConfirmDialog, Button, Select, Switch, Badge,
+  PageHeader, Toolbar, DataTable, Cell, Button, Select, Switch, Badge,
   Pagination, CategoryIcon, CATEGORY_LABELS, Notice, EMPTY_MARK, OnnuriBadge,
   CoordField, fixCoord,
 } from "../../design-systems/admin.js";
 import { KAKAO_APP_KEY } from "../../screens/main/config.js";
-import { CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
 import { STORE_ROWS } from "../data/sources.js";
 import { STORE_FIELDS, BIZ_MAJOR, DISTRICT_OPTIONS, deriveChip } from "../data/fields.js";
 import { useCollection } from "../data/store.js";
@@ -65,18 +64,23 @@ const DISTRICT_FILTER = [{ value: "", label: "전체 골목형 상점가" }].con
    같은 파일이 「노출 여부」와 「소속 골목형 상점가」의 빈자리도 함께 채운다 — 그 셋은 다
    **원천에 없는 값**이고, 화면마다 다르게 메우다가 목록과 폼이 갈렸다 (저쪽 머리말). */
 
+/* ── 이 화면은 **고치기만 한다** (2026-08-25 오후, 사용자 요청) ─────────────────
+   [점포 등록]과 [삭제]가 함께 없어졌다. 335곳은 **공공데이터를 구역 주소로 매칭한 결과**라
+   (fields.js 2-2 머리말) 가게가 새로 들어오고 나가는 일은 원천이 알려주는 일이지 담당자가
+   이 화면에서 만들고 지우는 일이 아니다. 담당자가 여기서 하는 일은 **틀린 값을 바로잡고**
+   (오류신고가 그 입구다) 문 닫은 가게를 **[노출 여부]로 내리는** 것이다 — 지우는 것과
+   달리 내린 줄은 다음 갱신에서도 그 자리에 남는다. */
 export function Stores({ onToast, focus }) {
-  const { rows, upsert, remove, patch, patchMany } = useCollection("stores", STORE_ROWS, null, "점포");
+  const { rows, upsert, patch, patchMany } = useCollection("stores", STORE_ROWS, null, "점포");
   const [major, setMajor] = React.useState("");
   const [onnuri, setOnnuri] = React.useState("");
   const [district, setDistrict] = React.useState("");
   const list0 = useListState([major, onnuri, district]);
 
+  /* `initial`(새 점포의 기본값)과 `onRemove` 가 여기 있었다 — 여는 자리가 없어졌다 */
   const ed = useRecordEditor({
     fieldsFor: () => STORE_FIELDS,
-    initial: () => ({ onnuri: false, onnuriType: [], visible: true, districtId: CURRENT_DISTRICT_ID }),
     onSave: values => upsert(values),
-    onRemove: remove,
     onToast, label: "점포",
     /* 가맹인데 종류가 없으면 저장이 막힌다 — 그 검사는 항목표에 있다 (fields.js 의
        `onnuriType` 은 ◐ 이고, 조건이 「가맹여부가 켜짐」이다) */
@@ -125,8 +129,18 @@ export function Stores({ onToast, focus }) {
     if (onnuri === "y" && !s.onnuri) return false;
     if (onnuri === "n" && s.onnuri) return false;
     if (!list0.term) return true;
-    /* 중분류(biz)도 훑는다. 표에는 안 적지만 담당자가 "노래방"으로 찾을 수 있어야 한다 */
-    return `${s.name} ${s.branch || ""} ${s.addr} ${s.biz || ""} ${s.bizS || ""}`.includes(list0.term);
+    /* ── **상호명만 본다** (2026-08-26, 사용자 요청) ──────────────────────────
+       「상호명 + 지점명 + 주소 + 중분류 + 소분류」 다섯을 한 문자열로 이어 담고 있었다.
+       중분류를 넣어 둔 근거는 「표에는 안 적지만 담당자가 "노래방"으로 찾을 수 있어야
+       한다」였는데, 그 일은 **바로 왼쪽 업종 고르개**가 한다. 겹치는 데서 그치지 않고
+       두 장치의 답이 다르다: 고르개는 대분류로 정확히 가르고 검색은 소분류 문자열을
+       부분 일치로 훑어서, 「카페」를 고른 결과와 「카페」를 친 결과가 서로 다른 목록이다.
+       담당자는 어느 쪽이 맞는지 알 수 없고, 335곳에서는 그 차이가 눈에 띄지도 않는다.
+
+       주소도 뺐다 — 소속 상점가 고르개가 그 일의 실질을 하고(점포의 소속 판정 자체가
+       도로명주소 매칭이다), 「둔전로」로 훑어 나오는 목록은 상점가 하나를 고른 것과
+       거의 같으면서 미묘하게 다르다. 이 화면에서 검색으로 찾는 것은 **가게 한 곳**이다. */
+    return s.name.includes(list0.term);
   }), [rows, list0.term, major, onnuri, district]);
 
   const paged = list0.paginate(filtered);
@@ -143,8 +157,8 @@ export function Stores({ onToast, focus }) {
           「입력 항목은 명세서 2-2 를 따릅니다」와 시민 화면 기준일 고지였는데, 둘 다
           이 화면에서 할 일을 돕는 말이 아니다 — 명세서 번호는 만드는 쪽의 사정이고,
           기준일은 [데이터 갱신 현황]이 다루는 값이라 여기서는 읽기만 하던 줄이었다. */}
-      <PageHeader title="점포 정보 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`}
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>점포 등록</Button>} />
+      {/* 머리에 [점포 등록]이 있었다 (2026-08-25 오후 삭제 — 아래 머리말) */}
+      <PageHeader title="점포 정보 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`} />
 
       <Toolbar actions={list0.selected.length ? (
         <>
@@ -158,7 +172,7 @@ export function Stores({ onToast, focus }) {
         <Select value={district} options={DISTRICT_FILTER} onChange={e => setDistrict(e.target.value)} />
         <Select value={major} options={MAJOR_OPTIONS} onChange={e => setMajor(e.target.value)} />
         <Select value={onnuri} options={ONNURI_OPTIONS} onChange={e => setOnnuri(e.target.value)} />
-        <ListSearch state={list0} placeholder="상호명, 주소, 업종 검색" />
+        <ListSearch state={list0} placeholder="상호명 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
@@ -257,11 +271,8 @@ export function Stores({ onToast, focus }) {
               <Switch checked={s.visible} aria-label={`${s.name} 노출 여부`}
                 onChange={() => patch(s.id, { visible: !s.visible }, s.name)} />
             ) },
-          { key: "manage", label: "관리", width: 96, align: "center",
-            render: s => (
-              <Button variant="ghost" size="sm" icon="trash-2"
-                onClick={() => ed.askRemove(s)} style={{ color: "var(--state-danger)" }}>삭제</Button>
-            ) },
+          /* 「관리」 열이 여기 있었다 — 안에 [삭제] 하나뿐이라 열째 없앴다
+             (2026-08-25 오후, 사용자 요청. 위 머리말) */
         ]} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
@@ -270,10 +281,9 @@ export function Stores({ onToast, focus }) {
 
       <EditorModal ed={ed} size="lg"
         /* 「점포 수정」에서 고쳤다 (2026-08-25, 사용자 요청) — 화면 이름이 「점포 정보
-           관리」라 창 제목도 같은 말로 받는다. 등록 쪽은 [점포 등록] 단추에서 열리므로
-           그 단추와 같은 말로 둔다 */
-        title={ed.draft && ed.draft.isNew ? "점포 등록" : "점포 정보 수정"}
-        description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}>
+           관리」라 창 제목도 같은 말로 받는다 */
+        title="점포 정보 수정"
+        description={ed.draft ? ed.draft.values.name : undefined}>
         {/* 값을 손보지 않고 그대로 넘긴다 (2026-08-25) — 전에는 여기서 `createdAt` 을
             끼워 넣었는데, 그러면 **화면에 보이는 값이 폼 안에는 없는** 상태가 된다.
             지금은 표가 이미 채워서 준다 (`data/sources.js`) */}
@@ -298,16 +308,16 @@ export function Stores({ onToast, focus }) {
                것이고, 고른 값이 그대로 남는 것은 당연한 쪽이다. */
             extra={
               <div style={{ gridColumn: "1 / -1" }}>
+                {/* 「삭제하지 말고」가 앞에 붙어 있었다 (2026-08-25 오후) — 지우는 자리가
+                    없어졌으므로 하지 말라고 할 것도 없다. 남는 것은 할 일 하나다 */}
                 <Notice tone="neutral" size="sm">
-                  폐업을 확인했다면 삭제하지 말고 [노출 여부]를 꺼 주세요.
+                  폐업을 확인했다면 [노출 여부]를 꺼 주세요.
                 </Notice>
               </div>
             } />
         ) : null}
       </EditorModal>
-
-      <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
-        description="점포를 삭제합니다." onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
+      {/* 삭제 확인 창이 여기 있었다 (2026-08-25 오후 삭제) */}
     </>
   );
 }

@@ -1,7 +1,7 @@
 import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Cell, Button, Select, Switch, Badge, Pagination,
-  ConfirmDialog, Notice, Repeater, EMPTY_MARK,
+  Notice, Repeater, EMPTY_MARK,
 } from "../../design-systems/admin.js";
 import { DISTRICTS, CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
 import { COURSE_ROWS, STORE_ROWS } from "../data/sources.js";
@@ -61,12 +61,22 @@ const DISTRICT_FILTER = [{ value: "", label: "전체 골목형 상점가" }].con
    이 가까운 순 넷을 잇는다). 하한만 적어 두면 셋짜리와 여섯짜리 코스가 섞여 저장되고,
    둘러보기 탭에서 코스 카드마다 길이가 달라진다.
 
-   그래서 이 수는 하한이 아니라 **정해진 수**다: 넷을 채우면 [점포 추가]가 없어지고
-   (`Repeater` 의 `maxRows`), 넷이 아니면 저장이 막힌다. */
+   그래서 이 수는 하한이 아니라 **틀**이다 (2026-08-25 오후, 사용자 요청): 빈 줄 넷이
+   처음부터 서 있고 [점포 추가]도 휴지통도 없다 (`Repeater` 의 `fixedRows`). 담당자가
+   하는 일은 넷을 고르는 것이지 **넷이라는 수를 손으로 맞추는 것**이 아니다. */
 const COURSE_STOPS = 4;
 
+/* 넷을 채워 연다 — 모자라면 빈 줄로, 넘치면 잘라서. 옛 자료나 서버가 다른 길이를 들고
+   와도 화면에서는 늘 넷이다. 자르는 쪽은 그 값을 화면이 보여주지 못한 채 저장하게 되므로
+   **저장할 때가 아니라 열 때** 한다 — 담당자가 무엇을 들고 저장하는지 보고 있어야 한다 */
+const stopsOfFour = stops => {
+  const out = (Array.isArray(stops) ? stops : []).slice(0, COURSE_STOPS);
+  while (out.length < COURSE_STOPS) out.push({ storeId: "" });
+  return out;
+};
+
 export function Courses({ onToast }) {
-  const { rows, upsert, remove, patch, patchMany } = useCollection("courses", COURSE_ROWS, null, "골목 한바퀴 코스");
+  const { rows, upsert, patch, patchMany } = useCollection("courses", COURSE_ROWS, null, "골목 한바퀴 코스");
   const [district, setDistrict] = React.useState("");
   const list0 = useListState([district]);
 
@@ -83,18 +93,22 @@ export function Courses({ onToast }) {
        [코스 등록]을 누른 것이므로, 빈 칸을 다시 고르게 할 이유가 없다.
        필터가 [전체]면 점포가 실제로 있는 상점가로 연다 (점포 관리의 새 점포와 같은 값) —
        목록의 첫 줄로 열면 고를 점포가 없는 상점가에서 시작할 수 있다 */
-    initial: () => ({ districtId: district || CURRENT_DISTRICT_ID, visible: true, stops: [] }),
+    initial: () => ({
+      districtId: district || CURRENT_DISTRICT_ID, visible: true,
+      /* 등록 창도 **빈 줄 넷으로 열린다** — [점포 추가]가 없으니 여기서 세워 두지 않으면
+         고를 자리 자체가 없다 */
+      stops: stopsOfFour([]),
+    }),
     onSave: values => upsert(values),
-    onRemove: remove,
+    /* `onRemove` 가 여기 있었다 (2026-08-25 오후) — [삭제]가 없어졌다 */
     onToast, label: "골목 한바퀴 코스",
-    /* 항목 하나만 봐서는 알 수 없는 검사 셋 */
+    /* 항목 하나만 봐서는 알 수 없는 검사 둘.
+       「넷인가」는 검사에서 빠졌다 (2026-08-25 오후) — 넷이 아닌 상태를 만들 길이 화면에
+       없어졌다. 빈 줄은 아래 `missingInRows` 가 「n번째 줄의 점포를 골라 주세요」로 잡는다 */
     extraValidate: v => {
       const stops = v.stops || [];
       const gone = missingInRows(COURSE_STOP_COLUMNS, stops);
       if (gone) return { stops: gone };
-      if (stops.length !== COURSE_STOPS) {
-        return { stops: `코스는 점포 ${COURSE_STOPS}곳으로 이루어집니다. 지금 ${stops.length}곳입니다.` };
-      }
       /* 같은 가게를 두 번 들르는 코스는 코스가 아니다. 넷 중 둘이 같으면 시민 화면의
          ①②③④ 중 두 자리에 같은 이름이 서고, 지도에서는 핀 하나에 순번 둘이 겹친다 */
       const seen = new Set();
@@ -109,6 +123,11 @@ export function Courses({ onToast }) {
       return {};
     },
   });
+
+  /* 수정 창도 늘 넷으로 연다 (위 stopsOfFour). 씨앗 자료는 전부 넷이지만, 넷이 아닌
+     코스가 어디선가 들어와도 담당자가 마주하는 것은 늘 같은 틀이어야 한다 — 줄을 더하고
+     빼는 단추가 없으므로 그때 고칠 길이 화면에 없다 */
+  const openEdit = row => ed.openEdit({ ...row, stops: stopsOfFour(row.stops) });
 
   const draft = ed.draft ? ed.draft.values : null;
 
@@ -136,7 +155,9 @@ export function Courses({ onToast }) {
   const filtered = rows.filter(c => {
     if (district && c.districtId !== district) return false;
     if (!list0.term) return true;
-    return `${c.name} ${c.desc || ""} ${DISTRICT_NAME[c.districtId] || ""}`.includes(list0.term);
+    /* **코스명만 본다** (2026-08-26, 사용자 요청). 소속 상점가는 왼쪽 고르개가 하고,
+       설명 줄까지 훑으면 이름과 한 글자도 겹치지 않는 코스가 목록에 남는다 */
+    return c.name.includes(list0.term);
   });
   const paged = list0.paginate(filtered);
 
@@ -174,14 +195,14 @@ export function Courses({ onToast }) {
         </>
       ) : null}>
         <Select value={district} options={DISTRICT_FILTER} onChange={e => setDistrict(e.target.value)} />
-        <ListSearch state={list0} placeholder="코스명, 설명, 골목형 상점가 검색" />
+        <ListSearch state={list0} placeholder="코스명 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
       <DataTable
         caption="등록된 골목 한바퀴 코스 목록"
         rows={paged.rows} rowKey="id"
-        onRowClick={ed.openEdit}
+        onRowClick={openEdit}
         selectable selected={list0.selected} onSelectedChange={list0.setSelected}
         /* 넷이 아니면 목록에서 바로 보여야 그 줄을 열어 채우게 된다 (좌표 없는 점포를
            표시하는 것과 같은 자리다). 옛 자료에는 넷이 아닌 코스가 있을 수 있다 —
@@ -207,11 +228,9 @@ export function Courses({ onToast }) {
               <Switch checked={c.visible} aria-label={`${c.name} 노출 여부`}
                 onChange={() => patch(c.id, { visible: !c.visible }, c.name)} />
             ) },
-          { key: "manage", label: "관리", width: 96, align: "center",
-            render: c => (
-              <Button variant="ghost" size="sm" icon="trash-2"
-                onClick={() => ed.askRemove(c)} style={{ color: "var(--state-danger)" }}>삭제</Button>
-            ) },
+          /* 「관리」 열이 여기 있었다 — 안에 [삭제] 하나뿐이라 열째 없앴다
+             (2026-08-25 오후, 사용자 요청). **[코스 등록]은 남는다** — 코스는 원천 자료가
+             아니라 담당자가 짜는 것이다. 내리는 일은 [노출 여부]가 한다 */
         ]} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
@@ -254,10 +273,10 @@ export function Courses({ onToast }) {
                   rows={draft.stops || []}
                   onChange={v => ed.set("stops", v)}
                   newRow={() => ({ storeId: "" })}
-                  /* 지울 때 「무엇을」에 해당하는 값이 이 목록에는 없다 — 칸이 점포 id
-                     하나뿐이라 그대로 적으면 「dj-004 을(를) 지울까요?」가 된다.
-                     `nameKey` 를 주지 않아 「n번째 줄」로 부르게 둔다 (Repeater 의 nameOf) */
-                  addLabel="점포 추가" maxRows={COURSE_STOPS} error={ed.errors.stops}
+                  /* 넷이 늘 서 있고 더하거나 지우지 않는다 — [점포 추가]도 휴지통도 없다.
+                     그래서 지울 때 이름을 부르던 `nameKey` 도, [추가] 단추 글자(`addLabel`)도
+                     여기서는 쓸 데가 없어졌다 */
+                  fixedRows={COURSE_STOPS} error={ed.errors.stops}
                   /* 한 줄로 줄였다 (2026-08-25 오후, 사용자 요청). 적혀 있던 나머지는
                      전부 **화면에 이미 서 있는 것**이다 — 순번은 줄마다 붙어 있고,
                      곳수는 머리의 「4건」이며, 구간 거리와 도보 시간은 이 화면에 없는
@@ -268,15 +287,8 @@ export function Courses({ onToast }) {
         ) : null}
       </EditorModal>
 
-      <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
-        description="골목 한바퀴 코스를 삭제합니다."
-        /* 기본 각주를 쓰지 않는다 — 코스에는 「폐업·폐쇄」가 없고, 지워도 **가게는 그대로**다.
-           그 사실을 적어야 「코스를 지우면 저 넷도 없어지나」를 묻지 않는다.
-           첫 문장은 다른 화면과 같다 (되돌릴 수 없다는 것이 가장 먼저 읽혀야 한다). */
-        footnote={"삭제한 항목은 복구할 수 없습니다. "
-          + "코스만 없어지고 코스에 골라 둔 점포는 그대로 남습니다. "
-          + "잠시 내려 두는 것이라면 삭제하지 말고 [노출 여부]를 해제해주세요."}
-        onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
+      {/* 삭제 확인 창이 여기 있었다 (2026-08-25 오후 삭제). 그 각주의 마지막 줄 —
+          「잠시 내려 두는 것이라면 [노출 여부]를 해제해주세요」 — 이 이제 유일한 길이다 */}
     </>
   );
 }

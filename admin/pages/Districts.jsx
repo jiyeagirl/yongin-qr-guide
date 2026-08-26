@@ -1,12 +1,12 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, Cell, ConfirmDialog, DELETE_NOTE, Button, Select, Pagination,
-  Badge, Switch, Icon,
+  PageHeader, Toolbar, DataTable, Cell, Button, Select, Pagination,
+  Badge, Switch,
 } from "../../design-systems/admin.js";
 import { GU_ORDER } from "../../screens/main/data/districts.js";
-import { DISTRICT_ROWS, STORE_ROWS, FESTIVAL_ROWS, QR_ROWS } from "../data/sources.js";
+import { DISTRICT_ROWS, STORE_ROWS } from "../data/sources.js";
 import { DISTRICT_FIELDS } from "../data/fields.js";
-import { useCollection, readCollection, removeRows } from "../data/store.js";
+import { useCollection, readCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
@@ -47,15 +47,26 @@ import { EditorModal } from "./EditorModal.jsx";
 
 const GU_OPTIONS = [{ value: "", label: "전체 구" }].concat(GU_ORDER.map(g => ({ value: g, label: g })));
 
-/* 등록 창에서 빼는 두 칸 (아래 `fieldsFor`) */
-const COUNT_KEYS = new Set(["storeCount", "onnuriCount"]);
+/* 등록 창에서 두 칸을 빼던 `COUNT_KEYS` 가 여기 있었다 (2026-08-25 오후) —
+   등록 창 자체가 없어졌다 */
 
 /* QR 원본을 관리자 쪽 모양으로 바꾸던 한 줄이 여기 있었다 (2026-08-25 에 `data/sources.js`
    로 옮겼다) — QrPoints.jsx 가 같은 줄을 따로 갖고 있었다. 원천 표를 관리자 쪽 모양으로
    맞추는 일은 화면이 아니라 자료가 할 일이고, **모듈 밖에서 한 번만** 만들어야 한다:
    렌더마다 새 배열이면 `readCollection` 이 매번 새로 겹친다. */
 
-/* ── 막지 않고, 함께 지운다 (2026-08-24, 사용자 요청으로 뒤집음) ──────────────
+/* ── 지우는 자리가 없어졌다 (2026-08-25 오후, 사용자 요청) ───────────────────
+   [골목형 상점가 등록]과 [삭제]가 함께 없어졌다. 32개소는 **지정 제도가 정하는 목록**이라
+   한 곳이 늘고 주는 일은 지정·해제의 결과이지 이 화면에서 만들고 지우는 일이 아니고,
+   지우면 거기 걸린 축제·QR 지점·점포가 통째로 따라갔다 — 되돌릴 수 없는 일 중 가장 큰
+   것이었다. 목록에서 내리는 일은 [노출 여부]가 그대로 한다.
+
+   그래서 아래 셋이 함께 나갔다: 연쇄 삭제(`removeWithLinked`), 함께 지워지는 것을 늘어놓던
+   확인 창, 그리고 그 목록을 만들던 `linkedOf`. 그 코드가 답하던 물음(「이 상점가에 무엇이
+   걸려 있나」)은 이제 각 화면의 소속 필터가 답한다.
+
+   ── 아래는 그 자리가 있던 동안의 기록이다 ────────────────────────────────────
+   ── 막지 않고, 함께 지운다 (2026-08-24, 사용자 요청으로 뒤집음) ──────────────
    전에는 진행 중 축제나 활성 QR 이 걸린 상점가를 **지우지 못하게 막았다**. 명세서 10장의
    "삭제를 차단한다"를 그대로 옮긴 것이었는데, 담당자 쪽에서 보면 막다른 길이었다 —
    상점가 하나를 정리하려면 축제 화면에서 축제를 지우고, QR 화면에서 지점을 지우고,
@@ -84,22 +95,10 @@ const COUNT_KEYS = new Set(["storeCount", "onnuriCount"]);
 
    함께 가는 것 셋의 성격이 다르므로 다이얼로그가 적는 방식도 다르다 —
    축제·QR 지점은 **이름으로**(많아야 한둘), 점포는 **곳수로**(둔전만 335곳이다). */
-function linkedOf(d, festivals, qrPoints, stores) {
-  return {
-    festivals: festivals.filter(f => f.districtId === d.id),
-    qr: qrPoints.filter(p => p.districtId === d.id),
-    /* 소속이 비어 있으면 둔전이라는 기본값은 **표가 이미 채워서 준다** (2026-08-25,
-       `data/sources.js`) — 더미 자료 335곳이 전부 그 상태라, 화면마다 메우다가
-       한 곳이라도 빠지면 아무것도 걸리지 않는다 */
-    stores: stores.filter(s => s.districtId === d.id),
-  };
-}
 
 export function Districts({ onToast }) {
-  const { rows, upsert, remove, patch, patchMany } = useCollection("districts", DISTRICT_ROWS, null, "골목형 상점가");
+  const { rows, upsert, patch, patchMany } = useCollection("districts", DISTRICT_ROWS, null, "골목형 상점가");
   const storeRows = readCollection("stores", STORE_ROWS);
-  const qrRows = readCollection("qr", QR_ROWS);
-  const festivalRows = readCollection("festivals", FESTIVAL_ROWS);
   const [gu, setGu] = React.useState("");
   const list0 = useListState([gu]);
 
@@ -129,15 +128,9 @@ export function Districts({ onToast }) {
   };
 
   const ed = useRecordEditor({
-    /* ── 등록 창에는 점포수 두 칸이 없다 (2026-08-25 오후, 사용자 요청) ──────────
-       새 상점가에는 셀 점포가 없어 답이 늘 0 이다. 고칠 수 없는 0 을 두 칸이나 세워
-       두면 담당자는 그것을 「채워야 하는데 채워지지 않는 칸」으로 읽고 채울 방법을
-       찾는다 — 없는 방법이다. 수정 창에서는 센 값이 ⚙ 로 서 있다.
-       새 줄인지는 `id` 로 안다: 식별자는 저장할 때 붙는다 (data/store.js 의 upsert). */
-    fieldsFor: v => (v && v.id ? DISTRICT_FIELDS : DISTRICT_FIELDS.filter(f => !COUNT_KEYS.has(f.key))),
-    /* 레코드에는 두 수가 0 으로 들어간다 — 목록의 「점포수」 열이 셀 것이 없을 때
-       읽는 값이라(위 countOf), 없으면 그 자리가 빈 칸이 된다 */
-    initial: () => ({ gu: GU_ORDER[0], visible: true, stores: 0, onnuri: 0 }),
+    /* 등록 창이 없어지면서 점포수 두 칸을 빼던 갈래도 함께 없어졌다 (2026-08-25 오후) —
+       이 폼은 늘 수정 창이고, 두 칸은 늘 ⚙ 로 서 있다 */
+    fieldsFor: () => DISTRICT_FIELDS,
     /* 폼의 두 칸(`storeCount` · `onnuriCount`)은 **보여주기만 하는 값**이라 저장할 때
        버린다. 레코드가 갖는 `stores` · `onnuri` 는 열 때 들고 온 그대로 지나간다 —
        점포 자료가 없는 31곳의 게시값이 그 자리에 있다.
@@ -147,8 +140,8 @@ export function Districts({ onToast }) {
     /* 「온누리 가맹 점포수가 점포수보다 많을 수 없습니다」 검사가 여기 있었다
        (2026-08-25 오후 삭제) — 두 수를 따로 받을 때만 생기는 어긋남이고, 세는 쪽에서는
        가맹이 점포의 부분집합인 것이 셈 자체로 보장된다 */
-    /* 상점가 하나가 아니라 거기 걸린 것까지 함께 지운다 (아래 removeWithLinked) */
-    onRemove: (id, name) => removeWithLinked(id, name),
+    /* `initial`(새 상점가의 기본값)과 `onRemove`(연쇄 삭제)가 여기 있었다 —
+       여는 자리가 둘 다 없어졌다 (머리말) */
     onToast, label: "골목형 상점가",
   });
 
@@ -163,32 +156,18 @@ export function Districts({ onToast }) {
   const filtered = rows.filter(d => {
     if (gu && d.gu !== gu) return false;
     if (!list0.term) return true;
-    return `${d.name} ${d.gu} ${d.area} ${d.addr}`.includes(list0.term);
+    /* **이름만 본다** (2026-08-26, 사용자 요청). 「이름 + 구 + 소재지 + 주소」 넉 줄을
+       한 문자열로 이어 담고 있었는데, 그중 구는 **바로 왼쪽 고르개가 하는 일**이고
+       (「처인구」를 치면 고르개를 쓴 것과 같은 결과가 나온다) 소재지·주소는 서로 겹치는
+       값이다. 검색으로 걸리는 범위가 화면의 다른 장치와 겹치면 담당자는 같은 일을 두
+       가지 방법으로 하게 되고, 그때 두 결과가 미묘하게 다르면(고르개는 정확히, 검색은
+       부분 문자열로) 어느 쪽이 맞는지 알 수 없다. 여기서 찾는 것은 상점가 한 곳이다. */
+    return d.name.includes(list0.term);
   });
   const paged = list0.paginate(filtered);
 
-  /* 지금 이 상점가에 걸려 있는 것들 — 다이얼로그가 늘어놓고, 확인하면 함께 지운다 */
-  const linked = ed.pending ? linkedOf(ed.pending, festivalRows, qrRows, storeRows) : null;
-
-  /* ── 함께 지운다 ─────────────────────────────────────────────────────────
-     `useRecordEditor` 의 onRemove 가 상점가 하나를 지우고, 여기서 걸린 것들을 마저 지운다.
-     컬렉션을 넘나드는 삭제라 훅(useCollection)이 아니라 store.js 의 removeRows 를 직접
-     부른다 — 이 화면이 축제·QR·점포 컬렉션을 통째로 세울 이유가 없다 (그쪽 머리말).
-     **여럿을 한 번에 넘기는 것이 중요하다** — 점포 335건을 한 건씩 지우면 이력이 그것만으로
-     가득 찬다 (store.js 의 removeRows 머리말). 이력에는 상점가 이름을 적어 둔다:
-     「일괄 삭제 · 점포 · 둔전 골목형상점가 삭제」가 「335건」보다 나중에 읽힌다.
-
-     함께 지운 것을 적어 두던 `linkRemoval` 이 여기 있었다 (2026-08-24 삭제) — 그것은
-     **되돌릴 때 무엇을 함께 되살릴지** 정하는 값이었고, 되돌리는 자리가 없어졌다. */
-  const removeWithLinked = (id, name) => {
-    const d = rows.find(x => x.id === id);
-    remove(id, name);
-    if (!d) return;
-    const l = linkedOf(d, festivalRows, qrRows, storeRows);
-    removeRows("festivals", l.festivals, "축제", `${d.name} 삭제`);
-    removeRows("qr", l.qr, "QR 지점", `${d.name} 삭제`);
-    removeRows("stores", l.stores, "점포", `${d.name} 삭제`);
-  };
+  /* 연쇄 삭제(`removeWithLinked`)와 그 목록(`linked`)이 여기 있었다 (2026-08-25 오후 삭제 —
+     머리말). 축제·QR 지점·점포를 한 번에 지우던 자리다 */
 
   /* ── 고르기와 일괄 처리 (2026-08-24 추가, 사용자 요청) ─────────────────────
      점포·공공시설에만 있던 것을 목록 화면 전부로 넓혔다. **삭제는 일괄로 두지 않는다** —
@@ -202,8 +181,8 @@ export function Districts({ onToast }) {
 
   return (
     <>
-      <PageHeader title="골목형 상점가 정보 관리" count={`${filtered.length}곳`}
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>골목형 상점가 등록</Button>} />
+      {/* 머리에 [골목형 상점가 등록]이 있었다 (2026-08-25 오후 삭제 — 머리말) */}
+      <PageHeader title="골목형 상점가 정보 관리" count={`${filtered.length}곳`} />
 
       <Toolbar actions={list0.selected.length ? (
         <>
@@ -215,7 +194,7 @@ export function Districts({ onToast }) {
         </>
       ) : null}>
         <Select value={gu} options={GU_OPTIONS} onChange={e => setGu(e.target.value)} />
-        <ListSearch state={list0} placeholder="골목형 상점가명, 소재지 검색" />
+        <ListSearch state={list0} placeholder="골목형 상점가명 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
@@ -265,11 +244,8 @@ export function Districts({ onToast }) {
               <Switch checked={d.visible} aria-label={`${d.name} 노출 여부`}
                 onChange={() => patch(d.id, { visible: !d.visible }, d.name)} />
             ) },
-          { key: "manage", label: "관리", width: 96, align: "center",
-            render: d => (
-              <Button variant="ghost" size="sm" icon="trash-2"
-                onClick={() => ed.askRemove(d)} style={{ color: "var(--state-danger)" }}>삭제</Button>
-            ) },
+          /* 「관리」 열이 여기 있었다 — 안에 [삭제] 하나뿐이라 열째 없앴다
+             (2026-08-25 오후, 사용자 요청. 머리말) */
         ]} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
@@ -282,8 +258,8 @@ export function Districts({ onToast }) {
           점포수가 읽기 전용이라는 사실은 열 머리말의 「노출 상태 기준」이 이미 말한다. */}
 
       <EditorModal ed={ed} size="lg"
-        title={ed.draft && ed.draft.isNew ? "골목형 상점가 등록" : "골목형 상점가 수정"}
-        description={ed.draft && !ed.draft.isNew ? ed.draft.values.name : undefined}>
+        title="골목형 상점가 수정"
+        description={ed.draft ? ed.draft.values.name : undefined}>
         {/* ── 「상권센터 링크 미리보기」를 뺐다 (2026-08-24) ────────────────────
              폼 아래에 조립된 주소를 글자로 적어 보여주던 자리다. 그 칸이 **번호**를 받던
              때에는 필요했다 — 담당자가 넣은 `114` 가 어떤 주소가 되는지는 화면이
@@ -298,65 +274,9 @@ export function Districts({ onToast }) {
         ) : null}
       </EditorModal>
 
-      {/* ── 함께 지워지는 것을 먼저 보여준다 (2026-08-24) ─────────────────────
-             전에는 여기 오기 전에 「삭제할 수 없습니다」 창이 막았다 (위 linkedOf 주석).
-             이제 막지 않는 대신 **무엇이 함께 가는지**를 적는다. 적는 방식이 둘로 갈린다:
-
-               축제 · QR 지점   **이름으로.** "QR 지점 2곳"은 몇 건인지만 알려주고 정작
-                                그것이 무엇인지는 다른 화면에 가서 확인하게 만든다.
-                                길어질 일도 없다 — 상점가 하나에 많아야 한둘이다
-               점포             **곳수로.** 둔전만 335곳이라 이름을 늘어놓으면 확인 창이
-                                아니라 목록이 된다. 여기서 알아야 하는 것도 어느 가게인지가
-                                아니라 **이만큼이 함께 간다**는 크기다
-
-             QR 지점에는 빠져나갈 길을 함께 적는다 — 안내판은 현장에 그대로 붙어 있으므로
-             지우는 것이 늘 맞는 답은 아니다 (QrPoints.jsx 머리말). */}
-      <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
-        description="골목형 상점가를 삭제합니다."
-        footnote={DELETE_NOTE}
-        onClose={ed.cancelRemove} onConfirm={ed.confirmRemove}>
-        {linked && (linked.festivals.length || linked.qr.length || linked.stores.length) ? (
-          <div style={{ marginTop: "var(--space-3)", padding: "var(--space-3) var(--space-4)",
-            background: "var(--surface-sunken)", borderRadius: "var(--radius-md)" }}>
-            <p style={{ fontSize: "var(--fs-label)", fontWeight: "var(--fw-bold)",
-              color: "var(--text-heading)", lineHeight: 1.5 }}>
-              연결된 아래 항목도 함께 삭제됩니다
-            </p>
-            <ul style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-              {linked.festivals.map(f => (
-                <li key={f.id} style={{ display: "flex", alignItems: "center", gap: 6,
-                  fontSize: "var(--fs-label)", color: "var(--text-body)", lineHeight: 1.5 }}>
-                  <Icon name="party-popper" size={14} color="var(--text-muted)" />
-                  축제 · {f.name}
-                </li>
-              ))}
-              {linked.qr.map(p => (
-                <li key={p.id} style={{ display: "flex", alignItems: "center", gap: 6,
-                  fontSize: "var(--fs-label)", color: "var(--text-body)", lineHeight: 1.5 }}>
-                  <Icon name="qr-code" size={14} color="var(--text-muted)" />
-                  QR 지점 · {p.name || p.code}
-                  {p.active === false ? <Badge tone="neutral" size="sm">비활성</Badge> : null}
-                </li>
-              ))}
-              {linked.stores.length ? (
-                <li style={{ display: "flex", alignItems: "center", gap: 6,
-                  fontSize: "var(--fs-label)", color: "var(--text-body)", lineHeight: 1.5 }}>
-                  <Icon name="store" size={14} color="var(--text-muted)" />
-                  점포 · {linked.stores.length.toLocaleString("ko-KR")}곳
-                </li>
-              ) : null}
-            </ul>
-            {/* 여기 두 줄이 차례로 있다가 없어졌다.
-                「되돌릴 때도 함께 돌아옵니다」 (2026-08-24) — 되돌리는 자리가 없어졌다.
-                「안내판은 현장에 그대로 남습니다 · [QR 지점 관리]에서 소속을 먼저 옮겨
-                주세요」 (2026-08-25, 사용자 요청) — 이 상자가 하는 일은 **함께 지워지는
-                것을 보여주는 것**이고, 위 목록이 QR 지점을 이름으로 이미 적고 있다.
-                옮기는 방법까지 적으면 지울지 말지를 정하는 자리에서 다른 화면의 절차를
-                읽게 된다. 안내판이 현장에 남는다는 사실은 QR 지점 관리의 삭제 확인 창이
-                그 일을 하는 자리에서 적는다 (QrPoints.jsx 의 DELETE_NOTE_QR). */}
-          </div>
-        ) : null}
-      </ConfirmDialog>
+      {/* 함께 지워지는 것을 이름과 곳수로 늘어놓던 삭제 확인 창이 여기 있었다
+          (2026-08-25 오후 삭제 — 머리말). 상점가를 지우면 축제·QR 지점·점포가 따라가던
+          자리다: 지우는 길이 없어지면서 그 앞에 세워 두던 안전장치도 함께 나갔다 */}
     </>
   );
 }

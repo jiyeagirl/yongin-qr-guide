@@ -1,9 +1,10 @@
 import React from "react";
 import {
-  PageHeader, Toolbar, DataTable, Cell, Button, Select, Switch, Badge, Pagination, ConfirmDialog,
+  PageHeader, Toolbar, DataTable, Cell, Button, Select, Switch, Badge, Pagination,
   FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, CoordField, fixCoord, EMPTY_MARK,
 } from "../../design-systems/admin.js";
 import { facilityName } from "../../screens/main/data/facilities.js";
+import { GU_ORDER, guOf } from "../../screens/main/data/districts.js";
 import { FACILITY_ROWS } from "../data/sources.js";
 import { KAKAO_APP_KEY } from "../../screens/main/config.js";
 import { FACILITY_FIELDS } from "../data/fields.js";
@@ -59,6 +60,19 @@ import { EditorModal } from "./EditorModal.jsx";
 const TYPE_OPTIONS = [{ value: "", label: "전체 유형" }]
   .concat(FACILITY_TYPES.map(t => ({ value: t, label: FACILITY_LABELS[t] })));
 
+/* ── 소속 구 고르개 (2026-08-26 신설, 사용자 요청) ──────────────────────────────
+   유형 하나로는 목록이 좁혀지지 않는다. 지금 더미가 18곳이라 티가 나지 않을 뿐,
+   공공데이터가 들어오면 AED 하나만으로도 시 전역에서 수백 건이고 그때 담당자에게
+   남는 좁히기 수단은 이름 검색뿐이다 — **찾는 이름을 이미 알 때만 쓸 수 있는 수단**이라,
+   「우리 구 화장실을 훑어보려는」 일이 통째로 막힌다.
+
+   값은 `GU_ORDER` 셋을 그대로 세운다. 자료에 있는 구만 세우지 않는 이유는 상점가
+   화면과 같아야 하기 때문이다 — 같은 고르개가 화면마다 다른 길이면 「우리 구가
+   없어졌다」로 읽힌다. 지금 더미는 전부 처인구라 나머지 둘은 0건이 나온다.
+
+   구는 시설의 항목이 아니라 **주소에서 읽는 값**이다 (districts.js 의 `guOf`). */
+const GU_OPTIONS = [{ value: "", label: "전체 구" }].concat(GU_ORDER.map(g => ({ value: g, label: g })));
+
 /* 목록의 "주요 항목" 열에 무엇을 적을지. 유형마다 담당자가 가장 먼저 확인하는 값이 다르다 —
    화장실은 칸수가 아니라 **개방시간**이다(잠겨 있으면 칸수는 소용없다), 대피소는 수용 인원이다. */
 function summaryOf(f) {
@@ -89,18 +103,26 @@ function derive(row) {
   return { ...row, name: facilityName(row) };
 }
 
+/* ── 이 화면은 **고치기만 한다** (2026-08-25 오후, 사용자 요청) ─────────────────
+   [시설 등록]과 [삭제]가 함께 없어졌다. 공공시설 넷은 **공공데이터에서 들어오는 자료**라
+   (fields.js 3장의 머리말) 한 곳이 새로 생기거나 없어지는 일은 원천이 알려주는 일이지
+   담당자가 이 화면에서 만들고 지우는 일이 아니다. 담당자가 여기서 하는 일은 **틀린 값을
+   바로잡고**(오류신고가 그 입구다) 잘못 들어온 줄을 **[노출 여부]로 내리는** 것이다.
+
+   내리는 것과 지우는 것의 차이가 요점이다 — 숨긴 줄은 원천이 다음에 갱신할 때 그 자리에
+   그대로 있고, 지운 줄은 다음 갱신에서 **되살아난다**(또는 영영 사라진다). 어느 쪽이든
+   담당자가 한 일이 남지 않는다. 점포·골목형 상점가도 같은 이유로 함께 닫혔다. */
 export function Facilities({ onToast }) {
-  const { rows, upsert, remove, patch, patchMany } = useCollection("facilities", FACILITY_ROWS, derive, "공공시설");
+  const { rows, upsert, patch, patchMany } = useCollection("facilities", FACILITY_ROWS, derive, "공공시설");
   const [type, setType] = React.useState("");
-  const list0 = useListState([type]);
+  const [gu, setGu] = React.useState("");
+  const list0 = useListState([type, gu]);
 
   const fieldsFor = React.useCallback(v => FACILITY_FIELDS[v.type] || FACILITY_FIELDS.aed, []);
+  /* `initial`(새 시설의 유형 기본값)과 `onRemove` 가 여기 있었다 — 여는 자리가 없어졌다 */
   const ed = useRecordEditor({
     fieldsFor,
-    /* 유형을 미리 골라 둔다 — 비워두면 폼이 어떤 항목을 보일지 정하지 못한다 */
-    initial: () => ({ type: "aed", visible: true }),
     onSave: values => upsert(values),
-    onRemove: remove,
     onToast, label: "공공시설",
   });
 
@@ -108,8 +130,19 @@ export function Facilities({ onToast }) {
      되돌리는 자리가 없어졌다 (`data/store.js` 머리말). 이 줄은 다시 유형만 고른다. */
   const filtered = rows.filter(f => {
     if (type && f.type !== type) return false;
+    if (gu && guOf(f.addr) !== gu) return false;
     if (!list0.term) return true;
-    return `${f.name} ${f.addr} ${f.place || ""} ${f.hours || ""}`.includes(list0.term);
+    /* ── **명칭만 본다** (2026-08-26, 사용자 요청) ────────────────────────────
+       「명칭 + 주소 + 설치 위치 + 운영시간」 넷을 한 문자열로 이어 담고 있었다.
+       운영시간까지 걸리는 검색은 「09」를 친 담당자에게 아홉 시에 여는 시설을 전부
+       내놓는다 — 이름을 찾으려던 사람에게 그 목록은 고장으로 보인다. 주소는 이제
+       왼쪽 구 고르개가 그 일의 실질을 하고, 설치 위치는 표에서 「주요 항목」 열이
+       적기는 하지만 **그 글자로 시설을 찾아오는 일은 없다**(「1층 로비」로 찾는
+       담당자는 없다).
+
+       AED·대피소는 명칭이 원천에 없어 주소에서 만든 이름을 쓰므로(`facilityName` —
+       「둔전로 42 AED」) 도로명으로 찾는 길은 그 이름 안에 그대로 남는다. */
+    return f.name.includes(list0.term);
   });
   const paged = list0.paginate(filtered);
 
@@ -122,19 +155,9 @@ export function Facilities({ onToast }) {
     list0.setSelected([]);
   };
 
-  /* 등록 다이얼로그에서만 유형을 고른다. 명세서 항목이 아니라 **어느 표를 쓸지**를
-     정하는 선택이라, 항목표(RecordForm) 밖에 따로 세운다 */
-  const typePicker = ed.draft && ed.draft.isNew ? (
-    <div style={{ gridColumn: "1 / -1", paddingBottom: "var(--space-4)",
-      borderBottom: "var(--stroke-hairline) solid var(--border-default)" }}>
-      <Select label="시설 유형" value={ed.draft.values.type}
-        options={FACILITY_TYPES.map(t => ({ value: t, label: FACILITY_LABELS[t] }))}
-        onChange={e => ed.set("type", e.target.value)} />
-      <p style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.5 }}>
-        유형에 따라 입력 항목이 달라지며, 등록 후에는 변경할 수 없습니다.
-      </p>
-    </div>
-  ) : null;
+  /* 등록 다이얼로그에서 유형을 고르던 고르개가 여기 있었다 (2026-08-25 오후 삭제) —
+     등록 창이 없어지면서 그 고르개가 설 자리도 없어졌다. 수정 창에서는 처음부터 고를 수
+     없었다(유형이 곧 어느 항목표를 쓰느냐라, 바꾸면 채워 둔 값이 갈 곳을 잃는다) */
 
   return (
     <>
@@ -142,8 +165,8 @@ export function Facilities({ onToast }) {
           시민 화면 기준일 고지가 적혀 있었다. 기준일은 [데이터 갱신 현황]이 보여주는
           값이고, 다루는 네 유형은 아래 고르개가 늘어놓는다.
           유형 탭 줄이 여기 있었다 (2026-08-24 삭제) — 필터 줄로 내려갔다. TYPE_OPTIONS 머리말 */}
-      <PageHeader title="공공시설 정보 관리" count={`${filtered.length}곳`}
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>시설 등록</Button>} />
+      {/* 머리에 [시설 등록]이 있었다 (2026-08-25 오후 삭제 — 위 머리말) */}
+      <PageHeader title="공공시설 정보 관리" count={`${filtered.length}곳`} />
 
       <Toolbar actions={list0.selected.length ? (
         <>
@@ -154,9 +177,13 @@ export function Facilities({ onToast }) {
           <Button variant="outline" size="sm" icon="eye-off" onClick={() => bulkVisible(false)}>숨김</Button>
         </>
       ) : null}>
-        {/* 검색창 **왼쪽**이다 — 점포·축제·QR 지점의 고르개가 서는 자리와 같다 */}
+        {/* 검색창 **왼쪽**이다 — 점포·축제·QR 지점의 고르개가 서는 자리와 같다.
+            **구가 유형보다 앞이다** (2026-08-26): 점포 줄이 「소속 상점가 → 업종」인
+            것과 같은 차례다. 넓은 데서 좁은 데로 — 어디를 볼지가 먼저이고 무엇을
+            볼지가 그다음이다 */}
+        <Select value={gu} options={GU_OPTIONS} onChange={e => setGu(e.target.value)} />
         <Select value={type} options={TYPE_OPTIONS} onChange={e => setType(e.target.value)} />
-        <ListSearch state={list0} placeholder="명칭, 주소, 설치 위치 검색" />
+        <ListSearch state={list0} placeholder="명칭 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
@@ -192,11 +219,8 @@ export function Facilities({ onToast }) {
               <Switch checked={f.visible} aria-label={`${f.name} 노출 여부`}
                 onChange={() => patch(f.id, { visible: !f.visible }, f.name)} />
             ) },
-          { key: "manage", label: "관리", width: 96, align: "center",
-            render: f => (
-              <Button variant="ghost" size="sm" icon="trash-2"
-                onClick={() => ed.askRemove(f)} style={{ color: "var(--state-danger)" }}>삭제</Button>
-            ) },
+          /* 「관리」 열이 여기 있었다 — 안에 [삭제] 하나뿐이라 열째 없앴다
+             (2026-08-25 오후, 사용자 요청. 위 머리말) */
         ]} />
 
       <div style={{ marginTop: "var(--space-5)" }}>
@@ -204,12 +228,12 @@ export function Facilities({ onToast }) {
       </div>
 
       <EditorModal ed={ed} size="lg"
-        title={ed.draft && ed.draft.isNew ? "공공시설 등록" : "공공시설 수정"}
-        description={ed.draft && !ed.draft.isNew
+        title="공공시설 수정"
+        description={ed.draft
           ? `${FACILITY_LABELS[ed.draft.values.type] || ""} · ${ed.draft.values.name || ""}` : undefined}>
         {ed.draft ? (
           <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors}
-            onChange={ed.set} before={typePicker}
+            onChange={ed.set}
             /* 주소 검색이 좌표를 함께 돌려준다 (V-02 · 입력 원칙 3번).
                AED·대피소는 명칭도 여기서 채운다 — 다만 **손으로 고친 이름은 덮지 않는다.**
                지금 이름이 비었거나 옛 주소에서 나온 그 값 그대로일 때만 다시 만든다. */
@@ -230,9 +254,7 @@ export function Facilities({ onToast }) {
             }} />
         ) : null}
       </EditorModal>
-
-      <ConfirmDialog open={!!ed.pending} name={ed.pending && ed.pending.name}
-        description="시설을 삭제합니다." onClose={ed.cancelRemove} onConfirm={ed.confirmRemove} />
+      {/* 삭제 확인 창이 여기 있었다 (2026-08-25 오후 삭제 — 지우는 자리가 없어졌다) */}
     </>
   );
 }

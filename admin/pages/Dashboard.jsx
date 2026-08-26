@@ -4,18 +4,18 @@ import {
   Select, CategoryIcon, CATEGORY_LABELS, OnnuriBadge,
 } from "../../design-systems/admin.js";
 /* 여기 `TAB_SHARE` 가 있었다 — 그 카드가 나가면서 함께 뺐다 (2026-08-24).
-   값 자체는 stats.js 에 그대로 있다 */
+   `SCANS_BY_POINT` · `API_USED_TODAY` 도 2026-08-25 오후에 함께 나갔다 (아래 머리말).
+   값 자체는 셋 다 stats.js 에 그대로 있다 */
 import {
   PERIODS, DEFAULT_PERIOD, statsFor, TOTAL_SCANS, FACILITY_SHARE,
-  SCANS_BY_POINT, API_USED_TODAY,
 } from "../data/stats.js";
 import { REPORTS } from "../data/reports.js";
 /* `QR_POINTS` 를 여기서 읽었다 — 「설치 미완료 QR」 배지가 나가면서 함께 빠졌다
-   (2026-08-24). 아래 지점별 스캔 표는 로그 통계(`SCANS_BY_POINT`)를 쓴다 */
+   (2026-08-24). 지점별 스캔 표가 쓰던 `SCANS_BY_POINT` 도 이제 없다 */
 import { discoverPicks, DISCOVER_PICK } from "../../screens/main/data/dunjeon.js";
 import { CURRENT_DISTRICT_ID, GU_ORDER } from "../../screens/main/data/districts.js";
 import { STORE_ROWS, FACILITY_ROWS, DISTRICT_ROWS } from "../data/sources.js";
-import { QUOTA_DEFAULTS } from "../data/settings.js";
+/* `QUOTA_DEFAULTS`(하루 한도 · 경고 임계치)를 읽었다 — API 사용량 카드와 함께 나갔다 */
 import { readCollection } from "../data/store.js";
 
 /* M02 대시보드 (명세서 6장).
@@ -156,7 +156,7 @@ export function Dashboard({ onNavigate }) {
        될 때까지 담당자가 **일부러** 꺼둔 것이다. 둘 다 지금 손대야 할 일이 아닌데
        배지는 「밀린 일 n건」이라고 말하고 있었다.
 
-       0 이 되지도 않는다. 지점 셋 가운데 `dunjeon-03`(설치완료 · 활성 꺼짐)이 늘 걸려
+       0 이 되지도 않는다. 지점 셋 가운데 `qr-003`(설치완료 · 활성 꺼짐)이 늘 걸려
        「1」이 붙박이로 떠 있었다 — 그 지점은 S11-A 를 검수하려고 일부러 그렇게 둔 것이라
        끄면 검수할 화면이 없어진다. **없어지지 않는 배지는 읽히지 않고**, 옆의 「좌표 누락
        점포」가 진짜로 떴을 때 그것까지 같이 묻힌다.
@@ -195,19 +195,21 @@ export function Dashboard({ onNavigate }) {
         || a.name.localeCompare(b.name, "ko"))
       .map(d => {
         const cnt = (storesByDistrict[d.id] || []).filter(s => s.visible).length;
-        return { value: d.id, label: `${d.gu} · ${d.name} ${cnt ? `(점포 ${n(cnt)}곳)` : "(점포 자료 없음)"}` };
+        /* ── 구와 이름 사이가 **줄표**다 (2026-08-26, 사용자 요청. 그전에는 가운뎃점) ──
+           이 화면의 가운뎃점은 **나란한 두 값**을 잇는 부호다 (「음식 · 카페」, 「4~20자 ·
+           영문 소문자+숫자」). 그런데 구와 상점가는 나란하지 않다 — 상점가가 그 구 **안에**
+           있다. 「처인구 · 둔전골목형상점가」는 둘을 같은 자리에 놓아, 한 줄에서 어느 쪽이
+           고르는 대상인지가 흐려진다. 줄표는 앞이 뒤를 한정하는 부호라 그 관계를 그대로
+           적는다 — 「처인구 - 둔전골목형상점가 (점포 335곳)」. */
+        return { value: d.id, label: `${d.gu} - ${d.name} ${cnt ? `(점포 ${n(cnt)}곳)` : "(점포 자료 없음)"}` };
       }), [districtRows, storesByDistrict]);
 
   const district = districtRows.find(d => d.id === districtId) || null;
   const districtStores = storesByDistrict[districtId] || [];
   const picks = discoverPicks(districtStores);
 
-  /* 한도와 경고 임계치는 화면에서 정하지 않는다 — 카카오 쪽 계약과 서버가 정하는 값이라
-     관리자 화면의 [환경 설정]에서 쿼터 구획을 뺐다 (2026-08-20). 여기서는 읽기만 한다. */
-  const limit = Number(QUOTA_DEFAULTS.dailyQuota) || 1;
-  const warnAt = Number(QUOTA_DEFAULTS.warnThresholdPct) || 80;
-  const usedPct = Math.round(API_USED_TODAY / limit * 100);
-  const overWarn = usedPct >= warnAt;
+  /* API 사용량 막대가 쓰던 값 넷(한도 · 경고 임계치 · 사용률 · 초과 여부)이 여기 있었다
+     (2026-08-25 오후 삭제 — 아래 그 자리의 주석) */
 
   return (
     <>
@@ -251,7 +253,11 @@ export function Dashboard({ onNavigate }) {
         {/* 견주는 기간의 이름은 **표가 갖는다** (`PERIODS` 의 `vs`, 2026-08-25) — 여기서
             「직전 」을 앞에 붙여 지어내던 것을 걷어냈다. 그 방식으로는 「직전 오늘 대비」가
             나오고, 「직전 최근 7일」은 「최근」이 두 기간에 걸린다 (그쪽 머리말) */}
-        <StatTile label={`${s.period.label} 스캔`} value={n(s.scans)} unit="회" icon="scan-line"
+        {/* **「QR」을 넣어 앞 카드와 이름을 맞춘다** (2026-08-26, 사용자 요청) — 왼쪽이
+            「누적 QR 스캔」인데 이쪽만 「최근 7일 스캔」이었다. 같은 것을 기간만 달리 센
+            수인데 이름이 갈리면 담당자는 **다른 것을 세는 두 카드**로 읽는다 (이 화면에
+            스캔이라 부를 만한 다른 값이 없다는 것은 만든 쪽만 안다) */}
+        <StatTile label={`${s.period.label} QR 스캔`} value={n(s.scans)} unit="회" icon="scan-line"
           delta={s.delta == null ? undefined : `${s.period.vs} 대비 ${s.delta > 0 ? "+" : ""}${s.delta}%`}
           deltaTone={s.delta > 0 ? "up" : s.delta < 0 ? "down" : "flat"} />
         <StatTile label={`${s.period.label} 길찾기 실행`} value={n(s.routes)} unit="회" icon="route" />
@@ -300,32 +306,18 @@ export function Dashboard({ onNavigate }) {
         </Card>
       </div>
 
-      {/* ── 운영: 카카오맵 API 사용량 ───────────────────────────────────── */}
-      <Card style={{ marginBottom: "var(--space-7)" }}>
-        <Section title="카카오맵 API 일일 사용량"
-          note={`길찾기 호출의 하루 한도 ${n(limit)}건 대비 사용량입니다.`}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline",
-            marginBottom: 6 }}>
-            <span style={{ fontSize: "var(--fs-body)", fontWeight: "var(--fw-semibold)",
-              color: overWarn ? "var(--state-danger)" : "var(--text-heading)" }}>
-              {n(API_USED_TODAY)} / {n(limit)}건
-            </span>
-            <span style={{ fontSize: "var(--fs-label)", fontVariantNumeric: "tabular-nums",
-              color: overWarn ? "var(--state-danger)" : "var(--text-muted)" }}>{usedPct}%</span>
-          </div>
-          <div aria-hidden="true" style={{ height: 10, borderRadius: "var(--radius-pill)",
-            background: "var(--surface-sunken)", overflow: "hidden" }}>
-            <div style={{ width: `${Math.min(100, usedPct)}%`, height: "100%",
-              background: overWarn ? "var(--state-danger)" : "var(--brand-primary)" }} />
-          </div>
-          {overWarn ? (
-            <Notice tone="danger" size="sm" style={{ marginTop: "var(--space-3)" }}>
-              경고 임계치({warnAt}%)를 넘었습니다. 한도를 넘기면 길찾기가
-              「{QUOTA_DEFAULTS.fallbackOnExceed === "external" ? "외부 지도앱 연결" : "직선거리 안내"}」로 폴백합니다.
-            </Notice>
-          ) : null}
-        </Section>
-      </Card>
+      {/* ── 「카카오맵 API 일일 사용량」이 여기 있었다 (2026-08-25 오후 삭제, 사용자 요청) ──
+             길찾기 호출의 하루 한도 대비 사용량을 막대와 퍼센트로 적고, 경고 임계치를
+             넘으면 붉은 상자로 폴백 안내를 세우던 카드다.
+
+             **보고 나서 담당자가 할 수 있는 일이 없다.** 한도는 카카오 쪽 계약과 서버가
+             정하는 값이고(그래서 [환경 설정]의 쿼터 구획도 2026-08-20 에 나갔다), 사용량이
+             한도에 다가가도 이 화면에서 늘리거나 아낄 방법이 없다 — 할 일은 개발 쪽에
+             알리는 것뿐이다. [데이터 갱신 현황] 화면과 대시보드의 「탭별 조회 비중」이
+             같은 기준으로 나갔다.
+
+             값(`API_USED_TODAY` · `QUOTA_DEFAULTS`)은 stats.js · settings.js 에 그대로 둔다 —
+             지금 지우면 되살릴 자리가 생겼을 때 다시 지어내야 한다. */}
 
       {/* ── 상점가별 둘러보기 매장 (명세서 6장) ─────────────────────────
              시민 화면의 둘러보기 탭을 그대로 미리 보는 자리다. 머리말 참조. */}
@@ -333,70 +325,49 @@ export function Dashboard({ onNavigate }) {
         note="둘러보기 탭에서 노출되는 골목형 상점가별 매장 목록을 확인할 수 있습니다. 상점가를 선택하면 사용자 화면에 노출되는 해당 상점가의 매장 정보를 확인할 수 있습니다."
         style={{ marginBottom: "var(--space-4)" }}>
         {/* 고르개 옆에 「처인구 포곡읍 · 노출 점포 335곳」을 적었었는데 뺐다 (2026-08-20) —
-            고르개의 각 줄이 이미 「처인구 · 둔전골목형상점가 (점포 335곳)」이라 같은 말이
+            고르개의 각 줄이 이미 「처인구 - 둔전골목형상점가 (점포 335곳)」이라 같은 말이
             바로 옆에서 두 번 읽혔다. */}
         <div style={{ marginBottom: "var(--space-4)" }}>
           <Select label="골목형 상점가" options={districtOptions} value={districtId}
             onChange={e => setDistrictId(e.target.value)} style={{ width: 420 }} />
         </div>
 
+        {/* ── 「신규 점포」 표가 옆에 나란히 있었다 (2026-08-25 오후 삭제, 사용자 요청) ──
+               둘러보기 탭의 「신규 매장」 여섯 곳을 등록 일자와 함께 적던 표다. 두 표가
+               2열 격자로 서 있었는데, 하나가 나가면서 격자를 없애고 남은 표가 폭을
+               다 쓴다 — 반쪽짜리 격자에 카드 하나만 남기면 그 옆의 빈자리가 무언가
+               빠진 자리로 읽힌다.
+               점포의 등록 일자는 점포 정보 관리에서 그 줄을 열면 그대로 있다. */}
         {picks.popular.length ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: "var(--space-4)" }}>
-            <Card>
-              <Section title="조회수 상위 점포" variant="sub"
+          /* 카드도 표를 따라 줄어든다 (2026-08-26) — 표만 줄이면 흰 카드가 화면 끝까지
+             가고 그 안에서 표가 왼쪽에 붙은 것으로 보인다. 카드 하나가 반쪽만 차 있는
+             화면은 무언가 빠진 자리로 읽힌다 (「신규 점포」 표를 뺄 때 격자를 함께
+             없앤 것과 같은 판단 — 바로 위 주석) */
+          <Card style={{ width: "max-content", maxWidth: "100%" }}>
+            <Section title="조회수 상위 점포" variant="sub"
                 /* 「사용자 모바일 웹」을 앞에 세운다 (2026-08-25, 사용자 요청) — 「둘러보기 탭」은
                    관리자 화면에 없는 자리라, 그것만 적으면 이 화면 어딘가를 가리키는 말로 읽힌다 */
-                note={`사용자 모바일 웹 '둘러보기' 탭의 '인기 매장' ${DISCOVER_PICK}곳`}>
-                <DataTable
-                  caption={`${district ? district.name : ""} 인기 매장 ${DISCOVER_PICK}곳`}
-                  rows={picks.popular.map((s, i) => ({ ...s, rank: i + 1 }))} rowKey="id"
-                  columns={[
-                    /* 두 표는 **같은 뼈대**를 쓴다 — 번호 60 · 상호명 · 업종 110 · 값 90.
-                       나란히 선 표라 열 폭이 어긋나면 여섯 줄이 서로 밀려 보인다 */
-                    { key: "rank", label: "순위", width: 60, align: "center",
-                      render: r => <Badge tone={r.rank === 1 ? "brand" : "neutral"} size="sm">{r.rank}</Badge> },
-                    { key: "name", label: "상호명", render: r => <StoreName store={r} /> },
-                    { key: "biz", label: "업종", width: 110, render: r => r.biz || CATEGORY_LABELS[r.cat] },
-                    { key: "views", label: "조회", width: 90, align: "right",
-                      render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{n(r.views)}</span> },
-                  ]} />
-              </Section>
-            </Card>
-
-            <Card>
-              <Section title="신규 점포" variant="sub"
-                note={`사용자 모바일 웹 '둘러보기' 탭의 '신규 매장' ${DISCOVER_PICK}곳`}>
-                <DataTable
-                  caption={`${district ? district.name : ""} 신규 매장 ${DISCOVER_PICK}곳`}
-                  rows={picks.fresh.map((s, i) => ({ ...s, order: i + 1 }))} rowKey="id"
-                  columns={[
-                    /* 옆 표와 같은 뼈대다. 번호 칸이 없으면 배지가 든 줄과 글자만 든 줄의
-                       높이가 갈려 나란히 선 두 표의 여섯 줄이 서로 밀린다.
-
-                       색은 배지 하나만 다르다 — 여기 1번은 **가장 최근에 등록된 곳**이지
-                       1위가 아니다. 브랜드색을 주면 순위표로 읽힌다. */
-                    { key: "order", label: "순서", width: 60, align: "center",
-                      render: r => <Badge tone="neutral" size="sm">{r.order}</Badge> },
-                    { key: "name", label: "상호명", render: r => <StoreName store={r} /> },
-                    { key: "biz", label: "업종", width: 110, render: r => r.biz || CATEGORY_LABELS[r.cat] },
-                    /* ── 「등록」 → 「등록 일자」, 값도 일자까지 (2026-08-25, 사용자 요청) ──
-                       점포 폼이 일자까지 받게 된 뒤로 그 값을 확인하는 자리가 여기 하나인데
-                       (신규 매장을 가르는 것이 곧 이 값이다) 표만 연월이라, 같은 달에 문 연
-                       가게가 여럿이면 **왜 이 차례인지 화면에서 읽을 수 없었다.**
-
-                       가운데 정렬이다. 오른쪽으로 붙이면 열 이름이 값의 끝(「17」) 위에
-                       얹혀 한참 오른쪽에 가 있는 것처럼 보인다 — 숫자를 오른쪽에 붙이는
-                       것은 자릿수가 달라 견주는 값(조회수 · 곳수)의 규칙이고, 날짜는 늘
-                       같은 길이라 여기 해당하지 않는다.
-
-                       시민 카드는 그대로 연월이다 ("2026.04 등록") — dunjeon.js 의 note. */
-                    { key: "openedDay", label: "등록 일자", width: 120, align: "center",
-                      render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.openedDay}</span> },
-                  ]} />
-              </Section>
-            </Card>
-          </div>
+              note={`사용자 모바일 웹 '둘러보기' 탭의 '인기 매장' ${DISCOVER_PICK}곳`}>
+              <DataTable
+                /* ── 표를 **내용 너비에 맞춘다** (2026-08-26, 사용자 요청) ──────────
+                   열이 넷뿐인데 화면 폭을 다 쓰고 있었다. 목록 화면의 표는 열이 예닐곱이라
+                   넓을수록 한 줄이 잘 읽히지만, 여기서는 남는 자리를 상호명 열이 통째로
+                   먹어 순위 배지와 조회수 사이가 손바닥만큼 벌어졌다 — 한 줄을 읽으려면
+                   눈이 그 빈 곳을 건너뛰어야 한다. 표가 넓은 것이 아니라 읽을 것이 흩어진
+                   것이다 (`DataTable` 의 `fit`) */
+                fit
+                caption={`${district ? district.name : ""} 인기 매장 ${DISCOVER_PICK}곳`}
+                rows={picks.popular.map((s, i) => ({ ...s, rank: i + 1 }))} rowKey="id"
+                columns={[
+                  { key: "rank", label: "순위", width: 60, align: "center",
+                    render: r => <Badge tone={r.rank === 1 ? "brand" : "neutral"} size="sm">{r.rank}</Badge> },
+                  { key: "name", label: "상호명", render: r => <StoreName store={r} /> },
+                  { key: "biz", label: "업종", width: 110, render: r => r.biz || CATEGORY_LABELS[r.cat] },
+                  { key: "views", label: "조회", width: 90, align: "right",
+                    render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{n(r.views)}</span> },
+                ]} />
+            </Section>
+          </Card>
         ) : (
           /* 점포 자료가 없는 31곳. 빈 표를 세우는 대신 왜 비었는지 적는다.
 
@@ -415,19 +386,16 @@ export function Dashboard({ onNavigate }) {
         )}
       </Section>
 
-      <Section title="지점별 스캔 횟수">
-        <DataTable
-          caption="QR 지점별 스캔 수"
-          rows={SCANS_BY_POINT} rowKey="code"
-          columns={[
-            { key: "code", label: "QR 식별자", width: 190 },
-            { key: "name", label: "지점명" },
-            { key: "active", label: "활성", width: 90, align: "center",
-              render: r => <Badge tone={r.active ? "success" : "neutral"} size="sm">{r.active ? "활성" : "비활성"}</Badge> },
-            { key: "scans", label: "누적 스캔", width: 130, align: "right",
-              render: r => <span style={{ fontVariantNumeric: "tabular-nums" }}>{n(r.scans)}</span> },
-          ]} />
-      </Section>
+      {/* ── 「지점별 스캔 횟수」 표가 여기 있었다 (2026-08-25 오후 삭제, 사용자 요청) ──
+             QR 지점마다 식별자 · 지점명 · 활성 여부 · 누적 스캔을 적던 표다.
+
+             **여기서 나오는 답이 이 화면의 권한 밖이다.** 어느 지점이 덜 찍히는지 알아도
+             담당자가 할 수 있는 일은 안내판을 옮기거나 새로 붙이는 것인데, 그것은 화면이
+             아니라 현장에서 하는 일이고 이 화면에는 그 일로 이어지는 자리가 없다. 맨 위
+             요약 카드의 「누적 QR 스캔」이 규모를 말하고, 지점 자체를 다루는 일은 [QR 지점
+             관리]가 맡는다.
+
+             자료(`SCANS_BY_POINT`)는 stats.js 에 그대로 둔다. */}
 
       {/* 맨 아래 고지를 뺐다 (2026-08-20, 사용자 요청). 어느 수치가 서버 연동 전 예시이고
           어느 것이 실제 자료를 센 값인지 적어 두었던 다섯 줄이다. 그 구분이 필요한 것은

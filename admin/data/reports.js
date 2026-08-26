@@ -39,75 +39,75 @@ export const REPORT_SEED_STATES = ["접수", "확인중", "처리완료", "반�
 
 export const REPORTS = [
   { id: "rp-016", at: "2026-10-17", targetType: "점포", targetId: "dj-004", target: "가온김밥",
-    kind: "없어진 시설", state: "접수", assignee: null, qrCode: "dunjeon-01", memo: null,
+    kind: "없어진 시설", state: "접수", assignee: null, qrCode: "qr-001", memo: null,
     body: "가온김밥 지난달에 문 닫았어요. 갔다가 헛걸음했습니다." },
 
   { id: "rp-015", at: "2026-10-17", targetType: "점포", targetId: "dj-118", target: "명가노래연습장",
-    kind: "정보 오류", state: "접수", assignee: null, qrCode: "dunjeon-01", memo: null,
+    kind: "정보 오류", state: "접수", assignee: null, qrCode: "qr-001", memo: null,
     body: "온누리 가맹으로 나오는데 매장에서는 안 받는다고 합니다. 확인 부탁드려요." },
 
   /* ── 같은 대상 3건 (강조 규칙 확인용) ───────────────────────────────── */
   { id: "rp-014", at: "2026-10-16", targetType: "공공시설", targetId: "fc-004",
     target: "둔전시장 공중화장실", kind: "위치 부정확", state: "확인중", assignee: "포곡읍 김담당",
-    qrCode: "dunjeon-01",
+    qrCode: "qr-001",
     memo: "포곡읍 현장 확인 요청함 (10.16)",
     body: "지도에 찍힌 자리에 화장실이 없습니다. 한 블록 위인 것 같아요." },
   { id: "rp-013", at: "2026-10-15", targetType: "공공시설", targetId: "fc-004",
     target: "둔전시장 공중화장실", kind: "위치 부정확", state: "확인중", assignee: "포곡읍 김담당",
-    qrCode: "dunjeon-01", memo: null,
+    qrCode: "qr-001", memo: null,
     body: "길찾기 따라갔는데 주차장 한가운데로 안내합니다." },
   { id: "rp-012", at: "2026-10-14", targetType: "공공시설", targetId: "fc-004",
     target: "둔전시장 공중화장실", kind: "정보 오류", state: "접수", assignee: null,
-    qrCode: "dunjeon-01", memo: null,
+    qrCode: "qr-001", memo: null,
     body: "위치가 틀린 것 같아요. 시장 안쪽이 아니라 바깥쪽입니다." },
 
   { id: "rp-011", at: "2026-10-14", targetType: "공공시설", targetId: "fc-002",
     target: "둔전 공영주차장 공중화장실", kind: "정보 오류", state: "확인중", assignee: "포곡읍 김담당",
-    qrCode: "dunjeon-01", memo: null,
+    qrCode: "qr-001", memo: null,
     body: "비상벨 있다고 나오는데 여자화장실에는 없어요." },
 
   { id: "rp-010", at: "2026-10-14", targetType: "기타", targetId: null, target: null,
-    kind: "기타", state: "접수", assignee: null, qrCode: "dunjeon-01", memo: null,
+    kind: "기타", state: "접수", assignee: null, qrCode: "qr-001", memo: null,
     body: "QR 스티커가 비에 젖어 잘 안 찍힙니다. 정류장 기둥에 붙은 거요." },
 
   { id: "rp-009", at: "2026-10-13", targetType: "점포", targetId: null, target: null,
-    kind: "추가 제안", state: "접수", assignee: null, qrCode: "dunjeon-01", memo: null,
+    kind: "추가 제안", state: "접수", assignee: null, qrCode: "qr-001", memo: null,
     body: "둔전로 새로 생긴 반찬가게가 목록에 없습니다. 추가해 주세요." },
 
   { id: "rp-008", at: "2026-10-12", targetType: "점포", targetId: "dj-071", target: "둔전꽃집",
-    kind: "정보 오류", state: "처리완료", assignee: "포곡읍 김담당", qrCode: "dunjeon-01", memo: "상권정보 원본에도 옛 상호로 남아 있어 수기 수정함",
+    kind: "정보 오류", state: "처리완료", assignee: "포곡읍 김담당", qrCode: "qr-001", memo: "상권정보 원본에도 옛 상호로 남아 있어 수기 수정함",
     body: "상호가 바뀌었습니다. 지금은 다른 이름으로 영업 중이에요." },
 
   { id: "rp-007", at: "2026-10-11", targetType: "공공시설", targetId: "fc-003",
     target: "둔전마을회관 무더위쉼터", kind: "정보 오류", state: "처리완료", assignee: "포곡읍 김담당",
-    qrCode: "dunjeon-01", memo: "포곡읍행정복지센터 확인 결과 10:00 개방이 맞아 운영시간 수정함",
+    qrCode: "qr-001", memo: "포곡읍행정복지센터 확인 결과 10:00 개방이 맞아 운영시간 수정함",
     body: "운영시간이 평일 9시부터라고 되어 있는데 실제로는 10시에 엽니다." },
 
   { id: "rp-006", at: "2026-10-10", targetType: "점포", targetId: "dj-046", target: "제일반점",
-    kind: "위치 부정확", state: "처리완료", assignee: "최종 관리자", qrCode: "dunjeon-01", memo: "좌표 12m 보정",
+    kind: "위치 부정확", state: "처리완료", assignee: "최종 관리자", qrCode: "qr-001", memo: "좌표 12m 보정",
     body: "길찾기가 엉뚱한 골목으로 안내합니다." },
 
   { id: "rp-005", at: "2026-10-09", targetType: "기타", targetId: null, target: null,
-    kind: "추가 제안", state: "반려", assignee: "포곡읍 김담당", qrCode: "dunjeon-01", memo: "2차 범위",
+    kind: "추가 제안", state: "반려", assignee: "포곡읍 김담당", qrCode: "qr-001", memo: "2차 범위",
     body: "글자가 너무 작아요. 앱 안에서 크게 볼 수 있게 해주세요." },
 
   { id: "rp-004", at: "2026-10-09", targetType: "점포", targetId: "dj-019", target: "행복베이커리",
-    kind: "정보 오류", state: "처리완료", assignee: "포곡읍 김담당", qrCode: "dunjeon-01",
+    kind: "정보 오류", state: "처리완료", assignee: "포곡읍 김담당", qrCode: "qr-001",
     memo: "온누리 2025.07 기준 자료에 누락된 것 확인, 가맹으로 반영함",
     body: "온누리 되는데 앱에는 안 된다고 나와요." },
 
   { id: "rp-003", at: "2026-10-08", targetType: "공공시설", targetId: "fc-001",
     target: "둔전로 42 AED", kind: "정보 오류", state: "처리완료", assignee: "포곡읍 김담당",
-    qrCode: "dunjeon-01", memo: "건물 관리사무소 연락 완료",
+    qrCode: "qr-001", memo: "건물 관리사무소 연락 완료",
     body: "AED 보관함이 잠겨 있습니다." },
 
   { id: "rp-002", at: "2026-10-07", targetType: "점포", targetId: "dj-088", target: "둔전세탁소",
-    kind: "위치 부정확", state: "처리완료", assignee: "최종 관리자", qrCode: "dunjeon-01",
+    kind: "위치 부정확", state: "처리완료", assignee: "최종 관리자", qrCode: "qr-001",
     memo: "큰길 건너로 이전한 것 확인, 도로명주소와 좌표 수정함",
     body: "이전했어요. 큰길 건너로 옮겼습니다." },
 
   { id: "rp-001", at: "2026-10-06", targetType: "점포", targetId: "dj-004", target: "가온김밥",
-    kind: "없어진 시설", state: "중복", assignee: "포곡읍 김담당", qrCode: "dunjeon-01", memo: "rp-016 과 같은 건",
+    kind: "없어진 시설", state: "중복", assignee: "포곡읍 김담당", qrCode: "qr-001", memo: "rp-016 과 같은 건",
     body: "김밥집 없어졌습니다." },
 ];
 

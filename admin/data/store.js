@@ -307,7 +307,14 @@ export function useCollection(name, source, derive, label) {
   }, [name, source, derive, target]);
 
   /* 지운다 — 되돌리는 짝이 없다 (2026-08-24. 머리말 참조). 남는 것은 변경 이력의
-     「삭제」 한 줄뿐이고, 그것도 읽는 화면이 아직 없다 (readHistory 위 주석). */
+     「삭제」 한 줄뿐이고, 그것도 읽는 화면이 아직 없다 (readHistory 위 주석).
+
+     ── **지금 이것을 부르는 화면이 없다** (2026-08-26, 사용자 요청) ──────────────
+     열여섯 화면 전부에서 [삭제]가 없어졌다 (정보 관리 다섯은 v1.15, QR 지점과 계정
+     관리는 2026-08-26). 그래도 이 줄은 남긴다 — 화면 쪽 기계(`useRecordEditor` 의
+     `askRemove`·`confirmRemove`)는 지웠지만, 이쪽은 **덮개가 무엇을 할 수 있는가**이지
+     화면이 무엇을 하느냐가 아니다. 실연동에서 서버가 갖는 능력이기도 하다.
+     되살릴 일이 생기면 여기서부터가 아니라 화면에서부터 다시 짓는다. */
   const remove = React.useCallback((id, rowName) => removeRow(name, id, rowName, target), [name, target]);
 
   /* 노출 토글처럼 필드 하나만 바꾸는 자리 — 폼을 열지 않고 표에서 바로 누른다 */
