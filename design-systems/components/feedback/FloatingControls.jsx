@@ -44,32 +44,20 @@ import { Icon } from "../core/Icon.jsx";
    위로는 올라가지 않는다. 시트가 필터 바 아래까지만 올라오는 것과 같은 이야기이고
    (`Sheet` 의 같은 이름 prop), 같은 실측값을 쓴다.
 
-   ── `place="top"` — 상단 필터 바 **바로 아래** (2026-08-26, 사용자 요청) ──────────
-   시민 지도의 [스캔 위치로]가 이쪽으로 옮겨 왔다. `subtle` 이 안내 반경 고르개와 같은
-   알약이 되고 나니(위) **같은 것 둘이 화면 위아래 끝에 하나씩** 떨어져 서 있었다 —
-   닮은 둘이 멀리 떨어지면 한 벌로 보이는 대신 **같은 것이 왜 두 군데 있나**로 읽힌다.
-
-   `topInset`(필터 바 실측 높이) 바로 아래 `--space-1` 에 붙고, 오른쪽 여백은
-   `--float-inset`(16) 이 아니라 **`--gutter-screen`(20)** 이다 — 위 검색창·칩 줄·반경
-   고르개가 서는 세로선이라야 「그 밑」이 된다.
-
-   **바 안으로 들여놓지 않는 이유**는 시트다. `MapFilterOverlay` 의 `trailing` 에 한 줄
-   더 얹으면 바의 실측 높이가 44px 늘고, 그 값을 `Sheet` 의 `topInset` 이 그대로 받아
-   **전체 스냅의 목록이 그만큼 짧아진다.** 전체 스냅에서 이 단추를 감추면(`hidden`) 바가
-   다시 줄어들어 시트가 44px 뛴다. 떠 있는 층으로 두면 바의 높이에 관여하지 않는다.
-
-   `bottom` 과 아래 실측 높이(`tall`)는 `place="bottom"` 에서만 쓴다. 관리자
-   `CoordField` 가 그 길로 들어온다.
+   > `place="top"`(상단 필터 바 바로 아래)이 2026-08-26 에 잠깐 있었다 — [스캔 위치로]를
+   > 반경 고르개 밑에 붙이려던 것이다. **같은 날 되돌렸다** (사용자 요청): 붙여 놓고 보니
+   > 화면 오른쪽 위가 검색창·칩 줄·고르개·단추로 **넉 줄**이 됐고, 지도를 보라고 만든
+   > 화면에서 위쪽이 통째로 막히는 것이 v1.11 이 내내 고쳐 온 문제다. 대신 **폭을 맞췄다**
+   > (아래 `--float-pill-min`) — 통일감은 자리가 아니라 모양이 낸다.
 
    `children` 슬롯이 여기 있었다 (2026-08-26 아침 신설 → 같은 날 삭제). 세로 반경
    고르개(`RadiusSlider`)를 이 기둥에 세우려고 열었는데, 그 고르개가 **지도 오른쪽을 너무
    많이 차지해** 상단 필터 바의 칩 줄 아래로 내려갔다 (사용자 요청. `MapFilterOverlay` 의
    `trailing`). 손님이 없어진 슬롯은 함께 닫는다. */
 export function FloatingControls({ bottom = "var(--sheet-half)", hidden = false, topInset = 0,
-  place = "bottom", subtle = false, items = [], style, ...rest }) {
+  subtle = false, items = [], style, ...rest }) {
   const anchor = typeof bottom === "number" ? `${bottom}px` : bottom;
   const top = typeof topInset === "number" ? `${topInset}px` : topInset;
-  const atTop = place === "top";
 
   /* 위쪽 상한은 **이 기둥의 실측 높이**로 잰다 (2026-08-26). 전에는 `--tap-min`(44px)
      상수였는데, 글자를 아이콘 아래로 쌓던 시절의 `subtle` 이 그보다 높아지면서 시트를
@@ -89,14 +77,8 @@ export function FloatingControls({ bottom = "var(--sheet-half)", hidden = false,
   const tall = h ? `${h}px` : "var(--tap-min)";
 
   return (
-    <div ref={col} style={{ position: "absolute",
-      /* 위쪽에 설 때는 필터 바 바로 아래에 붙고 오른쪽 세로선을 그 바와 맞춘다.
-         바가 없는 화면(S03-E)에서는 `topInset` 이 0 이라 `--float-gap` 이 바닥이 된다 */
-      ...(atTop
-        ? { top: `max(calc(${top} + var(--space-1)), var(--float-gap))`,
-            right: "var(--gutter-screen)" }
-        : { right: "var(--float-inset)",
-            bottom: `clamp(var(--float-gap), calc(${anchor} + var(--float-gap)), calc(100% - ${top} - ${tall} - var(--float-gap)))` }),
+    <div ref={col} style={{ position: "absolute", right: "var(--float-inset)",
+      bottom: `clamp(var(--float-gap), calc(${anchor} + var(--float-gap)), calc(100% - ${top} - ${tall} - var(--float-gap)))`,
       zIndex: "var(--z-float)", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "var(--space-2)",
       opacity: hidden ? 0 : 1, pointerEvents: hidden ? "none" : "auto",
       transition: "opacity var(--dur-base) var(--ease-standard)", ...style }}
@@ -111,6 +93,10 @@ export function FloatingControls({ bottom = "var(--sheet-half)", hidden = false,
            `CoordField` 가 `subtle` 없이 쓰는 길이 그쪽이다). */
         const face = {
           display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+          /* 폭도 고르개와 같다 — 둘은 화면의 반대쪽 끝에 떨어져 서므로 높이만 같아서는
+             한 벌로 읽히지 않는다 (layers.css 의 `--float-pill-min` 머리말). 이쪽이
+             둘 중 넓은 쪽이라 대개 제 폭 그대로다 */
+          minWidth: "var(--float-pill-min)",
           minHeight: 34, padding: "0 12px 0 10px",
           background: on ? "var(--brand-primary)" : "var(--surface-float-translucent)",
           backdropFilter: on ? undefined : "var(--blur-glass)",

@@ -129,6 +129,12 @@ export function InlineSelect({
             뿐 보이는 것은 같다 */}
         <span style={floating
           ? { display: "inline-flex", alignItems: "center", gap: 4,
+              /* 지도 위 알약의 공통 최소 폭 (layers.css 의 `--float-pill-min` 머리말) —
+                 화면 반대쪽 끝의 [스캔 위치로]와 덩어리 크기가 같아야 한 벌로 읽힌다.
+                 남는 폭은 `space-between` 이 가른다: 글자는 왼쪽에, 삼각형은 오른쪽 끝에
+                 붙는다 (가운데로 모으면 삼각형이 알약 안쪽으로 떠서 무엇에 딸린
+                 표시인지 흐려진다) */
+              minWidth: "var(--float-pill-min)", justifyContent: "space-between",
               minHeight: 34,
               /* 왼쪽 아이콘을 뗀 자리는 여백이 대신 채운다 — 10px 로 두면 글자가 알약
                  왼쪽 벽에 붙어 오른쪽 삼각형 쪽만 헐거워 보인다 */
