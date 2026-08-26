@@ -139,6 +139,9 @@ const phOf = c => (c.placeholder ? `예) ${c.placeholder}` : undefined);
 export function Repeater({
   title, note, badge, columns = [], rows = [], onChange,
   newRow = () => ({}), addLabel = "행 추가",
+  /* [추가]를 눌렀을 때 줄을 만드는 대신 적을 말. 비어 있으면 평소대로 줄이 생긴다
+     (아래 `add` 머리말) */
+  addBlocked,
   /* 지울 때 무엇을 지우는지 이름으로 적기 위한 열쇠 (아래 `pending`). 목록마다 이름 칸이
      다르다 — 프로그램은 `title`, 부스는 `name`. 없으면 「n번째 줄」로 부른다 */
   nameKey = "name",
@@ -219,7 +222,24 @@ export function Repeater({
     if (!onChange) return;
     onChange(list.map((r, n) => (n === i ? { ...r, [key]: value } : r)));
   };
-  const add = () => { setPending(null); if (onChange) onChange(list.concat(newRow())); };
+  /* ── [추가]가 막히는 자리 (`addBlocked`, 2026-08-26, 사용자 요청) ─────────────────
+     축제의 프로그램·부스가 첫 손님이다. 줄의 일시 칸이 **위 폼의 축제 기간에서 날 목록을
+     받아** 서는데, 기간이 비어 있으면 고를 날이 없다.
+
+     **단추를 흐리게 하지 않고 누르게 둔 뒤 이유를 적는다.** 흐린 단추는 못 누른다는 것만
+     말하고 왜인지는 말하지 않아서, 담당자가 그 앞에서 할 일을 찾지 못한다. 눌러서 나오는
+     한 줄은 **무엇을 먼저 하면 되는지**를 적는다 — 그 칸은 바로 위에 있다.
+
+     막는 값이 없어지면(기간을 채우면) 그 말도 함께 사라진다. 눌렀다는 기억(`bumped`)만
+     들고 있고 문장은 부르는 쪽이 그때그때 정하므로, 지나간 말이 남아 있을 수 없다. */
+  const [bumped, setBumped] = React.useState(false);
+  const blockedNow = bumped && !!addBlocked;
+  const add = () => {
+    setPending(null);
+    if (addBlocked) { setBumped(true); return; }
+    setBumped(false);
+    if (onChange) onChange(list.concat(newRow()));
+  };
   const drop = i => {
     setPending(null);
     setOpenLower([]);            /* 뒤 번호가 당겨진다 — 위 openLower 머리말 */
@@ -370,38 +390,73 @@ export function Repeater({
        하기 때문이다. **그 반쪽은 저장으로 나가지 못한다** — `missingInRows` 가 「비어
        있는가」가 아니라 「다 찼는가」로 본다 (data/fields.js 의 `filled`).
 
-       `c.days` 가 비면(위 폼의 기간이 아직 비었다) 종전 `datetime-local` 로 떨어진다 —
-       고를 날이 하나도 없는 고르개보다는 낫다. */
+       ── `c.days` 가 비어도 **모양은 같다** (2026-08-26 저녁, 사용자 요청) ─────────
+       위 폼의 기간이 아직 비었을 때 종전 `datetime-local` 로 떨어지게 두었었다. 「고를
+       날이 하나도 없는 고르개보다는 낫다」가 근거였는데, **[등록]을 눌러 연 창이 정확히
+       그 상태다** — 기간을 아직 안 넣었으니 예시 줄이 회색 「연-월-일」로 서고, 담당자가
+       처음 보는 화면에서 **이 칸이 연도를 받는 칸으로 보인다.** 기간을 넣는 순간 모양이
+       통째로 바뀌는 것도 같은 값을 두 가지로 배우게 하는 일이다.
+
+       예시 줄의 규칙이 이미 답을 적어 두고 있었다 — **「[추가]를 눌렀을 때 실제로 생기는
+       모양 그대로여야 이 줄이 예시 노릇을 한다.」** 그래서 폴백을 지웠다. 고를 날이
+       없으면 고르개는 그대로 서되 **칸 이름(「일자」)만 달고 잠긴다.** 무엇을 먼저 해야
+       하는지는 **[추가]를 누른 순간** 한 줄로 나온다 (위 `addBlocked`) — 잠긴 고르개가
+       늘 이고 있을 말이 아니다.
+
+       값이 이미 든 줄은 잠겨도 **그 날짜를 그대로 보여준다** — 기간을 나중에 지웠다고
+       해서 이미 들어간 값을 화면에서 감추면 담당자가 그것을 모른 채 저장한다. */
     if (c.type === "daytime") {
       const days = c.days || [];
-      if (days.length) {
+      {
         const raw = off ? "" : String(row[c.key] || "");
         const cut = raw.indexOf("T");
         const day = cut < 0 ? raw : raw.slice(0, cut);
         const time = cut < 0 ? "" : raw.slice(cut + 1);
+        const outside = day && !days.some(d => d.value === day);
+        /* 앞자리 0 을 떼는 것은 목록 쪽(`daysBetween`)과 같아야 한다 — 한 고르개 안에서
+           「9.1」과 「09.01」이 나란히 서면 다른 체계의 값으로 보인다 */
+        const mark = d => `${+d.slice(5, 7)}.${+d.slice(8, 10)} (기간 밖)`;
         /* 고른 날이 목록에 없으면 그 값을 앞에 세운다 — 기간을 나중에 좁히면 이미
            들어간 줄이 그 밖에 남는데, 목록에서 빼 버리면 **담당자가 모르는 사이에
            다른 날로 바뀐다.** 보이게 두고 고치게 한다 */
-        const opts = day && !days.some(d => d.value === day)
-          ? [{ value: day, label: `${day.slice(5).replace("-", ".")} (기간 밖)` }].concat(days)
-          : days;
+        const opts = days.length
+          ? (outside ? [{ value: day, label: mark(day) }].concat(days) : days)
+          /* 고를 날이 없을 때 이 자리에 적는 것은 **칸 이름**이다 — 「일자」. 한때
+             「기간 먼저」라고 시켰는데(2026-08-26, 같은 날 바뀜), **무엇을 먼저 하라는
+             말은 [추가]를 누른 순간에 나오는 것**이지 잠긴 고르개가 늘 이고 있을 말이
+             아니다 (위 `addBlocked`). 옆 칸들이 「예) 개막 풍물놀이」로 자리를 이름 짓는
+             것과 같은 결이다 */
+          : (day ? [{ value: day, label: mark(day) }] : [{ value: "", label: "일자" }]);
         /* 비어 있는 줄은 **첫날**을 보여준다. 값은 아직 쓰지 않는다 — 시각을 넣는
            순간 그 날과 이어진다. 하루짜리 축제에서는 이것이 곧 정답이다 */
-        const shown = day || days[0].value;
+        const shown = day || (days[0] ? days[0].value : "");
         const join = (d, t) => (t ? `${d}T${t}` : (d ? `${d}T` : ""));
+        /* 고를 날이 없으면 시각도 잠근다 — 날 없는 시각은 저장으로 나가지 못하는 반쪽이라,
+           받아 놓고 나중에 막는 것보다 처음부터 받지 않는 편이 정직하다 */
+        const dead = off || !days.length;
         return (
           <div style={{ display: "flex", gap: 4, minWidth: 0 }}>
-            <Select options={opts} disabled={off} tabIndex={off ? -1 : undefined}
+            <Select options={opts} disabled={dead} tabIndex={dead ? -1 : undefined}
               aria-hidden={off ? "true" : undefined}
               aria-label={off ? undefined : `${c.label} 날짜`}
               value={shown} style={{ flex: "1 1 0", minWidth: 0 }}
-              onChange={off ? () => {} : e => set(i, c.key, join(e.target.value, time))} />
+              onChange={dead ? () => {} : e => set(i, c.key, join(e.target.value, time))} />
+            {/* ── 시각 칸이 **먼저 제 폭을 가져간다** (2026-08-26 저녁, 사용자 요청) ─────
+                   104px 이었고 **글자가 잘렸다.** `type="time"` 이 무엇으로 보이는지는
+                   페이지가 아니라 **브라우저·OS 로케일이 정한다** — 한국어에서는
+                   「오후 03:00」이라 「18:00」보다 30px 남짓 넓다. HTML 에는 그것을 24시로
+                   못박는 수단이 없다(`lang` 도 이 위젯에는 걸리지 않는다). 그래서 **좁은
+                   쪽에 맞추고 기대하는 대신 넓은 쪽에 맞춘다** — 안 보이는 것보다 조금
+                   넉넉한 편이 낫고, 24시로 뜨는 환경에서는 그 여유가 여백이 될 뿐이다.
+                   `0 0` 으로 두는 것은 이 칸이 **줄어들면 곧바로 글자가 잘리는 칸**이기
+                   때문이다. 남는 폭을 가져가는 쪽은 날짜 고르개다 (`1 1 0`) — 그쪽은
+                   모자라면 말줄임으로 접힐 뿐 값을 못 읽게 되지 않는다 */}
             <Input type="time" value={time}
-              readOnly={off} disabled={off} tabIndex={off ? -1 : undefined}
+              readOnly={dead} disabled={dead} tabIndex={dead ? -1 : undefined}
               aria-hidden={off ? "true" : undefined}
               aria-label={off ? undefined : `${c.label} 시각`}
-              style={{ flex: "0 0 104px", minWidth: 0 }}
-              onChange={off ? undefined : e => set(i, c.key, join(shown, e.target.value))} />
+              style={{ flex: "0 0 148px", minWidth: 0 }}
+              onChange={dead ? undefined : e => set(i, c.key, join(shown, e.target.value))} />
           </div>
         );
       }
@@ -416,10 +471,7 @@ export function Repeater({
       );
     }
     return (
-      /* `daytime` 은 고를 날이 없을 때 여기로 떨어진다 (위 머리말) — 그때는 연도까지
-         받는 종전 칸이 그나마 답을 넣을 수 있는 유일한 모양이다 */
-      <Input type={c.type === "daytime" ? "datetime-local"
-        : c.type === "number" ? "number" : c.type || "text"}
+      <Input type={c.type === "number" ? "number" : c.type || "text"}
         value={off ? "" : (row[c.key] == null ? "" : row[c.key])}
         readOnly={off} disabled={off} tabIndex={off ? -1 : undefined}
         aria-hidden={off ? "true" : undefined} aria-label={off ? undefined : c.label}
@@ -653,9 +705,15 @@ export function Repeater({
         </div>
       )}
 
-      {error ? (
-        <p style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--state-danger)", lineHeight: 1.5 }}>
-          {error}
+      {/* 저장할 때 나는 오류(`error`)와 **[추가]를 눌러 막힌 말**이 같은 자리에 선다 —
+          둘 다 「지금 이 목록에서 걸린 것」이고, 자리를 나누면 담당자가 두 곳을 보게 된다.
+          저장 오류가 먼저다: 그쪽은 이미 들어간 값의 문제라 새 줄을 만드는 것보다 앞선다.
+          `role="alert"` 인 것은 [추가]를 눌러 **방금 생긴** 말이기 때문이다 — 눌렀는데
+          아무 줄도 생기지 않은 사람에게 그 이유가 소리로도 가야 한다 */}
+      {error || blockedNow ? (
+        <p role={error ? undefined : "alert"}
+          style={{ marginTop: 6, fontSize: "var(--fs-caption)", color: "var(--state-danger)", lineHeight: 1.5 }}>
+          {error || addBlocked}
         </p>
       ) : null}
       {note ? (

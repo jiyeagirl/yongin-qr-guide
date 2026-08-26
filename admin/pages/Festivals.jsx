@@ -86,8 +86,11 @@ function stateOf(f) {
    여러 해에 걸치는 축제(12/28~1/3)도 이 길로 저절로 풀린다. 「연도가 같다」는 것은
    대개 맞지만 늘 맞지는 않은 짐작인데, **날을 통째로 목록으로 만들면 짐작할 것이 없다.**
 
-   기간이 아직 비어 있으면 목록을 넘기지 않는다 — 그때 칸은 종전 `datetime-local` 로
-   떨어진다 (고를 날이 하나도 없는 고르개보다는 낫다). */
+   고를 날이 없으면(기간이 비었거나 거꾸로 적혔다) 칸은 **같은 모양으로 서되 칸 이름
+   (「일자」)만 달고 잠긴다** (`Repeater` 의 `daytime`). 한때 그 경우만 종전
+   `datetime-local` 로 떨어지게 두었는데, **[등록] 창이 정확히 그 상태**라 담당자가 처음
+   보는 화면에서 연도를 받는 칸을 보게 됐다. **무엇을 먼저 해야 하는지는 [추가]를 누른
+   순간 적는다** (아래 `noPeriod` → `Repeater` 의 `addBlocked`). */
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
 /* 날짜를 **UTC 자정으로 못박고 UTC 로만 셈한다.** 하루를 더하는 일과 요일을 내는 일이
@@ -100,16 +103,21 @@ function daysBetween(start, end) {
   for (const d = new Date(at(start)); d.getTime() <= last; d.setUTCDate(d.getUTCDate() + 1)) {
     const iso = d.toISOString().slice(0, 10);
     out.push({ value: iso, label: `${+iso.slice(5, 7)}.${+iso.slice(8, 10)} (${DOW[d.getUTCDay()]})` });
-    /* 종료일을 시작일보다 앞으로 적어 둔 중간 상태에서는 빈 목록이 나오고, 그때는
-       위 규칙대로 종전 칸으로 떨어진다. 400 은 그 밖의 실수를 막는 빗장이다 */
+    /* 종료일을 시작일보다 앞으로 적어 둔 중간 상태에서는 빈 목록이 나온다 (V-07 이 그
+       자리에서 따로 말한다). 400 은 그 밖의 실수를 막는 빗장이다 */
     if (out.length > 400) break;
   }
   return out;
 }
 
-function withPeriod(columns, v) {
-  if (!v.start || !v.end) return columns;
-  const days = daysBetween(v.start, v.end);
+/* 폼의 값에서 고를 수 있는 날들을 낸다. **[추가]를 막는 조건과 칸이 잠기는 조건이 이 한
+   값에서 갈라져 나와야** 둘이 어긋나지 않는다 — 고를 날이 없는데 줄만 생기면 채울 수 없는
+   줄이 하나 서 있게 된다 */
+function daysOf(v) {
+  return v && v.start && v.end ? daysBetween(v.start, v.end) : [];
+}
+
+function withPeriod(columns, days) {
   if (!days.length) return columns;
   return columns.map(c => (c.type === "daytime" ? { ...c, days } : c));
 }
@@ -177,6 +185,24 @@ export function Festivals({ onToast }) {
     });
     return o;
   }, [rows, ed.draft]);
+
+  /* ── 고를 날이 없으면 1:N 목록에 줄을 못 만든다 (2026-08-26, 사용자 요청) ───────────
+     프로그램·부스의 일시 칸은 **축제 기간에서 고를 날 목록을 받아** 선다(위 `withPeriod`).
+     고를 날이 없는 채로 줄을 만들면 **채울 수 없는 줄**이 하나 서 있게 된다.
+
+     [추가] 단추를 흐리게 하지 않고 **누르게 둔 뒤 이유를 적는다** — 흐린 단추는 못
+     누른다는 것만 말하고 왜인지는 말하지 않아서, 담당자가 그 앞에서 할 일을 찾지 못한다.
+     시작일·종료일은 이 폼의 위쪽에 있고 둘 다 필수라, 문장이 가리키는 자리가 화면에
+     이미 있다. 두 목록이 같은 문장을 쓴다 — 걸리는 이유가 같으니 말도 같아야 한다.
+
+     **막히는 두 경우를 갈라 적는다.** 기간이 비어 있는 것과 거꾸로 적힌 것은 담당자가
+     할 일이 다르다 — 앞은 채우는 일이고 뒤는 고치는 일이다. 뒤쪽은 종료일 칸에도 V-07
+     오류가 함께 서지만, [추가]를 누른 사람은 그 칸이 아니라 이 자리를 보고 있다. */
+  const days = daysOf(ed.draft && ed.draft.values);
+  const noPeriod = !ed.draft || days.length ? null
+    : (!ed.draft.values.start || !ed.draft.values.end)
+      ? "시작일과 종료일을 먼저 입력해 주세요."
+      : "종료일이 시작일보다 빠릅니다. 축제 기간을 먼저 고쳐 주세요.";
 
   /* 제목 아래 「전체 | 삭제된 항목 n」 탭이 있었다 (2026-08-24 삭제) — 삭제가 영구가
      되면서 되돌리는 자리가 없어졌다 (`data/store.js` 머리말) */
@@ -273,10 +299,10 @@ export function Festivals({ onToast }) {
                        「조건부 · 자료 확보 시」 배지가 붙었다. 자료를 받을지 아직 모른다는
                        것은 **우리 쪽 사정**이지 이 칸을 채우는 사람이 알아야 할 일이 아니다.
                        담당자에게 이 둘은 그냥 "있으면 넣고 없으면 비우는" 선택 항목이다. */}
-                {/* 날짜 고르개를 축제 기간 안으로 묶는다 (2026-08-24). 위 폼의 시작일·종료일이
-                    이미 정해져 있으므로, 달력이 그 밖의 날을 흐리게 두면 담당자가 다른 달을
-                    잘못 고르는 일 자체가 없어진다. 기간을 아직 안 넣었으면 묶지 않는다 —
-                    아무 날도 못 고르는 달력이 되는 쪽이 나쁘다. */}
+                {/* 일시 칸이 축제 기간에서 **고를 날 목록**을 받는다 (위 `withPeriod`).
+                    기간이 비어 있으면 고를 날이 없으므로 [추가]가 막히고, 무엇을 먼저
+                    해야 하는지를 그때 한 줄로 적는다 (`addBlocked`). 두 목록이 같은
+                    말을 쓴다 — 걸리는 이유가 같으니 문장도 같아야 한다. */}
                 {/* 「선택」 배지를 단다 (2026-08-25, 사용자 요청). 두 목록은 명세서의
                     조건부 항목이라(`C` — 자료가 오면 채운다) 축제 하나에 한 줄도 없을 수
                     있는데, 위 폼의 칸들이 전부 필수/선택을 달고 있는 사이에서 이 둘만
@@ -286,12 +312,13 @@ export function Festivals({ onToast }) {
                     쓴다 (design-systems 의 RequiredBadge). */}
                 <Repeater
                   title="프로그램 일정" badge={<RequiredBadge />}
-                  columns={withPeriod(PROGRAM_COLUMNS, ed.draft.values)}
+                  columns={withPeriod(PROGRAM_COLUMNS, days)}
                   rows={ed.draft.values.programs || []}
                   onChange={p => ed.set("programs", p)}
                   /* 지울 때 「무엇을」에 해당하는 칸 — 프로그램은 `title` 이다 (부스는 `name`) */
                   nameKey="title"
                   addLabel="프로그램 추가" error={ed.errors.programs}
+                  addBlocked={noPeriod}
                   note="작성하신 순서에 따라 사용자 화면에 노출됩니다." />
 
                 {/* 부스는 **글로 안내한다** (2026-08-20). 좌표 칸 둘과 배치도 이미지(V-06),
@@ -299,10 +326,11 @@ export function Festivals({ onToast }) {
                     한 줄이 된다. 자세한 사정은 data/fields.js 의 BOOTH_COLUMNS 주석. */}
                 <Repeater
                   title="부스 위치" badge={<RequiredBadge />}
-                  columns={withPeriod(BOOTH_COLUMNS, ed.draft.values)}
+                  columns={withPeriod(BOOTH_COLUMNS, days)}
                   rows={ed.draft.values.booths || []}
                   onChange={b => ed.set("booths", b)}
                   addLabel="부스 추가" error={ed.errors.booths}
+                  addBlocked={noPeriod}
                   note="작성하신 순서에 따라 사용자 화면에 노출됩니다." />
               </>
             } />
