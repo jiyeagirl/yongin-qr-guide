@@ -140,7 +140,17 @@ export function OptionPicker({
         aria-label={ariaLabel}
         role="combobox" aria-expanded={open} aria-autocomplete="list"
         disabled={disabled}
-        onFocus={() => setOpen(true)}
+        /* ── 포커스로는 열지 않는다 (2026-08-27, 사용자 요청) ────────────────────
+           `onFocus` 로도 열고 있었는데, 그러면 **[QR 지점 등록]을 누르는 순간 목록이
+           이미 내려와 있다**: 다이얼로그는 열릴 때 본문의 첫 입력칸으로 포커스를
+           보내고(`Modal`), 그 첫 칸이 이 칸이다. 담당자가 처음 보는 화면이 **폼이
+           아니라 QR ID 오십 줄**이고, 그 밑에 무슨 칸이 있는지는 목록을 닫아야 보인다.
+           1:N 목록에서는 더 나쁘다 — 줄을 Tab 으로 훑기만 해도 줄마다 목록이 떴다 진다.
+
+           포커스는 **여기 있다**는 뜻이고 여는 것은 **고르겠다**는 뜻이라, 둘은 같은
+           일이 아니다. 여는 길은 셋 그대로다: 칸을 누르거나 · ↓ 나 Enter 를 치거나 ·
+           글자를 치거나 (아래 `onChange` 와 `onKeyDown`). 키보드만 쓰는 사람도 잃는
+           것이 없다 — Tab 으로 들어와 ↓ 한 번이면 같은 목록이다. */
         onClick={() => setOpen(true)}
         onChange={e => { setTerm(e.target.value); setActive(0); if (!open) setOpen(true); }}
         onKeyDown={onKeyDown} />

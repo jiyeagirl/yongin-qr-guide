@@ -125,22 +125,14 @@ export function DataTable({
      적힌 폭의 합 + 폭 없는 열마다 `FLEX_MIN`. 그보다 좁아지면 표가 가로로 스크롤된다
      (바깥 상자가 이미 `overflow-x: auto` 다). */
   fixed = false,
-  /* ── `fit` — 표를 **내용 너비에 맞춘다** (2026-08-26 신설) ────────────────────
-     기본은 표가 주어진 폭을 전부 쓴다(`width: 100%`). 목록 화면에서는 그것이 맞다 —
-     열이 예닐곱이고 훑는 것이 일이라 넓을수록 한 줄이 잘 읽힌다.
+  /* ── `fit` 이 여기 있었다 (2026-08-26 신설 → 2026-08-27 삭제) ──────────────────
+     표를 자기 내용 너비에 맞춰 세우고 바깥 상자도 함께 줄이던 플래그다. 쓰는 자리는
+     대시보드의 「조회수 상위 점포」 하나였는데 — 열이 넷뿐이라 남는 자리를 상호명 열이
+     통째로 먹던 표다 — **그 표가 열 여섯이 되면서 손님이 없어졌다.**
 
-     열이 서넛뿐인 표에서는 반대가 된다. 대시보드의 「조회수 상위 점포」가 그렇다:
-     순위 · 상호명 · 업종 · 조회 넷인데 화면 폭을 다 쓰니 **상호명 열 하나가 남는 자리를
-     통째로 먹고**, 순위 배지와 조회수 사이가 손바닥만큼 벌어져 한 줄을 읽으려면 눈이
-     그 빈 곳을 건너뛰어야 한다. 표가 넓은 것이 아니라 **읽을 것이 흩어진 것**이다.
-
-     `fit` 을 켜면 표가 자기 내용만큼만 서고 바깥 상자(테두리 · 배경)도 함께 줄어든다.
-     **테두리만 화면 끝까지 가면 안 된다** — 그러면 표가 왼쪽에 치우쳐 붙은 것으로 보인다.
-     내용이 자리보다 넓어지면 그때는 100% 에서 멈추고 가로로 스크롤된다.
-
-     `fixed` 와 함께 쓰지 않는다. 저쪽은 「남는 자리를 한 열이 가져간다」이고 이쪽은
-     「남는 자리를 만들지 않는다」라, 둘을 같이 켜면 서로 반대되는 말을 한다. */
-  fit = false,
+     남는 한 줄: 열이 서넛뿐인 표가 화면 폭에서 흩어져 보이면, **표를 줄이기 전에 그
+     자리에 담당자가 읽을 것이 빠져 있지 않은지** 먼저 본다. 줄이면 오른쪽 절반이 비고,
+     빈 절반은 「알맞게 선 표」가 아니라 「무언가 빠진 자리」로 읽힌다. */
   style, ...rest
 }) {
   const [sort, setSort] = React.useState(null);
@@ -195,14 +187,11 @@ export function DataTable({
 
   return (
     <div style={{ background: "var(--surface-card)", border: "var(--stroke-hairline) solid var(--border-default)",
-      borderRadius: "var(--radius-lg)", overflow: "hidden",
-      /* `fit` 이면 상자가 표를 따라 줄어든다 — 테두리만 화면 끝까지 가지 않는다 (위 주석) */
-      width: fit ? "max-content" : undefined, maxWidth: fit ? "100%" : undefined,
-      ...style }} {...rest}>
+      borderRadius: "var(--radius-lg)", overflow: "hidden", ...style }} {...rest}>
       {/* 가로 스크롤은 **이 상자 안에서만** 일어난다. 밖으로 새면 셸 전체가 흔들리고
           좌측 내비가 화면 밖으로 밀린다 (AdminShell 의 minWidth:0 주석 참조) */}
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: fit ? "auto" : "100%", borderCollapse: "collapse", fontFamily: "var(--font-sans)",
+        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-sans)",
           tableLayout: fixed ? "fixed" : undefined, minWidth }}>
           {caption ? <caption style={{ position: "absolute", width: 1, height: 1, overflow: "hidden",
             clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>{caption}</caption> : null}
