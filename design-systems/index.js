@@ -54,6 +54,8 @@ export { Notice } from "./components/feedback/Notice.jsx";
 export { Toast } from "./components/feedback/Toast.jsx";
 export { Sheet, SNAP_ORDER, SNAP_HEIGHT } from "./components/feedback/Sheet.jsx";
 export { FloatingControls } from "./components/feedback/FloatingControls.jsx";
+/* 처음 들어온 사람에게 화면을 짚어주는 코치마크 (U-CM-19). 밝힐 자리는 부르는 쪽이 준다 */
+export { CoachMarks } from "./components/feedback/CoachMarks.jsx";
 export { EmptyState } from "./components/feedback/EmptyState.jsx";
 export { LoadingBar } from "./components/feedback/LoadingBar.jsx";
 export { ProgressBar } from "./components/feedback/ProgressBar.jsx";

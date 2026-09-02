@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ContextBar, KakaoMap, MapPreviewCard, MapFilterOverlay, InlineSelect, Sheet, Toast, TabBar, FloatingControls,
+  CoachMarks,
   DistrictSummary, FacilitySummary, FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, SAFETY,
   Icon, Mascot, token, VisuallyHidden,
 } from "../../design-systems/index.js";
@@ -23,6 +24,7 @@ import { DistrictList } from "../detail/DistrictList.jsx";
 import { DistrictSoon } from "../detail/DistrictSoon.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, replace, back, closeAll } from "./router.js";
+import { useCoachMarks } from "./data/coachMarks.js";
 import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
   DISTRICT_LIST_PAGE_SIZE } from "./config.js";
 
@@ -98,6 +100,53 @@ const TABS = [
 ];
 const tabOf = id => TABS.find(t => t.id === id);
 
+/* ── 첫 진입 코치마크 (U-CM-19, 2026-08-28. 사용자 요청) ────────────────────────
+   **탭 하나에 한 걸음**이고 차례는 위 TABS 그대로다. 그래서 이 표는 TABS 바로 아래에
+   있다 — 탭이 늘거나 하는 일이 바뀌면 이 셋도 함께 봐야 한다.
+
+   ── 왜 탭을 짚는가 ──────────────────────────────────────────────────────────
+   처음 온 사람이 이 화면에서 못 보는 것은 **지금 보고 있는 탭이 아니라 나머지 둘**이다.
+   진입은 언제나 공공시설 탭이고(U-CM-03), 거기 뜬 지도와 목록은 눈앞에 있으니 스스로
+   읽힌다. 반면 상점가 탭에 무엇이 있는지 · 다른 동네 상점가는 어디서 보는지는 **눌러
+   보기 전에는 알 수 없다** — 탭 이름 넉 자가 전부다. 그래서 세 걸음이 각각 탭 한 칸을
+   밝히고, 그 칸을 눌렀을 때 무엇이 나오는지를 한 줄로 적는다.
+
+   ── 걸음이 넘어가도 탭은 그대로다 ────────────────────────────────────────────
+   두 번째 걸음에서 상점가 탭으로 옮겨 실제 화면을 보여주는 방법도 있었는데, 그러면
+   **읽는 사람이 시키지 않은 일이 화면에서 일어난다** — 카메라가 움직이고, 시트 내용이
+   갈리고, 지도 마커가 통째로 바뀐다. 그것도 어두운 막 뒤에서 일어나 무엇이 달라졌는지
+   보이지도 않는다. 게다가 [×] 로 그만둔 사람은 자기가 오지 않은 탭에 서 있게 된다.
+   안내가 끝나면 처음 들어온 그 자리(공공시설 탭)에 그대로 있어야 한다.
+
+   ── 문구 ────────────────────────────────────────────────────────────────────
+   해요체다. 이 앱에서 해요체는 조아용의 목소리인데(디자인 시스템 README 의 Content
+   fundamentals), 여기서 하는 말은 규칙도 거리도 날짜도 아닌 **처음 온 사람에게 건네는
+   안내**라 그 결이 맞다. 다만 **카드에 조아용을 세우지는 않는다** — 이 화면의 캐릭터
+   자리는 상단 띠 하나이고(한 화면에 하나), 그 띠는 코치마크가 떠 있는 동안에도 그 자리에
+   있다.
+
+   상점가 이름은 **적어 넣지 않고 받는다.** 지금은 유효한 QR 지점이 둔전 하나뿐이라
+   어느 쪽이든 같은 글자가 나오지만, 안내판은 시 전역에 서고 그때 이 문장만 둔전을
+   가리키고 있으면 화면이 조용히 거짓말을 한다. 상점가가 아예 없는 지점(S03-E)에서는
+   **이 걸음을 통째로 뺀다** — 그 탭에 깔리는 것은 점포 목록이 아니라 "가까운 상점가가
+   없습니다" 안내라(U-ST-16), 업종과 온누리를 말하는 문장이 그 위에 서면 안 된다.
+   점 개수도 함께 둘로 줄어든다. */
+function buildCoachSteps(district) {
+  return [
+    { id: "facility",
+      title: "내 주변 시설을 확인해요",
+      body: "QR을 찍은 곳에서 가까운 AED, 대피소, 쉼터, 화장실을 알려드려요." },
+    district ? {
+      id: "district",
+      title: "이 동네 상점 찾기",
+      body: `${district.name}에 있는 상점들을 업종별로 보고, 온누리상품권 되는 곳만 골라 볼 수 있어요.`,
+    } : null,
+    { id: "discover",
+      title: "다른 상점가도 둘러봐요",
+      body: "다른 골목형 상점가들도 살펴볼 수 있어요. 상점가 축제 소식도 여기서 확인해요." },
+  ].filter(Boolean);
+}
+
 /* 거리 문구 — 1km 를 넘으면 km 로 적는다 ("약 1400m"는 크기 감이 안 온다) */
 const km = m => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`);
 
@@ -115,7 +164,7 @@ function receiptNo(now = new Date()) {
   return `YG-${day}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
 }
 
-export function MainApp({ qr = null, noDistrict = false }) {
+export function MainApp({ qr = null, noDistrict = false, forceCoach = false }) {
   /* `nearby`(U-ST-07 주변 공공시설 4줄)가 여기서 합쳐졌다 — 읽는 화면이 없어져 함께
      걷어냈다 (2026-08-24. DistrictSheet 의 해당 자리 주석 · facilities.js 의 U-ST-07 항목).
      축제는 그대로다: 6건이 32개소에 흩어져 있어 `districts.js` 가 소유하고, 여기서
@@ -216,6 +265,20 @@ export function MainApp({ qr = null, noDistrict = false }) {
   const currentDistrict = React.useMemo(
     () => (noDistrict ? null : DISTRICTS.find(x => x.id === CURRENT_DISTRICT_ID) || null), [noDistrict]);
   const hasDistrict = Boolean(currentDistrict);
+
+  /* ── 첫 진입 코치마크 (U-CM-19, 2026-08-28) ────────────────────────────────
+     열지 말지는 여기서 정하지 않는다 — 「처음인가」를 아는 것은 브라우저에 그 사실을
+     적어두는 쪽이다 (`data/coachMarks.js`). 셸은 **어디를 밝히고 무슨 말을 적을지**만
+     안다.
+
+     탭 한 칸의 자리는 `TabBar` 에게 받는다 (`itemRefs`). 셈으로 짐작하지 않는 이유는
+     그쪽 머리말에 있다. 걸음 목록이 탭 id 를 그대로 쓰므로 이 사전 하나로 셋이 다 걸린다. */
+  const [coachOpen, closeCoach] = useCoachMarks(forceCoach);
+  const tabRefs = React.useRef({});
+  const coachSteps = React.useMemo(
+    () => buildCoachSteps(hasDistrict ? d.district : null)
+      .map(s => ({ ...s, target: () => tabRefs.current[s.id] })),
+    [hasDistrict, d.district]);
 
   /* ── S03 상점가: 필터 + 정렬 ──────────────────────────────────────────
      목록과 지도 마커가 같은 배열을 본다 (U-ST-10/11/12/15 → U-ST-13).
@@ -1199,7 +1262,20 @@ export function MainApp({ qr = null, noDistrict = false }) {
       {/* 하단 탭바 (U-CM-03) — 지도 영역의 **형제**다. 시트 안이나 위가 아니라 밖에 있으므로
           전체 스냅(100%)에서도 덮이지 않는다. 기능명세서 5-3 #5 의 답.
           알림 점은 찍지 않는다 (2026-08-20. 종전 U-CM-18) — 아래 TABS 머리말 참조 */}
-      <TabBar items={TABS} value={tab} onChange={changeTab} />
+      <TabBar items={TABS} value={tab} onChange={changeTab} itemRefs={tabRefs} />
+
+      {/* ── 첫 진입 코치마크 (U-CM-19) — z-modal 600 ─────────────────────────
+             탭바(z 450)와 시트(z 500) 위에 서야 탭 한 칸을 밝힐 수 있으므로 지도 영역
+             안이 아니라 **루트의 자식**이다 (상세 오버레이와 같은 이유).
+
+             **상세 오버레이가 열려 있으면 뜨지 않는다.** 정상 진입에서는 해시가 `#/` 라
+             걸릴 일이 없지만, 상세로 바로 들어오는 주소(딥링크·검수 주소)로 처음 오는
+             사람이 있다 — 그때 뜨면 탭바가 상세 화면에 덮여 보이지 않는 상태에서 그
+             자리를 밝히게 된다. 여기서 열지 않을 뿐 **미루지도 않는다**: 상세를 닫고
+             셸로 돌아오면 그때 뜬다 (`coachOpen` 은 그대로 남아 있다). 그 사람에게도
+             셸은 여전히 처음 보는 화면이다. */}
+      {coachOpen && route.name === "main"
+        ? <CoachMarks steps={coachSteps} onFinish={closeCoach} /> : null}
 
       {/* ── 상세 오버레이 (S05 / S06) — z-modal 600 ──────────────────────────
              지도 영역이 아니라 **루트의 자식**이다. 지도 영역 안에 두면 탭바(형제, z 450)를

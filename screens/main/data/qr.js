@@ -187,10 +187,20 @@ export function lookup(code) {
  *
  *   ?district=none   현재 상점가 없음 → 상점가 탭이 S03-E 로
  *   ?net=fail        QR 조회가 통신 오류로 실패 → S11-B (첫 조회만. 위 lookup)
+ *   ?coach=1         첫 진입 코치마크(U-CM-19)를 다시 켠다
+ *
+ * `?coach=1` 만 성격이 조금 다르다 — 앞의 둘은 **더미로는 만들 수 없는 상태**를 켜는
+ * 것이고, 이쪽은 **한 번 지나가면 다시 오지 않는 상태**를 되돌리는 것이다. 코치마크는
+ * 처음 온 사람에게만 뜨고 봤다는 사실이 브라우저에 남으므로(`data/coachMarks.js`),
+ * 이 플래그가 없으면 두 번째부터는 새 프로필을 열어야 검수할 수 있다.
  */
 export function readReviewFlags(loc = typeof location !== "undefined" ? location : null) {
   const p = new URLSearchParams((loc && loc.search) || "");
-  return { noDistrict: p.get("district") === "none", netFail: p.get("net") === "fail" };
+  return {
+    noDistrict: p.get("district") === "none",
+    netFail: p.get("net") === "fail",
+    coach: p.get("coach") === "1",
+  };
 }
 
 export default QR_POINTS;

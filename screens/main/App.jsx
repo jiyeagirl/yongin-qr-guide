@@ -66,8 +66,10 @@ export function App() {
   }
 
   /* 정상 진입 — 여기서부터는 셸이 화면을 전부 맡는다.
-     noDistrict 는 S03-E(U-ST-16) 검수 플래그다 (data/qr.js 머리말 참조). */
-  return <MainApp qr={result ? result.point : null} noDistrict={flags.noDistrict} />;
+     noDistrict 는 S03-E(U-ST-16), forceCoach 는 코치마크(U-CM-19) 검수 플래그다
+     (data/qr.js 머리말 참조). */
+  return <MainApp qr={result ? result.point : null} noDistrict={flags.noDistrict}
+    forceCoach={flags.coach} />;
 }
 
 export default App;
