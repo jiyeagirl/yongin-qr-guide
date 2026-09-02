@@ -66,10 +66,16 @@ export function App() {
   }
 
   /* 정상 진입 — 여기서부터는 셸이 화면을 전부 맡는다.
-     noDistrict 는 S03-E(U-ST-16), forceCoach 는 코치마크(U-CM-19) 검수 플래그다
-     (data/qr.js 머리말 참조). */
+     noDistrict 는 S03-E(U-ST-16), forceCoach 는 코치마크(U-CM-19), pamphlet 은 축제
+     팜플렛 진입(U-CM-20 · S14) 검수 플래그다 (data/qr.js 머리말 참조).
+
+     **축제 팜플렛 진입 자체는 여기서 갈라지지 않는다.** 셸을 세울 수 있느냐는 물음에
+     대한 답이 「세운다」로 같기 때문이다 — 팜플렛으로 들어온 사람도 [주변 안내보기]를
+     누르면 여느 진입과 한 픽셀도 다르지 않은 화면에 선다. 갈리는 것은 그 위에 안내가
+     한 장 덮이느냐이고, 그것은 셸이 안다 (이 파일 머리말의 「조건이 늘어나면 진입이
+     느려진다」). 어느 축제인지는 QR 지점이 들고 온다 (`qr.festivalId`). */
   return <MainApp qr={result ? result.point : null} noDistrict={flags.noDistrict}
-    forceCoach={flags.coach} />;
+    forceCoach={flags.coach} pamphlet={flags.pamphlet} />;
 }
 
 export default App;

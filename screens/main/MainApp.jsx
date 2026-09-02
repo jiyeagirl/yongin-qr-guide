@@ -1,9 +1,9 @@
 import React from "react";
 import {
   ContextBar, KakaoMap, MapPreviewCard, MapFilterOverlay, InlineSelect, Sheet, Toast, TabBar, FloatingControls,
-  CoachMarks,
+  CoachMarks, WelcomeDialog,
   DistrictSummary, FacilitySummary, FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, SAFETY,
-  Icon, Mascot, token, VisuallyHidden,
+  Icon, Mascot, token, VisuallyHidden, eun, i as iJosa,
 } from "../../design-systems/index.js";
 import { DUNJEON } from "./data/dunjeon.js";
 import { FACILITIES, RADIUS_STEPS, RADIUS_DEFAULT, NEAR_ENOUGH } from "./data/facilities.js";
@@ -147,6 +147,47 @@ function buildCoachSteps(district) {
   ].filter(Boolean);
 }
 
+/* ── S14 축제 팜플렛 진입 안내 (U-CM-20, 2026-09-02. 사용자 요청) ──────────────
+   **안내판이 아니라 축제 팜플렛에 인쇄된 QR 로 들어온 사람**에게 셸 위에 한 장 덮는다.
+   그 사람이 손에 들고 있는 것은 지도가 아니라 축제 홍보물이고, 찍은 이유도 「주변에 뭐가
+   있나」가 아니라 **「이 축제 뭐지」**다. 진입이 언제나 공공시설 탭인 것은 안내판 앞에 선
+   사람을 위한 규칙이라(U-CM-03), 그 사람에게는 시키지 않은 화면이 먼저 열리는 셈이 된다.
+
+   그렇다고 축제 상세로 곧장 보내지도 않는다 — 그러면 이번엔 **주변 안내가 있다는 사실
+   자체가 안 보인다.** 팜플렛에 QR 을 찍은 사람도 골목에 서 있고, 화장실과 AED 는 그때
+   찾는다. 그래서 두 길을 다 적고 고르게 한다: 화면 하나를 건너뛰게 하는 대신, 갈림길을
+   한 번 보여주는 쪽이 어느 쪽도 잃지 않는다.
+
+   ── 문구는 축제의 상태를 따라 셋이다 ────────────────────────────────────────
+   **팜플렛은 종이라서 축제보다 오래 남는다.** 끝난 축제의 팜플렛을 서랍에서 꺼내 찍는
+   사람이 있고, 열리기 몇 주 전에 받아 든 사람도 있다. 상태를 보지 않고 늘 「열리고
+   있어요」라고 적으면, [축제 정보보기]를 눌러 들어간 상세에 「종료」 배지가 서 있다 —
+   **두 번 눌러 스스로 뒤집히는 화면**이 된다.
+
+   ── 이름은 `short` 가 아니라 `name` 이다 ────────────────────────────────────
+   화면 제목용 짧은 이름(「둔전 골목축제」)을 두고도 실제 축제명을 적는다. 이 줄이 하는
+   일이 **손에 든 팜플렛과 맞춰 보는 것**이기 때문이다 — 현수막과 인쇄물에 적힌 이름이
+   실제 명칭이라, 짧은 이름을 적으면 방금 찍은 종이에 없는 말이 화면에 뜬다.
+   (`FestivalCard` 가 둘을 함께 적는 것과 갈리는데, 저쪽은 여섯 장을 훑는 목록이라
+   길이가 고른 제목이 필요하다. 여기는 한 장이고 훑을 것이 없다.)
+
+   조사는 `josa` 가 붙인다 — 이름이 자료에서 오므로 문장에 박아둘 수 없다.
+   「…stage78이」(8 → 받침 있음) 와 「…한마당 축제가」가 한 표에서 나온다.
+
+   단추 차례는 **세 상태가 모두 같다.** 종료된 축제라고 [주변 안내보기]를 위로 올리지
+   않는다 — 축제 팜플렛을 찍은 사람이 첫 번째로 물은 것은 어느 경우든 그 축제이고
+   (끝났다면 「무슨 축제였나」가 그 물음이다), 상태에 따라 단추가 자리를 바꾸면 같은 QR 이
+   날짜에 따라 다른 화면이 된다. */
+const PAMPHLET_COPY = {
+  진행중: { pose: "excited", title: n => `${iJosa(n)} 열리고 있어요!` },
+  /* 「곧 열려요」가 아니다 — 이 문장은 두 달 뒤의 축제에도 그대로 뜬다.
+     언제인지는 바로 아래 기간 줄이 날짜로 적는다 */
+  예정:   { pose: "curious", title: n => `${iJosa(n)} 열릴 예정이에요` },
+  /* `sorry` 를 쓰지 않는다 — 축제가 끝난 것은 잘못된 일이 아니고, 사과하는 표정은 이
+     사람이 뭔가를 놓쳤다고 말한다. 있었던 일을 있었던 대로 적는다 */
+  종료:   { pose: "front",   title: n => `${eun(n)} 지난 축제예요` },
+};
+
 /* 거리 문구 — 1km 를 넘으면 km 로 적는다 ("약 1400m"는 크기 감이 안 온다) */
 const km = m => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`);
 
@@ -164,7 +205,7 @@ function receiptNo(now = new Date()) {
   return `YG-${day}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
 }
 
-export function MainApp({ qr = null, noDistrict = false, forceCoach = false }) {
+export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pamphlet = null }) {
   /* `nearby`(U-ST-07 주변 공공시설 4줄)가 여기서 합쳐졌다 — 읽는 화면이 없어져 함께
      걷어냈다 (2026-08-24. DistrictSheet 의 해당 자리 주석 · facilities.js 의 U-ST-07 항목).
      축제는 그대로다: 6건이 32개소에 흩어져 있어 `districts.js` 가 소유하고, 여기서
@@ -279,6 +320,27 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false }) {
     () => buildCoachSteps(hasDistrict ? d.district : null)
       .map(s => ({ ...s, target: () => tabRefs.current[s.id] })),
     [hasDistrict, d.district]);
+
+  /* ── S14 축제 팜플렛 진입 (U-CM-20, 2026-09-02) ─────────────────────────────
+     어느 축제인지는 **QR 지점이 들고 온다** (`data/qr.js` 의 `festivalId`). 지금 서 있는
+     상점가의 축제로 유추하지 않는 이유는 그 표에 적어 두었다 — 팜플렛은 종이라 옮겨
+     다닌다. `pamphlet` prop 은 검수 플래그이고(`?pamphlet=<축제 id>`), 세 상태를 다
+     열어보기 위한 자리라 코드가 들고 온 값보다 앞선다.
+
+     ── 봤다는 사실을 적어두지 않는다 (코치마크와 갈리는 자리다) ────────────────
+     코치마크가 묻는 것은 「이 서비스를 처음 보는가」라 브라우저에 답을 남기지만, 이
+     팝업이 답하는 것은 **「이번에 무엇으로 들어왔는가」**다. 같은 팜플렛을 다음 주에 다시
+     찍은 사람은 그때도 그 축제를 보러 온 것이고, 그 사이 축제 상태가 바뀌어 있을 수도
+     있다. 한 번 보고 나면 안 뜨게 만들면 **팜플렛 QR 이 그 다음부터는 그냥 안내판 QR 이
+     된다** — 인쇄물에 QR 을 실은 이유가 그때 없어진다.
+
+     그래서 기억은 이 진입 한 번 안에서만 산다: 어느 단추를 눌러도 닫히고, 축제 상세를
+     보고 돌아와도 다시 뜨지 않는다 (아래 두 함수 모두 먼저 닫는다). */
+  const pamphletFestival = React.useMemo(() => {
+    const id = pamphlet || (qr && qr.festivalId) || null;
+    return id ? FESTIVALS.find(f => f.id === id) || null : null;
+  }, [pamphlet, qr]);
+  const [pamphletOpen, setPamphletOpen] = React.useState(Boolean(pamphletFestival));
 
   /* ── S03 상점가: 필터 + 정렬 ──────────────────────────────────────────
      목록과 지도 마커가 같은 배열을 본다 (U-ST-10/11/12/15 → U-ST-13).
@@ -1264,6 +1326,39 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false }) {
           알림 점은 찍지 않는다 (2026-08-20. 종전 U-CM-18) — 아래 TABS 머리말 참조 */}
       <TabBar items={TABS} value={tab} onChange={changeTab} itemRefs={tabRefs} />
 
+      {/* ── S14 축제 팜플렛 진입 안내 (U-CM-20) — z-modal 600 ────────────────
+             코치마크와 같은 자리에 선다(루트의 자식). 뜨는 조건이 겹치지 않게 **이쪽이
+             먼저다** — 팜플렛으로 처음 들어온 사람은 둘 다 대상이라, 그대로 두면 어두운
+             막 두 겹이 한꺼번에 뜬다. 코치마크는 미뤄지고 이 상자가 닫힌 뒤에 나온다
+             (아래 `!pamphletOpen`). 순서가 이쪽인 이유는 **이 사람이 방금 한 일에 대한
+             답이 여기 있어서**다 — 코치마크는 화면을 설명하지만 이 상자는 그가 찍은
+             종이에 대해 말한다. [축제 정보보기]로 나갔다 돌아오면 그때 코치마크가 뜬다.
+
+             상세 오버레이가 열려 있으면 뜨지 않는 것도 코치마크와 같다. */}
+      {pamphletOpen && pamphletFestival && route.name === "main" ? (() => {
+        const copy = PAMPHLET_COPY[pamphletFestival.state] || PAMPHLET_COPY.진행중;
+        return (
+          <WelcomeDialog
+            base="../../design-systems/"
+            pose={copy.pose}
+            title={copy.title(pamphletFestival.name)}
+            /* 기간과 시간 한 줄. 장소까지 적지 않는 것은 **팜플렛에 이미 다 인쇄되어
+               있고**, 이 상자가 하는 일이 안내가 아니라 갈림길이기 때문이다 — 상세
+               한 화면을 여기에 옮겨 적으면 [축제 정보보기]가 눌러볼 이유를 잃는다.
+               날짜만 남기는 것은 그것이 **지금 무엇을 할지 가르는 값**이라서다. */
+            description={pamphletFestival.date}
+            actions={[
+              { label: "축제 정보보기",
+                onClick: () => { setPamphletOpen(false); go(`#/festival/${pamphletFestival.id}`); } },
+              { label: "주변 안내보기", onClick: () => setPamphletOpen(false) },
+            ]}
+            /* Esc 는 **소극적인 쪽**이다 — 아무것도 고르지 않고 물러난 사람을 축제 상세로
+               데려가면 고른 적 없는 화면에 서게 된다. 남는 자리는 진입 기본값인 공공시설
+               탭이고, 그것이 [주변 안내보기]가 하는 일 그대로다 */
+            onDismiss={() => setPamphletOpen(false)} />
+        );
+      })() : null}
+
       {/* ── 첫 진입 코치마크 (U-CM-19) — z-modal 600 ─────────────────────────
              탭바(z 450)와 시트(z 500) 위에 서야 탭 한 칸을 밝힐 수 있으므로 지도 영역
              안이 아니라 **루트의 자식**이다 (상세 오버레이와 같은 이유).
@@ -1273,8 +1368,12 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false }) {
              사람이 있다 — 그때 뜨면 탭바가 상세 화면에 덮여 보이지 않는 상태에서 그
              자리를 밝히게 된다. 여기서 열지 않을 뿐 **미루지도 않는다**: 상세를 닫고
              셸로 돌아오면 그때 뜬다 (`coachOpen` 은 그대로 남아 있다). 그 사람에게도
-             셸은 여전히 처음 보는 화면이다. */}
-      {coachOpen && route.name === "main"
+             셸은 여전히 처음 보는 화면이다.
+
+             **축제 팜플렛 안내(S14)가 떠 있을 때도 같다** (2026-09-02) — 막 두 겹을
+             한꺼번에 덮지 않으려고 비켜서고, 저 상자가 닫히면 그때 뜬다. 여기서도
+             미루는 것이 아니라 그저 조건을 안 맞춘 것이고, 되찾는 길은 위와 같다. */}
+      {coachOpen && !pamphletOpen && route.name === "main"
         ? <CoachMarks steps={coachSteps} onFinish={closeCoach} /> : null}
 
       {/* ── 상세 오버레이 (S05 / S06) — z-modal 600 ──────────────────────────
