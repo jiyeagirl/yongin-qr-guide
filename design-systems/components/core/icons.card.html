@@ -12,7 +12,7 @@ const {FacilityIcon,CategoryIcon,FACILITY_LABELS,CATEGORY_LABELS,Icon}=window.De
 ReactDOM.createRoot(document.getElementById('root')).render(<div className="col" style={{gap:18}}>
 <div className="row" style={{gap:26}}>{["aed","toilet","rest","shelter"].map(t=><div key={t} style={{textAlign:'center',width:80}}><FacilityIcon type={t} size={28}/><div className="k" style={{marginTop:6}}>{FACILITY_LABELS[t]}</div></div>)}
 <span className="k" style={{maxWidth:220}}>AED · 대피소는 --pin-emergency 적색, 화장실 · 쉼터는 기본색</span></div>
-<div className="row" style={{gap:22}}>{["all","food","cafe","shop","beauty","culture","etc"].map(t=><div key={t} style={{textAlign:'center',width:78}}><CategoryIcon type={t} size={24}/><div className="k" style={{marginTop:6}}>{CATEGORY_LABELS[t]}</div></div>)}</div>
+<div className="row" style={{gap:22}}>{["all","food","cafe","shop","life","edu","culture","etc"].map(t=><div key={t} style={{textAlign:'center',width:78}}><CategoryIcon type={t} size={24}/><div className="k" style={{marginTop:6}}>{CATEGORY_LABELS[t]}</div></div>)}</div>
 <div className="row" style={{gap:22}}>{["navigation","qr-code","list","map-pin","ticket","party-popper","flag","copy","chevron-right"].map(n=><div key={n} style={{textAlign:'center',width:74}}><Icon name={n} size={22}/><div className="k" style={{marginTop:4,fontSize:9}}>{n}</div></div>)}</div>
 </div>);
 </script>

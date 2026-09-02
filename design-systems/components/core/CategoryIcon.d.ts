@@ -1,6 +1,6 @@
-/** Glyph for one of the 7 business-category chips. */
+/** Glyph for one of the 8 business-category chips. */
 export interface CategoryIconProps {
-  type: "all" | "food" | "cafe" | "shop" | "beauty" | "culture" | "etc";
+  type: "all" | "food" | "cafe" | "shop" | "life" | "edu" | "culture" | "etc";
   size?: number;
   style?: React.CSSProperties;
 }

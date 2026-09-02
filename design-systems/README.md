@@ -75,7 +75,7 @@ No component library was supplied, so the inventory is derived from the 13-scree
 - **Set:** **Lucide** (ISC), loaded from the CDN UMD build per page. No other icon system, no icon font, no emoji, no Unicode dingbats.
 - **Wrappers:** screens never name a glyph directly for domain concepts. `<FacilityIcon type="aed" />` and `<CategoryIcon type="cafe" />` hold the mapping in one place (spec 5-2), so a glyph swap before launch is a one-line change.
   - 시설 4종: aed → `heart-pulse`, toilet → `toilet`, rest → `armchair`, shelter → `shield`.
-  - 업종 7종: all → `layout-grid`, food → `utensils`, cafe → `coffee`, shop → `shopping-bag`, beauty → `scissors`, culture → `palette`, etc → `ellipsis`.
+  - 업종 8종: all → `layout-grid`, food → `utensils`, cafe → `coffee`, shop → `shopping-bag`, life → `concierge-bell`, edu → `graduation-cap`, culture → `palette`, etc → `ellipsis`.
 - **Style rules:** Lucide default line style, stroke-width untouched on every screen. **No fills, no tinted background squares behind icons.** Sizes 16 inline / 20 rows / 24 tabs and headers / 28 tiles. Safety hierarchy is carried by colour (`--pin-emergency`) and list order, not by a heavier glyph.
 - **Character vs icon:** never in the same cluster. 조아용 appears as PNG artwork in `Mascot`, `MascotBubble`, `EmptyState`, and the `ContextBar` leading slot only — never cropped, recoloured, rotated, or redrawn. 60px+ for illustration; down to 38px in the ContextBar, where only a face-forward pose (`hello`) survives the size.
 

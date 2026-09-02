@@ -88,8 +88,8 @@
         "message": "<CategoryIcon> doesn't accept that prop. Declared props: type, size, style."
       },
       {
-        "selector": "JSXOpeningElement[name.name='CategoryIcon'] > JSXAttribute[name.name='type'] > Literal[value!=/^(?:all|food|cafe|shop|beauty|culture|etc)$/]",
-        "message": "<CategoryIcon> type must be one of 'all' | 'food' | 'cafe' | 'shop' | 'beauty' | 'culture' | 'etc'."
+        "selector": "JSXOpeningElement[name.name='CategoryIcon'] > JSXAttribute[name.name='type'] > Literal[value!=/^(?:all|food|cafe|shop|life|edu|culture|etc)$/]",
+        "message": "<CategoryIcon> type must be one of 'all' | 'food' | 'cafe' | 'shop' | 'life' | 'edu' | 'culture' | 'etc'."
       },
       {
         "selector": "JSXOpeningElement[name.name='Checkbox'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|checked|onChange|disabled|style|key|ref|className|style|children)$/]",
