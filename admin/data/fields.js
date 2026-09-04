@@ -775,6 +775,12 @@ export const FACILITY_FIELDS = {
 export const INSTALL_STATUS = ["설치예정", "설치완료", "훼손", "철거"];
 export const INSTALL_STATUS_OPTIONS = INSTALL_STATUS.map(v => ({ value: v, label: v }));
 
+/* 이 코드가 **안내판이 아니라 축제 팜플렛에 인쇄된 것인가** (2026-09-02).
+   가르는 값은 「연계 축제」(`festival_id`) 하나다 — 값이 있으면 팜플렛이다. 아래 세 칸의
+   필수 여부가 여기서 갈린다 (그 자리의 머리말). **설치 상태로 가르지 않는다**: 그쪽은
+   현장의 기록이고(안내판이 서 있는가·철거됐는가), 이것은 코드의 성격이다. */
+export const isPamphlet = v => !!(v && v.festivalId);
+
 export const QR_FIELDS = [
   /* ── 이름이 「QR 식별자」에서 **「QR ID」** 가 됐다 (2026-08-26, 사용자 요청) ─────
      「식별자」는 이 값이 무슨 일을 하는지를 설명하는 말이지 담당자가 부르는 이름이
@@ -823,15 +829,53 @@ export const QR_FIELDS = [
      `maxLength` 가 막는다. 어디에 나가는지는 이 칸을 채우는 일과 상관이 없다 */
   { key: "name", spec: "name", label: "지점명", required: true, type: "text",
     range: "2~40자", minLength: 2, maxLength: 40, example: "둔전 시장 입구 버스정류장" },
-  { key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
+  /* ── 앵커를 어디서 얻는가가 코드마다 다르다 (2026-09-02, 사용자 요청) ─────────
+     QR 이 붙는 자리가 안내판만은 아니다 — **축제 팜플렛에도 인쇄된다** (시민 S14 · U-CM-20).
+     그런데 팜플렛은 **종이라서 붙어 있는 자리가 없다.** 도로명주소를 필수로 두면 담당자가
+     적을 수 있는 값이 없어서, 나눠 주는 자리의 주소나 안내판 주소를 대신 넣게 된다 —
+     둘 다 그 팜플렛이 거기 붙어 있다는 뜻이 되어 사실이 아니다.
+
+     대신 팜플렛에는 언제나 정해져 있는 것이 있다: **어느 상점가의 축제 팜플렛인가.**
+     그래서 앵커(주소·좌표)를 **소속 상점가의 대표주소에서 읽는다.** 옮겨 적지 않는
+     이유는 2-1 의 점포수 두 칸을 ⚙ 로 되돌린 근거와 같다 — **같은 사실을 두 곳에서
+     받으면 반드시 어긋난다.** 상점가 대표주소가 바뀌었는데 팜플렛 코드가 옛 주소를 들고
+     있으면, 그 코드로 들어온 시민이 보는 **모든 거리**가 옛 자리 기준이 된다.
+
+     그래서 필수가 코드의 성격을 따라 갈린다:
+
+       안내판 (연계 축제 없음)   주소 ● · 좌표 ● · 소속 상점가 ○
+       팜플렛 (연계 축제 있음)   주소 — · 좌표 — · 소속 상점가 ●
+
+     **`festivalId`(연계 축제)는 아직 이 표에 칸으로 서 있지 않다.** 화면에 그 칸을 여는
+     것은 다음 판의 일이고(관리자 명세서 4장), 그때까지 팜플렛 코드는 관리자 화면에서
+     만들 수 없다 — 이미 있는 줄을 열어 고치는 것만 된다. 값 자체는 레코드에 있으므로
+     (`useRecordEditor` 가 행을 통째로 복사한다) 아래 조건은 지금도 제대로 걸린다. */
+  { key: "addr", spec: "address_road", label: "도로명주소", required: "cond",
+    when: v => !isPamphlet(v), type: "address",
+    /* 조건부가 되면서 기본 문구가 「이 조건에서는 필수 항목입니다」로 바뀌는데, **그
+       조건이 화면에 없다** (연계 축제 칸이 아직 없다). 게다가 여기는 안내판 코드 —
+       즉 대부분의 경우 — 가 보는 문구라, 보이지 않는 조건을 가리키는 말이 서 있으면
+       담당자가 무엇을 잘못했는지 되짚게 된다. 검색해 고르는 칸이므로 할 일을 적는다
+       (V-02 · `districtId` 의 `requiredMsg` 와 같은 이유). */
+    requiredMsg: "도로명주소를 검색해 선택해주세요.",
     range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 },
-  COORD,
-  { key: "districtId", spec: "market_id", label: "소속 골목형 상점가", required: false, type: "select",
+  /* `COORD` 를 그대로 쓰지 않고 조건만 갈아 끼운다 — 그 상수는 점포·공공시설과 **함께
+     쓰는 값**이라, 여기서 고치면 저쪽 둘의 좌표까지 조건부가 된다 */
+  { ...COORD, required: "cond", when: v => !isPamphlet(v) },
+  { key: "districtId", spec: "market_id", label: "소속 골목형 상점가", required: "cond",
+    when: isPamphlet, type: "select",
+    /* 고르는 칸에서 「이 조건에서는 필수 항목입니다」는 **무엇을 눌러야 하는지 말해주지
+       않는다** — 온누리 상품권 종류가 같은 이유로 `requiredMsg` 를 열었다 (v1.15).
+       여기서는 한 가지를 더 해야 한다: 이 칸이 왜 갑자기 필수가 됐는지가 화면에 없다
+       (연계 축제 칸이 아직 없다). 그래서 문구가 그 이유까지 적는다 */
+    requiredMsg: "축제 팜플렛 코드는 앵커를 소속 골목형 상점가에서 읽습니다. 상점가를 선택해주세요.",
     options: withBlank(DISTRICT_OPTIONS, "— 지정 안 함 —"), span: 2,
     /* 「안내 상태로 진입합니다」에서 고쳤다 (2026-08-24, 사용자 요청). 「안내 상태」는
        우리가 화면 갈래에 붙인 이름(S03-E)이라 담당자에게 가리키는 대상이 없었다 —
        비웠을 때 사용자가 **실제로 보는 것**을 적는다. 세 곳인 것은 S03-E 의
-       NEARBY_DISTRICT_COUNT 다 (DistrictEmpty.jsx). */
+       NEARBY_DISTRICT_COUNT 다 (DistrictEmpty.jsx).
+       **팜플렛 이야기를 이 줄에 보태지 않는다** — 비울 수 있는 코드에게만 하는 말이고,
+       비울 수 없는 코드에게는 위 `requiredMsg` 가 그때 적는다 */
     hint: "골목형 상점가를 지정하지 않은 경우, 해당 QR로 진입한 사용자에게 가까운 골목형 상점가 3곳을 대신 안내합니다" },
 
   { key: "installStatus", spec: "install_status", label: "설치 상태", required: true, type: "select",

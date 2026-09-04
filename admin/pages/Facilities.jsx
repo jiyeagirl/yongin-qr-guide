@@ -1,7 +1,7 @@
 import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Cell, Button, Select, Switch, Badge, Pagination,
-  FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, CoordField, fixCoord, EMPTY_MARK,
+  FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, CoordField, fixCoord, EMPTY_MARK, FormField,
 } from "../../design-systems/admin.js";
 import { facilityName } from "../../screens/main/data/facilities.js";
 import { GU_ORDER, guOf } from "../../screens/main/data/districts.js";
@@ -13,6 +13,7 @@ import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
+import { BulkUploadModal } from "./BulkUploadModal.jsx";
 /* 여기서 `./RemovedItems.jsx` 의 「삭제된 항목 n」 탭 한 칸을 가져와 유형 탭 줄 끝에
    이어 붙였다 (2026-08-24 삭제) — `data/store.js` 머리말 참조 */
 
@@ -60,6 +61,12 @@ import { EditorModal } from "./EditorModal.jsx";
 const TYPE_OPTIONS = [{ value: "", label: "전체 유형" }]
   .concat(FACILITY_TYPES.map(t => ({ value: t, label: FACILITY_LABELS[t] })));
 
+/* 일괄 등록 창의 고르개. 필터의 것과 **첫 줄만 다르다** — 저쪽의 빈 값은 「전체」라는
+   답이고 이쪽의 빈 값은 **아직 답하지 않았다**는 뜻이라, 같은 글자를 쓰면 고르지 않은
+   채로 올린 사람에게 「네 유형에 다 넣었다」로 읽힌다 (점포 창과 같은 규칙) */
+const BULK_TYPE_OPTIONS = [{ value: "", label: "— 선택 —" }]
+  .concat(FACILITY_TYPES.map(t => ({ value: t, label: FACILITY_LABELS[t] })));
+
 /* ── 소속 구 고르개 (2026-08-26 신설, 사용자 요청) ──────────────────────────────
    유형 하나로는 목록이 좁혀지지 않는다. 지금 더미가 18곳이라 티가 나지 않을 뿐,
    공공데이터가 들어오면 AED 하나만으로도 시 전역에서 수백 건이고 그때 담당자에게
@@ -103,7 +110,22 @@ function derive(row) {
   return { ...row, name: facilityName(row) };
 }
 
-/* ── 이 화면은 **고치기만 한다** (2026-08-25 오후, 사용자 요청) ─────────────────
+/* ── [공공시설 등록]이 돌아왔다 — 엑셀 일괄 등록이다 (2026-09-04, 사용자 요청) ─────
+   점포 화면과 같은 창을 쓴다 (`BulkUploadModal.jsx`). 아래 「고치기만 한다」의 근거는
+   **한 곳이 새로 생기는 일**에 대한 것이었는데, 원천이 알려준다는 것과 **그 자료가 화면에
+   닿을 길이 없다**는 것은 다른 이야기다 — 길이 없으면 담당자는 개발 쪽에 요청하고
+   기다린다. 공공시설은 넷을 합쳐 수백 줄로 들어오므로 폼이 아니라 파일로 받는다
+   (골목형 상점가는 반대라 그쪽만 폼이다 — 한 달에 두세 곳이다).
+
+   **창에서 시설 유형을 먼저 고른다.** 이 화면에서 유형은 필터가 아니라 **어느 항목표를
+   쓰느냐**이고(AED 2항목 · 화장실 10항목 — fields.js 3장), 그래서 수정 창에서도 유형만은
+   바꿀 수 없다. 유형이 정해지지 않은 파일은 **어느 표로 읽어야 하는지가 정해지지 않은
+   파일**이라, 고르기 전에는 파일 칸이 잠긴다.
+
+   **[삭제]는 돌아오지 않는다** — 잘못 들어온 줄은 [노출 여부]로 내린다.
+
+   ── 아래는 그 자리가 없던 동안의 기록이다 ───────────────────────────────────
+   ── 이 화면은 **고치기만 한다** (2026-08-25 오후, 사용자 요청) ─────────────────
    [시설 등록]과 [삭제]가 함께 없어졌다. 공공시설 넷은 **공공데이터에서 들어오는 자료**라
    (fields.js 3장의 머리말) 한 곳이 새로 생기거나 없어지는 일은 원천이 알려주는 일이지
    담당자가 이 화면에서 만들고 지우는 일이 아니다. 담당자가 여기서 하는 일은 **틀린 값을
@@ -117,6 +139,18 @@ export function Facilities({ onToast }) {
   const [type, setType] = React.useState("");
   const [gu, setGu] = React.useState("");
   const list0 = useListState([type, gu]);
+
+  /* 일괄 등록 창 — 열림과 고른 유형. 파일은 창이 갖는다 (BulkUploadModal).
+     **열 때 목록의 유형 필터를 기본값으로 넣는다** (점포 창이 소속 필터를 그렇게 받는
+     것과 같다). 필터가 「전체 유형」이면 빈 값으로 연다 — 넷 중 하나가 미리 골라져
+     있으면 확인 없이 [업로드]가 눌리고, 그때 잘못 들어간 줄은 **다른 항목표로 읽힌 줄**이다 */
+  const [bulk, setBulk] = React.useState(false);
+  const [bulkType, setBulkType] = React.useState("");
+
+  const openBulk = () => {
+    setBulkType(type);
+    setBulk(true);
+  };
 
   const fieldsFor = React.useCallback(v => FACILITY_FIELDS[v.type] || FACILITY_FIELDS.aed, []);
   /* `initial`(새 시설의 유형 기본값)과 `onRemove` 가 여기 있었다 — 여는 자리가 없어졌다 */
@@ -165,8 +199,11 @@ export function Facilities({ onToast }) {
           시민 화면 기준일 고지가 적혀 있었다. 기준일은 [데이터 갱신 현황]이 보여주는
           값이고, 다루는 네 유형은 아래 고르개가 늘어놓는다.
           유형 탭 줄이 여기 있었다 (2026-08-24 삭제) — 필터 줄로 내려갔다. TYPE_OPTIONS 머리말 */}
-      {/* 머리에 [시설 등록]이 있었다 (2026-08-25 오후 삭제 — 위 머리말) */}
-      <PageHeader title="공공시설 정보 관리" count={`${filtered.length}곳`} />
+      {/* 이름은 [공공시설 등록]이고 여는 것은 일괄 등록 창이다 (2026-09-04) — 점포 화면과
+          같은 규칙이다. 「일괄」을 이름에 넣지 않는 이유는 담당자가 하려는 일이 「등록하는
+          것」 하나이고, 이 화면에 한 건짜리 등록이 따로 있는 것도 아니라 가를 것이 없어서다 */}
+      <PageHeader title="공공시설 정보 관리" count={`${filtered.length}곳`}
+        action={<Button variant="primary" icon="upload" onClick={openBulk}>공공시설 등록</Button>} />
 
       <Toolbar actions={list0.selected.length ? (
         <>
@@ -226,6 +263,31 @@ export function Facilities({ onToast }) {
       <div style={{ marginTop: "var(--space-5)" }}>
         <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />
       </div>
+
+      {/* ── 시설 유형은 **창이 정한다** (2026-09-04, 사용자 요청) ────────────────────
+          이 화면에서 유형은 목록을 좁히는 조건이기 전에 **어느 항목표를 쓰느냐**다 —
+          AED 는 두 항목, 화장실은 열 항목이고(fields.js 3장) 수정 창에서도 유형만은 바꿀
+          수 없다(채워 둔 값이 갈 곳을 잃는다). 그러니 **유형이 정해지지 않은 파일은 어느
+          표로 읽어야 하는지가 정해지지 않은 파일**이라, 고르기 전에는 파일 칸이 잠긴다.
+
+          받은 파일로 무엇을 하는지는 아직 이 화면에 없다 — 읽고 넣는 일이 서버 쪽이라
+          [업로드]는 받았다는 사실만 적는다. 여기서 「120곳을 등록했습니다」처럼 그럴듯한
+          결과를 지어내면 담당자는 목록이 그대로인 것을 보고 화면이 고장난 것으로 읽는다 */}
+      <BulkUploadModal open={bulk}
+        title="공공시설 일괄 등록"
+        description="엑셀 파일을 통해 일괄 등록 가능합니다."
+        onClose={() => setBulk(false)}
+        blocked={bulkType ? "" : "시설 유형을 먼저 선택해주세요."}
+        onUpload={file => {
+          setBulk(false);
+          onToast(`${FACILITY_LABELS[bulkType] || ""} · ${file.name} 파일을 받았습니다. 일괄 등록은 서버 연동 후 동작합니다.`);
+        }}>
+        {/* 이 칸에는 오류가 붙지 않는다 — 고르지 않아서 생기는 일은 **아래 칸이 잠기는
+            것**이고, 그 말은 잠긴 칸이 자기 자리에서 한다 */}
+        <FormField label="시설 유형" required type="select"
+          value={bulkType} options={BULK_TYPE_OPTIONS} onChange={setBulkType}
+          hint="업로드한 파일의 모든 시설이 현재 선택한 유형으로 등록됩니다." />
+      </BulkUploadModal>
 
       <EditorModal ed={ed} size="lg"
         title="공공시설 수정"

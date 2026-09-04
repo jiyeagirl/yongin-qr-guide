@@ -1,7 +1,7 @@
 import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Cell, Button, Select, Pagination,
-  Badge, Switch,
+  Badge, Switch, EMPTY_MARK,
 } from "../../design-systems/admin.js";
 import { GU_ORDER } from "../../screens/main/data/districts.js";
 import { DISTRICT_ROWS, STORE_ROWS } from "../data/sources.js";
@@ -47,15 +47,33 @@ import { EditorModal } from "./EditorModal.jsx";
 
 const GU_OPTIONS = [{ value: "", label: "전체 구" }].concat(GU_ORDER.map(g => ({ value: g, label: g })));
 
-/* 등록 창에서 두 칸을 빼던 `COUNT_KEYS` 가 여기 있었다 (2026-08-25 오후) —
-   등록 창 자체가 없어졌다 */
+/* 등록 창에서 빼는 두 칸 (2026-09-04 에 등록 창과 함께 돌아왔다 — `fieldsFor`).
+   점포 정보에서 산출되는 값이라 새 상점가에서는 답이 늘 0 이다 */
+const COUNT_KEYS = ["storeCount", "onnuriCount"];
 
 /* QR 원본을 관리자 쪽 모양으로 바꾸던 한 줄이 여기 있었다 (2026-08-25 에 `data/sources.js`
    로 옮겼다) — QrPoints.jsx 가 같은 줄을 따로 갖고 있었다. 원천 표를 관리자 쪽 모양으로
    맞추는 일은 화면이 아니라 자료가 할 일이고, **모듈 밖에서 한 번만** 만들어야 한다:
    렌더마다 새 배열이면 `readCollection` 이 매번 새로 겹친다. */
 
-/* ── 지우는 자리가 없어졌다 (2026-08-25 오후, 사용자 요청) ───────────────────
+/* ── [골목형 상점가 등록]이 돌아왔다 — **폼이다** (2026-09-04, 사용자 요청) ──────
+   v1.15 가 이 단추를 없앤 근거는 「32개소는 지정 제도가 정하는 목록이라 한 곳이 늘고 주는
+   일이 이 화면에서 일어나지 않는다」였는데, 그 말은 **그 일이 일어나지 않는다**가 아니라
+   **드물게 일어난다**였다. 지정이 새로 나면 그 상점가는 어딘가에 반드시 등록되어야 하고,
+   화면에 자리가 없으면 그 일은 개발 쪽 요청으로 넘어가 담당자는 기다린다 (v1.9 가
+   [QR 지점 등록]을 열면서 닿은 결론과 같다).
+
+   **여는 것은 엑셀이 아니라 폼이다** (같은 날 엑셀 창으로 먼저 만들었다가 바꿨다).
+   가르는 것은 **한 번에 몇 줄이 오는가**다 — 새 상점가는 **한 달에 두세 곳**이라 한 건씩
+   폼으로 받는 것이 파일을 만들어 올리는 것보다 짧고, 축제·코스가 이미 그렇게 한다.
+   점포는 반대라 그쪽만 엑셀이다(둔전 한 곳이 335줄이다. Stores.jsx).
+
+   **[삭제]는 돌아오지 않는다.** 늘리는 일과 지우는 일은 여기서 갈린다 — 목록에서 내리는
+   일은 [노출 여부]가 그대로 하고, 지운 줄은 되살아나거나 영영 사라져 담당자가 한 일이
+   남지 않는다 (아래 옛 기록).
+
+   ── 아래는 그 자리가 없던 동안의 기록이다 ───────────────────────────────────
+   ── 지우는 자리가 없어졌다 (2026-08-25 오후, 사용자 요청) ───────────────────
    [골목형 상점가 등록]과 [삭제]가 함께 없어졌다. 32개소는 **지정 제도가 정하는 목록**이라
    한 곳이 늘고 주는 일은 지정·해제의 결과이지 이 화면에서 만들고 지우는 일이 아니고,
    지우면 거기 걸린 축제·QR 지점·점포가 통째로 따라갔다 — 되돌릴 수 없는 일 중 가장 큰
@@ -128,9 +146,20 @@ export function Districts({ onToast }) {
   };
 
   const ed = useRecordEditor({
-    /* 등록 창이 없어지면서 점포수 두 칸을 빼던 갈래도 함께 없어졌다 (2026-08-25 오후) —
-       이 폼은 늘 수정 창이고, 두 칸은 늘 ⚙ 로 서 있다 */
-    fieldsFor: () => DISTRICT_FIELDS,
+    /* ── 등록 창에는 점포수 두 칸이 없다 (2026-09-04 에 되살아난 갈래) ────────────
+       새 상점가에는 셀 점포가 없어 답이 늘 0 인데, **고칠 수 없는 0** 을 두 칸이나 세워
+       두면 담당자는 그것을 채워야 할 칸으로 읽고 채울 방법을 찾는다. 수정 창에서는
+       ⚙ 로 서 있다 — 거기서는 그 수가 실제로 무언가를 말한다 (명세서 2-1).
+       새 줄인지는 `id` 로 가른다 — `openNew` 는 `initial()` 을 넘기고 거기에는 id 가 없다 */
+    fieldsFor: values => (values && values.id
+      ? DISTRICT_FIELDS
+      : DISTRICT_FIELDS.filter(f => !COUNT_KEYS.includes(f.key))),
+    /* 새 상점가는 **지금 걸어 둔 구**로 시작한다 (코스 등록이 상점가를 그렇게 받는 것과
+       같다) — 「기흥구」로 좁혀 보다가 [등록]을 누른 것이면 그 구를 다시 고를 이유가 없다.
+       고르개가 「전체 구」면 목록의 첫 구다: `gu` 는 비울 수 없는 칸이라(●) 빈 값으로 열면
+       담당자가 손대지 않은 항목에서 저장이 막힌다. 노출은 켜고 시작한다 (명세서 2-1 의
+       기본 `true`) — 등록하는 이유가 목록에 세우기 위해서다 */
+    initial: () => ({ gu: gu || GU_ORDER[0], visible: true }),
     /* 폼의 두 칸(`storeCount` · `onnuriCount`)은 **보여주기만 하는 값**이라 저장할 때
        버린다. 레코드가 갖는 `stores` · `onnuri` 는 열 때 들고 온 그대로 지나간다 —
        점포 자료가 없는 31곳의 게시값이 그 자리에 있다.
@@ -140,8 +169,7 @@ export function Districts({ onToast }) {
     /* 「온누리 가맹 점포수가 점포수보다 많을 수 없습니다」 검사가 여기 있었다
        (2026-08-25 오후 삭제) — 두 수를 따로 받을 때만 생기는 어긋남이고, 세는 쪽에서는
        가맹이 점포의 부분집합인 것이 셈 자체로 보장된다 */
-    /* `initial`(새 상점가의 기본값)과 `onRemove`(연쇄 삭제)가 여기 있었다 —
-       여는 자리가 둘 다 없어졌다 (머리말) */
+    /* `onRemove`(연쇄 삭제)가 여기 있었다 — 여는 자리가 없어졌다 (머리말) */
     onToast, label: "골목형 상점가",
   });
 
@@ -181,8 +209,8 @@ export function Districts({ onToast }) {
 
   return (
     <>
-      {/* 머리에 [골목형 상점가 등록]이 있었다 (2026-08-25 오후 삭제 — 머리말) */}
-      <PageHeader title="골목형 상점가 정보 관리" count={`${filtered.length}곳`} />
+      <PageHeader title="골목형 상점가 정보 관리" count={`${filtered.length}곳`}
+        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>골목형 상점가 등록</Button>} />
 
       <Toolbar actions={list0.selected.length ? (
         <>
@@ -216,7 +244,10 @@ export function Districts({ onToast }) {
               </Cell>
             ) },
           { key: "gu", label: "구", width: 80, sortable: true },
-          { key: "area", label: "소재지", sortable: true },
+          /* 폼으로 등록한 상점가에는 이 값이 없다 (2026-09-04) — 「소재지」는 항목표에 없는
+             칸이라(명세서 2-1) 등록 창이 받지 않는다. 빈 칸으로 두면 자료가 빠진 것인지
+             화면이 못 그린 것인지 알 수 없으므로, 없다는 것을 없음 표시로 적는다 */
+          { key: "area", label: "소재지", sortable: true, render: d => d.area || EMPTY_MARK },
           /* 「노출 상태 기준」이라고 적어 두었던 열 밑 설명을 뺐다 (2026-08-20) —
              머리줄은 어느 칸이 무엇인지만 가리킨다. 세는 규칙은 명세서 2-1 이 갖는다. */
           /* 「수기」 배지가 여기 있었다 (2026-08-25 오후 삭제) — 손으로 고친 줄에 붙던
@@ -258,7 +289,9 @@ export function Districts({ onToast }) {
           점포수가 읽기 전용이라는 사실은 열 머리말의 「노출 상태 기준」이 이미 말한다. */}
 
       <EditorModal ed={ed} size="lg"
-        title="골목형 상점가 수정"
+        title={ed.draft && ed.draft.isNew ? "골목형 상점가 등록" : "골목형 상점가 수정"}
+        /* 등록 창에서는 제목 밑이 비어 있다 — 새 줄에는 아직 이름이 없고, 그 이름은
+           바로 아래 첫 칸에서 받는다 */
         description={ed.draft ? ed.draft.values.name : undefined}>
         {/* ── 「상권센터 링크 미리보기」를 뺐다 (2026-08-24) ────────────────────
              폼 아래에 조립된 주소를 글자로 적어 보여주던 자리다. 그 칸이 **번호**를 받던
@@ -273,6 +306,9 @@ export function Districts({ onToast }) {
           <RecordForm fields={ed.fields} values={ed.draft.values} errors={ed.errors} onChange={ed.set} />
         ) : null}
       </EditorModal>
+
+      {/* 엑셀 일괄 등록 창이 잠깐 여기 있었다 (2026-09-04, 같은 날 폼으로 바뀌었다) —
+          그 창은 점포 화면에 남아 있다 (`BulkUploadModal.jsx`) */}
 
       {/* 함께 지워지는 것을 이름과 곳수로 늘어놓던 삭제 확인 창이 여기 있었다
           (2026-08-25 오후 삭제 — 머리말). 상점가를 지우면 축제·QR 지점·점포가 따라가던

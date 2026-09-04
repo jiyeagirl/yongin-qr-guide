@@ -2,7 +2,7 @@ import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Cell, Button, Select, Switch, Badge,
   Pagination, CategoryIcon, CATEGORY_LABELS, Notice, EMPTY_MARK, OnnuriBadge,
-  CoordField, fixCoord,
+  CoordField, fixCoord, FormField,
 } from "../../design-systems/admin.js";
 import { KAKAO_APP_KEY } from "../../screens/main/config.js";
 import { STORE_ROWS } from "../data/sources.js";
@@ -12,6 +12,7 @@ import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
+import { BulkUploadModal } from "./BulkUploadModal.jsx";
 /* 여기서 `./RemovedItems.jsx` 의 「전체 | 삭제된 항목」 탭을 가져왔다 (2026-08-24 삭제).
    삭제가 영구가 되면서 되돌리는 자리가 통째로 없어졌다 — `data/store.js` 머리말 참조 */
 
@@ -63,11 +64,31 @@ const ONNURI_OPTIONS = [
 
 const DISTRICT_FILTER = [{ value: "", label: "전체 골목형 상점가" }].concat(DISTRICT_OPTIONS);
 
+/* 일괄 등록 창의 고르개. 필터의 것과 **첫 줄만 다르다** — 저쪽의 빈 값은 「전체」라는 답이고
+   이쪽의 빈 값은 **아직 답하지 않았다**는 뜻이라, 같은 글자를 쓰면 고르지 않은 채로 올린
+   사람에게 「전체 상점가에 넣었다」로 읽힌다 */
+const BULK_DISTRICT_OPTIONS = [{ value: "", label: "— 선택 —" }].concat(DISTRICT_OPTIONS);
+
 /* 등록일시를 펴는 `createdAtOf` 가 여기 있었다 (2026-08-25 에 `data/sources.js` 로 옮겼다).
    같은 파일이 「노출 여부」와 「소속 골목형 상점가」의 빈자리도 함께 채운다 — 그 셋은 다
    **원천에 없는 값**이고, 화면마다 다르게 메우다가 목록과 폼이 갈렸다 (저쪽 머리말). */
 
-/* ── 이 화면은 **고치기만 한다** (2026-08-25 오후, 사용자 요청) ─────────────────
+/* ── [점포 등록]이 돌아왔다 — 엑셀 일괄 등록이다 (2026-09-04, 사용자 요청) ────────
+   v1.15 가 이 단추를 없앨 때의 근거는 「335곳은 공공데이터를 매칭한 결과라 가게가 들고
+   나는 일은 원천이 알려주는 일」이었고 그 말은 지금도 맞다 — 달라진 것은 **그 원천이
+   화면에 닿는 길**이다. 원천은 표로 오고, 그 표가 들어올 자리가 화면에 없으면 담당자는
+   335줄을 손으로 옮겨 적거나 개발 쪽에 요청하고 기다린다.
+
+   그래서 여는 것은 한 건짜리 폼이 아니라 **엑셀 한 장을 받는 창**이다 (2026-08-20 에
+   일괄 업로드를 뺀 근거 — 「5,000행을 한 번에 넣는 일은 결과를 화면에서 되돌릴 수 없다」 —
+   는 적재를 여기서 곧장 반영할 때의 이야기다. 지금 이 창이 하는 일은 파일을 받는 데까지고,
+   읽고 넣고 실패한 행을 돌려주는 일은 서버 쪽이다).
+
+   **[삭제]는 돌아오지 않는다.** 문 닫은 가게는 지우는 것이 아니라 [노출 여부]로 내린다 —
+   내린 줄은 다음 갱신에도 그 자리에 있고 지운 줄은 그렇지 않다.
+
+   ── 아래는 그 자리가 없던 동안의 기록이다 ───────────────────────────────────
+   ── 이 화면은 **고치기만 한다** (2026-08-25 오후, 사용자 요청) ─────────────────
    [점포 등록]과 [삭제]가 함께 없어졌다. 335곳은 **공공데이터를 구역 주소로 매칭한 결과**라
    (fields.js 2-2 머리말) 가게가 새로 들어오고 나가는 일은 원천이 알려주는 일이지 담당자가
    이 화면에서 만들고 지우는 일이 아니다. 담당자가 여기서 하는 일은 **틀린 값을 바로잡고**
@@ -79,6 +100,22 @@ export function Stores({ onToast, focus }) {
   const [onnuri, setOnnuri] = React.useState("");
   const [district, setDistrict] = React.useState("");
   const list0 = useListState([major, onnuri, district]);
+
+  /* ── 일괄 등록 창의 상태 셋 ─────────────────────────────────────────────────
+     열림 · 고른 소속 상점가 · 그 칸의 오류다. 파일은 창이 갖는다 (BulkUploadModal).
+
+     **창을 열 때 목록의 소속 필터를 기본값으로 넣는다** — 「둔전골목형상점가」로 좁혀 놓고
+     보다가 그 상점가 파일을 올리는 것이 이 화면에서 실제로 일어나는 일이고, 그때 방금 고른
+     것과 같은 값을 한 번 더 고르게 하지 않는다. 필터가 「전체」면 빈 값으로 연다 —
+     **첫 상점가가 미리 골라져 있으면 확인 없이 [업로드]가 눌린다** (온누리 토글을 자동으로
+     켜지 않는 것과 같은 이유: 어느 상점가 파일인지는 담당자만 안다). */
+  const [bulk, setBulk] = React.useState(false);
+  const [bulkDistrict, setBulkDistrict] = React.useState("");
+
+  const openBulk = () => {
+    setBulkDistrict(district);
+    setBulk(true);
+  };
 
   /* `initial`(새 점포의 기본값)과 `onRemove` 가 여기 있었다 — 여는 자리가 없어졌다 */
   const ed = useRecordEditor({
@@ -160,8 +197,9 @@ export function Stores({ onToast, focus }) {
           「입력 항목은 명세서 2-2 를 따릅니다」와 시민 화면 기준일 고지였는데, 둘 다
           이 화면에서 할 일을 돕는 말이 아니다 — 명세서 번호는 만드는 쪽의 사정이고,
           기준일은 [데이터 갱신 현황]이 다루는 값이라 여기서는 읽기만 하던 줄이었다. */}
-      {/* 머리에 [점포 등록]이 있었다 (2026-08-25 오후 삭제 — 아래 머리말) */}
-      <PageHeader title="점포 정보 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`} />
+      {/* 상점가 화면과 같은 이름 규칙이다 — 이름은 [점포 등록], 여는 것은 일괄 등록 창 */}
+      <PageHeader title="점포 정보 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`}
+        action={<Button variant="primary" icon="upload" onClick={openBulk}>점포 등록</Button>} />
 
       <Toolbar actions={list0.selected.length ? (
         <>
@@ -320,6 +358,49 @@ export function Stores({ onToast, focus }) {
             } />
         ) : null}
       </EditorModal>
+      {/* ── 소속 골목형 상점가는 **창이 정한다** (2026-09-04, 사용자 요청) ────────────
+          점포에는 상점가 화면에 없는 물음이 하나 있다 — **이 파일의 가게들이 어느
+          상점가 것인가.** 그리고 화면에는 그것을 스스로 알아낼 방법이 없다: 소속 판정은
+          도로명주소를 상점가의 **구역 주소 목록**과 맞추는 일인데(시민 명세서 3-2 —
+          둔전은 66개 주소로 335곳이 나왔다) 그 목록은 앱 어디에도 없고, 상점가 레코드가
+          가진 주소는 「…번지 **일원**」 대표주소 한 줄이라 그것으로 하는 짐작은 **틀려도
+          화면 어디에도 표시가 나지 않는다.** 매칭은 그대로 서버 쪽이다.
+
+          그래서 **사람이 정하되, 파일이 아니라 창에서** 고른다. 구역 자료 자체가
+          상점가별 xlsx 로 오므로 「한 파일 = 한 상점가」가 실제 업무 모양이고, 파일 안에
+          상점가 이름을 적게 하면 **한 글자만 달라도 그 행은 아무 데도 걸리지 않는다**
+          (v1.18 이 QR ID 를 고르는 칸으로 바꾼 근거). 두 곳에서 같은 사실을 받지 않는
+          것은 온누리 두 칸 · 점포수 두 칸에서 이미 내린 결론이다.
+
+          **검사는 여기서 한다** — 오류 한 줄은 그것이 가리키는 칸 밑에 서야 한다
+          (BulkUploadModal 머리말). 창은 파일만 본다. */}
+      <BulkUploadModal open={bulk}
+        title="점포 일괄 등록"
+        description="엑셀 파일을 통해 일괄 등록 가능합니다."
+        onClose={() => setBulk(false)}
+        /* 고르기 전에는 파일 칸이 잠긴다 (2026-09-04, 사용자 요청) — 소속이 정해지지 않은
+           파일은 어디로 넣어야 하는지가 정해지지 않았다. 이유는 그 칸이 적는다
+           (BulkUploadModal · FileField) */
+        blocked={bulkDistrict ? "" : "소속 골목형 상점가를 먼저 선택해주세요."}
+        onUpload={file => {
+          setBulk(false);
+          /* 창이 닫히고 나면 남는 줄이 이것 하나다 — **어디로 넣으라고 말했는지**가
+             거기 적혀 있어야 한다 (파일 이름만으로는 방금 고른 상점가가 무엇이었는지
+             확인할 자리가 없다) */
+          const name = (DISTRICT_OPTIONS.find(o => o.value === bulkDistrict) || {}).label || "";
+          onToast(`${name} · ${file.name} 파일을 받았습니다. 일괄 등록은 서버 연동 후 동작합니다.`);
+        }}>
+        {/* 이 칸에는 오류가 붙지 않는다 — 고르지 않아서 생기는 일은 **아래 칸이 잠기는
+            것**이고, 그 말은 잠긴 칸이 자기 자리에서 한다. 여기에 같은 말을 한 번 더 적으면
+            담당자가 두 줄을 견주게 된다 */}
+        <FormField label="소속 골목형 상점가" required type="select"
+          value={bulkDistrict} options={BULK_DISTRICT_OPTIONS}
+          onChange={setBulkDistrict}
+          /* 이 한 줄은 칸이 스스로 하지 못하는 말이다 — 고르개는 「무엇을 고르는가」까지
+             말하고, **고른 것이 파일 전체에 걸린다**는 범위는 적지 않으면 알 수 없다 */
+          hint="업로드한 파일의 모든 점포가 현재 선택한 상점가로 등록됩니다." />
+      </BulkUploadModal>
+
       {/* 삭제 확인 창이 여기 있었다 (2026-08-25 오후 삭제) */}
     </>
   );
