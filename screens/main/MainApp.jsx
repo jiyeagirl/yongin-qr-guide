@@ -212,7 +212,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      지금 상점가의 것 하나를 얹는다 (순환 참조를 피하려고 데이터 파일이 아니라 화면이 합친다). */
   const d = React.useMemo(() => ({ ...DUNJEON, festival: CURRENT_FESTIVAL }), []);
 
-  const [tab, setTab] = React.useState("facility");   /* QR 스캔 시 공공시설 탭으로 진입 (U-CM-03) */
+  const [tab, setTab] = React.useState("district");   /* 진입은 상점가 탭 (U-CM-03, 2026-10-16 방향 변경 — 종전 공공시설) */
   const [snap, setSnap] = React.useState("half");
   const [selected, setSelected] = React.useState(null);   /* 지도에서 탭한 대상 */
 
@@ -337,7 +337,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      그래서 기억은 이 진입 한 번 안에서만 산다: 어느 단추를 눌러도 닫히고, 축제 상세를
      보고 돌아와도 다시 뜨지 않는다 (아래 두 함수 모두 먼저 닫는다). */
   const pamphletFestival = React.useMemo(() => {
-    const id = pamphlet || (qr && qr.festivalId) || null;
+    const id = pamphlet || null;   /* 축제 QR 은 이제 축제 상세로 바로 들어온다 (App.jsx onResolved) — 이 대화상자는 ?pamphlet 검수 플래그로만 열린다 */
     return id ? FESTIVALS.find(f => f.id === id) || null : null;
   }, [pamphlet, qr]);
   const [pamphletOpen, setPamphletOpen] = React.useState(Boolean(pamphletFestival));

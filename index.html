@@ -49,10 +49,17 @@
        여섯은 전부 메인 화면 안에서 열리는 자리다. 상세로 바로 뛰어드는 링크는 그 화면이
        **어디서 열리는지**를 건너뛰게 만들기도 한다.
        이제 문은 하나다. 나머지는 그 안에서 실제로 쓰는 길로 들어간다. -->
-  <a class="card" href="./screens/main/">
+  <a class="card" href="./screens/main/?qr=qr-001">
     <div>
-      <strong>사용자 모바일 웹</strong>
-      <span>하단 탭 3개(공공시설, 골목형 상점가, 둘러보기)로 오갑니다. 시설, 점포, 코스, 축제 상세와 길찾기, 오류 신고는 이 화면 안에서 열립니다.</span>
+      <strong>사용자 모바일 웹 (개별 상점 진입)</strong>
+      <span>상점 QR 로 들어오면 그 상점의 상세가 먼저 열리고, 닫으면 상점가 탭으로 이어집니다. 하단 탭 3개(공공시설, 골목형 상점가, 둘러보기)로 오갑니다.</span>
+    </div>
+    <div class="go">열기 →</div>
+  </a>
+  <a class="card" href="./screens/main/?qr=qr-004" style="margin-top: var(--space-2)">
+    <div>
+      <strong>사용자 모바일 웹 (축제 QR 진입)</strong>
+      <span>축제 홍보 QR 로 들어오면 그 축제의 상세가 먼저 열리고, 닫으면 상점가 탭으로 이어집니다.</span>
     </div>
     <div class="go">열기 →</div>
   </a>
@@ -78,7 +85,8 @@
          도입이 확정되지 않았다. 검수하는 사람이 이 줄을 열어 보는 이유와, 그 화면을
          지금 서비스에서 만날 수 없는 이유가 다르기 때문에 적어 둔다 — 실서비스에서는
          QR 지점에 「연계 축제」가 걸려야 뜨는데 관리자 화면에 그 칸이 아직 없다. -->
-    <li class="todo"><code>S14</code><em><a href="./screens/main/?qr=qr-004">축제 팜플렛 QR</a>(진행중), <a href="./screens/main/?pamphlet=ft-everland">지난 축제의 팜플렛</a>(종료) - 셸 위에 축제 안내 팝업. <b>예비 화면 — 도입 확정 전이라 실제 서비스에서는 뜨지 않습니다</b></em></li>
+    <li class="todo"><code>C1~C3</code><em><a href="./screens/main/?coupon=reset">축제 쿠폰 흐름 A안</a>(가입 없이 발급), <a href="./screens/main/?coupon=reset&plan=b">B안</a>(간편 가입 후 발급) - 안내 → 쿠폰 → 확인 완료. 코치마크 앞에 서는 예외 화면 (11/7 축제, 협의 중인 예시)</em></li>
+    <li class="todo"><code>S14</code><em><a href="./screens/main/?pamphlet=ft-dunjeon">축제 팜플렛 QR</a>(진행중), <a href="./screens/main/?pamphlet=ft-everland">지난 축제의 팜플렛</a>(종료) - 셸 위에 축제 안내 팝업. <b>예비 화면 — 도입 확정 전이라 실제 서비스에서는 뜨지 않습니다</b></em></li>
   </ul>
 
   <!-- ── 설명은 카드 한 줄로 (2026-08-25, 사용자 요청) ──────────────────────────

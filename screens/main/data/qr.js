@@ -72,6 +72,11 @@ export const QR_POINTS = [
     lng: ANCHOR.lng,
     dong: "처인구 포곡읍 둔전리",
     addr: "처인구 포곡읍 둔전로 42",
+    /* 종류 (2026-10-16 방향 변경): store = 개별 상점에 붙은 QR → 그 상점 상세가 먼저 뜬다.
+       더미에서는 안내판 지점 하나를 상점 QR 로 쓰고 `storeId` 를 걸었다 — 실서비스에서는
+       상점마다 지점이 하나씩이고 앵커도 그 상점이다 (`docs/direction_v2_rules.md` 3장). */
+    kind: "store",
+    storeId: "dj-163",
     districtId: "dunjeon",          /* U-ST-01 — 관리자가 등록 시 직접 지정한다 (앱이 계산하지 않는다) */
     installStatus: "설치완료",
     installedAt: "2026-03-14",
@@ -161,6 +166,8 @@ export const QR_POINTS = [
     ...districtAnchor("dunjeon"),
     dong: "처인구 포곡읍 둔전리",
     districtId: "dunjeon",
+    /* 종류 festival = 축제 홍보 QR → 그 축제 상세(S09)가 먼저 뜬다 (2026-10-16 방향 변경) */
+    kind: "festival",
     festivalId: "ft-dunjeon",
     installStatus: "설치완료",
     installedAt: "2026-09-25",
@@ -275,7 +282,11 @@ export function lookup(code) {
 export function readReviewFlags(loc = typeof location !== "undefined" ? location : null) {
   const p = new URLSearchParams((loc && loc.search) || "");
   const pamphlet = (p.get("pamphlet") || "").trim();
+  /* ?coupon=1 축제 쿠폰 흐름을 셸 앞에 세운다 · ?coupon=reset 저장된 상태를 지우고 처음부터 · &plan=b B안(간편 가입 후 발급) */
+  const coupon = (p.get("coupon") || "").trim();
   return {
+    couponPlan: p.get("plan") === "b" ? "b" : "a",
+    coupon: coupon === "1" || coupon === "reset" ? coupon : null,
     noDistrict: p.get("district") === "none",
     netFail: p.get("net") === "fail",
     coach: p.get("coach") === "1",

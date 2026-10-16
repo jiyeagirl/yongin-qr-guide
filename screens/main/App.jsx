@@ -1,6 +1,7 @@
 import React from "react";
 import { QrEntry } from "../boot/QrEntry.jsx";
 import { EntryFallback } from "../boot/EntryFallback.jsx";
+import { CouponFlow } from "../boot/CouponFlow.jsx";
 import { MainApp } from "./MainApp.jsx";
 import { readQrCode, readReviewFlags, resolveQr } from "./data/qr.js";
 
@@ -40,8 +41,20 @@ export function App() {
   const [phase, setPhase] = React.useState("boot");
   const [result, setResult] = React.useState(null);
   const [attempt, setAttempt] = React.useState(0);
+  const [couponDone, setCouponDone] = React.useState(false);
 
   const onResolved = React.useCallback(r => {
+    /* QR 의 종류가 첫 화면을 정한다 (2026-10-16 방향 변경) — 상점 QR 은 그 상점 상세(S06),
+       축제 QR 은 그 축제 상세(S09)가 셸 위에 먼저 뜬다. 해시를 **갈아 끼워** 두면
+       (history 를 쌓지 않는다) 상세를 닫을 때 셸(상점가 탭)로 나가고 서비스 밖으로 튕기지
+       않는다. 사람이 이미 해시를 달고 들어왔으면(딥링크) 건드리지 않는다. */
+    if (r.status === "ok" && r.point && !location.hash && !readReviewFlags().pamphlet) {
+      const target = r.point.kind === "store" && r.point.storeId ? `#/store/${r.point.storeId}`
+        : r.point.kind === "festival" && r.point.festivalId ? `#/festival/${r.point.festivalId}` : null;
+      if (target) {
+        window.history.replaceState({ shellDepth: 0 }, "", `${location.pathname}${location.search}${target}`);
+      }
+    }
     setResult(r);
     setPhase(r.status === "ok" ? "ok" : "fallback");
   }, []);
@@ -63,6 +76,12 @@ export function App() {
        EntryFallback 머리말). 쓰지 않는 값을 계속 넘기면 그 화면이 무엇을 아는지가
        흐려진다 — 지금 이 화면이 아는 것은 "셸을 세울 수 없다"는 사실 하나다. */
     return <EntryFallback status={r.status} onRetry={retry} />;
+  }
+
+  /* 축제 쿠폰 흐름 — 셸보다 앞이다 (boot/CouponFlow.jsx). 끝나면 셸로 들어가고, 그 뒤로는
+     여기서 관여하지 않는다 (셸을 다시 세우지 않는다 — U-CM-16). */
+  if (flags.coupon && !couponDone) {
+    return <CouponFlow plan={flags.couponPlan} reset={flags.coupon === "reset"} onEnter={() => setCouponDone(true)} />;
   }
 
   /* 정상 진입 — 여기서부터는 셸이 화면을 전부 맡는다.
