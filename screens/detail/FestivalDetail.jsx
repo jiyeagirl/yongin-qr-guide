@@ -1,7 +1,7 @@
 import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice, InfoList, Accordion, SectionHeader,
-  Badge, Button, ListRow, Icon, Notice, festivalBadge, CourseCard,
+  Badge, Button, ListRow, Icon, Notice, festivalBadge, CourseCard, PhotoStrip,
 } from "../../design-systems/index.js";
 import { whenLabel } from "../main/data/districts.js";
 
@@ -160,6 +160,10 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
           </Notice>
         ) : null}
 
+        {/* 축제 사진 자리 (2026-10-16, 사용자 요청) — 점포 상세와 같은 부품이다. 자료(`festival.images`)가
+            들어오면 같은 자리에 사진이 선다. */}
+        <PhotoStrip images={f.images} name={f.short || f.name} label="축제 이미지" />
+
         {/* ── 기본 정보 (U-FT-02) ──────────────────────────────────────
                "주최 상점가"만 누를 수 있다. 상점가 자체의 소개·연혁·연락처는 우리가 가진
                자료가 아니라 시가 이미 관리하는 자료다 — 여기에 옮겨 적으면 갱신 주체가
@@ -176,6 +180,9 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
              어느 칸 이야기인지 맞춰봐야 한다. */}
         <InfoList items={[
           { label: "기간", value: f.period },
+          /* 순서는 기간 → 시간 → 소속 상점가 → 주요 프로그램 (2026-10-16, 사용자 요청) — 언제 · 몇 시 ·
+             어디서 순으로 읽힌다 */
+          { label: "시간", value: f.time },
           /* ── 주소가 없어도 [상세 페이지]는 그대로다 (2026-08-24) ────────────
                  전에는 `homepage` 가 비면 이 줄이 상점가 이름 한 글자짜리 평문으로 떨어졌다.
                  상점가 목록의 같은 자리와 같은 이유로 고쳤다 (DistrictRow 의 external 주석):
@@ -187,7 +194,6 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
           { label: "소속 상점가", value: (
             <DistrictLink f={f} onOpenDistrict={onOpenDistrict} />
           ) },
-          { label: "시간", value: f.time },
           { label: "주요 프로그램", value: f.program },
         ]} />
 

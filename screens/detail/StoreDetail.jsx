@@ -2,7 +2,7 @@ import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice,
   Button, Badge, OnnuriBadge, CategoryIcon, CATEGORY_LABELS, FestivalBanner, Icon,
-  SectionHeader, CourseCard,
+  SectionHeader, CourseCard, PhotoStrip,
 } from "../../design-systems/index.js";
 import { STORE_AS_OF } from "../main/config.js";
 
@@ -61,41 +61,6 @@ import { STORE_AS_OF } from "../main/config.js";
  * 아니다. "조회 1,240회"는 가게를 고르는 데 도움이 되지 않으면서 적은 쪽 가게에는 불리하게
  * 작용한다. 둘러보기 탭의 "이번 주 조회 1위" 처럼 순위로 감싸 노출하는 자리는 따로 있다.
  */
-/* ── 가게 이미지 (2026-10-16, 사용자 요청) ─────────────────────────────────────
-   상점 QR 의 첫 화면이 이 상세라 가게 사진이 들어갈 자리를 먼저 세운다. **옆으로 밀어
-   넘긴다** — 한 장씩 맞춰 멈추고(scroll-snap) 다음 장이 오른쪽에 살짝 보여 더 있다는 것을
-   알린다. 사진 자료가 아직 없어(`store.images` 가 비어 있다) 자리표시 카드 셋을 그린다 —
-   사진이 들어오면 같은 자리에 <img> 가 선다. 높이는 상수가 아니라 가로세로 비율로 잡는다
-   (고정 높이 금지). */
-const PHOTO_SLOTS = 3;
-
-function StorePhotos({ images, name }) {
-  const list = images && images.length ? images : Array.from({ length: PHOTO_SLOTS }, () => null);
-  return (
-    <div role="group" aria-label={`${name} 가게 이미지`}
-      style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", scrollSnapType: "x mandatory",
-        WebkitOverflowScrolling: "touch", overscrollBehaviorX: "contain",
-        /* 화면 가장자리까지 밀어 보이게 — 본문 좌우 여백을 음수로 풀고 같은 만큼 안쪽에 되돌린다 */
-        margin: "0 calc(-1 * var(--gutter-screen))", padding: "0 var(--gutter-screen)",
-        scrollPaddingLeft: "var(--gutter-screen)" }}>
-      {list.map((src, i) => (
-        <div key={i} style={{ flex: "0 0 78%", maxWidth: 320, aspectRatio: "4 / 3", scrollSnapAlign: "start",
-          borderRadius: "var(--radius-card)", overflow: "hidden", background: "var(--surface-sunken)",
-          display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {src ? <img src={src} alt={`${name} ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : (
-              <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                color: "var(--text-muted)", fontSize: "var(--fs-caption)" }}>
-                <Icon name="image" size={28} />
-                가게 이미지
-              </span>
-            )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function StoreDetail({ store, district, festival, courses = [], entry = false, onBack, onReport, onCopied, onDistrict, onOpenFestival, onOpenCourse }) {
   const s = store;
 
@@ -132,7 +97,7 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
           </div>
         </header>
 
-        <StorePhotos images={s.images} name={s.name} />
+        <PhotoStrip images={s.images} name={s.name} label="가게 이미지" />
 
         {/* 소속 상점가 (2026-10-16) — 상점 QR 로 들어온 사람이 이 가게가 어느 상점가인지 알고
             그 상점가로 넘어가는 길이다. 누르면 이 상세를 닫고 상점가 탭으로 간다.

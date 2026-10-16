@@ -94,6 +94,8 @@ export { FESTIVAL_STATES, FESTIVAL_STATE_TONE, FESTIVAL_BADGE_TONE, festivalTone
 export { DistrictSummary } from "./components/store/DistrictSummary.jsx";
 export { DistrictRow } from "./components/store/DistrictRow.jsx";
 export { CourseCard } from "./components/store/CourseCard.jsx";
+/* 옆으로 밀어 넘기는 사진 줄 — 점포 상세와 축제 상세가 함께 쓴다 */
+export { PhotoStrip } from "./components/store/PhotoStrip.jsx";
 
 /* brand */
 export { Mascot, MASCOT_POSES, MASCOT_FULL, MASCOT_BUST } from "./components/brand/Mascot.jsx";
