@@ -26,7 +26,7 @@ export { OnnuriBadge } from "./components/core/OnnuriBadge.jsx";
 export { OnnuriChip } from "./components/core/OnnuriChip.jsx";
 export { SearchField } from "./components/core/SearchField.jsx";
 export { InfoList, yesNoMark, EMPTY_MARK } from "./components/core/InfoList.jsx";
-export { CopyField } from "./components/core/CopyField.jsx";
+export { CopyField, CopyButton } from "./components/core/CopyField.jsx";
 export { Accordion } from "./components/core/Accordion.jsx";
 export { FilterBar } from "./components/core/FilterBar.jsx";
 export { ListControls } from "./components/core/ListControls.jsx";

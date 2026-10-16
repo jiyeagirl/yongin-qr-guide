@@ -24,7 +24,7 @@ import { Icon } from "../core/Icon.jsx";
    시작점이 어긋나 읽는 눈이 좌우로 흔들린다.
 
    뒤로가기(상세 화면)와 leading(셸)은 같은 자리를 쓰므로 동시에 오지 않는다. */
-export function AppBar({ title, label, leading, back = false, onBack, actions, tone = "plain", style, ...rest }) {
+export function AppBar({ title, label, leading, back = false, onBack, backIcon = "chevron-left", backLabel = "뒤로", actions, tone = "plain", style, ...rest }) {
   const brand = tone === "brand";
   const stacked = Boolean(label || leading);
 
@@ -42,10 +42,10 @@ export function AppBar({ title, label, leading, back = false, onBack, actions, t
 
       <span style={{ justifySelf: "start", display: "inline-flex", alignItems: "center" }}>
         {leading || (back ? (
-          <button onClick={onBack} aria-label="뒤로"
+          <button onClick={onBack} aria-label={backLabel} data-back
             style={{ width: 44, height: 44, display: "inline-flex", alignItems: "center", justifyContent: "center",
               background: "none", border: "none", color: "inherit", cursor: "pointer" }}>
-            <Icon name="chevron-left" size={24} />
+            <Icon name={backIcon} size={24} />
           </button>
         ) : null)}
       </span>

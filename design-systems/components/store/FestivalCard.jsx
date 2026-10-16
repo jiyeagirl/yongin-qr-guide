@@ -80,11 +80,19 @@ const MASCOT_SIZE = 72;
    오느냐 하나뿐이고, 그것은 자리의 크기가 정하는 문제다. */
 const COMPACT_ICON = 22;
 
+/* ── compact 에서도 조아용을 **고를 수 있다** (2026-10-16, 사용자 요청) ───────────
+   위 결정은 시트 헤더(두세 줄짜리 띠)를 위한 것이라 기본은 그대로 아이콘이다. 점포 상세처럼
+   한 화면에 아이콘이 이미 여럿 서 있는 자리에서는 아이콘 한 점이 또 하나의 기호가 될
+   뿐이라, `mascot` 을 주면 그 자리에 조아용이 선다. 크기는 띠가 두꺼워지지 않는 선에서
+   잡은 값이다. */
+const COMPACT_MASCOT = 52;
+
 export function FestivalCard({
   festival, onClick,
   pose = "excited",       /* MASCOT_FULL 안에서만 고른다 */
   base = "",              /* 조아용 PNG 경로 기준 (화면마다 깊이가 다르다) */
   compact = false,        /* 시트 헤더용 한 줄짜리 (FestivalBanner 가 쓴다) */
+  mascot = false,         /* compact 에서 왼쪽 아이콘 대신 조아용을 둔다 */
   onDismiss,              /* 주면 오른쪽 위에 [X] 가 붙는다 */
   dismissLabel = "축제 안내 닫기",
   style, ...rest
@@ -123,7 +131,9 @@ export function FestivalCard({
       {/* compact 의 왼쪽 한 점. 색은 상태 틴트의 -fg 를 따라가므로 종료 축제에서는 함께 빠진다 */}
       {compact ? (
         <span style={{ flex: "0 0 auto", alignSelf: "center", display: "inline-flex" }}>
-          <Icon name="party-popper" size={COMPACT_ICON} color={ink} />
+          {mascot
+            ? <Mascot pose={pose} size={COMPACT_MASCOT} base={base} alt="" />
+            : <Icon name="party-popper" size={COMPACT_ICON} color={ink} />}
         </span>
       ) : null}
 

@@ -1,9 +1,10 @@
 import React from "react";
 import {
-  DetailPage, DetailBody, DetailNotice, InfoList, yesNoMark, CopyField,
-  Button, Badge, OnnuriBadge, CategoryIcon, CATEGORY_LABELS, Notice,
+  DetailPage, DetailBody, DetailNotice,
+  Button, Badge, OnnuriBadge, CategoryIcon, CATEGORY_LABELS, FestivalBanner, Icon,
+  SectionHeader, CourseCard,
 } from "../../design-systems/index.js";
-import { WALK_M_PER_MIN, STORE_AS_OF } from "../main/config.js";
+import { STORE_AS_OF } from "../main/config.js";
 
 /* S06 점포 상세 (기능명세서 v1.1 4장 S06 행).
  * 관련 기능: U-ST-05(점포 상세) · U-ST-06(온누리 가맹 표시) · U-CM-07 · U-CM-08 · U-CM-10
@@ -60,13 +61,50 @@ import { WALK_M_PER_MIN, STORE_AS_OF } from "../main/config.js";
  * 아니다. "조회 1,240회"는 가게를 고르는 데 도움이 되지 않으면서 적은 쪽 가게에는 불리하게
  * 작용한다. 둘러보기 탭의 "이번 주 조회 1위" 처럼 순위로 감싸 노출하는 자리는 따로 있다.
  */
-export function StoreDetail({ store, district, onBack, onRoute, onReport, onCopied }) {
+/* ── 가게 이미지 (2026-10-16, 사용자 요청) ─────────────────────────────────────
+   상점 QR 의 첫 화면이 이 상세라 가게 사진이 들어갈 자리를 먼저 세운다. **옆으로 밀어
+   넘긴다** — 한 장씩 맞춰 멈추고(scroll-snap) 다음 장이 오른쪽에 살짝 보여 더 있다는 것을
+   알린다. 사진 자료가 아직 없어(`store.images` 가 비어 있다) 자리표시 카드 셋을 그린다 —
+   사진이 들어오면 같은 자리에 <img> 가 선다. 높이는 상수가 아니라 가로세로 비율로 잡는다
+   (고정 높이 금지). */
+const PHOTO_SLOTS = 3;
+
+function StorePhotos({ images, name }) {
+  const list = images && images.length ? images : Array.from({ length: PHOTO_SLOTS }, () => null);
+  return (
+    <div role="group" aria-label={`${name} 가게 이미지`}
+      style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", scrollSnapType: "x mandatory",
+        WebkitOverflowScrolling: "touch", overscrollBehaviorX: "contain",
+        /* 화면 가장자리까지 밀어 보이게 — 본문 좌우 여백을 음수로 풀고 같은 만큼 안쪽에 되돌린다 */
+        margin: "0 calc(-1 * var(--gutter-screen))", padding: "0 var(--gutter-screen)",
+        scrollPaddingLeft: "var(--gutter-screen)" }}>
+      {list.map((src, i) => (
+        <div key={i} style={{ flex: "0 0 78%", maxWidth: 320, aspectRatio: "4 / 3", scrollSnapAlign: "start",
+          borderRadius: "var(--radius-card)", overflow: "hidden", background: "var(--surface-sunken)",
+          display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {src ? <img src={src} alt={`${name} ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : (
+              <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                color: "var(--text-muted)", fontSize: "var(--fs-caption)" }}>
+                <Icon name="image" size={28} />
+                가게 이미지
+              </span>
+            )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function StoreDetail({ store, district, festival, courses = [], entry = false, onBack, onReport, onCopied, onDistrict, onOpenFestival, onOpenCourse }) {
   const s = store;
-  const walk = Math.max(1, Math.round(s.dist / WALK_M_PER_MIN));
 
   return (
     <DetailPage title={s.name} onBack={onBack}
-      footer={<Button variant="primary" size="lg" icon="footprints" block onClick={onRoute}>길찾기</Button>}>
+      /* 상점 QR 로 막 들어온 첫 화면이면 「뒤로」가 아니라 「홈」이다 — 되돌아갈 이전 화면이 없고,
+         누르면 상점가 탭(메인)으로 나간다 (2026-10-16, 사용자 요청) */
+      backIcon={entry ? "store" : undefined} backLabel={entry ? "홈" : undefined}
+      footer={<Button variant="primary" size="lg" icon="store" block onClick={onDistrict}>상점가 둘러보기</Button>}>
 
       <DetailBody>
         {/* ── 머리 ───────────────────────────────────────────────────────
@@ -78,21 +116,43 @@ export function StoreDetail({ store, district, onBack, onRoute, onReport, onCopi
                 새로 조립하지 않고 OnnuriBadge 하나만 쓴다 */}
             {s.onnuri ? <OnnuriBadge /> : null}
           </div>
-          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-start" }}>
-            <span style={{ flex: "0 0 auto", paddingTop: 3 }}>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+            <span style={{ flex: "0 0 auto", display: "inline-flex" }}>
               <CategoryIcon type={s.cat} size={26} />
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <h2 style={{ font: "var(--type-title-2)", letterSpacing: "var(--ls-snug)",
                 color: "var(--text-heading)", wordBreak: "keep-all" }}>{s.name}</h2>
-              <p style={{ marginTop: 4, fontSize: "var(--fs-body)", color: "var(--text-body)" }}>
-                {s.biz} · 약 {s.dist}m, 도보 {walk}분
-              </p>
+              {/* 도로명주소 — 이름 밑에 작게 (2026-10-16, 사용자 요청). 정보 표에서 옮겨 왔다 */}
+              {s.addr ? (
+                <p style={{ marginTop: 2, font: "var(--type-caption)", color: "var(--text-muted)",
+                  wordBreak: "keep-all", overflowWrap: "anywhere" }}>{s.addr}</p>
+              ) : null}
             </div>
           </div>
         </header>
 
-        {/* ── 온누리 가맹 안내 (U-ST-06) ────────────────────────────────
+        <StorePhotos images={s.images} name={s.name} />
+
+        {/* 소속 상점가 (2026-10-16) — 상점 QR 로 들어온 사람이 이 가게가 어느 상점가인지 알고
+            그 상점가로 넘어가는 길이다. 누르면 이 상세를 닫고 상점가 탭으로 간다.
+            축제 카드 위에 선다 — 축제는 이 상점가의 것이라 어느 상점가인지가 먼저 읽혀야 한다. */}
+        {district ? (
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "var(--space-2)" }}>
+            <span style={{ font: "var(--type-label)", color: "var(--text-muted)" }}>소속 상점가 :</span>
+            <button type="button" onClick={onDistrict}
+              style={{ background: "none", border: "none", padding: "10px 0", cursor: "pointer",
+                font: "var(--type-body)", fontWeight: "var(--fw-semibold)", color: "var(--brand-primary)",
+                textDecoration: "underline", textUnderlineOffset: 3, textAlign: "left" }}>
+              {district.name}
+            </button>
+          </div>
+        ) : null}
+
+        {/* ── 진행중인 축제 (2026-10-16) — 온누리 사용 가능 안내 상자를 대신해 이 자리에 선다.
+               온누리 가맹은 머리의 배지가 계속 말한다.
+               (아래는 옛 안내 상자의 근거다 — 상자는 없어졌다.)
+               ── 온누리 가맹 안내 (U-ST-06) ────────────────────────────────
                배지 하나로 끝내지 않고 문장으로 적는다. "온누리"라는 낱말만으로는 그것이
                상품권을 쓸 수 있다는 뜻인지 아는 사람만 알고, 이 데이터는 상점가 탭 필터 중
                신뢰도가 가장 높은 축이라 확실히 전달할 값어치가 있다 (명세서 U-ST-11).
@@ -106,11 +166,8 @@ export function StoreDetail({ store, district, onBack, onRoute, onReport, onCopi
 
                크기는 sm 이다 (2026-08-19). md 로는 320px 화면에서 상자가 154px 이었다 —
                상세 화면에서 가장 큰 덩어리가 배지 한 줄로도 되는 이야기였다. 99px 로 줄었다. */}
-        {s.onnuri ? (
-          <Notice tone="info" size="sm" title="온누리상품권 사용 가능">
-            지류 및 디지털 온누리상품권 가맹점입니다. 가맹 여부는 2025.07 기준이며 방문 전
-            매장에 확인해 주세요.
-          </Notice>
+        {festival ? (
+          <FestivalBanner festival={festival} onClick={onOpenFestival} mascot pose="excited" base="../../design-systems/" />
         ) : null}
 
         {/* ── 도로명주소 (1-2 필수) ────────────────────────────────────
@@ -118,26 +175,33 @@ export function StoreDetail({ store, district, onBack, onRoute, onReport, onCopi
                카카오맵·티맵 검색창으로 건너가므로 구가 있어야 한 번에 찾힌다.
                예전에는 화면이 "처인구 "를 앞에 붙였는데, 주소가 없을 때
                "처인구 undefined" 가 만들어져 빈 값 검사를 통과했다. */}
-        <CopyField label="도로명주소" value={s.addr} onCopied={onCopied} />
+        {/* ── 골목 한바퀴 코스 추천 (2026-10-16, 사용자 요청) ───────────────────
+               상점 QR 로 들어온 사람이 이 가게 다음에 원하는 것은 가게의 사무 정보가 아니라
+               **이 골목을 어떻게 도는가**다. 정보 표보다 위에 둔다. 둘러보기 탭의 코스 레일과
+               같은 카드(CourseCard)이고, 누르면 코스 상세(S08)로 간다. */}
+        {courses.length ? (
+          <section>
+            <SectionHeader title="골목 한바퀴 코스 추천" />
+            <p style={{ marginTop: "calc(-1 * var(--space-1))", marginBottom: "var(--space-3)",
+              font: "var(--type-caption)", color: "var(--text-muted)", wordBreak: "keep-all" }}>
+              {s.name} 근처 가게들을 둘러보세요
+            </p>
+            <div style={{ display: "flex", alignItems: "stretch", gap: "var(--space-3)", overflowX: "auto",
+              margin: "0 calc(-1 * var(--gutter-screen))", padding: "2px var(--gutter-screen) var(--space-2)",
+              scrollbarWidth: "none" }}>
+              {courses.map(c => <CourseCard key={c.id} course={c} onClick={() => onOpenCourse && onOpenCourse(c)} />)}
+            </div>
+          </section>
+        ) : null}
+
+
+
 
         {/* 오류 신고는 상세 정보 박스에 바짝 붙인다 (U-CM-10) — S05 와 같은 자리, 같은 크기.
              [지도에서 보기]는 뺐다: 위에 뒤로가기, 아래에 길찾기가 이미 있다. */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-          {/* 정의서 1-2 의 항목 순서 그대로다(중분류·표준산업분류명은 빼고 — 머리말).
-              대분류만 필수이고 나머지는 선택이라, 원천이 비면 줄을 지우지 않고 "-" 로
-              남는다 — 골목상점가의 점포는 대부분 단독 점포라 지점명이 실제로 자주 빈다.
-
-              온누리 가맹 여부는 ○ · × 로 적는다 (yesNoMark). 답이 둘뿐인 항목이라
-              부호가 낱말보다 빨리 읽히고, 읽어줄 때는 "가맹"·"미가맹"으로 들려준다.
-              **불리언을 그대로 넘기지 않는 이유**: InfoList 는 false 를 빈 값으로 읽어
-              "-" 를 찍는데, "미가맹"과 "확인되지 않음"은 다른 말이다 — 상품권을 들고 온
-              사람에게는 그 차이가 갈지 말지를 가른다. */}
-          <InfoList items={[
-            { label: "지점명", value: s.branch },
-            { label: "상권업종대분류명", value: s.bizL },
-            { label: "상권업종소분류명", value: s.bizS },
-            { label: "온누리상품권 가맹 여부", value: yesNoMark(s.onnuri, "가맹", "미가맹") },
-          ]} />
+          {/* 업종 대·소분류 표는 뺐다 (2026-10-16, 사용자 요청) — 머리의 업종 칩이 이미 큰 갈래를 말하고,
+              상점 QR 로 들어온 사람이 이 화면에서 찾는 것은 분류명이 아니다. 데이터(bizL · bizS)는 남아 있다. */}
           <Button variant="ghost" size="sm" icon="flag" onClick={onReport}
             style={{ alignSelf: "flex-start", color: "var(--text-muted)" }}>
             정보 오류 신고

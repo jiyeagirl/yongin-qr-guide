@@ -57,7 +57,7 @@ function useEnter() {
    열리고, 칩을 바꾸면 다른 목록의 한가운데가 열린다.
    되돌리는 일을 Pagination 이 스스로 하지 않는 이유: 어느 조상이 스크롤되는지 DOM 을
    뒤져야 하고 화면마다 답이 다르다. 스크롤 컨테이너를 가진 쪽이 맡는다. */
-export function DetailPage({ title, onBack, onClose, closeLabel = "닫기", children, footer, actions, scrollKey, style, ...rest }) {
+export function DetailPage({ title, onBack, backIcon, backLabel, onClose, closeLabel = "닫기", children, footer, actions, scrollKey, style, ...rest }) {
   const entered = useEnter();
   const page = React.useRef(null);
   const body = React.useRef(null);
@@ -71,7 +71,7 @@ export function DetailPage({ title, onBack, onClose, closeLabel = "닫기", chil
      AppBar 가 ref 를 받지 않으므로 버튼을 DOM 에서 찾는다 — AppBar 는 이미 여러 화면이
      쓰고 있어 시그니처를 건드리면 파급이 크고, 여기서 필요한 것은 포커스 한 번뿐이다. */
   React.useEffect(() => {
-    const btn = page.current && page.current.querySelector('header button[aria-label="뒤로"]');
+    const btn = page.current && page.current.querySelector('header button[data-back]');
     if (btn) btn.focus();
   }, []);
 
@@ -96,7 +96,7 @@ export function DetailPage({ title, onBack, onClose, closeLabel = "닫기", chil
 
       {/* AppBar 는 이미 back/onBack 을 갖고 있다. 제목이 길면 자르지 않고 줄바꿈하며
           헤더가 함께 늘어난다 (U-CM-14) */}
-      <AppBar title={title} back onBack={onBack} style={{ flex: "0 0 auto" }}
+      <AppBar title={title} back onBack={onBack} backIcon={backIcon} backLabel={backLabel} style={{ flex: "0 0 auto" }}
         actions={
           <>
             {actions}

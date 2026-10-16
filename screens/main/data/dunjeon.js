@@ -374,6 +374,25 @@ export const COURSES = COURSE_PLAN.map(({ pick, ...c }) => {
   return { ...c, stops, ...totals(stops) };
 }).filter(c => c.stops.length >= 3);
 
+/* ── 한 가게 **근처**의 코스 (2026-10-16, 사용자 요청) ───────────────────────────
+   상점 QR 로 들어온 사람에게 보여주는 코스는 그 가게 둘레를 도는 코스다. **그 가게 자신은
+   코스에 넣지 않는다** — 이미 그 가게 상세에 서 있기 때문이다. 같은 세 코스(업종 · 온누리 ·
+   조건 없음)를 쓰되 그 가게에서 가까운 순으로 네 곳을 잇는다. 세 코스가 같은 가게로 채워지지
+   않게 앞 코스가 쓴 가게는 뒤 코스의 후보에서 먼저 뺀다(후보가 모자라면 겹치는 쪽을 택한다). */
+export function coursesFrom(storeId) {
+  const home = STORES.find(s => s.id === storeId);
+  if (!home) return COURSES;
+  const used = new Set();
+  return COURSE_PLAN.map(({ pick, ...c }) => {
+    const pool = BAND.filter(s => s.id !== home.id && pick(s));
+    const fresh = pool.filter(s => !used.has(s.id));
+    const near = nearestChain(fresh.length >= 4 ? fresh : pool, home, 4);
+    near.forEach(s => used.add(s.id));
+    const stops = withLegs(near, ANCHOR);
+    return { ...c, stops, ...totals(stops) };
+  }).filter(c => c.stops.length >= 3);
+}
+
 /* 주변 공공시설(U-ST-07)은 여기 있지 않았고, 이제 **화면에도 없다** (2026-08-24).
    `data/facilities.js` 의 NEARBY 를 화면(MainApp)이 합쳐 쓰던 자리인데 붙던 두 자리
    (점포 상세 · 상점가 탭 하단)가 모두 없어져 그 상수째 지웠다 — 시설을 고르는 자리는

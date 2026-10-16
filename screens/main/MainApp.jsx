@@ -5,7 +5,7 @@ import {
   DistrictSummary, FacilitySummary, FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, SAFETY,
   Icon, Mascot, token, VisuallyHidden, eun, i as iJosa,
 } from "../../design-systems/index.js";
-import { DUNJEON } from "./data/dunjeon.js";
+import { DUNJEON, coursesFrom } from "./data/dunjeon.js";
 import { FACILITIES, RADIUS_STEPS, RADIUS_DEFAULT, NEAR_ENOUGH } from "./data/facilities.js";
 import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalNear,
   CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT,
@@ -210,7 +210,10 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      걷어냈다 (2026-08-24. DistrictSheet 의 해당 자리 주석 · facilities.js 의 U-ST-07 항목).
      축제는 그대로다: 6건이 32개소에 흩어져 있어 `districts.js` 가 소유하고, 여기서
      지금 상점가의 것 하나를 얹는다 (순환 참조를 피하려고 데이터 파일이 아니라 화면이 합친다). */
-  const d = React.useMemo(() => ({ ...DUNJEON, festival: CURRENT_FESTIVAL }), []);
+  /* 상점 QR 로 들어왔으면 코스는 그 가게에서 출발한다 (dunjeon.js 의 coursesFrom) */
+  const entryStoreId = qr && qr.kind === "store" ? qr.storeId : null;
+  const d = React.useMemo(() => ({ ...DUNJEON, festival: CURRENT_FESTIVAL,
+    courses: entryStoreId ? coursesFrom(entryStoreId) : DUNJEON.courses }), [entryStoreId]);
 
   const [tab, setTab] = React.useState("district");   /* 진입은 상점가 탭 (U-CM-03, 2026-10-16 방향 변경 — 종전 공공시설) */
   const [snap, setSnap] = React.useState("half");
@@ -945,8 +948,13 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         store={target}
         district={d.district}
         onBack={back}
-        onRoute={() => goRoute(target)}
+        courses={target.id === entryStoreId ? d.courses : []}
+        onOpenCourse={c => go(`#/course/${c.id}`)}
+        festival={d.festival && d.festival.state === "진행중" ? d.festival : null}
+        onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
+        entry={!(window.history.state && window.history.state.shellDepth > 0)}
         onReport={() => goReport(target)}
+        onDistrict={() => { closeAll(); changeTab("district"); }}
         onCopied={copied} />
     );
 

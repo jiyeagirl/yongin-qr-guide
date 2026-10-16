@@ -43,10 +43,23 @@ function legacyCopy(text) {
   }
 }
 
+/* [복사] 단추만 — 정보 표의 한 줄 안에 주소를 넣을 때(S06) 쓴다 (2026-10-16). CopyField 도 이것을 쓴다 */
+export function CopyButton({ label = "주소", value, onCopied }) {
+  const copy = () => copyText(value).then(ok => onCopied && onCopied(ok, value));
+  return (
+    <button onClick={copy} aria-label={`${label} 복사`}
+        style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", gap: 4,
+          minWidth: "var(--tap-min)", minHeight: "var(--tap-min)", padding: "0 var(--space-2)",
+          justifyContent: "center", background: "none", border: "none", cursor: "pointer",
+          fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)", fontWeight: "var(--fw-bold)",
+          color: "var(--brand-primary)" }}>
+        <Icon name="copy" size={18} />복사
+      </button>
+  );
+}
+
 export function CopyField({ label = "주소", value, onCopied, style, ...rest }) {
   if (!value) return null;
-
-  const copy = () => copyText(value).then(ok => onCopied && onCopied(ok, value));
 
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)",
@@ -63,14 +76,7 @@ export function CopyField({ label = "주소", value, onCopied, style, ...rest })
           wordBreak: "keep-all", overflowWrap: "anywhere" }}>{value}</div>
       </div>
 
-      <button onClick={copy} aria-label={`${label} 복사`}
-        style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", gap: 4,
-          minWidth: "var(--tap-min)", minHeight: "var(--tap-min)", padding: "0 var(--space-2)",
-          justifyContent: "center", background: "none", border: "none", cursor: "pointer",
-          fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)", fontWeight: "var(--fw-bold)",
-          color: "var(--brand-primary)" }}>
-        <Icon name="copy" size={18} />복사
-      </button>
+      <CopyButton label={label} value={value} onCopied={onCopied} />
     </div>
   );
 }
