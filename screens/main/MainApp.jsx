@@ -913,9 +913,17 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     ) : route.name === "festival" ? (
       <FestivalDetail
         festival={target}
+        courses={target.districtId === CURRENT_DISTRICT_ID ? d.courses : []}
+        onOpenCourse={c => go(`#/course/${c.id}`)}
         onBack={back}
+        entry={!(window.history.state && window.history.state.shellDepth > 0)}
+        onDistrict={() => { closeAll(); changeTab("district"); }}
         /* 「상권명」줄에 안내 주소가 없을 때만 쓰인다 (2026-08-24) */
-        onOpenDistrict={f => go(`#/district/${encodeURIComponent(f.districtId)}`)} />
+        onOpenDistrict={f => {
+          /* 지금 서 있는 상점가면 상점가 탭으로, 다른 상점가면 앱 안의 준비 중 안내로 (2026-10-16) */
+          if (f.districtId === CURRENT_DISTRICT_ID) { closeAll(); changeTab("district"); }
+          else go(`#/district/${encodeURIComponent(f.districtId)}`);
+        }} />
 
     /* ── S13-S 상점가 상세 안내 준비 중 ──────────────────────────────────
            상점가 줄의 [상세 페이지]는 보통 용인시 누리집으로 **나간다**. 여기로 오는

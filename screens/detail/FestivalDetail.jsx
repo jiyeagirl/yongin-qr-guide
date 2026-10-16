@@ -1,7 +1,7 @@
 import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice, InfoList, Accordion, SectionHeader,
-  Badge, ListRow, Icon, Notice, festivalBadge,
+  Badge, Button, ListRow, Icon, Notice, festivalBadge, CourseCard,
 } from "../../design-systems/index.js";
 import { whenLabel } from "../main/data/districts.js";
 
@@ -46,50 +46,30 @@ import { whenLabel } from "../main/data/districts.js";
  * 목록(U-FT-01)이 종료 상태도 노출하므로 상세에도 들어올 수 있다. 이때 프로그램을
  * 그대로 보여주면 아직 열리는 행사로 읽힌다. 맨 위에 끝났다는 사실을 먼저 적는다.
  */
-/* 「상권명」줄. 주소가 있으면 앵커로 새 창을 열고, 없으면 앱 안의 준비 중 안내로 가는
-   버튼이 된다 — **눈에 보이는 모양은 둘이 같다.** 나가는 것과 안 나가는 것의 차이는
-   보조기기에만 말한다 (aria-label): 새 창이 뜨는 쪽만 그 사실을 미리 알아야 한다. */
+/* 「소속 상점가」줄. **서비스 안 화면으로만 간다** (2026-10-16, 사용자 요청) — 종전에는 상점가의
+   누리집 주소(`homepage`)가 있으면 새 창으로 나갔고 줄 끝에 「상세 페이지」가 적혀 있었다. 이제
+   그 글자도 외부 링크도 없다. 어디로 가는지는 화면(MainApp)이 정한다 — 지금 서 있는 상점가면
+   상점가 탭, 아니면 앱 안의 준비 중 안내(S13-S). */
 function DistrictLink({ f, onOpenDistrict }) {
-  const look = { display: "inline-flex", alignItems: "center", gap: 4, minHeight: 44,
-    color: "var(--text-link)", fontWeight: "var(--fw-semibold)",
-    background: "none", border: "none", padding: 0, font: "inherit", textAlign: "left" };
-  const inner = <>
-    {f.districtName}
-    <span style={{ fontSize: "var(--fs-micro)", fontWeight: "var(--fw-regular)",
-      color: "var(--text-muted)" }}>상세 페이지</span>
-    <Icon name="chevron-right" size={16} />
-  </>;
-
-  if (f.homepage) {
-    return (
-      /* 보조기기에는 어디로 가는지 온전히 말한다. 눈으로 보는 "상세 페이지"만으로는
-         이 앱 안의 화면인지 바깥인지 구분되지 않는데, 화면에서는 꺾쇠와 링크색이
-         그 역할을 나눠 맡고 있어 글자를 길게 늘일 필요가 없다. */
-      <a href={f.homepage} target="_blank" rel="noopener noreferrer"
-        aria-label={`${f.districtName} 상세 페이지 — 용인시 누리집에서 새 창으로 열림`}
-        style={{ ...look, color: "var(--text-link)" }}>
-        {inner}
-      </a>
-    );
-  }
-  /* 열어줄 화면이 없으면(핸들러를 안 넘긴 화면) 평문으로 떨어진다 — 눌리지 않는 것을
-     눌리는 모양으로 두지 않는다 */
   if (!onOpenDistrict) return f.districtName;
   return (
-    <button type="button" onClick={() => onOpenDistrict(f)} style={{ ...look, cursor: "pointer" }}>
-      {inner}
+    <button type="button" onClick={() => onOpenDistrict(f)}
+      style={{ display: "inline-flex", alignItems: "center", gap: 4, minHeight: 44, cursor: "pointer",
+        color: "var(--text-link)", fontWeight: "var(--fw-semibold)", background: "none", border: "none",
+        padding: 0, font: "inherit", textAlign: "left" }}>
+      {f.districtName}
+      <Icon name="chevron-right" size={16} />
     </button>
   );
 }
 
-export function FestivalDetail({ festival, onBack, onOpenDistrict }) {
+export function FestivalDetail({ festival, courses = [], entry = false, onBack, onOpenDistrict, onDistrict, onOpenCourse }) {
   const f = festival;
   const ended = f.state === "종료";
   const live = f.state === "진행중";
 
   /* 거리는 "가까운 순" 정렬의 근거이자 갈지 말지를 정하는 값이다 (U-DC-01 이 목록에서도
      상점가명과 거리를 병기하라고 요구한다). km 로 적는다 — 축제는 수 km 밖이 기본이다. */
-  const distance = f.dist >= 1000 ? `${(f.dist / 1000).toFixed(1)}km` : `${f.dist}m`;
 
   /* ── 시각과 위치가 값으로 들어온다 (2026-08-24) ─────────────────────────
      전에는 `p.at` 이 "15:00~17:00" 이라는 한 덩어리 글자였고, 자리 정보("한숲공원
@@ -123,7 +103,11 @@ export function FestivalDetail({ festival, onBack, onOpenDistrict }) {
        궁금해진 사람이 그 낱말을 보고 있는 바로 그 자리다. */
     /* 앱바 제목은 **짧은 이름**이다 (2026-08-20). 실제 축제명은 24자까지 가는데 그 줄은
        뒤로가기 단추와 한 줄을 나눠 쓴다 — 아래 머리에서 온전히 적으므로 여기서 잘릴 이유가 없다 */
-    <DetailPage title={f.short || f.name} onBack={onBack}>
+    <DetailPage title={f.short || f.name} onBack={onBack}
+      /* 축제 QR 로 막 들어온 첫 화면이면 「뒤로」가 아니라 가게(상점가) 아이콘이다 — 상점 상세와
+         같은 규칙이다 (2026-10-16, 사용자 요청). 누르면 상점가 탭으로 나간다 */
+      backIcon={entry ? "store" : undefined} backLabel={entry ? "홈" : undefined}
+      footer={<Button variant="primary" size="lg" icon="store" block onClick={onDistrict}>상점가 둘러보기</Button>}>
 
       <DetailBody>
         {/* ── 머리 ─────────────────────────────────────────────────────── */}
@@ -133,7 +117,6 @@ export function FestivalDetail({ festival, onBack, onOpenDistrict }) {
                 삼항으로 다시 적고 있었는데, 같은 표가 네 곳에 흩어진 결과 관리자 표만
                 예정이 청록으로 갈려 있었다. 진행중이 꽉 찬 빨강에 점을 다는 것도 그 표가 정한다 */}
             <Badge {...festivalBadge(f.state)}>{f.state}</Badge>
-            <Badge tone="neutral">{f.districtName} · {distance}</Badge>
           </div>
           <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-start" }}>
             <span style={{ flex: "0 0 auto", paddingTop: 3 }}>
@@ -152,9 +135,7 @@ export function FestivalDetail({ festival, onBack, onOpenDistrict }) {
                   fontWeight: "var(--fw-semibold)", color: "var(--text-body)",
                   wordBreak: "keep-all" }}>{f.name}</p>
               ) : null}
-              <p style={{ marginTop: 4, fontSize: "var(--fs-body)", color: "var(--text-body)" }}>
-                {f.period} {f.time}
-              </p>
+              {/* 기간·시간 줄은 뺐다 (2026-10-16, 사용자 요청) — 아래 정보 표가 같은 값을 적는다 */}
             </div>
           </div>
         </header>
@@ -201,7 +182,9 @@ export function FestivalDetail({ festival, onBack, onOpenDistrict }) {
                  관리자가 그 칸을 비우는 이유는 대개 **아직 페이지가 없어서**이고, 그 사정이
                  「이 축제만 링크가 없다」는 모양으로 나갈 이유가 없다.
                  주소가 있으면 새 창으로 나가고, 없으면 앱 안의 준비 중 안내로 간다. */
-          { label: "상권명", value: (
+          /* 라벨은 정의서의 「상권명」이 아니라 **「소속 상점가」**다 (2026-10-16, 사용자 요청) —
+             점포 상세의 같은 줄과 이름을 맞춘다. 저장되는 항목명은 그대로다. */
+          { label: "소속 상점가", value: (
             <DistrictLink f={f} onOpenDistrict={onOpenDistrict} />
           ) },
           { label: "시간", value: f.time },
@@ -226,7 +209,7 @@ export function FestivalDetail({ festival, onBack, onOpenDistrict }) {
         {/* ── 부스 위치 (정의서 1-3, 협의 필요) — 자료가 있을 때만 ─────── */}
         {booths.length ? (
           <section>
-            <SectionHeader title="부스 위치" note="주최 상점가 제공" />
+            <SectionHeader title="부스 위치" />
             <div style={{ background: "var(--surface-card)", border: "var(--stroke-hairline) solid var(--border-default)",
               borderRadius: "var(--radius-card)", padding: "var(--space-2) var(--space-4)" }}>
               {/* 두 줄이 각각 다른 질문에 답한다 — 어디에 있나(위치) · 지금 열었나(시각).
@@ -269,6 +252,24 @@ export function FestivalDetail({ festival, onBack, onOpenDistrict }) {
              축제는 공공데이터가 아니라 시가 그때그때 전달하는 자료라 "몇 월 기준"이라는 말이
              성립하지 않는다 — 없는 근거를 적으면 그 날짜가 보증처럼 읽힌다.
              대신 바뀔 수 있다는 사실은 그대로 적는다. */}
+        {/* 골목 한바퀴 코스 추천 (2026-10-16, 사용자 요청) — 하단에 둔다. 축제를 읽은 사람이 이어서
+            골목을 도는 길이다. 둘러보기 탭과 같은 카드이고 누르면 코스 상세(S08)로 간다.
+            이 상점가의 축제일 때만 넘어온다(다른 상점가의 코스는 자료가 없다). */}
+        {courses.length ? (
+          <section>
+            <SectionHeader title="골목 한바퀴 코스 추천" />
+            <p style={{ marginTop: "calc(-1 * var(--space-1))", marginBottom: "var(--space-3)",
+              font: "var(--type-caption)", color: "var(--text-muted)", wordBreak: "keep-all" }}>
+              축제 위치 근처 가게들을 둘러보세요
+            </p>
+            <div style={{ display: "flex", alignItems: "stretch", gap: "var(--space-3)", overflowX: "auto",
+              margin: "0 calc(-1 * var(--gutter-screen))", padding: "2px var(--gutter-screen) var(--space-2)",
+              scrollbarWidth: "none" }}>
+              {courses.map(c => <CourseCard key={c.id} course={c} onClick={() => onOpenCourse && onOpenCourse(c)} />)}
+            </div>
+          </section>
+        ) : null}
+
         {/* 119 안내를 끈다 — 이 화면에는 안전시설이 한 줄도 없다 (DetailNotice 의 emergency 주석).
              그러면서 "참고용"과 "바뀔 수 있다"를 한 문장으로 잇는다. 두 줄로 나누면 앞줄이
              축제 이야기, 뒷줄이 일반 고지로 읽혀 같은 말을 두 번 하는 것처럼 보였다 */}
