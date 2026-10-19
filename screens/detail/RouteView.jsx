@@ -108,7 +108,9 @@ export function RouteView({ dest, origin, fromAnchor = true,
      지도와 경로 중 늦게 오는 쪽에 맞춰야 하므로 둘 다 의존성에 넣는다. */
   const fitAll = React.useCallback(() => {
     if (mapApi.current && result && result.path.length) {
-      mapApi.current.fitTo(result.path, { top: 24, bottom: 24 });
+      /* 출발·도착이 지도 가장자리에 붙으면 핀이 잘리고 어디서 어디까지인지 읽히지 않는다 —
+         사방에 여백을 넉넉히 둬서 한 단계 더 멀리 잡는다 (2026-10-19, 사용자 요청) */
+      mapApi.current.fitTo(result.path, { top: 72, bottom: 72, left: 56, right: 56 });
     }
   }, [result]);
 
@@ -174,7 +176,10 @@ export function RouteView({ dest, origin, fromAnchor = true,
         {/* ── 경로 지도 (U-NV-02) ────────────────────────────────────────
                S08 과 같은 비율·여백을 쓴다. 상세 화면 안의 지도가 화면마다 다른 크기면
                같은 앱의 같은 장치로 읽히지 않는다. */}
-        <div style={{ position: "relative", width: "auto", aspectRatio: "4 / 3", maxHeight: "46vh",
+        {/* 크기만 S08 보다 크다 (2026-10-19, 사용자 요청) — 여기서 사람이 가장 먼저 읽는 것은 "어디로 어떻게
+               가나"라서 지도가 화면의 절반쯤을 차지하고, 출발·도착 줄과 상세 경로는 스크롤해서 읽는다.
+               경로 안내가 한 화면에 다 못 들어와도 된다. 화면 높이를 따르므로 고정 높이가 아니다 */}
+        <div style={{ position: "relative", width: "auto", height: "52vh", minHeight: 280,
           margin: "0 calc(var(--gutter-screen) * -1)",
           borderBottom: "var(--stroke-hairline) solid var(--border-default)" }}>
           <KakaoMap

@@ -784,6 +784,13 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
 
   const originStop = route.name === "route" ? carriedOrigin : null;
 
+  /* 코스를 거쳐 왔는가 (2026-10-19, 사용자 요청). 출발지를 고르는 드롭다운은 **코스 안에서만** 뜬다 —
+     그냥 상세에서 누른 길찾기는 QR 지점에서 출발하고 바꿀 곳도 없다. 해시 끝 조각이 그 표시다:
+     코스 직전 가게의 id, 첫 곳이면 COURSE_FROM_ANCHOR(QR 지점에서 출발하는 코스 안의 길). */
+  const COURSE_FROM_ANCHOR = "@anchor";
+  const fromCourse = (route.name === "route" ? route.parts[2]
+    : (route.name === "store" || route.name === "facility") ? route.parts[1] : null) != null;
+
   /* 고를 수 있는 출발지 = **QR 지점 + 같은 코스의 다른 지점들.**
 
      후보를 코스로 좁히는 이유는 그 밖에 우리가 이름 댈 수 있는 자리가 없어서다. 주소 검색은
@@ -795,13 +802,13 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      같은 경우) 지금 출발지로 한 번 더 찾는다 — 코스를 돌다 AED 를 찾는 흐름이 그렇다.
      둘 다 아니면 후보가 QR 지점 하나뿐이고, 그때 RouteView 는 드롭다운을 그리지 않는다. */
   const routeOrigins = React.useMemo(() => {
-    if (route.name !== "route" || !target) return [];
+    if (route.name !== "route" || !target || !fromCourse) return [];
     const inCourse = c => (c.stops || []).some(s => s.id === target.id);
     const hasOrigin = c => originStop && (c.stops || []).some(s => s.id === originStop.id);
     const course = (d.courses || []).find(inCourse) || (d.courses || []).find(hasOrigin);
     const stops = course ? course.stops.filter(s => s.id !== target.id) : [];
     return [d.anchor, ...stops];
-  }, [route.name, target, originStop, d.courses, d.anchor]);
+  }, [route.name, target, originStop, fromCourse, d.courses, d.anchor]);
 
   /* 출발지를 바꾸면 해시의 마지막 조각만 갈아 끼운다. **history 에 쌓지 않는다** —
      쌓으면 출발지를 세 번 바꿔본 사람이 도착지 상세로 돌아가려고 뒤로가기를 세 번 눌러야
@@ -810,7 +817,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     const kind = route.parts[0];
     const destId = route.parts[1];
     if (!kind || !destId) return;
-    replace(`#/route/${kind}/${encodeURIComponent(destId)}${id ? `/${encodeURIComponent(id)}` : ""}`);
+    replace(`#/route/${kind}/${encodeURIComponent(destId)}/${id ? encodeURIComponent(id) : COURSE_FROM_ANCHOR}`);
   }, [route.parts]);
 
   /* 길찾기로 보내는 길은 여기 하나다 (U-FC-07 / U-ST-05 → U-NV-01).
@@ -822,8 +829,9 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
   const goRoute = React.useCallback(item => {
     const kind = item.type && FACILITY_LABELS[item.type] ? "facility" : "store";
     const from = carriedOrigin && carriedOrigin.id !== item.id ? carriedOrigin : null;
-    go(`#/route/${kind}/${encodeURIComponent(item.id)}${from ? `/${encodeURIComponent(from.id)}` : ""}`);
-  }, [carriedOrigin]);
+    const piece = from ? from.id : fromCourse ? COURSE_FROM_ANCHOR : null;
+    go(`#/route/${kind}/${encodeURIComponent(item.id)}${piece ? `/${encodeURIComponent(piece)}` : ""}`);
+  }, [carriedOrigin, fromCourse]);
 
   /* 대상 없는 오류신고(#/report)는 정상이므로 되돌리지 않는다. 대상을 달고 왔는데
      못 찾은 경우(#/report/facility/없는id)는 다른 상세와 똑같이 되돌린다 —
@@ -951,7 +959,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         /* 도착지 상세로 갈 때도 출발지를 물려준다 — 거기서 [길찾기]로 돌아오면
            같은 출발지여야 한다. 사용자가 여기서 바꾼 값이면 바꾼 그대로다. */
         onOpenDest={() => go(`#/${route.parts[0]}/${encodeURIComponent(target.id)}`
-          + (originStop ? `/${encodeURIComponent(originStop.id)}` : ""))}
+          + (originStop ? `/${encodeURIComponent(originStop.id)}` : fromCourse ? `/${COURSE_FROM_ANCHOR}` : ""))}
         onReport={() => goReport(target)} />
     ) : route.name === "course" ? (
       <CourseDetail
@@ -968,9 +976,9 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
            다시 맞춰지고, 방문 기록만 세션에 남는다 (data/courseVisits.js). */
         /* 상세로 갈 때도 출발지를 해시에 실어 보낸다 (#/store/dj-042/dj-041, 2026-08-24) —
            거기서 [길찾기]를 눌러도 코스 순서대로 안내된다 (위 carriedOrigin 주석) */
-        onPickStore={(s, from) => go(`#/store/${s.id}${from ? `/${from.id}` : ""}`)}
+        onPickStore={(s, from) => go(`#/store/${s.id}/${from ? from.id : COURSE_FROM_ANCHOR}`)}
         /* 출발지는 코스 순서상 직전 가게다. 첫 곳(from 없음)만 QR 지점에서 출발한다 */
-        onRouteStore={(s, from) => go(`#/route/store/${s.id}${from ? `/${from.id}` : ""}`)} />
+        onRouteStore={(s, from) => go(`#/route/store/${s.id}/${from ? from.id : COURSE_FROM_ANCHOR}`)} />
     ) : route.name === "festival" ? (
       <FestivalDetail
         festival={target}

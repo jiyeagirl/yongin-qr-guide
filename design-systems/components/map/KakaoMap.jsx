@@ -217,7 +217,7 @@ export function KakaoMap({
     const b = new k.maps.LatLngBounds();
     points.forEach(p => p.lat && p.lng && b.extend(new k.maps.LatLng(p.lat, p.lng)));
     const pad = padding || {};
-    m.setBounds(b, Math.round(pad.top || 0), 16, Math.round(pad.bottom || 0), 16);
+    m.setBounds(b, Math.round(pad.top || 0), pad.right == null ? 16 : Math.round(pad.right), Math.round(pad.bottom || 0), pad.left == null ? 16 : Math.round(pad.left));
   }, []);
 
   /* `fitRadius(meters, padding)` 가 여기 있었다 (2026-08-26 아침 → 같은 날 오후 삭제,
