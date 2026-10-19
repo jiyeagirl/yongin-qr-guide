@@ -164,7 +164,9 @@ export function Sheet({ open = true, title, subtitle, titleAside, headerExtra, c
           style={{ flex: "0 0 auto", padding: "10px 0 6px", cursor: "grab", touchAction: "none" }}>
           <span style={{ display: "block", width: 44, height: 5, borderRadius: 999, background: "var(--border-strong)", margin: "0 auto" }} />
         </div>
-        {title ? (
+        {(title || onClose) ? (
+          /* 제목 없이 닫기 버튼만 있는 시트도 이 줄을 쓴다 (2026-10-19) — 상단 바가 이미 제목을 적는 화면(다른 상점가 지도)에서는
+             시트가 같은 이름을 또 적지 않고, 전체로 펼쳤을 때 [지도]로 돌아가는 버튼만 선다.
           /* 아래 여백을 space-3 → space-2 → space-1 로 두 번 줄였다 (2026-08-18).
              헤더 바로 밑이 목록 제어 줄(ListControls)인데 둘 다 여백을 넉넉히 잡고 있어
              그 사이가 스무 남짓 벌어져 있었다 — 붙어 있어야 할 두 줄이다.
@@ -173,7 +175,7 @@ export function Sheet({ open = true, title, subtitle, titleAside, headerExtra, c
             {/* 제목 줄을 titleAside · 닫기 버튼과 나눠 쓴다 */}
             <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <h2 style={{ fontSize: "var(--fs-title-2)", fontWeight: "var(--fw-bold)", letterSpacing: "var(--ls-snug)" }}>{title}</h2>
+                {title ? <h2 style={{ fontSize: "var(--fs-title-2)", fontWeight: "var(--fw-bold)", letterSpacing: "var(--ls-snug)" }}>{title}</h2> : null}
                 {subtitle ? <div style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", marginTop: 4 }}>{subtitle}</div> : null}
               </div>
               {/* 줄지 않는다 (`0 0 auto`). 이 자리에 오는 것은 **한 줄로 다 보여야 하는**

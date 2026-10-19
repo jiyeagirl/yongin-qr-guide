@@ -24,7 +24,7 @@ import { FestivalList } from "../detail/FestivalList.jsx";
 import { DistrictList } from "../detail/DistrictList.jsx";
 import { DistrictInfo } from "../detail/DistrictInfo.jsx";
 import { DistrictMap } from "../detail/DistrictMap.jsx";
-import { districtStores, findDistrictStore, subscribeCoords } from "./data/districtStores.js";
+import { districtStores, findDistrictStore, districtCoursesFrom, findDistrictCourse, subscribeCoords } from "./data/districtStores.js";
 import "./data/dongbaekStores.js";
 import "./data/dongbaekStnStores.js";
 import "./data/dongbaekJungStores.js";
@@ -142,7 +142,7 @@ const tabOf = id => TABS.find(t => t.id === id);
 function buildCoachSteps(district) {
   return [
     { id: "facility",
-      title: "내 주변 시설을 확인해요",
+      title: "내 주변 공공시설을 확인해요",
       body: "QR을 찍은 곳에서 가까운 AED, 대피소, 쉼터, 화장실을 알려드려요." },
     district ? {
       id: "district",
@@ -330,7 +330,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
 
      탭 한 칸의 자리는 `TabBar` 에게 받는다 (`itemRefs`). 셈으로 짐작하지 않는 이유는
      그쪽 머리말에 있다. 걸음 목록이 탭 id 를 그대로 쓰므로 이 사전 하나로 셋이 다 걸린다. */
-  const [coachOpen, closeCoach] = useCoachMarks(forceCoach);
+  const [coachOpen, closeCoach, showCoach] = useCoachMarks(forceCoach);
   const tabRefs = React.useRef({});
   const coachSteps = React.useMemo(
     () => buildCoachSteps(hasDistrict ? d.district : null)
@@ -738,7 +738,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     if (!id) return null;
     if (kind === "facility") return FACILITIES.find(x => x.id === id) || null;
     if (kind === "store") return d.stores.find(x => x.id === id) || findDistrictStore(id);
-    if (kind === "course") return d.courses.find(x => x.id === id) || null;
+    if (kind === "course") return d.courses.find(x => x.id === id) || findDistrictCourse(id);
     if (kind === "festival") return FESTIVALS.find(x => x.id === id) || null;
     /* 상점가는 32곳 전부에서 찾는다 — 지금 서 있는 곳(둔전)도 S13 목록에는 들어간다 */
     if (kind === "district") return DISTRICTS.find(x => x.id === id) || null;
@@ -963,7 +963,8 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     ) : route.name === "course" ? (
       <CourseDetail
         course={target}
-        anchor={d.anchor}
+        /* 실제 점포 자료를 받은 상점가의 코스는 그 가게(`course.home`)에서 시작한다 — 지도 기준점도 그 가게다 */
+        anchor={target.home || d.anchor}
         /* 기준일자를 넘기지 않고 있었다 (2026-08-19 고침) — 코스 화면 맨 아래가
            "점포 정보 undefined 기준"으로 나갔다. 코스는 점포 데이터로 만들어지므로
            시트·점포 상세와 같은 값을 본다 */
@@ -985,7 +986,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         onOpenCourse={c => go(`#/course/${c.id}`)}
         onBack={back}
         entry={!(window.history.state && window.history.state.shellDepth > 0)}
-        onDistrict={() => { closeAll(); changeTab("district"); }}
+        onDistrict={() => { closeAll(); changeTab("district"); showCoach(); }}
         /* 「상권명」줄에 안내 주소가 없을 때만 쓰인다 (2026-08-24) */
         onOpenDistrict={f => {
           /* 지금 서 있는 상점가면 상점가 탭으로, 다른 상점가면 앱 안의 준비 중 안내로 (2026-10-16) */
@@ -1036,13 +1037,13 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         onBack={back}
         /* 어떤 길로 들어와도 그 가게 둘레의 코스가 붙는다 (2026-10-19, 사용자 요청) — 상점 QR · 검색 ·
            지도 카드 · 목록 어디서 열든 상세가 같은 모양이어야 한다. 종전에는 QR 로 들어온 가게만 받았다 */
-        courses={target.districtId ? [] : coursesFrom(target.id)}
+        courses={target.districtId ? districtCoursesFrom(target.id) : coursesFrom(target.id)}
         onOpenCourse={c => go(`#/course/${c.id}`)}
         festival={!target.districtId && d.festival && d.festival.state === "진행중" ? d.festival : null}
         onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
         entry={!(window.history.state && window.history.state.shellDepth > 0)}
         onReport={() => goReport(target)}
-        onDistrict={() => { closeAll(); changeTab("district"); }}
+        onDistrict={() => { closeAll(); changeTab("district"); showCoach(); }}
         onRoute={() => goRoute(target)}
         onCopied={copied} />
     );

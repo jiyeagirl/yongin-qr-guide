@@ -136,8 +136,9 @@ export function DistrictMap({ district, stores = [], onBack, onClose, onOpenStor
                 onDetail={() => onOpenStore && onOpenStore(active)} />
             ) : null}
 
+            {/* 시트에는 상점가 이름을 적지 않는다 (2026-10-19, 사용자 요청) — 위 상단 바가 이미 같은 이름을 적고 있다 */}
             <Sheet
-              title={spaced(d.name)}
+              aria-label={spaced(d.name)}
               snap={snap}
               onSnapChange={changeSnap}
               onHeightChange={setSheetH}

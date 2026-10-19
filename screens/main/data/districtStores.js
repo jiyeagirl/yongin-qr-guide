@@ -15,6 +15,8 @@
  *   · 거리(`dist`)는 null 이다 — 화면의 「약 n m」는 QR 지점 기준인데 이 점포들은 다른 동네라 말이 안 된다.
  * 실서비스에서는 서버가 점포 좌표와 이 값들을 채운다. */
 
+import { nearestChain, withLegs, totals } from "./coursePlan.js";
+
 export const ROAD_PREFIX = "경기도 용인시 기흥구 ";   /* 지금 자료가 있는 상점가는 모두 기흥구다 */
 
 const registry = new Map();   /* districtId → { districtId, idPrefix, center, buildings, cache } */
@@ -87,3 +89,38 @@ export const findDistrictStore = id => {
   for (const r of registry.values()) { const f = districtStores(r.districtId).find(s => s.id === id); if (f) return f; }
   return null;
 };
+
+/* ── 이 가게에서 시작하는 골목 한바퀴 코스 (2026-10-19, 사용자 요청) ───────────────
+   둔전은 코스가 더미 자료(`dunjeon.js` 의 `coursesFrom`)로 있고, 실제 점포 자료를 받은 상점가는 코스 자료가 없다.
+   그래서 같은 세 규칙(음식점·카페 / 온누리 / 조건 없음)으로 **그 가게 둘레의 같은 상점가 점포**에서 가까운 순으로 네 곳을
+   이어 만든다 — 그 가게 자신은 넣지 않는다(이미 그 상세에 서 있다). 규칙 · 이름 · 설명은 `coursesFrom` 과 같고 시연용
+   생성이다(큐레이션이 정해지면 서버 응답으로 바뀐다). 온누리 코스는 가맹으로 표시된 점포가 모자라면(동백중심상가는 표시가
+   없다) 3곳 미만이라 빠진다. 구간 값은 가게 사이 좌표로 잰다 — 첫 구간은 그 가게에서 첫 곳까지다.
+
+   코스 id 는 `cs-{eat|onnuri|around}-{가게 id}` 라 해시(#/course/:id)만으로 다시 만들어 열 수 있다. */
+const COURSE_PLAN = [
+  { k: "eat", name: "먹자골목 한바퀴", desc: "맛있는 음식점과 카페를 찾아 떠나는 코스", pick: s => s.cat === "food" || s.cat === "cafe" },
+  { k: "onnuri", name: "온누리 알뜰 한바퀴", desc: "온누리상품권으로 다양한 가게를 알뜰하게 둘러보는 코스", pick: s => !!s.onnuri },
+  { k: "around", name: "동네 상점 둘러보기", desc: "근처 곳곳의 가게를 발견하는 한바퀴 코스", pick: () => true },
+];
+
+export function districtCoursesFrom(storeId) {
+  const home = findDistrictStore(storeId);
+  if (!home) return [];
+  const all = districtStores(home.districtId).filter(s => s.id !== home.id);
+  const used = new Set();
+  return COURSE_PLAN.map(({ k, pick, ...c }) => {
+    const pool = all.filter(pick);
+    const fresh = pool.filter(s => !used.has(s.id));
+    const near = nearestChain(fresh.length >= 4 ? fresh : pool, home, 4);
+    near.forEach(s => used.add(s.id));
+    const stops = withLegs(near, home);
+    return { id: `cs-${k}-${storeId}`, ...c, stops, ...totals(stops),
+      home: { name: home.name, lat: home.lat, lng: home.lng }, districtId: home.districtId };
+  }).filter(c => c.stops.length >= 3);
+}
+
+export function findDistrictCourse(id) {
+  const m = /^cs-(?:eat|onnuri|around)-(.+)$/.exec(String(id));
+  return m ? (districtCoursesFrom(m[1]).find(c => c.id === id) || null) : null;
+}

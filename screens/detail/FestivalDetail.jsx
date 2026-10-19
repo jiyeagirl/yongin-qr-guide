@@ -257,7 +257,7 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
             <SectionHeader title="골목 한바퀴 코스 추천" />
             <p style={{ marginTop: "calc(-1 * var(--space-1))", marginBottom: "var(--space-3)",
               font: "var(--type-caption)", color: "var(--text-muted)", wordBreak: "keep-all" }}>
-              축제 위치 근처 가게들을 둘러보세요
+              축제가 열리는 골목 근처 가게들을 둘러보세요
             </p>
             <div style={{ display: "flex", alignItems: "stretch", gap: "var(--space-3)", overflowX: "auto",
               margin: "0 calc(-1 * var(--gutter-screen))", padding: "2px var(--gutter-screen) var(--space-2)",

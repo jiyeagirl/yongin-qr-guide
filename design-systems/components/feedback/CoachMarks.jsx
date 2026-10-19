@@ -57,6 +57,11 @@ const TAIL = 14;
 
    세로로 얇은 대상에서는 조이지 않는다 — 아래 `insetY` 가 대상 높이를 보고 물러선다. */
 const HOLE_PAD_X = 6;
+
+/* 구멍은 **이 부품의 상자 안**에 머문다 (2026-10-19, 사용자 요청). 탭바의 맨 왼쪽(공공시설)과 맨 오른쪽(둘러보기) 칸은
+   화면 가장자리에 붙어 있어 가로로 6px 넓히면 구멍이 화면 밖으로 나가 **왼쪽 · 오른쪽이 잘려** 보였다. 가장자리에서
+   이만큼(px) 안쪽까지만 뚫는다 — 가운데 칸은 그대로 넓어지고, 가장자리 칸은 넓히다 만다. */
+const HOLE_EDGE = 4;
 const HOLE_INSET_Y = 6;
 
 /* 구멍이 남겨야 할 최소 높이. 이보다 얇아질 만큼 조이지 않는다 */
@@ -119,7 +124,7 @@ export function CoachMarks({
     if (!step) return undefined;
     const same = (a, b) => (a === null && b === null)
       || Boolean(a && b && a.top === b.top && a.left === b.left
-        && a.width === b.width && a.height === b.height && a.hostH === b.hostH);
+        && a.width === b.width && a.height === b.height && a.hostH === b.hostH && a.hostW === b.hostW);
     let raf = 0;
     const tick = () => {
       raf = requestAnimationFrame(tick);
@@ -133,7 +138,7 @@ export function CoachMarks({
            뚫으면 막만 남고 어디를 가리키는지는 사라진다. 그때는 대상이 없는 것으로 본다 */
         if (b.width && b.height) {
           next = { top: b.top - a.top, left: b.left - a.left,
-            width: b.width, height: b.height, hostH: a.height };
+            width: b.width, height: b.height, hostH: a.height, hostW: a.width };
         }
       }
       setBox(cur => (same(cur, next) ? cur : next));
@@ -218,10 +223,13 @@ export function CoachMarks({
   /* 조이는 폭은 대상 높이가 정한다 — 44px 짜리 단추를 12px 조이면 32px 이 남지만,
      그보다 얇은 것을 만나면 조이다가 구멍이 사라진다 */
   const insetY = box ? Math.min(HOLE_INSET_Y, Math.max(0, (box.height - HOLE_MIN_H) / 2)) : 0;
-  const hole = box
-    ? { top: box.top + insetY, left: box.left - HOLE_PAD_X,
-        width: box.width + HOLE_PAD_X * 2, height: box.height - insetY * 2 }
-    : null;
+  const hole = (() => {
+    if (!box) return null;
+    const hostW = box.hostW || Infinity;
+    const left = Math.max(HOLE_EDGE, box.left - HOLE_PAD_X);
+    const right = Math.min(hostW - HOLE_EDGE, box.left + box.width + HOLE_PAD_X);
+    return { top: box.top + insetY, left, width: Math.max(0, right - left), height: box.height - insetY * 2 };
+  })();
 
   return (
     <div ref={host} onKeyDown={trap}
