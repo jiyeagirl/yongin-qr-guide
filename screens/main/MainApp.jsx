@@ -1122,8 +1122,10 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
           <MapPreviewCard
             item={selected}
             icon={selected.kind === "facility" ? <FacilityIcon type={selected.type} size={22} /> : undefined}
-            /* 상점가 카드는 아이콘 대신 대표 사진 자리다 (2026-10-19) */
-            photoSlot={selected.kind === "district"}
+            /* 상점가·점포 카드는 아이콘 대신 대표 사진 칸이다 (2026-10-19, 사용자 요청). 사진 자료가 없는
+               동안은 회색 칸에 이미지 아이콘이 서고 `images[0]` 이 들어오면 같은 자리에 사진이 선다.
+               시설은 사진 대상이 아니라 종전 아이콘이다 */
+            photoSlot={selected.kind !== "facility"}
             bottom={sheetH}
             onHeightChange={setPreviewH}
             onClose={closePreview}
