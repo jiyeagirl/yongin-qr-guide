@@ -1,7 +1,7 @@
 import React from "react";
 import {
   DetailPage, DetailNotice, ListControls, OnnuriChip, StoreRow, Pagination, Notice,
-  SearchField, FilterBar, CATEGORY_LABELS,
+  SearchField, CATEGORY_LABELS,
 } from "../../design-systems/index.js";
 import { STORE_AS_OF } from "../main/config.js";
 
@@ -9,8 +9,7 @@ import { STORE_AS_OF } from "../main/config.js";
  *
  *   [AppBar]  ← 뒤로 · 둔전골목형상점가 가게
  *   ─────────────────────────────────
- *   [검색창]
- *   [전체][음식][카페]…                    ← 업종 칩 (여럿 고르기, 빈 배열이 전체)
+ *   [검색창]                               ← 업종 칩 줄은 없다 (2026-10-19)
  *   ─────────────────────────────────
  *   전체 335곳  (🎫 온누리)      ⇅ 거리순    ← sticky
  *   점포 목록 20곳
@@ -54,7 +53,7 @@ export function StoreList({
       <div data-store-search style={{ padding: "var(--space-3) var(--gutter-screen) var(--space-2)" }}>
         <SearchField value={q} onChange={e => setQ(e.target.value)} onClear={() => setQ("")} />
       </div>
-      <FilterBar sticky={false} chips={chips} value={cats} onChange={setCats} />
+      {/* 업종 칩 줄은 없다 (2026-10-19, 사용자 요청) — 검색창으로 찾고 온누리·정렬만 남긴다 */}
 
       <ListControls
         title={`${catTitle} ${rows.length}곳`}

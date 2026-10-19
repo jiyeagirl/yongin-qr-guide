@@ -10,7 +10,7 @@ import { PopularSection, CourseSection, DistrictPreviewSection } from "./HomeSec
  *   우리 상점가 축제 배너 (U-FT-03) [X]                       ← 닫을 수 있다. 조아용이 선다
  *   인기 매장                                                  ← 가로 레일 (HomeSections)
  *   골목 한바퀴 코스 추천                                      ← 가로 카드 (HomeSections)
- *   [둔전 골목형 상점가 전체보기 >]                            ← S15 (#/stores). 회색 알약
+ *   [둔전 골목형 상점가 전체매장 >]                            ← S15 (#/stores). 회색 알약
  *   주변 골목형 상점가   [전체보기]                            ← 가까운 3곳 → 지도로 이동
  *   기준일자·고지
  *
@@ -64,7 +64,7 @@ export function DistrictSheet({
       {/* ── 가게 전체보기 → S15. 목록이 이 시트에서 나간 대신 들어가는 길이다 ── */}
       <div style={{ padding: "var(--space-5) var(--gutter-screen) 0" }}>
         <Button variant="subtle" size="sm" block iconEnd="chevron-right" onClick={onOpenAllStores}>
-          {shortName(district)} 전체보기
+          {shortName(district)} 전체매장
         </Button>
       </div>
 

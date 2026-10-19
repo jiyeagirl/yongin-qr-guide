@@ -933,7 +933,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
       onnuriOnly={onnuriOnly} setOnnuriOnly={setOnnuriOnly}
       sort={sort} setSort={setSort}
       page={page} setPage={setPage} pageSize={PAGE_SIZE}
-      title={`${shortName(d.district)} 전체보기`}
+      title={`${shortName(d.district)} 전체매장`}
       /* 상세로 가지 않는다 (2026-10-19, 사용자 요청) — 목록을 닫고 지도에 핀을 켜서 미리보기 카드가 뜨게 한다.
          상세는 그 카드의 [상세 보기]가 맡는다 (인기 매장 카드와 같은 길, showStoreOnMap) */
       onPickStore={s => { closeAll(); showStoreOnMap(s); }}

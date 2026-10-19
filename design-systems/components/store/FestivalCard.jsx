@@ -88,7 +88,9 @@ const COMPACT_ICON = 22;
 
    **상점가 탭 시트 헤더도 이제 조아용을 쓴다** (2026-10-19, 사용자 요청) — 위 「기본은 아이콘」
    은 `mascot` 을 안 준 호출에만 남는다. */
-const COMPACT_MASCOT = 52;
+const COMPACT_MASCOT = 72;
+/* 시트 배너([X] 가 있는 쪽)는 72 가 너무 커서 56 으로 낮춘다 (2026-10-19, 사용자 요청). 점포 상세 배너는 72 그대로다 */
+const COMPACT_MASCOT_SHEET = 56;   /* 52→72 (2026-10-19, 사용자 요청 — 배너가 눈에 띄지 않는다) */
 
 export function FestivalCard({
   festival, onClick,
@@ -97,6 +99,7 @@ export function FestivalCard({
   compact = false,        /* 시트 헤더용 한 줄짜리 (FestivalBanner 가 쓴다) */
   mascot = false,         /* compact 에서 왼쪽 아이콘 대신 조아용을 둔다 */
   onDismiss,              /* 주면 오른쪽 위에 [X] 가 붙는다 */
+  actionLabel = "축제 정보 보기",   /* compact 에서 오른쪽 위에 적는 안내 — 배너가 눌러지는 것임을 알린다 */
   dismissLabel = "축제 안내 닫기",
   style, ...rest
 }) {
@@ -135,7 +138,7 @@ export function FestivalCard({
       {compact ? (
         <span style={{ flex: "0 0 auto", alignSelf: "center", display: "inline-flex" }}>
           {mascot
-            ? <Mascot pose={pose} size={COMPACT_MASCOT} base={base} alt="" />
+            ? <Mascot pose={pose} size={onDismiss ? COMPACT_MASCOT_SHEET : COMPACT_MASCOT} base={base} alt="" />
             : <Icon name="party-popper" size={COMPACT_ICON} color={ink} />}
         </span>
       ) : null}
@@ -156,26 +159,41 @@ export function FestivalCard({
 
                폭에 기대지 않고 항상 내린다. 카드 높이가 한 줄만큼 늘지만, 대신 여섯 장이
                같은 자리에 같은 것을 놓는다 — 훑는 눈이 날짜를 찾아다니지 않아도 된다. */}
-        <div style={{ display: "flex" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-2)" }}>
           {/* 목록 행·상세·관리자 표와 **같은 Badge** 다. 전에는 여기만 손수 만든 알약이었는데,
               그러면 같은 "진행중"이 자리마다 다르게 생긴다. 색은 바탕 틴트가 아니라
               festivalBadge 가 정한다 — 크림 카드 위의 크림 알약은 알약으로 보이지 않았다.
               상태는 색과 함께 **글자로도** 나간다 — 색을 못 보는 사람에게 남는 것이 그것이다 */}
           <Badge size="sm" {...festivalBadge(f.state)}>{f.state}</Badge>
+          {/* ── 「축제 정보 보기 >」 (2026-10-19, 사용자 요청) ───────────────────────
+                 배너가 눈에 띄지 않고, 눌러서 상세로 간다는 것도 읽히지 않았다. 오른쪽 위에 글자로
+                 적는다. 바깥이 이미 버튼이라 이것은 **글자일 뿐 별도 버튼이 아니다**(누를 수 있는
+                 것 안에 누를 수 있는 것을 넣지 않는다 — 위 wholeCardIsButton 주석).
+                 [X] 가 함께 서는 시트 배너에는 적지 않는다 — 오른쪽 위가 닫기에 쓰인다 (사용자 요청). */}
+          {compact && onClick && !onDismiss ? (
+            <span aria-hidden="true" style={{ display: "inline-flex", alignItems: "center", flex: "0 0 auto",
+              font: "var(--type-micro)", fontWeight: "var(--fw-medium)", color: "var(--text-muted)" }}>
+              {actionLabel}<Icon name="chevron-right" size={14} />
+            </span>
+          ) : null}
         </div>
         {/* 투명도를 낮추지 않는다 (2026-08-19). 틴트 배경 위의 12~16px 글자를 0.8 로 흐리면
             sand·neutral 카드에서 4.0~4.2:1 로 AA 에 못 미친다 — 불투명이면 5.97 / 8.80 이다
             (tokens/surfaces.css 머리말). 감쇠는 20px 이상이나 볼드에만 준다.
             대신 -fg 를 그대로 써서 제목(잉크)과는 굵기·크기로 갈린다 */}
-        <span style={{ font: "var(--type-micro)", fontWeight: "var(--fw-medium)" }}>{f.date}</span>
+        {compact ? null : <span style={{ font: "var(--type-micro)", fontWeight: "var(--fw-medium)" }}>{f.date}</span>}
 
         <h3 style={{
-          /* compact 는 시트 헤더라 제목 단계를 한 칸 낮춘다 — 바로 아래 점포 목록의
-             상호명(body)보다 크되 둘러보기 탭의 카드 제목만큼 크지는 않게 */
-          font: compact ? "var(--type-body)" : "var(--type-title-3)",
+          /* compact 도 둘러보기 카드와 같은 제목 단계다 (2026-10-19, 사용자 요청 — 축제명을 더 크게).
+             종전에는 시트 헤더라 body 로 한 칸 낮췄는데, 그래서 배너가 점포 목록에 묻혔다 */
+          font: "var(--type-title-3)",
           fontWeight: "var(--fw-bold)",
           letterSpacing: "var(--ls-snug)", wordBreak: "keep-all", color: ink,
         }}>{f.short || f.name}</h3>
+
+        {/* compact 는 날짜가 제목 **아래** 작게 선다 (2026-10-19, 사용자 요청) — 무슨 축제인가가 먼저 읽히고
+            언제인가가 그 뒤를 잇는다. 둘러보기 카드는 종전 순서(날짜 → 제목)다 */}
+        {compact ? <span style={{ font: "var(--type-micro)", fontWeight: "var(--fw-medium)" }}>{f.date}</span> : null}
 
         {/* 실제 축제명 (머리말 참조). 홍보 문장이 아니라 **이름**이라, 문장보다 조금 더
             또렷하게 둔다 — 위 제목보다는 작고 아래 상점가 줄보다는 크다. 이름은 가운데서
