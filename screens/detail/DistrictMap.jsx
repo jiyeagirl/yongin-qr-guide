@@ -188,7 +188,7 @@ export function DistrictMap({ district, stores = [], onBack, onClose, onOpenStor
           <div style={{ position: "absolute", left: "var(--gutter-screen)", right: "var(--gutter-screen)",
             bottom: "var(--space-5)", zIndex: "var(--z-float)" }}>
             <Notice tone="info" title="점포 목록은 준비 중이에요">
-              이 상점가의 점포 자료를 아직 받지 못했어요. 지도에는 상점가의 중심 위치만 표시돼요.
+              현재 상점가의 개별 점포 정보가 제공되지 않아, 지도에는 상점가 중심 위치만 표시됩니다.
             </Notice>
           </div>
         )}

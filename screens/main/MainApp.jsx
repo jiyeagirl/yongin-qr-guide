@@ -27,6 +27,7 @@ import { DistrictMap } from "../detail/DistrictMap.jsx";
 import { districtStores, findDistrictStore, subscribeCoords } from "./data/districtStores.js";
 import "./data/dongbaekStores.js";
 import "./data/dongbaekStnStores.js";
+import "./data/dongbaekJungStores.js";
 import { ensureDistrictsGeocoded } from "./data/districtGeo.js";
 import { StoreList } from "../detail/StoreList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";

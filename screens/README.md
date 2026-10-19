@@ -38,7 +38,7 @@
 | S13 상점가 전체보기 | **완료** | `detail/DistrictList.jsx` — `#/districts` (둘러보기 탭 [전체보기] · 상점가 탭 시트 [주변 골목형 상점가 전체보기]) |
 | S13-A 다른 상점가 안내 (앱 안) | **완료 (2026-10-19)** | `detail/DistrictInfo.jsx` — `#/district/:id` (종전 S13-S 「준비 중」을 대체. 누리집으로 나가지 않는다) |
 | S15 가게 전체보기 | **보관 — 열리는 길 없음 (2026-10-19 시트가 다시 목록이 됨)** | `detail/StoreList.jsx` — `#/stores` (시트 [가게 전체보기] · 지도 위 검색창을 누르거나 Enter. 상태는 셸이 든다) |
-| 상점가 지도 보기 (DistrictMap) | **완료 (2026-10-19)** | `detail/DistrictMap.jsx` — `#/district/:id/map` (상점가 안내의 [지도 보기]). 동백이음길(190곳) · 동백역(459곳)은 실제 점포를 상점가 탭처럼(핀 · 업종 칩 · 바텀시트 목록 · 상세 · 길찾기) 보인다(`data/districtStores.js` 에 상점가별 자료 등록) |
+| 상점가 지도 보기 (DistrictMap) | **완료 (2026-10-19)** | `detail/DistrictMap.jsx` — `#/district/:id/map` (상점가 안내의 [지도 보기]). 동백이음길(190곳) · 동백역(459곳) · 동백중심상가(630곳)는 실제 점포를 상점가 탭처럼(핀 · 업종 칩 · 바텀시트 목록 · 상세 · 길찾기) 보인다(`data/districtStores.js` 에 상점가별 자료 등록) |
 | S03-E 상점가 없음 안내 | **완료** | `main/DistrictEmpty.jsx` — 상점가 탭의 한 상태 (`?district=none`) |
 | S01 QR 진입 및 로딩 | **완료** | `boot/QrEntry.jsx` — 진입 게이트 `main/App.jsx` 가 띄운다 |
 | S10 오류신고 및 문의 | **완료** | `detail/ReportForm.jsx` — `#/report` · `#/report/facility/:id` |

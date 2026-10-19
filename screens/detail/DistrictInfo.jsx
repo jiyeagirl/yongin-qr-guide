@@ -75,7 +75,7 @@ export function DistrictInfo({ district, festival, onBack, onClose, onOpenFestiv
         <InfoList items={[
           { label: "점포 수", value: `${d.stores}곳` },
           ...(d.mainBiz ? [{ label: "주요 업종", value: d.mainBiz.join(", ") }] : []),
-          { label: "온누리 가맹점", value: d.onnuri != null ? `${d.onnuri}곳` : "시 안내에 수가 없습니다" },
+          { label: "온누리 가맹점", value: d.onnuri != null ? `${d.onnuri}곳` : "-" },
           { label: "거리", value: km },
         ]} />
 

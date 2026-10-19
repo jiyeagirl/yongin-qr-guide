@@ -131,7 +131,9 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
 
                크기는 sm 이다 (2026-08-19). md 로는 320px 화면에서 상자가 154px 이었다 —
                상세 화면에서 가장 큰 덩어리가 배지 한 줄로도 되는 이야기였다. 99px 로 줄었다. */}
-        {festival ? (
+        {/* 축제 홍보 배너는 **처음 진입한 상세에서만** 보인다 (2026-10-19, 사용자 요청). QR 로 들어와 맨 처음 만나는 가게 상세에서는
+            그 상점가의 축제를 알리되, 상점가 탭 · 목록 · 코스 등 더 깊은 곳에서 연 상세에는 매번 붙이면 과하다(entry=false) */}
+        {festival && entry ? (
           <FestivalBanner festival={festival} onClick={onOpenFestival} mascot pose="excited" base="../../design-systems/" />
         ) : null}
 
