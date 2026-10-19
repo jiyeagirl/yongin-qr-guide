@@ -47,10 +47,17 @@ export function StoreRankList({ items = [], onPick, label = "인기 매장", sty
                   color: "var(--text-heading)", lineHeight: 1.35, wordBreak: "keep-all" }}>{s.name}</span>
                 {s.onnuri ? <OnnuriBadge size="sm" /> : null}
               </span>
-              <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-label)", color: "var(--text-body)",
-                lineHeight: 1.45, wordBreak: "keep-all", overflowWrap: "anywhere" }}>
-                {[s.biz, s.addr].filter(Boolean).join(" · ")}
-              </span>
+              {s.biz ? (
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-label)", color: "var(--text-body)",
+                  lineHeight: 1.45, wordBreak: "keep-all" }}>{s.biz}</span>
+              ) : null}
+              {/* 주소는 **한 줄**이다 (2026-10-19, 사용자 요청) — 업종과 한 줄에 잇던 것을 갈랐다. 이어 두면
+                  「음식 · 처인구 포곡읍 포곡로 79」가 이 폭(사진·순번을 뺀 약 200px)에서 두 줄로 접혔다.
+                  접히지 않게 줄을 갈라 작은 글자로 적고, 그래도 넘치는 긴 주소만 끝을 줄임표로 둔다 */}
+              {s.addr ? (
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", color: "var(--text-muted)",
+                  lineHeight: 1.45, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.addr}</span>
+              ) : null}
               {s.note ? (
                 <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", fontWeight: "var(--fw-bold)",
                   color: "var(--rail-hot-ink)", lineHeight: 1.35 }}>{s.note}</span>

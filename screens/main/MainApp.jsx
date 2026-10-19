@@ -95,8 +95,6 @@ const SNAP_LABEL = { collapsed: "접힘", half: "절반", full: "전체" };
    **`life-buoy` 로 확정한다** — 대피소가 이미 `shield` 를 쓰고 있어, 방패 계열을 탭에도 쓰면
    탭바의 방패와 지도·목록의 방패가 서로 다른 것을 가리키게 된다.
    탭 아이콘은 4종을 묶는 상위 개념이어야 하는데 그중 하나와 같은 형태를 쓰면 위계가 무너진다. */
-const HOME_DISTRICT_PREVIEW = 3;   /* 상점가 탭 시트의 「다른 골목형 상점가」 미리보기 곳수 (2026-10-19) */
-
 const TABS = [
   { id: "facility", label: "공공시설", icon: "life-buoy" },
   { id: "district", label: "상점가", icon: "store" },
@@ -240,19 +238,6 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
   const [onnuriOnly, setOnnuriOnly] = React.useState(false);
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState("distance");
-  /* 지도 위 검색창을 누르면 S15 가 열리고 **거기 검색창에 커서가 바로 간다** (2026-10-19, 사용자 요청).
-     누른 사람이 한 번 더 눌러야 하면 안 된다. 모바일 브라우저는 사용자가 누른 그 순간(같은 호출) 안에서
-     focus() 를 불러야 자판을 올려 주므로, 화면을 동기로 그린 뒤(flushSync) 곧바로 포커스를 옮긴다. */
-  const openStoresForSearch = () => {
-    flushSync(() => { go("#/stores"); });
-    const input = document.querySelector("[data-store-search] input");
-    if (input) {
-      input.focus();
-      /* DetailPage 가 열리며 뒤로가기 단추에 포커스를 두는 것이 뒤따라 오면 커서를 빼앗는다 — 한 번 더 */
-      requestAnimationFrame(() => { if (document.activeElement !== input) input.focus(); });
-    }
-  };
-
   /* 점포 목록의 쪽 번호 (U-ST-04). **시트가 아니라 셸이 들고 있다** — 쪽을 넘기면 목록을
      맨 위로 되돌려야 하는데 그 스크롤 컨테이너는 Sheet 이고, Sheet 는 scrollKey 로만
      되돌린다. 필터와 쪽을 한 문자열로 묶으려면 둘 다 여기 있어야 한다. */
@@ -471,7 +456,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         /* 칩에서는 색이 선택 상태를 뜻하므로 안전시설 적색 강조를 끈다 (emphasis={false}).
            아이콘 표는 FacilityIcon 한 곳에만 있다 (U-CM-05) */
         renderIcon: c => <FacilityIcon type={c.id} size={15} emphasis={false} /> }
-    : { q, onQueryChange: e => setQ(e.target.value), onQueryClear: () => setQ(""), onQuerySubmit: openStoresForSearch,
+    : { q, onQueryChange: e => setQ(e.target.value), onQueryClear: () => setQ(""),
         chips: d.chips, cat: cats, onCatChange: setCats };
 
   const focus = React.useCallback((lat, lng) => {
@@ -1374,20 +1359,19 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
           ) : isDistrict ? (
             <DistrictSheet
               data={d}
-              /* 가까운 3곳만 깐다. `OTHER_DISTRICTS` 는 이미 거리순이다 (현재 상점가는 뺀다) */
-              otherDistricts={OTHER_DISTRICTS.slice(0, HOME_DISTRICT_PREVIEW)}
-              /* 인기 매장 카드도 마커를 누른 것과 같다 — 상세로 건너뛰지 않고 지도에서 켠다
-                 (둘러보기 탭과 같은 동작. showStoreOnMap 주석) */
-              onOpenStore={showStoreOnMap}
-              onOpenCourse={c => go(`#/course/${c.id}`)}
-              onOpenAllStores={() => go("#/stores")}
-              onOpenAllDistricts={() => go("#/districts")}
-              onOpenDistrict={showDistrictOnMap}
+              rows={storeRows}
+              cats={cats}
+              onnuriOnly={onnuriOnly} setOnnuriOnly={setOnnuriOnly}
+              sort={sort} setSort={setSort}
+              page={page} setPage={setPage}
+              q={q}
+              selectedId={selected ? selected.id : null}
+              /* 점포 행도 마커를 누른 것과 같다 — 지도에서 켠다 (pickFacility 주석) */
+              onPickStore={pickOnMap}
               onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
               /* 닫힌 축제의 id 를 셸이 들고 있다. 시트 안에 두면 탭을 옮길 때 언마운트되어
                  둘러보기를 갔다 올 때마다 배너가 되살아난다 (U-FC-09 말풍선과 같은 이유).
-                 id 로 비교하는 이유: 축제가 다음 것으로 넘어가면 다시 보여야 한다 —
-                 "한 번 닫았다"가 아니라 "이 축제를 닫았다"가 기억할 값이다. */
+                 id 로 비교하는 이유: 축제가 다음 것으로 넘어가면 다시 보여야 한다. */
               festivalDismissed={!!d.festival && festivalDismissed === d.festival.id}
               /* 토스트를 띄우지 않는다 (2026-08-18). 닫기는 사용자가 직접 시킨 일이고
                  배너가 사라지는 것으로 이미 답이 됐다 — 그 위에 토스트를 얹으면 지운 것을

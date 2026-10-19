@@ -67,6 +67,7 @@
 | `qr-001` | true | 우리의류 (`ANCHOR.name`) | `store` | `storeId: dj-163`, `districtId: dunjeon` | 설치완료 | ok — 상점 상세 먼저 |
 | `qr-002` | false | (구) 둔전 시장 안내판 | — | `replacedBy: qr-001` | 철거 | S11 |
 | `qr-003` | false | 둔전 시장 서편 출입구 | — | `districtId: dunjeon` | 설치완료 | S11-A |
+| `qr-005` | true | 둔전 시장 입구 버스정류장 | `sign` | `anchorName: 둔전 시장 입구 버스정류장`, `districtId: dunjeon` | 설치완료 | ok — 상점가 탭 (상세 없음) |
 | `qr-004` | true | 둔전 골목축제 안내 팜플렛 | `festival` | `festivalId: ft-dunjeon`, `anchorName: 둔전 골목형 상점가 중심 거리`, `bannerLabel: 둔전 골목형 상점가 기준 안내`, `bannerPlace: 축제 QR`(띠 뒤쪽 굵은 글자), `basisLabel: 둔전 골목형 상점가 기준 직선거리 · 가까운 순`, `backLabel: 상점가 중심으로` | 설치완료 | ok — 축제 상세 먼저 |
 
 - `bannerLabel`·`basisLabel`·`backLabel` 은 팜플렛 사용자가 스캔 지점을 모르므로 상단 띠 · 공공시설 시트 기준 문구 · 지도 위 복귀 버튼(아이콘은 map-pin)을 상점가 말로 적는 선택 항목이다. 없는 코드는 「QR 스캔 지점」 문구 그대로다.
@@ -86,7 +87,7 @@
 |---|---|---|
 | `store` + `storeId` | `#/store/{storeId}` | 점포 상세 (S06) |
 | `festival` + `festivalId` | `#/festival/{festivalId}` | 축제 상세 (S09) — S14 대화상자는 거치지 않는다 |
-| 그 밖 | 없음 | 셸(상점가 탭) |
+| `sign`(안내판 · 버스정류장) 그 밖 | 없음 | 셸(상점가 탭) |
 
 - 상세를 닫으면(`back`) 쌓인 기록이 없으므로 현재 항목을 `#/` 로 교체해 셸로 나간다. 서비스 밖으로 나가지 않는다.
 - 사람이 해시를 달고 들어온 딥링크는 건드리지 않는다.

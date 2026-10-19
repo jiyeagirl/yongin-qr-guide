@@ -69,7 +69,7 @@
 
 ### 2-4. 인기 매장 데이터
 
-- `POPULAR = discoverPicks(STORES).popular`: `visible !== false` 인 점포를 `views` 내림차순으로 정렬해 앞 8곳(`DISCOVER_PICK`).
+- `POPULAR = discoverPicks(STORES).popular`: `visible !== false` 인 점포를 `views` 내림차순으로 정렬해 앞 4곳(`DISCOVER_PICK`, 2026-10-19 8→4).
 - 줄 note: 없다 (2026-10-19 「이번 주 조회 1위」·「조회 n회」 삭제). 조회수는 정렬에만 쓰는 더미 생성값(3~113)이다.
 - `StoreRankList`: 한 쪽 4줄(`PER_PAGE`), 가로로 밀어 다음 쪽(스냅), 다음 쪽이 오른쪽에 걸쳐 보인다. 줄 = 사진 칸(84px, 자료 `images[0]` 없으면 회색 칸 + 이미지 아이콘) · 순번 · 이름 + 온누리 배지 · `업종 · 주소` · note. 신규 매장 목록은 없다.
 
