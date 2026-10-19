@@ -29,12 +29,14 @@ export function CouponCard() {
   const onTap = () => { if (st === "none") issueCoupon(); openCoupon(); };
 
   return (
-    /* 회색 바깥 상자를 없앴다 (2026-10-19, 사용자 요청 — 다른 글자들과 열을 맞춘다). 상자의 안쪽 여백 16px 때문에 「쿠폰」 제목과
-       카드가 본문 왼쪽 선보다 안으로 들어가 있었다. 이제 제목은 다른 구역과 같은 SectionHeader 이고 카드는 본문 폭 그대로다 */
-    <section aria-label="쿠폰">
+    /* 회색 바깥 상자 — 안의 글자는 본문 왼쪽 선보다 **조금만 안쪽**에 선다 (2026-10-19, 사용자 요청). 열을 딱 맞추면(상자를 12px
+       내밀었을 때) 너무 왼쪽으로 붙어 보였고, 상자를 본문 폭에 맞추면(안쪽 여백 16px) 너무 들어가 보였다. 그 사이로 상자를 4px 만
+       내밀고 안쪽 여백을 12px 로 두어 글자는 본문 선에서 8px 안쪽에 선다 */
+    <section aria-label="쿠폰" style={{ margin: "0 calc(-1 * var(--space-1))", padding: "var(--space-3)",
+      background: "var(--surface-sunken)", borderRadius: "var(--radius-card)" }}>
       <SectionHeader title="쿠폰" />
       {/* 티켓 모양 (2026-10-19, 사용자 요청 — 눈에 띄게): 왼쪽 조각(아이콘)과 오른쪽 글자 사이에 점선 절취선, 그 위아래에
-          반원으로 파인 홈. 홈은 화면 바탕(`--surface-page`)과 같은 색의 반원이라 카드가 거기서 잘려 나간 것처럼 보인다. 오른쪽 끝의
+          반원으로 파인 홈. 홈은 바깥 회색 상자(`--surface-sunken`)와 같은 색의 반원이라 카드가 거기서 잘려 나간 것처럼 보인다. 오른쪽 끝의
           화살표는 초록 동그라미 안에 둔다(눌러볼 칸임을 알린다 — 글자는 두지 않는다). */}
       <button type="button" onClick={onTap} aria-label={`${COUPON.name} ${COUPON.benefit} — ${label}`}
         style={{ position: "relative", width: "100%", display: "flex", alignItems: "stretch", textAlign: "left", padding: 0,
@@ -48,10 +50,10 @@ export function CouponCard() {
         <span aria-hidden="true" style={{ position: "absolute", top: 0, bottom: 0, left: STUB, width: 0,
           borderLeft: "1.5px dashed var(--border-strong)" }} />
         <span aria-hidden="true" style={{ position: "absolute", top: -1, left: STUB - NOTCH / 2, width: NOTCH, height: NOTCH / 2,
-          borderRadius: `0 0 ${NOTCH / 2}px ${NOTCH / 2}px`, background: "var(--surface-page)",
+          borderRadius: `0 0 ${NOTCH / 2}px ${NOTCH / 2}px`, background: "var(--surface-sunken)",
           border: "var(--stroke-hairline) solid var(--border-default)", borderTop: "none", boxSizing: "border-box" }} />
         <span aria-hidden="true" style={{ position: "absolute", bottom: -1, left: STUB - NOTCH / 2, width: NOTCH, height: NOTCH / 2,
-          borderRadius: `${NOTCH / 2}px ${NOTCH / 2}px 0 0`, background: "var(--surface-page)",
+          borderRadius: `${NOTCH / 2}px ${NOTCH / 2}px 0 0`, background: "var(--surface-sunken)",
           border: "var(--stroke-hairline) solid var(--border-default)", borderBottom: "none", boxSizing: "border-box" }} />
         <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2,
           padding: "var(--space-3) var(--space-2) var(--space-3) var(--space-4)", justifyContent: "center" }}>
