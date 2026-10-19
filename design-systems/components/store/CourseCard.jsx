@@ -10,9 +10,15 @@ import { CategoryIcon } from "../core/CategoryIcon.jsx";
 
    들르는 곳은 업종 아이콘 + 이름으로만 적는다. 주소나 거리까지 넣으면 카드가 목록이 되어
    바로 위 "신규 및 인기 매장" 레일과 구분되지 않는다.
-   고정 높이를 주지 않는다 — 가장 긴 카드에 맞춰 stretch 된다 (U-CM-14). */
-export function CourseCard({ course, onClick, style, ...rest }) {
+   고정 높이를 주지 않는다 — 가장 긴 카드에 맞춰 stretch 된다 (U-CM-14).
+
+   ── currentId (2026-10-19, 사용자 요청) ─────────────────────────────────────
+   가게 상세가 이 카드를 쓸 때 **지금 보고 있는 가게가 이 코스에 들어 있으면** 그 줄을 표시한다 — 가게 상세와 코스가
+   따로 노는 두 화면이 아니라 이어진 한 탐방으로 읽히게 한다. 윗줄에 「코스에 포함된 가게」, 해당 줄은 속이 찬 순번 +
+   굵은 이름 + 옅은 바탕, 맨 아래에 「현재 보고 있는 가게」 범례. 들어 있지 않으면 표시가 하나도 없다(종전과 같다). */
+export function CourseCard({ course, onClick, currentId, style, ...rest }) {
   const c = course;
+  const here = currentId ? c.stops.some(s => s.id === currentId) : false;
   return (
     <button onClick={onClick}
       style={{ flex: "0 0 auto", width: 244, display: "flex", flexDirection: "column", alignItems: "stretch",
@@ -21,6 +27,10 @@ export function CourseCard({ course, onClick, style, ...rest }) {
         borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)", cursor: "pointer", ...style }}
       {...rest}>
 
+      {here ? (
+        <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", fontWeight: "var(--fw-semibold)",
+          color: "var(--yong-green-700)" }}>코스에 포함된 가게</span>
+      ) : null}
       <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--brand-primary)" }}>
         <Icon name="footprints" size={18} />
         <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", fontWeight: "var(--fw-bold)" }}>
@@ -34,17 +44,31 @@ export function CourseCard({ course, onClick, style, ...rest }) {
 
       <span style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 2,
         paddingTop: "var(--space-2)", borderTop: "var(--stroke-hairline) solid var(--border-default)" }}>
-        {c.stops.map((s, i) => (
-          <span key={s.id} style={{ display: "flex", alignItems: "center", gap: 6,
-            fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)", color: "var(--text-body)", lineHeight: 1.4 }}>
+        {c.stops.map((s, i) => {
+          const cur = s.id === currentId;
+          return (
+          <span key={s.id} aria-current={cur ? "true" : undefined}
+            style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: "var(--radius-sm)",
+            margin: cur ? "0 -6px" : 0, padding: cur ? "3px 6px" : 0, background: cur ? "var(--brand-primary-soft)" : "none",
+            fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)", color: "var(--text-body)", lineHeight: 1.4,
+            fontWeight: cur ? "var(--fw-bold)" : undefined }}>
             {/* 순번을 적는다 — 코스는 목록이 아니라 순서다 */}
             <span style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center",
-              minWidth: 17, minHeight: 17, borderRadius: 999, background: "var(--brand-primary-soft)",
-              color: "var(--yong-green-800)", fontSize: "var(--fs-micro)", fontWeight: "var(--fw-bold)" }}>{i + 1}</span>
+              minWidth: 17, minHeight: 17, borderRadius: 999,
+              background: cur ? "var(--brand-primary)" : "var(--brand-primary-soft)",
+              color: cur ? "var(--text-on-brand)" : "var(--yong-green-800)", fontSize: "var(--fs-micro)", fontWeight: "var(--fw-bold)" }}>{i + 1}</span>
             <CategoryIcon type={s.cat} size={14} style={{ color: "var(--text-muted)" }} />
             <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
           </span>
-        ))}
+          );
+        })}
+        {here ? (
+          <span style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2,
+            fontFamily: "var(--font-sans)", fontSize: "var(--fs-micro)", color: "var(--yong-green-700)" }}>
+            <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: "var(--brand-primary)" }} />
+            현재 보고 있는 가게
+          </span>
+        ) : null}
       </span>
     </button>
   );

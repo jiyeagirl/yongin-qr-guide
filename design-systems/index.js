@@ -95,6 +95,8 @@ export { FESTIVAL_STATES, FESTIVAL_STATE_TONE, FESTIVAL_BADGE_TONE, festivalTone
 export { DistrictSummary } from "./components/store/DistrictSummary.jsx";
 export { DistrictRow } from "./components/store/DistrictRow.jsx";
 export { CourseCard } from "./components/store/CourseCard.jsx";
+/* 가게 상세 머리에서 코스 추천으로 이어지는 점선 발자국 길 */
+export { FootprintTrail } from "./components/store/FootprintTrail.jsx";
 /* 옆으로 밀어 넘기는 사진 줄 — 점포 상세와 축제 상세가 함께 쓴다 */
 export { PhotoStrip } from "./components/store/PhotoStrip.jsx";
 

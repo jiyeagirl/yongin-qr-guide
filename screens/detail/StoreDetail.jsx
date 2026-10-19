@@ -2,7 +2,7 @@ import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice,
   Button, Badge, OnnuriBadge, CategoryIcon, CATEGORY_LABELS, FestivalBanner, Icon,
-  SectionHeader, CourseCard, PhotoStrip,
+  SectionHeader, CourseCard, PhotoStrip, FootprintTrail,
 } from "../../design-systems/index.js";
 import { shortName } from "../main/DistrictSheet.jsx";
 import { STORE_AS_OF } from "../main/config.js";
@@ -148,15 +148,19 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
                같은 카드(CourseCard)이고, 누르면 코스 상세(S08)로 간다. */}
         {courses.length ? (
           <section>
-            <SectionHeader title="골목 한바퀴 코스 추천" />
+            {/* 가게에서 코스로 이어지는 발자국 길 + 문구 (2026-10-19, 사용자 요청) — 가게 상세와 코스 추천이 따로 노는
+                두 영역이 아니라 이 가게에서 시작되는 한 번의 탐방으로 읽히게 한다. 이 가게가 코스 안에 있으면 카드가
+                그 줄을 표시한다(currentId) */}
+            <FootprintTrail style={{ marginBottom: "var(--space-3)" }} />
+            <SectionHeader title="현재 가게에서 이어지는 골목 한 바퀴" />
             <p style={{ marginTop: "calc(-1 * var(--space-1))", marginBottom: "var(--space-3)",
               font: "var(--type-caption)", color: "var(--text-muted)", wordBreak: "keep-all" }}>
-              {s.name} 근처 가게들을 둘러보세요
+              주변 가게들을 따라 골목의 다양한 매력을 발견해 보세요.
             </p>
             <div style={{ display: "flex", alignItems: "stretch", gap: "var(--space-3)", overflowX: "auto",
               margin: "0 calc(-1 * var(--gutter-screen))", padding: "2px var(--gutter-screen) var(--space-2)",
               scrollbarWidth: "none" }}>
-              {courses.map(c => <CourseCard key={c.id} course={c} onClick={() => onOpenCourse && onOpenCourse(c)} />)}
+              {courses.map(c => <CourseCard key={c.id} course={c} currentId={s.id} onClick={() => onOpenCourse && onOpenCourse(c)} />)}
             </div>
           </section>
         ) : null}
