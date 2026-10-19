@@ -239,10 +239,22 @@ function build() {
     }
   }
 
+  /* 대표 사진 (2026-10-19, 사용자 요청) — 인기 매장 상위 4곳만 자료가 있다. 나머지는 `images` 가 없어
+     자리표시(회색 칸)가 선다. 실서비스에서는 점포 사진이 서버에서 온다. 경로는 루트 기준이다 —
+     관리자 화면(/admin/)도 같은 표를 읽는데 상대 경로면 거기서 깨진다. 파일은 800px 로 줄인 JPEG 이다. */
+  stores.forEach(s => { if (STORE_PHOTOS[s.id]) s.images = [STORE_PHOTOS[s.id]]; });
+
   /* 기본 정렬은 거리순 (U-ST-04) */
   stores.sort((a, b) => a.dist - b.dist);
   return stores;
 }
+
+const STORE_PHOTOS = {
+  "dj-106": "/screens/main/assets/stores/dj-106.jpg",   /* 미소족발 */
+  "dj-183": "/screens/main/assets/stores/dj-183.jpg",   /* 행복상회 */
+  "dj-160": "/screens/main/assets/stores/dj-160.jpg",   /* 가온정육점 */
+  "dj-133": "/screens/main/assets/stores/dj-133.jpg",   /* 청기와카페 */
+};
 
 export const STORES = build();
 
@@ -257,7 +269,7 @@ export const CHIPS =
 export const DISTRICT = {
   /* 이름과 소재지는 용인시 누리집 표기 그대로다 (districts.js 머리말 참조) —
      축제 상세의 "주최 상점가" 줄과 상점가 탭 앱바가 같은 이름이어야 한다 */
-  name: "둔전골목형상점가",
+  name: "둔전 골목형상점가",
   /* 시트 헤더가 제목 오른쪽에 한 줄로 적는 소재지 (DistrictSummary).
      **"처인구"를 뺐다** (2026-08-18). 19px 제목과 한 줄을 나눠 쓰는 자리라 360px 화면에서
      구까지 넣으면 두 줄로 감긴다. 뺄 것을 고르면 구다 — 이 탭은 지금 서 있는 상점가
@@ -287,7 +299,9 @@ export const DISTRICT = {
    `created_at`). 없어진 것은 그 값으로 뽑아 만들던 목록이다. */
 
 /* 몇 곳을 뽑나. 화면 둘(둘러보기 인기 매장 레일 · 관리자 대시보드 미리보기)이 같은 수를 쓴다 */
-export const DISCOVER_PICK = 4;   /* 8 → 4 (2026-10-19, 사용자 요청) — 인기 매장 순위 목록 한 쪽(네 줄)이 전부다 */
+/* 인기 매장 자료 곳수 (2026-10-19, 사용자 요청). 처음엔 앞 4곳만 보이고 [인기 매장 더 보기]로 10곳까지 펼친다
+   (PopularSection 의 INITIAL). 8 → 4 → 10 을 거친 값이다 */
+export const DISCOVER_PICK = 10;
 
 /* ── 뽑는 규칙을 함수로 둔다 (2026-08-20) ──────────────────────────────────
    관리자 대시보드가 **상점가를 골라 같은 목록을 미리 본다.** 규칙을 그쪽에 한 벌 더

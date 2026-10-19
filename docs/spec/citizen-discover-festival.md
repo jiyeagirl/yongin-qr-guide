@@ -56,7 +56,7 @@
 | 축제 머리말 [전체보기] | `#/festivals` |
 | 코스 카드 | `#/course/:id` |
 | 인기 매장 행 | `showStoreOnMap` — 상점가 탭으로 옮겨 그 점포를 지도에서 켠다 (아래) |
-| 상점가 행 | `showDistrictOnMap` — 열린 오버레이를 모두 닫고(`closeAll`) 상점가 탭으로 옮겨 그 상점가 핀 + 구역 면 + 미리보기 카드를 띄운다 |
+| 상점가 행 | `#/district/{id}` S13-A 상점가 안내 (2026-10-19 — 이전엔 상점가 탭으로 옮겨 핀을 켰다). 안내의 [지도 보기]가 `#/district/{id}/map` DistrictMap 을 연다(둘러보기 안, 점포 목록 포함) |
 | 상점가 머리말 [전체보기] | `#/districts` (S13) |
 
 점포 행(인기 매장)을 눌렀을 때 (`MainApp.showStoreOnMap`):
@@ -69,7 +69,7 @@
 
 ### 2-4. 인기 매장 데이터
 
-- `POPULAR = discoverPicks(STORES).popular`: `visible !== false` 인 점포를 `views` 내림차순으로 정렬해 앞 4곳(`DISCOVER_PICK`, 2026-10-19 8→4).
+- `POPULAR = discoverPicks(STORES).popular`: `visible !== false` 인 점포를 `views` 내림차순으로 정렬해 앞 10곳(`DISCOVER_PICK`). 화면은 처음 4곳만 보이고 [인기 매장 6곳 더 보기]로 10곳까지 펼친다(펼친 뒤 [인기 매장 접기], 2026-10-19).
 - 줄 note: 없다 (2026-10-19 「이번 주 조회 1위」·「조회 n회」 삭제). 조회수는 정렬에만 쓰는 더미 생성값(3~113)이다.
 - `StoreRankList`: 한 쪽 4줄(`PER_PAGE`), 가로로 밀어 다음 쪽(스냅), 다음 쪽이 오른쪽에 걸쳐 보인다. 줄 = 사진 칸(84px, 자료 `images[0]` 없으면 회색 칸 + 이미지 아이콘) · 순번 · 이름 + 온누리 배지 · `업종 · 주소` · note. 신규 매장 목록은 없다.
 

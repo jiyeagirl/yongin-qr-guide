@@ -12,21 +12,23 @@ import { OnnuriBadge } from "../core/OnnuriBadge.jsx";
  *
  * 사진 칸은 비워 둔다 — 이미지는 나중에 수집해 `store.images[0]` 로 들어온다. 값이 없으면
  * PhotoStrip 의 자리표시와 같은 회색 칸에 이미지 아이콘만 둔다.
+ * `rows` — 한 쪽의 줄 수(기본 4). 4곳 이상을 **세로로 한꺼번에** 펼칠 때(`[인기 매장 더 보기]`)는 곳수를
+ * 넘겨 한 쪽에 모두 세운다.
  * 높이는 상수가 아니라 글에 따라 자란다 (고정 높이 금지, 2차 글자 확대 대응). 사진 칸만 정사각형이다.
  * 이름·업종·주소는 길면 줄이 접힌다 — 말줄임으로 잘라내지 않는다. */
 const PER_PAGE = 4;
 const THUMB = 84;
 
-export function StoreRankList({ items = [], onPick, label = "인기 매장", style, ...rest }) {
+export function StoreRankList({ items = [], onPick, label = "인기 매장", rows = PER_PAGE, style, ...rest }) {
   return (
     <div role="list" aria-label={label}
-      style={{ display: "grid", gridAutoFlow: "column", gridTemplateRows: `repeat(${PER_PAGE}, auto)`,
+      style={{ display: "grid", gridAutoFlow: "column", gridTemplateRows: `repeat(${rows}, auto)`,
         gridAutoColumns: "calc(100% - var(--space-6))", columnGap: "var(--space-4)",
         overflowX: "auto", scrollSnapType: "x mandatory", scrollbarWidth: "none",
         WebkitOverflowScrolling: "touch", overscrollBehaviorX: "contain", ...style }} {...rest}>
       {items.map((s, i) => {
         const src = s.images && s.images[0];
-        const lastOfPage = (i % PER_PAGE) === PER_PAGE - 1 || i === items.length - 1;
+        const lastOfPage = (i % rows) === rows - 1 || i === items.length - 1;
         return (
           <button key={s.id || s.name} role="listitem" type="button" onClick={() => onPick && onPick(s)}
             style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", textAlign: "left",

@@ -48,9 +48,9 @@ export function DistrictRow({ district, onClick, selected = false, divider = tru
          색도 한 가지다 */
       icon={<Icon name="store" size={22} color="var(--text-muted)" />}
       title={d.name}
-      meta={<>
-        {d.gu} {d.area} · {km}
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 6 }}>
+      /* 한 줄 고정 (2026-10-19, 사용자 요청) — 이름·점포 수에 따라 한 곳만 두 줄로 꺾이면 목록 높이가 들쭉날쭉하다 */
+      meta={<span style={{ display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>        {d.gu} {d.area} · {km}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 6 }}>
           점포 {d.stores}곳
           {/* 온누리 가맹수를 모르는 곳이 있다 (시 안내에 그 수가 없다). 0 곳으로 적으면
               "가맹점이 없다"는 다른 말이 되므로, 모를 때는 배지째 내린다 */}
@@ -59,7 +59,7 @@ export function DistrictRow({ district, onClick, selected = false, divider = tru
             {d.onnuri}곳
           </> : null}
         </span>
-      </>}
+      </span>}
       trailing="chevron"
       /* 지도에서 상점가 마커를 탭했을 때 목록의 같은 줄이 함께 켜진다 (점포·시설과 같은 규칙) */
       style={selected

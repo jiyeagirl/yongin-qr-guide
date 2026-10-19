@@ -1,5 +1,5 @@
 import React from "react";
-import { SectionHeader, StoreRankList, CourseCard, DistrictRow, Button } from "../../design-systems/index.js";
+import { SectionHeader, StoreRankList, CourseCard, DistrictRow, Button, TextButton } from "../../design-systems/index.js";
 
 /* 상점가 탭 시트(DistrictSheet)와 둘러보기 탭(DiscoverPanel)이 같이 쓰는 섹션 조각 (2026-10-19).
  * 같은 「인기 매장」 · 「골목 한바퀴 코스」 · 「다른 골목형 상점가」가 두 화면에 한 벌씩 있으면
@@ -9,12 +9,31 @@ import { SectionHeader, StoreRankList, CourseCard, DistrictRow, Button } from ".
 const GUTTER = { padding: "0 var(--gutter-screen)" };
 
 /* 인기 매장 (U-DC-02) — 조회수 상위 순위 목록 (2026-10-19. 종전 가로 카드 레일 `StoreRail` 에서 바뀜) */
+/* 처음엔 앞 INITIAL 곳만 보이고, [인기 매장 N곳 더 보기]로 전부(10곳) 펼친다. 펼친 뒤엔 [인기 매장 접기]다
+   (둘러보기 탭의 축제 섹션과 같은 규칙, 2026-10-19 사용자 요청). 펼침 상태는 이 조각이 든다 — 탭을
+   옮기면 접힌 채로 돌아와도 괜찮다(펼침은 한 번의 훑어보기 안의 일이다). */
+const POPULAR_INITIAL = 4;
+
 export function PopularSection({ items, note, onPick, style }) {
+  const [open, setOpen] = React.useState(false);
   if (!items || !items.length) return null;
+  const rest = Math.max(0, items.length - POPULAR_INITIAL);
+  const shown = open ? items : items.slice(0, POPULAR_INITIAL);
   return (
     <section style={{ ...GUTTER, ...style }}>
       <SectionHeader title="인기 매장" note={note} />
-      <StoreRankList items={items} label="인기 매장" onPick={onPick} />
+      <StoreRankList items={shown} label="인기 매장" onPick={onPick} rows={Math.max(POPULAR_INITIAL, shown.length)} />
+      {rest > 0 ? (
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          {open ? (
+            <TextButton iconEnd="chevron-up" aria-expanded onClick={() => setOpen(false)}>인기 매장 접기</TextButton>
+          ) : (
+            <TextButton iconEnd="chevron-down" aria-expanded={false} onClick={() => setOpen(true)}>
+              인기 매장 {rest}곳 더 보기
+            </TextButton>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }

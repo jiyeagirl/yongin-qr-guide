@@ -23,6 +23,9 @@ import { FestivalDetail } from "../detail/FestivalDetail.jsx";
 import { FestivalList } from "../detail/FestivalList.jsx";
 import { DistrictList } from "../detail/DistrictList.jsx";
 import { DistrictInfo } from "../detail/DistrictInfo.jsx";
+import { DistrictMap } from "../detail/DistrictMap.jsx";
+import { dongbaekStores, findDongbaekStore, subscribeCoords } from "./data/dongbaekStores.js";
+import { ensureDongbaekGeocoded } from "./data/dongbaekGeo.js";
 import { StoreList } from "../detail/StoreList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, replace, back, closeAll } from "./router.js";
@@ -712,6 +715,14 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
   /* ── 상세 오버레이 (S05 / S06) ────────────────────────────────────────
      route 는 URL 이 진실이다. 여기서 id 로 대상을 찾고, 없으면 셸로 되돌린다 —
      딥링크 오타나 데이터 교체로 빈 화면이 뜨는 상태를 만들지 않는다 (S11 의 축소판). */
+  /* 동백이음길 점포의 좌표는 카카오 주소 검색이 건물 좌표를 찾아 오면서 바뀐다 (data/dongbaekGeo.js).
+     바뀔 때마다 이 값이 올라 target 이 새 좌표로 다시 만들어진다. 한 번만 시작한다 */
+  const [geoVer, setGeoVer] = React.useState(0);
+  React.useEffect(() => {
+    ensureDongbaekGeocoded();
+    return subscribeCoords(v => setGeoVer(v));
+  }, []);
+
   const target = React.useMemo(() => {
     /* 길찾기는 도착지가 시설일 수도 점포일 수도 있다 (#/route/facility/fc-001).
        종류를 URL 에 담아두므로 여기서 어느 목록을 뒤질지가 정해진다 — id 접두사로
@@ -723,13 +734,13 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     const id = twoPart ? route.parts[1] : route.id;
     if (!id) return null;
     if (kind === "facility") return FACILITIES.find(x => x.id === id) || null;
-    if (kind === "store") return d.stores.find(x => x.id === id) || null;
+    if (kind === "store") return d.stores.find(x => x.id === id) || findDongbaekStore(id);
     if (kind === "course") return d.courses.find(x => x.id === id) || null;
     if (kind === "festival") return FESTIVALS.find(x => x.id === id) || null;
     /* 상점가는 32곳 전부에서 찾는다 — 지금 서 있는 곳(둔전)도 S13 목록에는 들어간다 */
     if (kind === "district") return DISTRICTS.find(x => x.id === id) || null;
     return null;
-  }, [route, d.stores, d.courses]);
+  }, [route, d.stores, d.courses, geoVer]);
 
   /* ── 길찾기의 출발지 (2026-08-18 · 08-19 고를 수 있게 바뀜) ─────────────────
      기본은 QR 스캔 지점이다 (제안서 3-1 — 화면의 "내 위치"는 언제나 그 고정 좌표다).
@@ -905,7 +916,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
       sortNear={byDistrictNear}
       pageSize={DISTRICT_LIST_PAGE_SIZE}
       onBack={back}
-      onOpenDistrict={showDistrictOnMap} />
+      onOpenDistrict={x => go(`#/district/${encodeURIComponent(x.id)}`)} />
 
   /* ── S15 가게 전체보기 (2026-10-19) ────────────────────────────────────
          상점가 탭 시트에서 걷어낸 335곳 목록이다. 상태(검색·업종·온누리·정렬·쪽)는 이 셸의 것을
@@ -976,18 +987,31 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         onOpenDistrict={f => {
           /* 지금 서 있는 상점가면 상점가 탭으로, 다른 상점가면 앱 안의 준비 중 안내로 (2026-10-16) */
           if (f.districtId === CURRENT_DISTRICT_ID) { closeAll(); changeTab("district"); }
-          else { const x = DISTRICTS.find(v => v.id === f.districtId); if (x) showDistrictOnMap(x); }
+          else go(`#/district/${encodeURIComponent(f.districtId)}`);
         }} />
 
     /* ── 다른 상점가 안내 (2026-10-19. 종전 S13-S 「준비 중」을 대체) ──────────
            상점가 줄을 누르면 용인시 누리집으로 나가지 않고 앱 안에서 이 화면이 열린다.
            가진 자료(이름·소재지·점포 수·온누리 수·축제)만 보여준다 (DistrictInfo 머리말). */
+    ) : route.name === "district" && route.parts[1] === "map" ? (
+      /* 지도 보기 — `#/district/:id/map`. 상점가 안내에서 한 칸 더 들어간다. 상점가 탭으로 옮기지 않는다
+         (사용자 요청, 2026-10-19). 점포 목록 자료가 있는 상점가는 건물별 목록을 함께 보인다 */
+      <DistrictMap
+        district={target}
+        /* 점포 자료가 있는 상점가는 동백이음길뿐이다 (data/dongbaekStores.js). geoVer 는 좌표가 바뀔 때 다시 읽게 한다 */
+        stores={target.id === "dongbaekium" ? dongbaekStores() : []}
+        onBack={back}
+        onClose={closeAll}
+        onOpenStore={s => go(`#/store/${s.id}`)}
+        onRoute={s => goRoute(s)} />
     ) : route.name === "district" ? (
       <DistrictInfo
         district={target}
         festival={FESTIVALS.find(f => f.districtId === target.id) || null}
         onBack={back}
         onClose={closeAll}
+        /* 지금 서 있는 상점가(둔전)는 지도가 상점가 탭이라 [지도 보기]를 두지 않는다 */
+        onOpenMap={target.id === CURRENT_DISTRICT_ID ? undefined : () => go(`#/district/${encodeURIComponent(target.id)}/map`)}
         onOpenFestival={f => go(`#/festival/${f.id}`)} />
 
     ) : route.name === "facility" ? (
@@ -1004,13 +1028,14 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
          고르는 자리는 공공시설 탭 하나뿐이다** (U-ST-07 은 화면에서 사라졌다). */
       <StoreDetail
         store={target}
-        district={d.district}
+        /* 다른 상점가의 점포(동백이음길)는 그 상점가가 소속이다 — 둔전 상점가 이름·축제·코스를 달지 않는다 */
+        district={target.districtId ? (DISTRICTS.find(x => x.id === target.districtId) || null) : d.district}
         onBack={back}
         /* 어떤 길로 들어와도 그 가게 둘레의 코스가 붙는다 (2026-10-19, 사용자 요청) — 상점 QR · 검색 ·
            지도 카드 · 목록 어디서 열든 상세가 같은 모양이어야 한다. 종전에는 QR 로 들어온 가게만 받았다 */
-        courses={coursesFrom(target.id)}
+        courses={target.districtId ? [] : coursesFrom(target.id)}
         onOpenCourse={c => go(`#/course/${c.id}`)}
-        festival={d.festival && d.festival.state === "진행중" ? d.festival : null}
+        festival={!target.districtId && d.festival && d.festival.state === "진행중" ? d.festival : null}
         onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
         entry={!(window.history.state && window.history.state.shellDepth > 0)}
         onReport={() => goReport(target)}
@@ -1163,7 +1188,10 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
                   고쳐 온 바로 그 문제다. 통일감은 **자리가 아니라 모양이 낸다** —
                   둘은 이제 높이도 폭도 같고(아래), 그거면 멀리 있어도 한 벌로 읽힌다.
                   `FloatingControls` 의 `place="top"` 은 손님이 없어져 함께 지웠다. */
-            bottom={sheetH + (showPreview ? previewH + gap : 0)}
+            /* 미리보기 카드가 떠 있으면 카드 **바로 위**에 선다 (2026-10-19, 사용자 요청) — 종전엔 지도 가림용
+               여백(gap 24px)을 그대로 더해 단추가 카드에서 한참 위에 떴다. 카드와의 간격은 8px 이다
+               (카드 윗면 = 시트 + 카드 높이 + float-gap 12). 지도 가림 높이(mapPadBottom)는 그대로다 */
+            bottom={sheetH + (showPreview ? previewH + 8 : 0)}
             /* 시트에게 넘기는 것과 **같은 실측값**이다 — 막지 않으면 시트를 끝까지 올렸을
                때 기둥 윗머리가 상단 필터 바 위로 올라선다 (단추가 z 400, 필터가 z 300) */
             topInset={sheetTopInset}
@@ -1231,7 +1259,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
             onOpenStore={showStoreOnMap}
             onOpenCourse={c => go(`#/course/${c.id}`)}
             onOpenAllDistricts={() => go("#/districts")}
-            onOpenDistrict={showDistrictOnMap} />
+            onOpenDistrict={x => go(`#/district/${encodeURIComponent(x.id)}`)} />
         ) : null}
 
         {/* 결정 1 — 3단 스냅. 실측 높이를 위로 올려보내 지도 패딩과 미리보기 카드 앵커가 따라온다.

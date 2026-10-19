@@ -8,6 +8,8 @@ import { OnnuriBadge } from "../core/OnnuriBadge.jsx";
    고정 높이를 주지 않는다 — 업체명이 두 줄이 되면 행이 늘어난다. */
 export function StoreRow({ store, onClick, selected = false, divider = true, style, ...rest }) {
   const walk = Math.max(1, Math.round(store.dist / 67)); /* 도보 67m/분 */
+  /* dist 가 null 이면(다른 상점가의 점포 — QR 지점 기준 거리가 말이 안 된다) 거리 줄을 뺀다 (2026-10-19) */
+  const where = store.dist == null ? `${store.biz} · ${store.addr}` : `${store.biz} · 약 ${store.dist}m, 도보 ${walk}분 · ${store.addr}`;
   return (
     <ListRow
       onClick={onClick}
@@ -17,7 +19,7 @@ export function StoreRow({ store, onClick, selected = false, divider = true, sty
       icon={<CategoryIcon type={store.cat} size={22} />}
       title={store.name}
       tag={store.onnuri ? <OnnuriBadge size="sm" /> : null}
-      meta={`${store.biz} · 약 ${store.dist}m, 도보 ${walk}분 · ${store.addr}`}
+      meta={where}
       style={selected ? { background: "var(--surface-selected)", borderRadius: "var(--radius-sm)", paddingLeft: "var(--space-2)", paddingRight: "var(--space-2)", ...style } : style}
       {...rest} />
   );

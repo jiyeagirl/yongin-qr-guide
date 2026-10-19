@@ -130,6 +130,13 @@ const FESTIVAL_RAW = [
   ["guseong",   "구성언남 골목축제",     "‘구언이’와 함께하는 음악회 및 버스킹 축제",
     "2026-10-16", "2026-10-18", "15:00~21:00",
     "언남동 중앙골목 일원", "골목 음악회, 버스킹 무대, 플리마켓, 야간 조명거리"],
+  /* ── 동백이음길 골목축제는 **시연용으로 만든 축제**다 (2026-10-19, 사용자 요청) ─────────────────
+     동백 상권과 협의 중이라 이 상점가만 실제 점포 자료를 넣었는데(data/dongbaekStores.js), 시 안내에 이
+     상점가의 축제가 없어 상세의 「진행 중인 축제」 자리가 비었다. 이름 · 일정 · 프로그램은 임의의 값이며
+     실제 축제 정보가 오면 이 줄과 아래 POSES · PROGRAMS 의 `ft-dongbaekium` 만 바꾼다. */
+  ["dongbaekium", "동백이음길 골목축제", "동백이음길 이음 한마당",
+    "2026-10-16", "2026-10-18", "15:00~21:00",
+    "동백중앙로 일원", "이음길 스탬프 투어"],
   ["dunjeon",   "둔전 골목축제",         "둔전 골목상권 활성화 한마당 축제",
     "2026-10-17", "2026-10-17", "15:00~21:00",
     "둔전 시장통 일원", "먹거리 장터, 상인 경품행사, 어르신 한마당"],
@@ -177,6 +184,7 @@ const POSES = {
   "ft-everland":  "excited",
   "ft-guseong":   "surprised",
   "ft-dunjeon":   "thumbsup",
+  "ft-dongbaekium": "excited",
   "ft-namsa":     "front",
   "ft-dongcheon": "shy",
   "ft-bojeong":   "curious",
@@ -206,6 +214,9 @@ const POSES = {
    문장 끝에 섞여 있었다. 관리자 표에 위치 칸이 따로 있으므로 여기서도 나눠 둔다.
    (관리자 쪽 칸 이름도 「장소」에서 「위치」로 통일했다 — 부스 표가 이미 그렇게 부른다.) */
 const PROGRAMS = {
+  "ft-dongbaekium": [
+    ["18:30", "21:00", "이음길 스탬프 투어", "상점가 일원",       "스탬프 3곳을 모으면 기념품. 현장 접수"],
+  ],
   "ft-dunjeon": [
     ["15:00", "17:00", "먹거리 장터",     "시장통 양쪽",        "부스 20여 곳. 상점가 가맹점이 직접 운영한다"],
     ["16:00", "18:00", "어르신 한마당",   "경로당 앞 무대",     "노래자랑과 사물놀이"],
@@ -410,15 +421,26 @@ function areaOf(id, lat, lng, stores) {
   return circlePath(lat, lng, Math.min(320, Math.max(70, 12 * Math.sqrt(stores))));
 }
 
+const DISTRICT_PHOTOS = {
+  dongbaekium: ["/screens/main/assets/districts/dongbaekium-1.jpg", "/screens/main/assets/districts/dongbaekium-2.jpg"],  /* 거리 풍경 · 로고 */
+};
+/* 주요 업종 — 시 안내의 상점가 개요 (동백이음길) */
+const DISTRICT_MAIN_BIZ = {
+  dongbaekium: ["서비스문화", "미용건강의료", "음식외식"],
+};
+
 export const DISTRICTS = RAW
   .map(([id, query, name, gu, dong, addr, stores, onnuri, lat, lng]) => ({
-    id, kind: "district", name, gu, addr, stores, onnuri, lat, lng,
+    id, kind: "district", name: name.replace(/(\S)골목형상점가$/, "$1 골목형상점가"), gu, addr, stores, onnuri, lat, lng,
     /* 목록 한 줄에 들어가는 짧은 소재 표기. 전체 주소(`addr`)는 상세를 여는 쪽이 쓴다 —
        "수지구 죽전로144번길 8-2 일원 · 7.7km"는 한 줄에 담기지 않는다 */
     area: dong,
     dist: Math.round(metersFrom(lat, lng) / 100) * 100,
     homepage: GUIDE_BASE + query,
     festival: FESTIVAL_BY_DISTRICT[id] || null,
+    /* 상점가 사진 · 주요 업종 (2026-10-19, 사용자 요청) — 자료를 받은 상점가만 있다. 없으면 상세는 자리표시/생략 */
+    images: DISTRICT_PHOTOS[id] || undefined,
+    mainBiz: DISTRICT_MAIN_BIZ[id] || undefined,
     /* 대략의 구역 경계 [{lat,lng}] — 위 helper 주석. (`area` 는 목록 줄의 소재 표기라 이름이 겹친다) */
     zone: areaOf(id, lat, lng, stores),
   }))

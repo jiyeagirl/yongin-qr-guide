@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  DetailPage, DetailBody, DetailNotice, InfoList, SectionHeader, FestivalCard, PhotoStrip, Icon,
+  DetailPage, DetailBody, DetailNotice, InfoList, SectionHeader, FestivalCard, PhotoStrip, Icon, Button,
 } from "../../design-systems/index.js";
 
 /* 다른 골목형 상점가 안내 (2026-10-19 신설. 종전 S13-S 「준비 중」 화면을 대체한다).
@@ -31,14 +31,17 @@ const spaced = name => String(name || "").replace(/(\S)골목형상점가$/, "$1
    시작하면(처인구 쪽) 행정동을 한 번 더 적지 않는다 */
 const locationLine = d => (/^\S+[읍면동]\s/.test(d.addr || "") ? `${d.gu} ${d.addr}` : `${d.gu} ${d.area} ${d.addr}`);
 
-export function DistrictInfo({ district, festival, onBack, onClose, onOpenFestival,
+export function DistrictInfo({ district, festival, onBack, onClose, onOpenFestival, onOpenMap,
   base = "../../design-systems/" }) {
   const d = district;
   const km = d.dist === 0 ? "현 위치"
     : d.dist >= 1000 ? `${(d.dist / 1000).toFixed(1)}km` : `${d.dist}m`;
 
   return (
-    <DetailPage title={spaced(d.name)} onBack={onBack} onClose={onClose}>
+    <DetailPage title={spaced(d.name)} onBack={onBack} onClose={onClose}
+      /* [지도 보기] — 이 상점가의 점포를 지도와 목록으로 본다 (2026-10-19, 사용자 요청). 상점가 탭으로 옮기지 않고
+         둘러보기 안에서 한 칸 더 들어간다(DistrictMap). 지금 서 있는 상점가는 상점가 탭이 그 지도라 단추가 없다 */
+      footer={onOpenMap ? <Button variant="primary" size="lg" icon="map" block onClick={onOpenMap}>지도 보기</Button> : undefined}>
       <DetailBody>
         {/* 점포 · 축제 상세와 같은 머리 — 왼쪽 아이콘 하나 + 이름 + 그 아래 작은 주소 (2026-10-19, 사용자 요청) */}
         <header>
@@ -59,19 +62,23 @@ export function DistrictInfo({ district, festival, onBack, onClose, onOpenFestiv
             들어오면 같은 자리에 사진이 선다 */}
         <PhotoStrip images={d.images} name={spaced(d.name)} label="상점가 이미지" />
 
-        <InfoList items={[
-          { label: "점포 수", value: `${d.stores}곳` },
-          { label: "온누리 가맹점", value: d.onnuri != null ? `${d.onnuri}곳` : "시 안내에 수가 없습니다" },
-          { label: "거리", value: km },
-        ]} />
-
+        {/* 진행 중인 축제 홍보 (2026-10-19, 사용자 요청) — [지도 보기]로 들어가기 전에 이 상점가가 지금 무엇을 하는지
+            먼저 읽힌다. 점포 수 표보다 위다 */}
         {festival ? (
           <section>
-            <SectionHeader title="상점가 축제" />
+            <SectionHeader title={festival.state === "진행중" ? "진행 중인 축제" : "상점가 축제"} />
             <FestivalCard festival={festival} base={base} pose={festival.pose}
               onClick={() => onOpenFestival(festival)} />
           </section>
         ) : null}
+
+        <InfoList items={[
+          { label: "점포 수", value: `${d.stores}곳` },
+          ...(d.mainBiz ? [{ label: "주요 업종", value: d.mainBiz.join(", ") }] : []),
+          { label: "온누리 가맹점", value: d.onnuri != null ? `${d.onnuri}곳` : "시 안내에 수가 없습니다" },
+          { label: "거리", value: km },
+        ]} />
+
 
         <DetailNotice emergency={false}>
           점포 수와 온누리 가맹 수는 시 안내 기준이라 실제와 다를 수 있습니다. 안내 정보는 참고용입니다.
