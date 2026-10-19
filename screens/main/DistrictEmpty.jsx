@@ -109,7 +109,7 @@ export function DistrictEmpty({
               `DistrictRow` 에서 프로퍼티째 지웠다 (그쪽 머리말) */}
           <div role="list">
             {picks.map((d, i) => (
-              <DistrictRow key={d.id} district={d} external
+              <DistrictRow key={d.id} district={d}
                 divider={i < picks.length - 1}
                 onClick={() => onPickDistrict && onPickDistrict(d)} />
             ))}

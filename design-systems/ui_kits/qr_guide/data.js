@@ -1,6 +1,6 @@
 window.DUNJEON = {
   district: { name: "둔전 골목형 상점가", area: "처인구 포곡읍 둔전리 일원", stores: 335, onnuri: 139, asOf: "2026.06 기준" },
-  anchor: "둔전 시장 입구 버스정류장",
+  anchor: "우리의류",
   chips: [
     { id: "all", label: "전체", count: 335 },
     { id: "food", label: "음식", count: 132 },

@@ -31,7 +31,7 @@ import { OnnuriBadge } from "../core/OnnuriBadge.jsx";
 
    화면이 제 스타일을 따로 만들지 않고 이 변형을 쓰게 한 이유는, 지도 위에서 무언가를
    눌렀을 때 뜨는 것이 화면마다 다르면 사용자가 화면마다 다시 배워야 하기 때문이다. */
-export function MapPreviewCard({ item, icon, bottom = 0, compact = false, onClose, onDetail, onRoute, routeLabel = "길찾기", detailLabel = "상세 보기", onHeightChange, style, ...rest }) {
+export function MapPreviewCard({ item, icon, photoSlot = false, bottom = 0, compact = false, onClose, onDetail, onRoute, routeLabel = "길찾기", routeIcon = "footprints", detailLabel = "상세 보기", onHeightChange, style, ...rest }) {
   const el = React.useRef(null);
   const report = React.useRef(onHeightChange);
   report.current = onHeightChange;
@@ -60,18 +60,41 @@ export function MapPreviewCard({ item, icon, bottom = 0, compact = false, onClos
         boxShadow: "var(--shadow-raised)", ...style }} {...rest}>
       {/* 아이콘은 호출하는 쪽이 넘길 수 있다 — 점포는 CategoryIcon, 편의시설은 FacilityIcon 이어야 하고
           둘을 한 아이콘 체계로 뭉뚱그리면 5-2 의 아이콘 규칙이 깨진다 */}
-      <span style={{ flex: "0 0 auto", paddingTop: 2, color: "var(--text-muted)" }}>
-        {icon || <CategoryIcon type={item.cat} size={compact ? 20 : 22} />}
-      </span>
+      {/* photoSlot — 아이콘 대신 대표 사진 자리 (2026-10-19, 사용자 요청. 상점가 카드). 사진 자료
+          (`item.images[0]`)가 아직 없으면 회색 칸에 이미지 아이콘만 둔다 — 나중에 수집한 사진이 같은 자리에 선다 */}
+      {photoSlot ? (
+        <span style={{ flex: "0 0 auto", alignSelf: "center", width: 64, height: 64, borderRadius: "var(--radius-md)", overflow: "hidden",
+          background: "var(--surface-sunken)", display: "inline-flex", alignItems: "center", justifyContent: "center",
+          color: "var(--text-muted)" }}>
+          {item.images && item.images[0]
+            ? <img src={item.images[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <Icon name="image" size={22} />}
+        </span>
+      ) : (
+        <span style={{ flex: "0 0 auto", paddingTop: 2, color: "var(--text-muted)" }}>
+          {icon || <CategoryIcon type={item.cat} size={compact ? 20 : 22} />}
+        </span>
+      )}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column",
         gap: compact ? 4 : "var(--space-2)" }}>
         <span style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
           <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-body)", fontWeight: "var(--fw-bold)", color: "var(--text-heading)", lineHeight: 1.35 }}>{item.name}</span>
-          {item.onnuri ? <OnnuriBadge size="sm" /> : null}
+          {/* 상점가의 `onnuri` 는 가맹점 **수**라 이름 옆 배지가 아니다 — 아래 줄의 「온누리 71곳」 앞에 선다 (2026-10-19) */}
+          {item.onnuri && item.kind !== "district" ? <OnnuriBadge size="sm" /> : null}
         </span>
         <span style={{ fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)", color: "var(--text-muted)", lineHeight: 1.45 }}>
-          {item.biz}{walk != null ? ` · 약 ${item.dist}m, 도보 ${walk}분` : ""}
-          {compact ? null : <span style={{ display: "block" }}>{item.addr}</span>}
+          {item.biz}
+          {/* 거리 덩어리는 중간에서 줄이 바뀌지 않는다 — 「도보 25분」이 두 줄로 쪼개지던 것 (2026-10-19) */}
+          {walk != null ? <span style={{ whiteSpace: "nowrap" }}>{item.biz ? " · " : ""}약 {item.dist}m, 도보 {walk}분</span> : null}
+          {compact ? null : item.kind === "district" ? (
+            <span style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 5 }}>
+              점포 {item.stores}곳
+              {/* 온누리 가맹 수를 모르는 곳은(null) 0 으로 적지 않고 줄째 뺀다 */}
+              {item.onnuri != null ? <>
+                ,<OnnuriBadge size="sm" />{item.onnuri}곳
+              </> : null}
+            </span>
+          ) : <span style={{ display: "block" }}>{item.addr}</span>}
         </span>
         {/* 버튼은 xs 다 (2026-08-18. compact 여부와 무관하게 S02·S03 의 카드도 같다).
             sm(40px)으로는 카드 안에서 버튼이 내용보다 커 보였다 — 이 카드는 지도 위에
@@ -82,8 +105,9 @@ export function MapPreviewCard({ item, icon, bottom = 0, compact = false, onClos
             상세 화면에도 있다). */}
         <span style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap",
           marginTop: compact ? 2 : 0 }}>
-          <Button size="xs" variant="primary" icon="footprints" onClick={onRoute}>{routeLabel}</Button>
-          <Button size="xs" variant="outline" onClick={onDetail}>{detailLabel}</Button>
+          <Button size="xs" variant="primary" icon={routeIcon} onClick={onRoute}>{routeLabel}</Button>
+          {/* onDetail 을 안 주면 두 번째 단추는 없다 (상점가 카드는 [상점가 안내] 하나뿐이다, 2026-10-19) */}
+          {onDetail ? <Button size="xs" variant="outline" onClick={onDetail}>{detailLabel}</Button> : null}
         </span>
       </div>
       <button onClick={onClose} aria-label="미리보기 닫기"

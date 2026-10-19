@@ -46,23 +46,6 @@ import { whenLabel } from "../main/data/districts.js";
  * 목록(U-FT-01)이 종료 상태도 노출하므로 상세에도 들어올 수 있다. 이때 프로그램을
  * 그대로 보여주면 아직 열리는 행사로 읽힌다. 맨 위에 끝났다는 사실을 먼저 적는다.
  */
-/* 「소속 상점가」줄. **서비스 안 화면으로만 간다** (2026-10-16, 사용자 요청) — 종전에는 상점가의
-   누리집 주소(`homepage`)가 있으면 새 창으로 나갔고 줄 끝에 「상세 페이지」가 적혀 있었다. 이제
-   그 글자도 외부 링크도 없다. 어디로 가는지는 화면(MainApp)이 정한다 — 지금 서 있는 상점가면
-   상점가 탭, 아니면 앱 안의 준비 중 안내(S13-S). */
-function DistrictLink({ f, onOpenDistrict }) {
-  if (!onOpenDistrict) return f.districtName;
-  return (
-    <button type="button" onClick={() => onOpenDistrict(f)}
-      style={{ display: "inline-flex", alignItems: "center", gap: 4, minHeight: 44, cursor: "pointer",
-        color: "var(--text-link)", fontWeight: "var(--fw-semibold)", background: "none", border: "none",
-        padding: 0, font: "inherit", textAlign: "left" }}>
-      {f.districtName}
-      <Icon name="chevron-right" size={16} />
-    </button>
-  );
-}
-
 export function FestivalDetail({ festival, courses = [], entry = false, onBack, onOpenDistrict, onDistrict, onOpenCourse }) {
   const f = festival;
   const ended = f.state === "종료";
@@ -164,6 +147,23 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
             들어오면 같은 자리에 사진이 선다. */}
         <PhotoStrip images={f.images} name={f.short || f.name} label="축제 이미지" />
 
+        {/* 소속 상점가 (2026-10-19, 사용자 요청) — 점포 상세와 같은 줄이다. 표 안의 한 칸이던 것을
+            사진 바로 아래로 올렸다. 서비스 안 화면으로만 간다: 누르면 이 상세를 닫고 어디로 갈지는
+            화면(MainApp)이 정한다 — 지금 서 있는 상점가면 상점가 탭, 아니면 준비 중 안내(S13-S). */}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "var(--space-2)" }}>
+          <span style={{ font: "var(--type-label)", color: "var(--text-muted)" }}>소속 상점가 :</span>
+          {onOpenDistrict ? (
+            <button type="button" onClick={() => onOpenDistrict(f)}
+              style={{ background: "none", border: "none", padding: "10px 0", cursor: "pointer",
+                font: "var(--type-body)", fontWeight: "var(--fw-semibold)", color: "var(--brand-primary)",
+                textDecoration: "underline", textUnderlineOffset: 3, textAlign: "left" }}>
+              {f.districtName}
+            </button>
+          ) : (
+            <span style={{ font: "var(--type-body)", fontWeight: "var(--fw-semibold)" }}>{f.districtName}</span>
+          )}
+        </div>
+
         {/* ── 기본 정보 (U-FT-02) ──────────────────────────────────────
                "주최 상점가"만 누를 수 있다. 상점가 자체의 소개·연혁·연락처는 우리가 가진
                자료가 아니라 시가 이미 관리하는 자료다 — 여기에 옮겨 적으면 갱신 주체가
@@ -180,20 +180,8 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
              어느 칸 이야기인지 맞춰봐야 한다. */}
         <InfoList items={[
           { label: "기간", value: f.period },
-          /* 순서는 기간 → 시간 → 소속 상점가 → 주요 프로그램 (2026-10-16, 사용자 요청) — 언제 · 몇 시 ·
-             어디서 순으로 읽힌다 */
+          /* 소속 상점가는 표 밖, 사진 아래로 올렸다 (2026-10-19, 사용자 요청) — 점포 상세와 같은 자리 */
           { label: "시간", value: f.time },
-          /* ── 주소가 없어도 [상세 페이지]는 그대로다 (2026-08-24) ────────────
-                 전에는 `homepage` 가 비면 이 줄이 상점가 이름 한 글자짜리 평문으로 떨어졌다.
-                 상점가 목록의 같은 자리와 같은 이유로 고쳤다 (DistrictRow 의 external 주석):
-                 관리자가 그 칸을 비우는 이유는 대개 **아직 페이지가 없어서**이고, 그 사정이
-                 「이 축제만 링크가 없다」는 모양으로 나갈 이유가 없다.
-                 주소가 있으면 새 창으로 나가고, 없으면 앱 안의 준비 중 안내로 간다. */
-          /* 라벨은 정의서의 「상권명」이 아니라 **「소속 상점가」**다 (2026-10-16, 사용자 요청) —
-             점포 상세의 같은 줄과 이름을 맞춘다. 저장되는 항목명은 그대로다. */
-          { label: "소속 상점가", value: (
-            <DistrictLink f={f} onOpenDistrict={onOpenDistrict} />
-          ) },
           { label: "주요 프로그램", value: f.program },
         ]} />
 

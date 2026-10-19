@@ -9,7 +9,8 @@ import React from "react";
  *   #/festival/ft-dunjeon  S09 축제 상세
  *   #/route/facility/fc-001  S07 길찾기 (도착지 종류 + id)
  *   #/store/dj-042/dj-041    S06 점포 상세 + 물고 온 출발지 (코스에서 들어온 경우)
- *   #/district/mohyeon S13-S 상점가 상세 안내 준비 중
+ *   #/district/mohyeon 다른 상점가 안내 (앱 안, 2026-10-19)
+ *   #/stores           S15 가게 전체보기
  *
  * 라우팅 라이브러리를 넣지 않는다. 이 저장소에는 빌드가 없고(브라우저가 Babel 로 JSX 를
  * 실시간 변환한다) 첫 로딩이 이미 4.7MB 다. 경로가 세 개뿐인데 여기에 번들을 더할 이유가 없다.
@@ -40,9 +41,10 @@ const DETAIL = ["facility", "store", "course", "festival", "route", "district"];
                 대상을 특정하지 못한 문의(#/report)도 받아야 한다.
      festivals  S12 축제 전체보기. 목록 화면이라 애초에 대상이 없다 (#/festivals).
      districts  S13 상점가 전체보기. 같은 성격이다 (#/districts).
+     stores     S15 가게 전체보기. 335곳 목록 (#/stores, 2026-10-19).
    위 DETAIL 과 나누는 이유는 아래 parseHash 의 "조각이 없으면 셸" 규칙 때문이다 —
    그 규칙은 오타난 딥링크를 걸러내는 장치라 없애면 안 되고, 여기만 예외로 둔다. */
-const OPTIONAL_ID = ["report", "festivals", "districts"];
+const OPTIONAL_ID = ["report", "festivals", "districts", "stores"];
 
 /* "#/store/dj-042"           → { name: "store", id: "dj-042", parts: ["dj-042"] }
    "#/route/facility/fc-001"  → { name: "route", id: "facility", parts: ["facility", "fc-001"] }

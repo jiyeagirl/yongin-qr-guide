@@ -73,6 +73,8 @@ function clusterStyles() {
   });
 }
 
+const NO_AREAS = [];   /* 기본값을 렌더마다 새 배열로 만들면 구역 effect 가 매번 다시 돈다 */
+
 export function KakaoMap({
   appKey,
   center,                     /* {lat, lng} — QR 스캔 지점 */
@@ -109,6 +111,7 @@ export function KakaoMap({
   stores = [],                /* [{id, name, lat, lng, onnuri}] — 상점가 탭. 클러스터링(U-ST-13) */
   facilities = [],            /* [{id, name, type, lat, lng}] — 공공시설 탭. 유형 4종 색 */
   districts = [],             /* [{id, name, lat, lng, festival}] — 상점가 지점 (S03-E 의 근처 상점가) */
+  areas = NO_AREAS,                 /* [{id, path:[{lat,lng}]}] — 상점가 **구역**. 핀과 함께 반투명 면으로 그린다 (2026-10-19) */
   course = [],                /* [{id, name, lat, lng}] — S08 코스 상세. **순서가 있는 배열**이다 */
   /* 코스에서 이미 들른 곳의 id. 그 핀을 흐리게 둔다 — 목록에서 체크한 것이 지도에도
      보여야 두 곳이 같은 상태를 말한다. 색을 새로 만들지 않고 투명도만 낮춘다. */
@@ -152,6 +155,7 @@ export function KakaoMap({
   const storeMarkers = React.useRef(new Map());
   const facilityMarkers = React.useRef(new Map());
   const districtMarkers = React.useRef(new Map());
+  const areaPolys = React.useRef(new Map());
   /* 코스는 마커가 아니라 CustomOverlay 다 — 순번 숫자를 넣어야 하는데
      마커 이미지는 미리 만든 PNG 라 숫자를 얹을 수 없다 */
   const courseOverlays = React.useRef(new Map());
@@ -411,6 +415,26 @@ export function KakaoMap({
       facilityMarkers.current.set(f.id, mk);
     });
   }, [facilities, baseImage, ready]);
+
+  /* 상점가 구역 — 점이 아니라 지정된 구역이라는 것을 핀 옆에 면으로 보여준다 (2026-10-19, 사용자 요청).
+     경계는 대략이다(데이터가 구역도 이미지뿐). 색은 브랜드 초록의 옅은 면과 선이다. 마커·클러스터 아래에
+     깔리도록 zIndex 를 낮게 둔다 */
+  React.useEffect(() => {
+    const k = kakaoRef.current, m = map.current;
+    if (!k || !m) return;
+    areaPolys.current.forEach(pl => pl.setMap(null));
+    areaPolys.current.clear();
+    const line = token("--brand-primary", "#1f7a4d");
+    areas.filter(a => a.path && a.path.length >= 3).forEach(a => {
+      const pl = new k.maps.Polygon({
+        map: m,
+        path: a.path.map(p => new k.maps.LatLng(p.lat, p.lng)),
+        strokeWeight: 2, strokeColor: line, strokeOpacity: 0.9,
+        fillColor: line, fillOpacity: 0.18, zIndex: 1,
+      });
+      areaPolys.current.set(a.id, pl);
+    });
+  }, [areas, ready]);
 
   /* 상점가 지점 핀 (S04 둘러보기) — 32개소 전체. 축제가 걸린 곳은 호박색이다.
      클러스터에 넣지 않는다. 32개가 시 전역에 흩어져 있어 뭉칠 만큼 겹치지 않고,

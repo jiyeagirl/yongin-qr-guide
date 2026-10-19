@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  DetailPage, DetailNotice, ListControls, Chip, DistrictRow, EmptyState, Notice, Pagination,
+  DetailPage, DetailNotice, ListControls, Chip, DistrictRow, EmptyState, Pagination,
 } from "../../design-systems/index.js";
 
 /* S13 용인시 골목형 상점가 전체보기 (2026-08-18 신설).
@@ -109,19 +109,8 @@ export function DistrictList({ districts = [], guOrder = [], sortNear, pageSize 
       </ListControls>
 
       <div style={{ ...gutter, paddingTop: "var(--space-2)", paddingBottom: "var(--space-6)" }}>
-        {/* 줄 전체가 바깥 링크라는 것을 목록에 들어가기 전에 한 번 말한다. 줄마다 붙은
-            "상세 페이지 ›"만으로는 첫 줄을 누르고 나서야 알게 되는데, 그때는 이미
-            브라우저가 바뀌어 있다 (U-CM-08 의 결과 아니라 성질에 대한 고지다).
-
-            tone 은 neutral 이다 — info 의 teal 바탕이 각 줄의 온누리 배지와 같은 색이라,
-            안내 띠가 온누리와 관련된 것처럼 읽혔다. 이 문장은 알림도 경고도 아니고
-            사실 한 줄이라 의미색을 쓸 이유가 없다. size 도 sm 으로 내려 한 줄에 넣는다. */}
-        <Notice tone="neutral" size="sm" style={{ marginTop: "var(--space-3)" }}>
-          용인시 누리집에서 새 창으로 열립니다
-        </Notice>
-
         {rows.length ? (
-          <div role="list" style={{ marginTop: "var(--space-2)" }}>
+          <div role="list">
             {shown.map((d, i) => (
               /* [축제] 배지를 끈다 (2026-08-18). 한때 켜뒀다 — "이 화면에는 축제 정보가
                  따로 없으니 배지가 갈 이유를 말한다"는 이유였는데, 이 화면에 오는 사람은
@@ -129,7 +118,7 @@ export function DistrictList({ districts = [], guOrder = [], sortNear, pageSize 
                  통째로 맡고, 거기는 상태·날짜·홍보 문구까지 있다. 여기 배지는 32줄 중
                  여섯에만 붙어 그 여섯 줄이 다른 종류처럼 보이게 할 뿐이고, 눌리지도 않는데
                  알약 모양이라 칩(구 선택)과 같은 것으로 읽히기까지 했다. */
-              <DistrictRow key={d.id} district={d} external
+              <DistrictRow key={d.id} district={d}
                 divider={i < shown.length - 1}
                 onClick={() => onOpenDistrict && onOpenDistrict(d)} />
             ))}

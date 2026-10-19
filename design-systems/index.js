@@ -87,6 +87,7 @@ export { NearbyFacilities } from "./components/facility/NearbyFacilities.jsx";
 /* store — 골목형 상점가 도메인 */
 export { StoreRow } from "./components/store/StoreRow.jsx";
 export { StoreRail } from "./components/store/StoreRail.jsx";
+export { StoreRankList } from "./components/store/StoreRankList.jsx";
 export { FestivalBanner } from "./components/store/FestivalBanner.jsx";
 export { FestivalRow } from "./components/store/FestivalRow.jsx";
 export { FestivalCard } from "./components/store/FestivalCard.jsx";

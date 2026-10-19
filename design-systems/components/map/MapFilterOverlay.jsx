@@ -50,7 +50,8 @@ import { FilterBar } from "../core/FilterBar.jsx";
  */
 export function MapFilterOverlay({
   showSearch = true,
-  q, onQueryChange, onQueryClear,
+  showChips = true,       /* false 면 칩 줄을 내린다 (검색창만 남는다, 2026-10-19) */
+  q, onQueryChange, onQueryClear, onQuerySubmit,
   chips = [], cat, onCatChange, renderIcon, filterLabel,
   onHeightChange,
   style, ...rest
@@ -80,14 +81,18 @@ export function MapFilterOverlay({
 
       {showSearch ? (
         <div style={{ pointerEvents: "auto", padding: `0 var(--gutter-screen)`, marginBottom: "var(--space-2)" }}>
-          <SearchField value={q} onChange={onQueryChange} onClear={onQueryClear} elevated />
+          <SearchField value={q} onChange={onQueryChange} onClear={onQueryClear} elevated
+            /* 검색창을 누르면(포커스) 목록 화면(S15)이 열린다 (2026-10-19, 사용자 요청) — 전체 목록이
+               검색의 시작점이다. 열린 화면의 검색창이 이어서 입력을 받는다. Enter 도 같은 길이다 */
+            onFocus={onQuerySubmit ? (e => { e.target.blur(); onQuerySubmit(); }) : undefined}
+            onKeyDown={onQuerySubmit ? (e => { if (e.key === "Enter") { e.preventDefault(); onQuerySubmit(); } }) : undefined} />
         </div>
       ) : null}
 
-      <div style={{ pointerEvents: "auto" }}>
+      {showChips ? <div style={{ pointerEvents: "auto" }}>
         <FilterBar floating sticky={false} chips={chips} value={cat} onChange={onCatChange}
           renderIcon={renderIcon} label={filterLabel} />
-      </div>
+      </div> : null}
     </div>
   );
 }

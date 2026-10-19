@@ -1,4 +1,5 @@
 import React from "react";
+import { flushSync } from "react-dom";
 import {
   ContextBar, KakaoMap, MapPreviewCard, MapFilterOverlay, InlineSelect, Sheet, Toast, TabBar, FloatingControls,
   CoachMarks, WelcomeDialog,
@@ -10,7 +11,7 @@ import { FACILITIES, RADIUS_STEPS, RADIUS_DEFAULT, NEAR_ENOUGH } from "./data/fa
 import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalNear,
   CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT,
   byDistrictNear, GU_ORDER } from "./data/districts.js";
-import { DistrictSheet } from "./DistrictSheet.jsx";
+import { DistrictSheet, shortName } from "./DistrictSheet.jsx";
 import { FacilitySheet } from "./FacilitySheet.jsx";
 import { DiscoverPanel } from "./DiscoverPanel.jsx";
 import { DistrictEmpty, NEARBY_DISTRICT_COUNT } from "./DistrictEmpty.jsx";
@@ -21,12 +22,13 @@ import { CourseDetail } from "../detail/CourseDetail.jsx";
 import { FestivalDetail } from "../detail/FestivalDetail.jsx";
 import { FestivalList } from "../detail/FestivalList.jsx";
 import { DistrictList } from "../detail/DistrictList.jsx";
-import { DistrictSoon } from "../detail/DistrictSoon.jsx";
+import { DistrictInfo } from "../detail/DistrictInfo.jsx";
+import { StoreList } from "../detail/StoreList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, replace, back, closeAll } from "./router.js";
 import { useCoachMarks } from "./data/coachMarks.js";
 import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
-  DISTRICT_LIST_PAGE_SIZE } from "./config.js";
+  DISTRICT_LIST_PAGE_SIZE, PAGE_SIZE } from "./config.js";
 
 /* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.1 확정 결정사항 11).
  *
@@ -93,6 +95,8 @@ const SNAP_LABEL = { collapsed: "접힘", half: "절반", full: "전체" };
    **`life-buoy` 로 확정한다** — 대피소가 이미 `shield` 를 쓰고 있어, 방패 계열을 탭에도 쓰면
    탭바의 방패와 지도·목록의 방패가 서로 다른 것을 가리키게 된다.
    탭 아이콘은 4종을 묶는 상위 개념이어야 하는데 그중 하나와 같은 형태를 쓰면 위계가 무너진다. */
+const HOME_DISTRICT_PREVIEW = 3;   /* 상점가 탭 시트의 「다른 골목형 상점가」 미리보기 곳수 (2026-10-19) */
+
 const TABS = [
   { id: "facility", label: "공공시설", icon: "life-buoy" },
   { id: "district", label: "상점가", icon: "store" },
@@ -212,8 +216,13 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      지금 상점가의 것 하나를 얹는다 (순환 참조를 피하려고 데이터 파일이 아니라 화면이 합친다). */
   /* 상점 QR 로 들어왔으면 코스는 그 가게에서 출발한다 (dunjeon.js 의 coursesFrom) */
   const entryStoreId = qr && qr.kind === "store" ? qr.storeId : null;
+  /* 팜플렛 QR 은 가게가 아니라 종이라 기준점 이름이 「우리의류」일 수 없다 (2026-10-19, 사용자 요청) —
+     QR 지점 표의 `anchorName`(상점가 중심 거리 등)을 이름으로 쓴다. 좌표는 더미 세계가 한 점에
+     매달려 있어 그대로다 (data/qr.js 머리말). */
+  const anchorName = qr && qr.anchorName ? qr.anchorName : null;
   const d = React.useMemo(() => ({ ...DUNJEON, festival: CURRENT_FESTIVAL,
-    courses: entryStoreId ? coursesFrom(entryStoreId) : DUNJEON.courses }), [entryStoreId]);
+    anchor: anchorName ? { ...DUNJEON.anchor, name: anchorName } : DUNJEON.anchor,
+    courses: entryStoreId ? coursesFrom(entryStoreId) : DUNJEON.courses }), [entryStoreId, anchorName]);
 
   const [tab, setTab] = React.useState("district");   /* 진입은 상점가 탭 (U-CM-03, 2026-10-16 방향 변경 — 종전 공공시설) */
   const [snap, setSnap] = React.useState("half");
@@ -231,6 +240,18 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
   const [onnuriOnly, setOnnuriOnly] = React.useState(false);
   const [q, setQ] = React.useState("");
   const [sort, setSort] = React.useState("distance");
+  /* 지도 위 검색창을 누르면 S15 가 열리고 **거기 검색창에 커서가 바로 간다** (2026-10-19, 사용자 요청).
+     누른 사람이 한 번 더 눌러야 하면 안 된다. 모바일 브라우저는 사용자가 누른 그 순간(같은 호출) 안에서
+     focus() 를 불러야 자판을 올려 주므로, 화면을 동기로 그린 뒤(flushSync) 곧바로 포커스를 옮긴다. */
+  const openStoresForSearch = () => {
+    flushSync(() => { go("#/stores"); });
+    const input = document.querySelector("[data-store-search] input");
+    if (input) {
+      input.focus();
+      /* DetailPage 가 열리며 뒤로가기 단추에 포커스를 두는 것이 뒤따라 오면 커서를 빼앗는다 — 한 번 더 */
+      requestAnimationFrame(() => { if (document.activeElement !== input) input.focus(); });
+    }
+  };
 
   /* 점포 목록의 쪽 번호 (U-ST-04). **시트가 아니라 셸이 들고 있다** — 쪽을 넘기면 목록을
      맨 위로 되돌려야 하는데 그 스크롤 컨테이너는 Sheet 이고, Sheet 는 scrollKey 로만
@@ -269,6 +290,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      상점가 탭일 때만 존재한다. 값은 닫은 **축제의 id** 다: 축제가 다음 것으로 넘어가면
      다시 보여야 하므로, 기억할 것은 "한 번 닫았다"가 아니라 "이 축제를 닫았다"이다. */
   const [festivalDismissed, setFestivalDismissed] = React.useState(null);
+
 
   const [sheetH, setSheetH] = React.useState(0);          /* 시트 실측 높이(px) */
   const [previewH, setPreviewH] = React.useState(0);      /* 미리보기 카드 실측 높이(px) */
@@ -426,6 +448,10 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      그때 마지막으로 잰 높이를 그대로 쓰면 있지도 않은 바만큼 위를 비워두게 되므로 0 으로 되돌린다. */
   /* 둘러보기(정보 화면)와 S03-E(안내 상태)에는 필터 바가 없다. 걸러낼 목록이 없는 자리에
      검색창과 업종 칩을 남겨두면 "여기서 뭔가 찾을 수 있다"는 신호만 남는다. */
+  /* 다른 상점가를 골라 지도가 그리로 넘어가 있는 동안에는 **업종 칩만** 내린다 (2026-10-19, 사용자 요청).
+     그 칩들은 둔전 점포를 거르는 것인데 지도에는 다른 상점가가 떠 있어, 무엇을 거르는 칩인지 헷갈린다.
+     검색창은 남긴다 — 가게를 찾는 입구는 어느 상태에서도 필요하다. 카드를 닫으면 칩이 돌아온다 */
+  const districtPicked = isDistrict && Boolean(selected) && selected.kind === "district";
   const hasFilterBar = !isDiscover && !(isDistrict && !hasDistrict);
   const barH = hasFilterBar ? filterH : 0;
   const mapPadTop = barH + gap;
@@ -445,7 +471,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         /* 칩에서는 색이 선택 상태를 뜻하므로 안전시설 적색 강조를 끈다 (emphasis={false}).
            아이콘 표는 FacilityIcon 한 곳에만 있다 (U-CM-05) */
         renderIcon: c => <FacilityIcon type={c.id} size={15} emphasis={false} /> }
-    : { q, onQueryChange: e => setQ(e.target.value), onQueryClear: () => setQ(""),
+    : { q, onQueryChange: e => setQ(e.target.value), onQueryClear: () => setQ(""), onQuerySubmit: openStoresForSearch,
         chips: d.chips, cat: cats, onCatChange: setCats };
 
   const focus = React.useCallback((lat, lng) => {
@@ -551,11 +577,20 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
   /* 상점가 마커도 같은 카드를 쓴다. 다만 "길찾기"가 아니라 "이 상점가 보기"다 —
      상점가는 점이 아니라 구역이라 도보 경로의 도착지가 될 수 없다 (확정 결정사항 6). */
   const pickDistrict = React.useCallback(x => pickOnMap({
-    /* 축제는 **짧은 이름**으로 적는다 — 카드 한 줄에 구 이름과 함께 서는 자리라
-       실제 축제명(최대 24자)이 들어오면 그 줄이 두 줄이 된다 (districts.js 의 short) */
-    ...x, biz: x.festival ? `${x.gu} · ${x.festival.short || x.festival.name}` : x.gu,
-    addr: `${x.area} · 점포 ${x.stores}곳${x.onnuri != null ? `, 온누리 ${x.onnuri}곳` : ""}`,
+    /* 구와 거리만 적는다 (2026-10-19, 사용자 요청) — 축제명과 읍·면·동은 뺐다. 축제는 카드가 없애고,
+       소재는 상점가 안내(DistrictInfo)가 적는다. 점포 수와 온누리 수는 아래 줄이다 */
+    ...x, biz: x.gu,
+    addr: `점포 ${x.stores}곳${x.onnuri != null ? `, 온누리 ${x.onnuri}곳` : ""}`,
   }), [pickOnMap]);
+
+  /* 다른 상점가 줄을 누르면 **지도가 그 상점가로 넘어가** 핀이 켜지고 미리보기 카드가 뜬다
+     (2026-10-19, 사용자 요청). 열려 있던 목록·상세는 닫는다. 앱 안 상점가 안내(S13-A)는 카드의
+     버튼이 연다. 상점가 탭이 아니면 탭도 옮긴다 — 지도는 그 탭에만 있다. */
+  const showDistrictOnMap = React.useCallback(x => {
+    closeAll();
+    if (tab !== "district") changeTab("district");
+    pickDistrict(x);
+  }, [tab, pickDistrict]);
 
   /* 시트 높이가 바뀌면 선택된 마커를 다시 시야로 끌어올린다 (스냅 이동 후에도 안 가려지게) */
   React.useEffect(() => {
@@ -675,10 +710,19 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
 
   /* S03-E 의 "가볼 만한 상점가" 는 목록과 지도가 같은 것을 가리켜야 한다 (U-ST-16).
      시설 마커와 겹치지 않는다 — 상점가 탭이 소유한 레이어이므로 U-CM-17 을 지킨다. */
+  /* 상점가 줄을 눌러 고른 상점가는 핀을 켠다 (showDistrictOnMap) — 고른 한 곳만 그린다 */
+  const pickedDistrict = isDistrict && selected && selected.kind === "district" ? [selected] : [];
   const districtMarkers = isDistrict && !hasDistrict
     ? [...OTHER_DISTRICTS].sort((a, b) => a.dist - b.dist).slice(0, NEARBY_DISTRICT_COUNT)
-    : [];
+    : pickedDistrict;
   const facilityMarkers = isFacility ? facilityRows : [];
+
+  /* 상점가 구역 면 (2026-10-19) — **줄을 눌러 고른 상점가**에서만 그린다 (사용자 요청). 상점가 탭의 평소
+     화면(둔전)에는 그리지 않는다 — 점포 핀이 이미 그 안을 채운다. 경계는 대략이다 (districts.js 의 zone 주석) */
+  const areaLayers = React.useMemo(() => (
+    isDistrict && selected && selected.kind === "district" && selected.zone
+      ? [{ id: selected.id, path: selected.zone }] : []
+  ), [isDistrict, selected]);
 
   /* ── 상세 오버레이 (S05 / S06) ────────────────────────────────────────
      route 는 URL 이 진실이다. 여기서 id 로 대상을 찾고, 없으면 셸로 되돌린다 —
@@ -785,7 +829,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      못 찾은 경우(#/report/facility/없는id)는 다른 상세와 똑같이 되돌린다 —
      엉뚱한 곳을 신고하게 두는 것이 빈 화면보다 나쁘다. */
   /* S12 축제 · S13 상점가 전체보기는 목록 화면이라 대상이 없다 — 되돌리지 않는다 */
-  const needsTarget = route.name !== "main" && route.name !== "festivals" && route.name !== "districts"
+  const needsTarget = route.name !== "main" && route.name !== "festivals" && route.name !== "districts" && route.name !== "stores"
     && (route.name !== "report" || route.parts.length > 0);
 
   React.useEffect(() => {
@@ -868,7 +912,24 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
       sortNear={byDistrictNear}
       pageSize={DISTRICT_LIST_PAGE_SIZE}
       onBack={back}
-      onOpenDistrict={x => go(`#/district/${encodeURIComponent(x.id)}`)} />
+      onOpenDistrict={showDistrictOnMap} />
+
+  /* ── S15 가게 전체보기 (2026-10-19) ────────────────────────────────────
+         상점가 탭 시트에서 걷어낸 335곳 목록이다. 상태(검색·업종·온누리·정렬·쪽)는 이 셸의 것을
+         그대로 넘긴다 — 상세를 보고 돌아와도 조건이 남고, 지도 핀과 같은 `storeRows` 를 본다.
+         대상이 없는 목록 화면이라 `!target` 검사보다 위에 있어야 한다. */
+  ) : route.name === "stores" ? (
+    <StoreList
+      rows={storeRows} chips={d.chips}
+      cats={cats} setCats={setCats} q={q} setQ={setQ}
+      onnuriOnly={onnuriOnly} setOnnuriOnly={setOnnuriOnly}
+      sort={sort} setSort={setSort}
+      page={page} setPage={setPage} pageSize={PAGE_SIZE}
+      title={`${shortName(d.district)} 전체보기`}
+      /* 상세로 가지 않는다 (2026-10-19, 사용자 요청) — 목록을 닫고 지도에 핀을 켜서 미리보기 카드가 뜨게 한다.
+         상세는 그 카드의 [상세 보기]가 맡는다 (인기 매장 카드와 같은 길, showStoreOnMap) */
+      onPickStore={s => { closeAll(); showStoreOnMap(s); }}
+      onBack={back} />
 
   /* 여기서부터는 전부 대상 하나를 여는 화면이다 — 대상이 없으면 그릴 것이 없다.
      대상 없이 여는 화면을 새로 붙일 때는 이 줄 **위**에 둔다 (needsTarget 도 함께). */
@@ -922,23 +983,19 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         onOpenDistrict={f => {
           /* 지금 서 있는 상점가면 상점가 탭으로, 다른 상점가면 앱 안의 준비 중 안내로 (2026-10-16) */
           if (f.districtId === CURRENT_DISTRICT_ID) { closeAll(); changeTab("district"); }
-          else go(`#/district/${encodeURIComponent(f.districtId)}`);
+          else { const x = DISTRICTS.find(v => v.id === f.districtId); if (x) showDistrictOnMap(x); }
         }} />
 
-    /* ── S13-S 상점가 상세 안내 준비 중 ──────────────────────────────────
-           상점가 줄의 [상세 페이지]는 보통 용인시 누리집으로 **나간다**. 여기로 오는
-           것은 그 주소가 아직 없는 곳뿐이다 (관리자의 링크 칸이 비어 있는 경우).
-           목록에서 그 줄만 갈 곳 없는 줄로 두지 않기 위한 화면이다. */
+    /* ── 다른 상점가 안내 (2026-10-19. 종전 S13-S 「준비 중」을 대체) ──────────
+           상점가 줄을 누르면 용인시 누리집으로 나가지 않고 앱 안에서 이 화면이 열린다.
+           가진 자료(이름·소재지·점포 수·온누리 수·축제)만 보여준다 (DistrictInfo 머리말). */
     ) : route.name === "district" ? (
-      <DistrictSoon
+      <DistrictInfo
         district={target}
+        festival={FESTIVALS.find(f => f.districtId === target.id) || null}
         onBack={back}
         onClose={closeAll}
-        /* 뒤로가 아니라 **옆으로** 나가는 길이다. 여기까지 온 사람이 보려던 것은 이
-           상점가이고, 그 다음으로 볼 만한 것은 나머지 서른한 곳이다.
-           `go` 가 아니라 `replace` 인 이유: 한 칸을 더 쌓으면 뒤로가기가 방금 나온
-           안내를 다시 연다 — 되돌아갈 자리는 여기 들어오기 전이지 이 안내가 아니다. */
-        onGoDistricts={() => replace("#/districts")} />
+        onOpenFestival={f => go(`#/festival/${f.id}`)} />
 
     ) : route.name === "facility" ? (
       <FacilityDetail
@@ -956,7 +1013,9 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         store={target}
         district={d.district}
         onBack={back}
-        courses={target.id === entryStoreId ? d.courses : []}
+        /* 어떤 길로 들어와도 그 가게 둘레의 코스가 붙는다 (2026-10-19, 사용자 요청) — 상점 QR · 검색 ·
+           지도 카드 · 목록 어디서 열든 상세가 같은 모양이어야 한다. 종전에는 QR 로 들어온 가게만 받았다 */
+        courses={coursesFrom(target.id)}
         onOpenCourse={c => go(`#/course/${c.id}`)}
         festival={d.festival && d.festival.state === "진행중" ? d.festival : null}
         onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
@@ -1002,7 +1061,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
           2차의 언어·음성·글자 크기 버튼 자리는 코드에서만 비워둔다 (화면에 노출하지 않는다).
           오류 신고는 이 화면에 두지 않는다 — 신고 대상이 특정되는 상세 화면에서 진입한다 */}
       <div style={{ position: "relative", zIndex: "var(--z-filter)", flex: "0 0 auto" }}>
-        <ContextBar place={qr ? qr.name : d.anchor.name}
+        <ContextBar place={d.anchor.name}
           leading={<Mascot pose="hello" size={22} base="../../design-systems/" alt="" />} />
       </div>
 
@@ -1032,6 +1091,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
           stores={storeMarkers}
           facilities={facilityMarkers}
           districts={districtMarkers}
+          areas={areaLayers}
           selectedId={selected ? selected.id : null}
           /* 앵커가 지도 칸을 벗어났는지. [스캔 위치로]가 이 값일 때만 뜬다 */
           onAnchorOffscreen={setAnchorOff}
@@ -1047,7 +1107,9 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         {/* 결정 4 — 상단 필터 바 (z 300). 두 탭 모두 여기에 필터를 둔다. 시트가 어디에 있든
             자리가 바뀌지 않는다 (시트가 여기까지 올라오지 못하게 topInset 으로 막는다).
             둘러보기 탭은 필터 축이 없다 (섹션 스크롤 화면이라 지도 위에 아무것도 두지 않는다) */}
-        {hasFilterBar ? <MapFilterOverlay onHeightChange={setFilterH} {...filterProps} /> : null}
+        {hasFilterBar ? <MapFilterOverlay onHeightChange={setFilterH} showChips={!districtPicked} {...filterProps} /> : null}
+
+
 
         {/* 안내 반경 고르개(U-FC-08)가 여기 있었다 — 지도 위에 뜨는 부품이 아니게 되어
             **시트 헤더 오른쪽**으로 내려갔다 (아래 `titleAside`). 지도 위에 남는 것은
@@ -1057,26 +1119,25 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         {showPreview ? (
           <MapPreviewCard
             item={selected}
-            icon={selected.kind === "facility" ? <FacilityIcon type={selected.type} size={22} />
-              : selected.kind === "district" ? <Icon name="store" size={22} /> : undefined}
+            icon={selected.kind === "facility" ? <FacilityIcon type={selected.type} size={22} /> : undefined}
+            /* 상점가 카드는 아이콘 대신 대표 사진 자리다 (2026-10-19) */
+            photoSlot={selected.kind === "district"}
             bottom={sheetH}
             onHeightChange={setPreviewH}
             onClose={closePreview}
-            routeLabel={selected.kind === "district" ? "상점가 보기" : "길찾기"}
-            detailLabel={selected.kind === "district" && selected.festival ? "축제 보기" : "상세 보기"}
-            /* 상점가 마커 자체는 갈 곳이 없다 — 상점가는 점이 아니라 구역이라 상세 페이지가
-               아니라 탭 전환의 대상이다 (확정 결정사항 6). 다만 축제가 걸려 있으면 S09 로 간다. */
-            onDetail={() => selected.kind === "facility" ? go(`#/facility/${selected.id}`)
-              : selected.kind === "district"
-                /* 상점가명을 문장에 넣지 않는다 — 카드가 바로 위에서 이름을 말하고 있고,
-                   "광교상현역 온누리 골목형상점가" 같은 이름이 들어가면 두 줄이 된다 */
-                ? (selected.festival ? go(`#/festival/${selected.festival.id}`) : say("상점가 정보는 준비 중입니다"))
-                : go(`#/store/${selected.id}`)}
+            routeLabel={selected.kind === "district" ? "상점가 안내" : "길찾기"}
+            routeIcon={selected.kind === "district" ? "store" : undefined}
+            detailLabel="상세 보기"
+            /* 상점가 카드는 [상점가 안내] 하나뿐이다 (2026-10-19, 사용자 요청 — 축제 보기 단추를 뺐다).
+               그래서 onDetail 을 주지 않는다. 점포·시설은 종전대로 상세로 간다 */
+            onDetail={selected.kind === "district" ? undefined
+              : selected.kind === "facility" ? () => go(`#/facility/${selected.id}`)
+              : () => go(`#/store/${selected.id}`)}
             /* 상점가는 점이 아니라 구역이라 도보 경로의 도착지가 될 수 없다 (확정 결정사항 6).
                나머지 둘(점포·시설)은 미리보기 카드에서 상세를 거치지 않고 바로 길찾기로 간다 —
                지도에서 핀을 찍은 사람이 원하는 것은 대개 "저기까지 어떻게 가나"다. */
             onRoute={() => selected.kind === "district"
-              ? say("상점가는 길찾기 도착지가 아닙니다")
+              ? go(`#/district/${encodeURIComponent(selected.id)}`)   /* 앱 안 상점가 안내 (DistrictInfo) */
               : goRoute(selected)} />
         ) : null}
 
@@ -1173,7 +1234,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
             onOpenStore={showStoreOnMap}
             onOpenCourse={c => go(`#/course/${c.id}`)}
             onOpenAllDistricts={() => go("#/districts")}
-            onOpenDistrict={x => go(`#/district/${encodeURIComponent(x.id)}`)} />
+            onOpenDistrict={showDistrictOnMap} />
         ) : null}
 
         {/* 결정 1 — 3단 스냅. 실측 높이를 위로 올려보내 지도 패딩과 미리보기 카드 앵커가 따라온다.
@@ -1300,17 +1361,15 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
           ) : isDistrict ? (
             <DistrictSheet
               data={d}
-              rows={storeRows}
-              cats={cats}
-              onnuriOnly={onnuriOnly} setOnnuriOnly={setOnnuriOnly}
-              sort={sort} setSort={setSort}
-              page={page} setPage={setPage}
-              q={q}
-              selectedId={selected ? selected.id : null}
-              /* 점포 행도 마커를 누른 것과 같다 (pickFacility 주석) */
-              onPickStore={pickOnMap}
-              /* `onPickFacility` 가 여기 있었다 — 주변 공공시설 블록과 함께 나갔다
-                 (2026-08-24. DistrictSheet 의 해당 자리 주석) */
+              /* 가까운 3곳만 깐다. `OTHER_DISTRICTS` 는 이미 거리순이다 (현재 상점가는 뺀다) */
+              otherDistricts={OTHER_DISTRICTS.slice(0, HOME_DISTRICT_PREVIEW)}
+              /* 인기 매장 카드도 마커를 누른 것과 같다 — 상세로 건너뛰지 않고 지도에서 켠다
+                 (둘러보기 탭과 같은 동작. showStoreOnMap 주석) */
+              onOpenStore={showStoreOnMap}
+              onOpenCourse={c => go(`#/course/${c.id}`)}
+              onOpenAllStores={() => go("#/stores")}
+              onOpenAllDistricts={() => go("#/districts")}
+              onOpenDistrict={showDistrictOnMap}
               onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
               /* 닫힌 축제의 id 를 셸이 들고 있다. 시트 안에 두면 탭을 옮길 때 언마운트되어
                  둘러보기를 갔다 올 때마다 배너가 되살아난다 (U-FC-09 말풍선과 같은 이유).

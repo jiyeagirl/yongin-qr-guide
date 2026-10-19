@@ -1,8 +1,9 @@
 import React from "react";
 import {
-  SectionHeader, TextButton, Notice, StoreRail, CourseCard, FestivalCard, DistrictRow,
+  SectionHeader, TextButton, Notice, FestivalCard,
 } from "../../design-systems/index.js";
 import { DISTRICT_PREVIEW, FESTIVAL_PREVIEW } from "./config.js";
+import { PopularSection, CourseSection, DistrictPreviewSection } from "./HomeSections.jsx";
 
 /* S04 둘러보기 탭 (기능명세서 v1.1 4장 S04 행).
  * 관련 기능: U-DC-01~06 · U-FT-01 · U-ST-14(→U-DC-04)
@@ -128,20 +129,9 @@ export function DiscoverPanel({
              읽히고, 축제가 없는 기간에도 코스가 첫 화면에 남는다. */}
       {currentDistrict ? (
         <>
-          {/* 골목 한바퀴 추천 코스 (U-DC-03) */}
-          {courses.length ? (
-            <section style={{ marginTop: "var(--space-6)" }}>
-              <div style={scope}>
-                <SectionHeader title="골목 한바퀴 코스 추천" note={currentDistrict.name} />
-              </div>
-              <div style={{ display: "flex", alignItems: "stretch", gap: "var(--space-3)",
-                overflowX: "auto", padding: "2px var(--gutter-screen) var(--space-2)", scrollbarWidth: "none" }}>
-                {courses.map(c => (
-                  <CourseCard key={c.id} course={c} onClick={() => onOpenCourse(c)} />
-                ))}
-              </div>
-            </section>
-          ) : null}
+          {/* 골목 한바퀴 추천 코스 (U-DC-03) — 시트와 같은 조각 (HomeSections) */}
+          <CourseSection courses={courses} note={currentDistrict.name} onPick={onOpenCourse}
+            style={{ marginTop: "var(--space-6)" }} />
 
           {/* ── 인기 매장 (U-DC-02) ────────────────────────────────────────
                  **「신규 매장」 레일이 이 위에 있었다** (2026-08-25 삭제, 사용자 요청).
@@ -153,10 +143,8 @@ export function DiscoverPanel({
 
                  남은 레일은 하나라 색으로 갈라야 할 상대도 없어졌다 — `tone="hot"` 은
                  그대로 둔다 (인기라는 근거가 색에도 남는다. StoreRail 주석). */}
-          <section style={{ ...scope, marginTop: "var(--space-5)" }}>
-            <SectionHeader title="인기 매장" note={currentDistrict.name} />
-            <StoreRail items={popular} label="인기 매장" tone="hot" onPick={onOpenStore} />
-          </section>
+          <PopularSection items={popular} note={currentDistrict.name} onPick={onOpenStore}
+            style={{ marginTop: "var(--space-5)" }} />
         </>
       ) : (
         /* 현재 상점가가 없을 때 (U-DC-06). 빈 카드 자리를 남기는 대신 왜 없는지 한 줄로 적는다 */
@@ -185,25 +173,9 @@ export function DiscoverPanel({
              줄을 누르면 용인시 누리집의 그 상점가 안내 페이지로 나간다 (2026-08-18).
              우리에게는 다른 상점가의 점포도 지도도 없어서, 앱 안에서 열면 이 줄에 이미
              적힌 이름·규모·거리를 한 번 더 보게 된다 (DistrictRow 의 external 주석). */}
-      <section style={{ ...scope, marginTop: "var(--space-6)" }}>
-        {/* 라벨은 그냥 "전체보기"다 (2026-08-18). 한때 [전체 32개]로 수를 실었는데, 그
-            수는 목록의 길이도 아니고(여기는 5줄) 이 자리에서 할 일도 없다 — 필요하면
-            S13 의 [전체] 칩이 적는다. 위 축제 섹션과 같은 낱말이라 두 [전체보기]가
-            같은 성격의 길이라는 것도 함께 읽힌다. */}
-        <SectionHeader title="용인시 골목형 상점가 정보"
-          action="전체보기" onAction={onOpenAllDistricts} />
-        {/* 지도가 없어졌으므로 마커 선택 강조(selected)도 없다 — 강조할 지도가 없다 */}
-        <div role="list">
-          {preview.map((d, i) => (
-            /* [축제] 배지를 끄던 자리다 — 2026-08-25 부터 `DistrictRow` 가 그 배지를 아예
-               갖지 않아 끌 것이 없다 (그쪽 머리말). 여기서 껐던 이유는 그대로 유효하다:
-               맨 위 섹션이 통째로 축제이고 [전체보기]까지 있어 세 번째로 같은 말이 된다 */
-            <DistrictRow key={d.id} district={d} external
-              divider={i < preview.length - 1}
-              onClick={() => onOpenDistrict && onOpenDistrict(d)} />
-          ))}
-        </div>
-      </section>
+      <DistrictPreviewSection title="용인시 골목형 상점가 정보" districts={preview}
+        onOpenAll={onOpenAllDistricts} onOpen={onOpenDistrict}
+        style={{ marginTop: "var(--space-6)" }} />
 
       {/* ── 고지 (U-CM-07 · U-CM-08) ───────────────────────────────────── */}
       <div style={{ ...scope, marginTop: "var(--space-5)" }}>

@@ -26,7 +26,7 @@
 
 | 화면 | 상태 | 경로 |
 | --- | --- | --- |
-| S03 상점가 탭 | **완료 (기준 화면)** | `main/` — `DistrictSheet.jsx` |
+| S03 상점가 탭 | **완료 (홈형, 2026-10-19)** | `main/` — `DistrictSheet.jsx` (축제 · 인기 매장 · 코스 · 다른 상점가 3곳 · [가게 전체보기]) · 공용 조각 `HomeSections.jsx` |
 | S02 공공시설 탭 | **완료** | `main/` — `FacilitySheet.jsx` |
 | S04 둘러보기 탭 | **완료** | `main/` — `DiscoverPanel.jsx` (지도 없음) |
 | S05 시설 상세 | **완료 (상세 기준 화면)** | `detail/FacilityDetail.jsx` — `#/facility/:id` |
@@ -36,7 +36,8 @@
 | S09 축제 상세 | **완료** | `detail/FestivalDetail.jsx` — `#/festival/:id` |
 | S12 축제 전체보기 | **완료** | `detail/FestivalList.jsx` — `#/festivals` (둘러보기 탭 [전체보기]) |
 | S13 상점가 전체보기 | **완료** | `detail/DistrictList.jsx` — `#/districts` (둘러보기 탭 [전체보기]) |
-| S13-S 상점가 안내 준비 중 | **완료** | `detail/DistrictSoon.jsx` — `#/district/:id` (안내 주소가 없을 때만) |
+| S13-A 다른 상점가 안내 (앱 안) | **완료 (2026-10-19)** | `detail/DistrictInfo.jsx` — `#/district/:id` (종전 S13-S 「준비 중」을 대체. 누리집으로 나가지 않는다) |
+| S15 가게 전체보기 | **완료 (2026-10-19)** | `detail/StoreList.jsx` — `#/stores` (시트 [가게 전체보기] · 지도 위 검색창 Enter. 상태는 셸이 든다) |
 | S03-E 상점가 없음 안내 | **완료** | `main/DistrictEmpty.jsx` — 상점가 탭의 한 상태 (`?district=none`) |
 | S01 QR 진입 및 로딩 | **완료** | `boot/QrEntry.jsx` — 진입 게이트 `main/App.jsx` 가 띄운다 |
 | S10 오류신고 및 문의 | **완료** | `detail/ReportForm.jsx` — `#/report` · `#/report/facility/:id` |
@@ -104,13 +105,10 @@ QR 지점 표는 `main/data/qr.js` 다. **유효한 코드가 하나뿐인 것�
 | S14 아직 안 열린 축제의 팜플렛 (예정) | `/screens/main/?pamphlet=ft-namsa` — 「…이 열릴 예정이에요」 |
 | S10 오류신고 (대상 지정) | `/screens/main/#/report/facility/fc-001` |
 | S10 오류신고 (대상 없음) | `/screens/main/#/report` |
-| S13-S 상점가 안내 준비 중 | `/screens/main/#/district/mohyeon` |
+| S13-A 다른 상점가 안내 | `/screens/main/#/district/mohyeon` |
+| S15 가게 전체보기 | `/screens/main/#/stores` |
 
-**S13-S 는 목록에서 눌러서는 볼 수 없다.** 더미 데이터의 32곳 모두 안내 주소를 갖고 있어
-줄이 전부 바깥으로 나가기 때문이다 (그 편이 맞다 — 실제로 시 누리집에 32곳이 다 있다).
-주소를 직접 쳐서 화면만 확인한다. 목록에서 이 화면으로 가는 줄이 생기려면 관리자 화면의
-「상권 활성화 센터 페이지 링크」를 비워야 하는데, 관리자에서 고친 값은 시민용 화면에
-닿지 않는다 (서버가 없다).
+**S13-A 는 다른 상점가 줄 어디서든 열린다** (시트 미리보기 · 둘러보기 · S13 전체보기). 가진 자료(이름 · 소재지 · 점포 수 · 온누리 수 · 축제)만 보이고 점포 목록은 「준비 중」이다.
 
 `?district=none` 은 **검수 플래그**다 (`config.js` 의 `TODAY` 와 같은 성격). 유효한 QR
 지점이 둔전 한 곳뿐이라 실제로는 U-ST-16 상태에 들어갈 수 없어서, 없는 지점을 지어내는
@@ -453,7 +451,7 @@ S02 는 목록을 한 번에 다 그렸다. "수십 건이라 페이지를 나�
 ### 셸 상단은 한 줄이다 (2026-08-18 재개정)
 
 ```
-[조아용] QR 스캔 지점 기준 안내 · 둔전 시장 입구 버스정류장   ← 이것뿐. 바로 아래가 지도다
+[조아용] QR 스캔 지점 기준 안내 · 우리의류   ← 이것뿐. 바로 아래가 지도다
 ```
 
 세 번 고쳤다. 처음에는 지점명·캐릭터·[지점으로 이동] 버튼을 얹은 60px 짜리 초록 배너였고,

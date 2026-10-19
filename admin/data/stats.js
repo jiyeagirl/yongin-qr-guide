@@ -176,7 +176,7 @@ export const FACILITY_SHARE = [
    (U-CM-02 · S11 의 두 갈래). 지우면 그 사람들이 「등록되지 않은 코드」를 만난다. */
 const OLD_SIGN_SCANS = 148;
 export const SCANS_BY_POINT = [
-  { code: "qr-001", name: "둔전 시장 입구 버스정류장", active: true, scans: TOTAL_SCANS - OLD_SIGN_SCANS },
+  { code: "qr-001", name: "우리의류", active: true, scans: TOTAL_SCANS - OLD_SIGN_SCANS },
   { code: "qr-002", name: "(구) 둔전 시장 안내판", active: false, scans: OLD_SIGN_SCANS },
 ];
 

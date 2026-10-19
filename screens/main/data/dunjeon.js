@@ -18,7 +18,7 @@
 import { nearestChain, withLegs, totals } from "./coursePlan.js";
 
 /* QR 스캔 지점 — 화면의 "내 위치"는 항상 이 고정 좌표다. GPS 를 쓰지 않는다 (제안서 3-1). */
-export const ANCHOR = { name: "둔전 시장 입구 버스정류장", lat: 37.28874, lng: 127.19931 };
+export const ANCHOR = { name: "우리의류", lat: 37.28874, lng: 127.19931 };
 
 const M_PER_DEG_LAT = 111320;
 const M_PER_DEG_LNG = 111320 * Math.cos((ANCHOR.lat * Math.PI) / 180);
@@ -287,7 +287,7 @@ export const DISTRICT = {
    `created_at`). 없어진 것은 그 값으로 뽑아 만들던 목록이다. */
 
 /* 몇 곳을 뽑나. 화면 둘(둘러보기 인기 매장 레일 · 관리자 대시보드 미리보기)이 같은 수를 쓴다 */
-export const DISCOVER_PICK = 6;
+export const DISCOVER_PICK = 8;
 
 /* ── 뽑는 규칙을 함수로 둔다 (2026-08-20) ──────────────────────────────────
    관리자 대시보드가 **상점가를 골라 같은 목록을 미리 본다.** 규칙을 그쪽에 한 벌 더

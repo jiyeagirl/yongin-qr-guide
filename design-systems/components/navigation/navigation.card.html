@@ -13,7 +13,7 @@ function Demo(){const [t,setT]=React.useState('home');const [s,setS]=React.useSt
 return <div className="col" style={{gap:16}}>
 <div style={{border:'1px solid var(--border-default)',borderRadius:'var(--radius-md)',overflow:'hidden',background:'#fff'}}>
 <AppBar back title="둔전 골목형 상점가" actions={<IconButton name="flag" label="신고"/>}/>
-<ContextBar place="둔전 시장 입구 버스정류장" onReset={()=>{}}/>
+<ContextBar place="우리의류" onReset={()=>{}}/>
 <TabBar items={[{id:'home',label:'홈',icon:'house'},{id:'fac',label:'편의시설',icon:'heart-pulse'},{id:'st',label:'상점가',icon:'store'},{id:'ft',label:'축제',icon:'party-popper'}]} value={t} onChange={setT}/>
 </div>
 <SegmentedTabs items={[{id:'a',label:'진행중'},{id:'b',label:'예정'},{id:'c',label:'종료'}]} value={s} onChange={setS}/>

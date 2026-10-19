@@ -38,7 +38,7 @@
  * 아니라 우리가 실제로 그리는 목록의 수(335/139)를 쓴다.
  */
 
-import { ANCHOR } from "./dunjeon.js";
+import { ANCHOR, STORES } from "./dunjeon.js";
 import { TODAY } from "../config.js";
 
 const M_PER_DEG_LAT = 111320;
@@ -370,6 +370,46 @@ function metersFrom(lat, lng) {
   return Math.hypot((lng - ANCHOR.lng) * M_PER_DEG_LNG, (lat - ANCHOR.lat) * M_PER_DEG_LAT);
 }
 
+/* ── 상점가 **구역** (2026-10-19, 사용자 요청) ───────────────────────────────────
+   골목형 상점가는 점이 아니라 지정된 구역이다. 지도에 핀 하나만 찍으면 그것이 구역의 한 점처럼
+   읽히므로 영역을 함께 그린다. 구역 경계 좌표는 없다(구역도는 래스터 이미지 한 장 — 기능명세서 3-2)
+   그래서 시연용으로 **대략**만 그린다:
+     · 둔전 — 점포 335곳 좌표의 볼록 껍질 (명세서 3-2 의 대안 1). 구멍(주택가·주차장 제외)은 무시한다.
+     · 나머지 31곳 — 대표 좌표 중심의 원. 반지름은 점포 수에서 정한다(실제 면적이 아니다).
+   목데이터라 값이 거짓 정밀을 갖지 않게, 화면은 이것을 「대략의 구역」으로만 쓴다. */
+function convexHull(points) {
+  const pts = [...points].sort((a, b) => a.lng - b.lng || a.lat - b.lat);
+  if (pts.length < 3) return pts;
+  const cross = (o, a, b) => (a.lng - o.lng) * (b.lat - o.lat) - (a.lat - o.lat) * (b.lng - o.lng);
+  const build = list => {
+    const out = [];
+    for (const p of list) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], p) <= 0) out.pop();
+      out.push(p);
+    }
+    out.pop();
+    return out;
+  };
+  return build(pts).concat(build([...pts].reverse()));
+}
+
+function circlePath(lat, lng, radiusM, steps = 28) {
+  const dLat = radiusM / M_PER_DEG_LAT;
+  const dLng = radiusM / M_PER_DEG_LNG_AT(lat);
+  return Array.from({ length: steps }, (_, i) => {
+    const t = (i / steps) * Math.PI * 2;
+    return { lat: +(lat + Math.sin(t) * dLat).toFixed(6), lng: +(lng + Math.cos(t) * dLng).toFixed(6) };
+  });
+}
+const M_PER_DEG_LNG_AT = lat => 111320 * Math.cos((lat * Math.PI) / 180);
+
+function areaOf(id, lat, lng, stores) {
+  if (id === "dunjeon") {
+    return convexHull(STORES.filter(s => s.lat && s.lng).map(s => ({ lat: s.lat, lng: s.lng })));
+  }
+  return circlePath(lat, lng, Math.min(320, Math.max(70, 12 * Math.sqrt(stores))));
+}
+
 export const DISTRICTS = RAW
   .map(([id, query, name, gu, dong, addr, stores, onnuri, lat, lng]) => ({
     id, kind: "district", name, gu, addr, stores, onnuri, lat, lng,
@@ -379,6 +419,8 @@ export const DISTRICTS = RAW
     dist: Math.round(metersFrom(lat, lng) / 100) * 100,
     homepage: GUIDE_BASE + query,
     festival: FESTIVAL_BY_DISTRICT[id] || null,
+    /* 대략의 구역 경계 [{lat,lng}] — 위 helper 주석. (`area` 는 목록 줄의 소재 표기라 이름이 겹친다) */
+    zone: areaOf(id, lat, lng, stores),
   }))
   .sort((a, b) => a.dist - b.dist);
 

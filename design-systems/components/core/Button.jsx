@@ -6,6 +6,9 @@ const VARIANTS = {
   secondary: { background: "var(--brand-secondary)", color: "var(--text-on-dark)", border: "none" },
   soft: { background: "var(--brand-primary-soft)", color: "var(--yong-green-800)", border: "none" },
   outline: { background: "var(--surface-card)", color: "var(--text-heading)", border: "var(--stroke-hairline) solid var(--border-strong)" },
+  /* 회색 알약 [OO 더보기 >] — 목록 맨 아래에서 더 있다는 것을 알리는 약한 단추 (2026-10-19, 사용자 요청).
+     바탕이 회색이라 카드 사이에서 주 행동처럼 보이지 않는다. 모서리는 알약이다 */
+  subtle: { background: "var(--surface-sunken)", color: "var(--text-heading)", border: "none", borderRadius: "var(--radius-pill)" },
   ghost: { background: "transparent", color: "var(--text-body)", border: "none" },
   danger: { background: "var(--state-danger)", color: "var(--text-on-dark)", border: "none" },
 };
