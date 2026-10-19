@@ -66,18 +66,23 @@ export function DistrictInfo({ district, festival, onBack, onClose, onOpenFestiv
             먼저 읽힌다. 점포 수 표보다 위다 */}
         {festival ? (
           <section>
-            <SectionHeader title={festival.state === "진행중" ? "진행 중인 축제" : "상점가 축제"} />
+            <SectionHeader title="축제 및 행사" />
             <FestivalCard festival={festival} base={base} pose={festival.pose}
               onClick={() => onOpenFestival(festival)} />
           </section>
         ) : null}
 
+        {/* 정보 표 위 제목 (2026-10-19, 사용자 요청) — 축제 구역과 같은 SectionHeader. 축제 구역 제목은 축제 상태와 상관없이
+            「축제 및 행사」 하나다(「진행 중인 축제」 · 「상점가 축제」로 바뀌지 않는다) */}
+        <section>
+          <SectionHeader title="상점가 현황" />
         <InfoList items={[
           { label: "가게 수", value: `${d.stores}곳` },
           ...(d.mainBiz ? [{ label: "주요 업종", value: d.mainBiz.join(", ") }] : []),
           { label: "온누리 가맹점", value: d.onnuri != null ? `${d.onnuri}곳` : "-" },
           { label: "거리", value: km },
         ]} />
+        </section>
 
 
         <DetailNotice emergency={false}>
