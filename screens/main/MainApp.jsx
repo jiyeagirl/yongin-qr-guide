@@ -653,7 +653,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      지름길과 부딪히는 경우가 아니면 그 자리에 둘 이유가 남는다. 아무것도 안 걸렸으면
      아무것도 건드리지 않는다 — 대개 이 경우다. */
   const showStoreOnMap = s => {
-    /* 카드가 들고 있는 것은 note("이번 주 조회 1위")가 붙은 사본이다. 지도와 목록이 보는
+    /* 카드가 들고 있는 것은 목록용으로 복사한 사본일 수 있다. 지도와 목록이 보는
        원본을 id 로 되찾는다 — 사본을 그대로 고르면 목록용 문구가 selected 에 딸려 간다 */
     const store = d.stores.find(x => x.id === s.id) || s;
     if (tab !== "district") changeTab("district");

@@ -305,8 +305,7 @@ export function discoverPicks(stores) {
   return {
     popular: [...live]
       .sort((a, b) => viewsOf(b) - viewsOf(a))
-      .slice(0, DISCOVER_PICK)
-      .map((s, i) => ({ ...s, note: i === 0 ? "이번 주 조회 1위" : `조회 ${viewsOf(s).toLocaleString()}회` })),
+      .slice(0, DISCOVER_PICK),   /* 조회 문구(「이번 주 조회 1위」·「조회 n회」)는 붙이지 않는다 — 순위가 곧 순서이고 한 곳만 문구가 달라 어색했다 (2026-10-19, 사용자 요청) */
   };
 }
 
