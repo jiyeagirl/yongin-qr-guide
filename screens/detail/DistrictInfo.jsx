@@ -41,7 +41,7 @@ export function DistrictInfo({ district, festival, onBack, onClose, onOpenFestiv
     <DetailPage title={spaced(d.name)} onBack={onBack} onClose={onClose}
       /* [지도 보기] — 이 상점가의 점포를 지도와 목록으로 본다 (2026-10-19, 사용자 요청). 상점가 탭으로 옮기지 않고
          둘러보기 안에서 한 칸 더 들어간다(DistrictMap). 지금 서 있는 상점가는 상점가 탭이 그 지도라 단추가 없다 */
-      footer={onOpenMap ? <Button variant="primary" size="lg" icon="map" block onClick={onOpenMap}>지도 보기</Button> : undefined}>
+      footer={onOpenMap ? <Button variant="primary" size="lg" icon="store" block onClick={onOpenMap}>점포 둘러보기</Button> : undefined}>
       <DetailBody>
         {/* 점포 · 축제 상세와 같은 머리 — 왼쪽 아이콘 하나 + 이름 + 그 아래 작은 주소 (2026-10-19, 사용자 요청) */}
         <header>

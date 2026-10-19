@@ -4,7 +4,8 @@ import {
   Badge, Button, ListRow, Icon, Notice, festivalBadge, CourseCard, PhotoStrip,
 } from "../../design-systems/index.js";
 import { whenLabel } from "../main/data/districts.js";
-import { COUPON, COUPON_CHANGE, couponState, openCoupon } from "../boot/CouponFlow.jsx";
+import { COUPON } from "../boot/CouponFlow.jsx";
+import { CouponCard } from "./CouponCard.jsx";
 
 /* S09 축제 상세 (기능명세서 v1.1 4장 S09 행).
  * 관련 기능: U-FT-02(축제 상세) · U-FT-04(부스 위치) `C` · U-FT-05(당일 임시시설) `C`
@@ -49,14 +50,6 @@ import { COUPON, COUPON_CHANGE, couponState, openCoupon } from "../boot/CouponFl
  */
 export function FestivalDetail({ festival, courses = [], entry = false, onBack, onOpenDistrict, onDistrict, onOpenCourse }) {
   const f = festival;
-  /* 우측 상단 [쿠폰] (2026-10-19, 사용자 요청) — 쿠폰이 걸린 축제에서만 선다. 팝업을 닫거나 쿠폰 화면에서
-     나가도 여기서 다시 연다. 상태가 바뀌면 글자를 다시 읽는다 (COUPON_CHANGE) */
-  const [couponSt, setCouponSt] = React.useState(couponState);
-  React.useEffect(() => {
-    const h = () => setCouponSt(couponState());
-    window.addEventListener(COUPON_CHANGE, h);
-    return () => window.removeEventListener(COUPON_CHANGE, h);
-  }, []);
   const ended = f.state === "종료";
   const live = f.state === "진행중";
 
@@ -115,18 +108,8 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
               <Icon name="party-popper" size={26} color="var(--yong-amber-500)" />
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              {/* 제목 행 — [쿠폰]은 이 행의 오른쪽 끝에만 선다 (2026-10-19, 사용자 요청). 아래 실제 축제명은
-                  **다른 행**이라 버튼 폭(「사용완료」일 때 더 넓다)에 밀려 접히지 않는다 */}
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--space-2)" }}>
-              <h2 style={{ flex: 1, minWidth: 0, font: "var(--type-title-2)", letterSpacing: "var(--ls-snug)",
+              <h2 style={{ minWidth: 0, font: "var(--type-title-2)", letterSpacing: "var(--ls-snug)",
                 color: "var(--text-heading)", wordBreak: "keep-all" }}>{f.short || f.name}</h2>
-              {f.id === COUPON.festivalId ? (
-                <Button size="xs" variant={couponSt === "used" ? "outline" : "mint"} icon="ticket" onClick={openCoupon}
-                  style={{ flex: "0 0 auto", whiteSpace: "nowrap" }}>
-                  {couponSt === "used" ? "사용완료" : "쿠폰"}
-                </Button>
-              ) : null}
-              </div>
               {/* 실제 축제명 (2026-08-20). 제목은 짧은 이름이고 — 여섯 축제가 모두
                   "OO 골목축제"라 목록에서 견주기 좋다 — 이 줄이 현수막에 적힌 그 이름이다.
                   카드에서 이미 보고 들어온 줄이라 상세에서 사라지면 딴 축제로 읽힌다.
@@ -161,6 +144,9 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
             아래 내용은 지난 행사 기준입니다.
           </Notice>
         ) : null}
+
+        {/* 쿠폰 칸 (2026-10-19, 사용자 요청) — 팝업과 제목 옆 [쿠폰] 단추를 대신한다. 쿠폰이 걸린 축제에서만 선다 */}
+        {f.id === COUPON.festivalId ? <CouponCard /> : null}
 
         {/* 축제 사진 자리 (2026-10-16, 사용자 요청) — 점포 상세와 같은 부품이다. 자료(`festival.images`)가
             들어오면 같은 자리에 사진이 선다. */}

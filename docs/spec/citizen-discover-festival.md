@@ -56,7 +56,7 @@
 | 축제 머리말 [전체보기] | `#/festivals` |
 | 코스 카드 | `#/course/:id` |
 | 인기 매장 행 | `showStoreOnMap` — 상점가 탭으로 옮겨 그 점포를 지도에서 켠다 (아래) |
-| 상점가 행 | `#/district/{id}` S13-A 상점가 안내 (2026-10-19 — 이전엔 상점가 탭으로 옮겨 핀을 켰다). 안내의 [지도 보기]가 `#/district/{id}/map` DistrictMap 을 연다(둘러보기 안, 점포 목록 포함) |
+| 상점가 행 | `#/district/{id}` S13-A 상점가 안내 (2026-10-19 — 이전엔 상점가 탭으로 옮겨 핀을 켰다). 안내의 [점포 둘러보기]가 `#/district/{id}/map` DistrictMap 을 연다(둘러보기 안, 점포 목록 포함) |
 | 상점가 머리말 [전체보기] | `#/districts` (S13) |
 
 점포 행(인기 매장)을 눌렀을 때 (`MainApp.showStoreOnMap`):

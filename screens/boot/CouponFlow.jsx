@@ -55,10 +55,11 @@ export const COUPON_OPEN = "yongin:coupon-open";
 export const COUPON_CHANGE = "yongin:coupon-change";
 export const couponState = () => { const v = read(null); return v === "used" ? "used" : v === "issued" ? "issued" : "none"; };
 export const openCoupon = () => window.dispatchEvent(new Event(COUPON_OPEN));
-
-/* 「오늘 하루 보지 않기」 — 팝업(FestivalCoupon)이 쓴다. 날짜만 적는다 */
-const HIDE_KEY = `yongin.coupon.hide.${COUPON.id}`;
-const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+/* 받기 — 쿠폰 칸의 다운로드 아이콘이 부른다. 발급만 하고 화면은 열지 않는다(칸이 「받음」으로 바뀐다) */
+export const issueCoupon = () => { if (couponState() === "none") { write("issued"); window.dispatchEvent(new Event(COUPON_CHANGE)); } };
+/* 사용 일시 — 상인 확인으로 사용 처리한 시각(ISO). 완료 화면이 적는다 */
+const USED_AT = `${KEY}.usedAt`;
+export const couponUsedAt = () => get(USED_AT);
 
 const hash = t => { let h = 5381; for (const c of t) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; return String(h); };
 const ACCOUNTS = `yongin.coupon.accounts`;
@@ -80,7 +81,7 @@ const logIn = (id, pw) => {
 function clearAll() {
   const all = accounts();
   Object.keys(all).forEach(id => write(null, id));
-  put(ACCOUNTS, null); put(SESSION, null); write(null); put(HIDE_KEY, null);
+  put(ACCOUNTS, null); put(SESSION, null); write(null); put(USED_AT, null);
 }
 
 const BASE = "../../design-systems/";
@@ -268,125 +269,191 @@ function Done({ onEnter }) {
   );
 }
 
-/* ── 축제 QR 진입의 쿠폰 팝업 (2026-10-19, 사용자 요청) ─────────────────────────
-   축제 QR(qr-004)로 들어오면 **셸 위에** 가운데 직사각형 팝업이 뜨고 나머지는 어둡게 깔린다
-   (앱의 이벤트 팝업 모양 — 아래 [오늘 하루 보지 않기 | 닫기] 줄). A안이다(가입 없이 발급).
-   [쿠폰 받기] → 상인에게 보여주는 쿠폰(C2, 전체화면) → 상인 확인 → 확인 완료(C3).
-   셸은 이 아래에서 그대로 서 있다(U-CM-16 — 셸을 다시 세우지 않는다).
-
-   이미 받은 쿠폰이 있으면(다시 찍음) [받은 쿠폰 보기]가 되고 「오늘 하루 보지 않기」는 없다 —
-   받은 쿠폰을 상인에게 보여줄 길이 이 팝업뿐이다. 이미 쓴 쿠폰이면 뜨지 않는다.
+/* ── 축제 쿠폰 층 (2026-10-19, 사용자 요청) ─────────────────────────────────────
+   축제 QR 로 들어와도 **팝업이 뜨지 않는다.** 쿠폰은 축제 상세 본문의 「쿠폰」 칸(detail/CouponCard.jsx)에서 받고,
+   그 칸이 `openCoupon()` 을 부르면 여기서 전체화면 층이 열린다: 받기 전이면 곧바로 발급하고 상인에게 보이는 쿠폰(C2),
+   받은 뒤면 같은 쿠폰 화면, 쓴 뒤면 확인 완료(C3). A안이다(가입 없이 발급). 셸은 이 아래에서 그대로 서 있다(U-CM-16).
    저장은 위 localStorage 이다. 지우려면 `?qr=qr-004&popup=reset` 으로 연다. */
 /* `fixed` 가 아니라 `absolute` 다 — 데스크톱 검수 틀(#root 390×844)을 벗어나 브라우저 창 전체를 덮지 않는다.
    그래서 #root 가 위치 기준이어야 한다(index.html 의 `#root { position: relative }`). 휴대폰에서는 둘이 같다. */
 const LAYER = { position: "absolute", inset: 0, zIndex: "var(--z-modal)" };
-
-function Offer({ issued, onGet, onHide, onClose }) {
-  React.useEffect(() => {
-    const onKey = e => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const barBtn = { flex: 1, padding: "var(--space-3) var(--space-2)", background: "none", border: "none",
-    cursor: "pointer", font: "var(--type-label)", color: "var(--text-muted)", minHeight: "var(--tap-min)" };
-
-  return (
-    <div style={{ ...LAYER, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "var(--gutter-screen)" }}>
-      {/* 나머지는 어둡게 — 손끝을 받는 막. 눌러도 닫히지 않는다(단추로만 닫는다) */}
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0, 0, 0, 0.62)" }} />
-
-      <div role="dialog" aria-modal="true" aria-label={COUPON.name}
-        style={{ position: "relative", width: "100%", maxWidth: 340, maxHeight: "100%",
-          display: "flex", flexDirection: "column", borderRadius: "var(--radius-card)", overflow: "hidden",
-          boxShadow: "var(--shadow-raised)" }}>
-        <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain",
-          background: "var(--surface-card)", padding: "var(--space-6) var(--space-5) var(--space-5)",
-          display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)", textAlign: "center" }}>
-          <Badge tone="accent">{COUPON.eyebrow}</Badge>
-          <Mascot pose="excited" size={88} base={BASE} />
-          <p style={{ font: "var(--type-title-3)", color: "var(--text-heading)", ...WRAP }}>{COUPON.name}</p>
-          <p style={{ font: "var(--type-display)", color: "var(--brand-primary)" }}>{COUPON.benefit}</p>
-          <ul style={{ listStyle: "none", margin: 0, padding: 0, width: "100%", display: "flex",
-            flexDirection: "column", gap: 4, textAlign: "left" }}>
-            {COUPON.conditions.map(t => (
-              <li key={t} style={{ display: "flex", gap: 6, alignItems: "flex-start",
-                font: "var(--type-caption)", color: "var(--text-body)", ...WRAP }}>
-                <span style={{ flex: "0 0 auto", marginTop: 1, display: "inline-flex" }}>
-                  <Icon name="check" size={14} color="var(--brand-primary)" />
-                </span>
-                <span>{t}</span>
-              </li>
-            ))}
-          </ul>
-          <Button block size="lg" icon="ticket" onClick={onGet}>{issued ? "받은 쿠폰 보기" : "쿠폰 받기"}</Button>
-        </div>
-        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "stretch", background: "var(--surface-card)",
-          borderTop: "var(--stroke-hairline) solid var(--border-default)" }}>
-          {issued ? null : (
-            <>
-              <button type="button" onClick={onHide} style={barBtn}>오늘 하루 보지 않기</button>
-              <span aria-hidden="true" style={{ width: 1, margin: "var(--space-2) 0", background: "var(--border-default)" }} />
-            </>
-          )}
-          <button type="button" onClick={onClose} style={{ ...barBtn, fontWeight: "var(--fw-bold)", color: "var(--text-heading)" }}>닫기</button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* 전체화면 층 — 상인에게 보여주는 C2 · C3 가 셸 위에 덮인다 */
 function Layer({ children }) {
   return <div style={LAYER}>{children}</div>;
 }
 
-export function FestivalCoupon({ auto = true }) {
-  /* ?popup=reset — 저장된 상태(받음 · 사용 · 오늘 하루 보지 않기)를 지우고 처음부터 연다 (검수용) */
-  const [fresh] = React.useState(() => {
-    try { if (new URLSearchParams(location.search).get("popup") === "reset") { clearAll(); return true; } } catch { /* 주소를 못 읽는 환경 */ }
-    return false;
-  });
-  const [issued, setIssued] = React.useState(() => read(null) === "issued");
-  const [step, setStep] = React.useState(() => {
-    if (!auto) return "closed";   /* 축제 QR 진입이 아니면 스스로 뜨지 않고 상세의 [쿠폰]이 부를 때만 열린다 */
-    const saved = read(null);
-    if (saved === "used") return "closed";
-    if (saved === "issued") return "offer";
-    return get(HIDE_KEY) === today() ? "closed" : "offer";
-  });
+/* 쿠폰 사용 흐름 (2026-10-19, 사용자 요청) — 축제 상세의 쿠폰 칸(CouponCard)에서 시작한다.
+     받기(칸의 ⤓) → 받음 → 칸을 누르면 [바텀시트: 쿠폰 설명 + 「쿠폰 사용하기」]
+     → [직원 확인 화면: 다른 바탕색, 「직원에게 이 화면을 보여주세요」 + 「사용 확인」]
+     → [확인 팝업: 「되돌릴 수 없어요」] → 사용 처리 → [완료 화면: 흐르는 현재 시각 + 사용 일시]
+   직원 확인 화면에서 뒤로 가면 아직 쓴 것이 아니라서 쿠폰은 **미사용 그대로**다. 사용 처리는 확인 팝업을 지난 뒤에만 한다.
+   완료 화면의 시각이 초 단위로 흘러 사진·캡처가 아닌 실제 화면임을 직원이 알아본다. */
+const pad = n => String(n).padStart(2, "0");
+const clock = d => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const stamp = d => `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${clock(d)}`;
 
-  /* 상세의 [쿠폰] — 받은 쿠폰이 있으면 곧장 쿠폰 화면, 없으면 받기 팝업, 쓴 뒤면 확인 완료 */
+const Dim = ({ onClick, children, align = "flex-end" }) => (
+  <div style={{ ...LAYER, display: "flex", alignItems: align, justifyContent: "center" }}>
+    <div onClick={onClick} style={{ position: "absolute", inset: 0, background: "rgba(0, 0, 0, 0.55)" }} />
+    {children}
+  </div>
+);
+
+/* 받은 쿠폰의 바텀시트 — 설명과 [쿠폰 사용하기]. 바깥을 누르거나 [닫기]로 내린다 */
+function UseSheet({ onUse, onClose }) {
   React.useEffect(() => {
-    const open = () => {
-      const st = couponState();
-      setIssued(st === "issued");
-      setStep(st === "used" ? "done" : st === "issued" ? "ticket" : "offer");
-    };
+    const onKey = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <Dim onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={COUPON.name}
+        style={{ position: "relative", width: "100%", maxWidth: "var(--screen-max)", maxHeight: "88%", overflowY: "auto",
+          background: "var(--surface-card)", borderRadius: "var(--radius-card) var(--radius-card) 0 0",
+          padding: "var(--space-5) var(--gutter-screen) var(--space-5)", boxShadow: "var(--shadow-raised)",
+          display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+        <span aria-hidden="true" style={{ alignSelf: "center", width: 36, height: 4, borderRadius: 2, background: "var(--border-strong)" }} />
+        <Badge tone="accent" style={{ alignSelf: "flex-start" }}>{COUPON.eyebrow}</Badge>
+        <div>
+          <h2 style={{ font: "var(--type-title-2)", color: "var(--text-heading)", ...WRAP }}>{COUPON.name}</h2>
+          <p style={{ marginTop: 2, font: "var(--type-title-1)", color: "var(--brand-primary)" }}>{COUPON.benefit}</p>
+        </div>
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+          {COUPON.conditions.map(t => (
+            <li key={t} style={{ display: "flex", gap: 6, alignItems: "flex-start", font: "var(--type-body)", color: "var(--text-body)", ...WRAP }}>
+              <span style={{ flex: "0 0 auto", marginTop: 2, display: "inline-flex" }}><Icon name="check" size={18} color="var(--brand-primary)" /></span>
+              <span>{t}</span>
+            </li>
+          ))}
+        </ul>
+        <Button block size="lg" icon="ticket" onClick={onUse}>쿠폰 사용하기</Button>
+        <p style={{ font: "var(--type-caption)", color: "var(--text-muted)", textAlign: "center", ...WRAP }}>
+          매장에서 결제할 때 눌러주세요
+        </p>
+        <TextButton tone="muted" onClick={onClose} style={{ alignSelf: "center" }}>닫기</TextButton>
+      </div>
+    </Dim>
+  );
+}
+
+/* 직원 확인 화면 — 앱 바탕색과 다른 짙은 바탕이라 손님 화면이 아니라는 것이 한눈에 읽힌다. 뒤로 가면 미사용 */
+function StaffScreen({ onConfirm, onBack }) {
+  const [ask, setAsk] = React.useState(false);
+  React.useEffect(() => {
+    const onKey = e => { if (e.key === "Escape") { if (ask) setAsk(false); else onBack(); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ask, onBack]);
+  return (
+    <div style={{ ...LAYER, display: "flex", justifyContent: "center", background: "var(--surface-dark)", color: "#fff" }}>
+      <div style={{ position: "relative", width: "100%", maxWidth: "var(--screen-max)", height: "100%",
+        display: "flex", flexDirection: "column" }}>
+        <header style={{ flex: "0 0 auto", minHeight: "var(--appbar-h)", padding: "6px var(--space-2)", display: "flex", alignItems: "center" }}>
+          <button type="button" onClick={onBack} aria-label="뒤로" data-back
+            style={{ width: 44, height: 44, display: "inline-flex", alignItems: "center", justifyContent: "center",
+              background: "none", border: "none", color: "inherit", cursor: "pointer" }}>
+            <Icon name="chevron-left" size={24} />
+          </button>
+        </header>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "var(--space-4) var(--gutter-screen)",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--space-5)", textAlign: "center" }}>
+          <h1 style={{ font: "var(--type-title-1)", ...WRAP }}>직원에게 이 화면을 보여주세요</h1>
+          <div style={{ width: "100%", background: "var(--surface-card)", color: "var(--text-body)", borderRadius: "var(--radius-card)",
+            padding: "var(--space-6) var(--space-5)", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-2)" }}>
+            <Badge tone="brand">{COUPON.eyebrow}</Badge>
+            <p style={{ font: "var(--type-title-3)", marginTop: "var(--space-2)" }}>{COUPON.name}</p>
+            <p style={{ font: "var(--type-display)", color: "var(--brand-primary)" }}>{COUPON.benefit}</p>
+            <p style={{ font: "var(--type-caption)", color: "var(--text-muted)", ...WRAP }}>{COUPON.summary}</p>
+          </div>
+        </div>
+        <div style={{ flex: "0 0 auto", padding: "var(--space-3) var(--gutter-screen) var(--space-5)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          <Button block size="lg" variant="mint" onClick={() => setAsk(true)}>사용 확인</Button>
+          <p style={{ font: "var(--type-label)", fontWeight: "var(--fw-bold)", color: "#ffb4b4", textAlign: "center", ...WRAP }}>
+            ※ 직원 전용 버튼입니다. 손님은 누르지 마세요.
+          </p>
+        </div>
+        {ask ? (
+          <Dim onClick={() => setAsk(false)} align="center">
+            <div role="alertdialog" aria-modal="true" aria-label="되돌릴 수 없어요"
+              style={{ position: "relative", width: "calc(100% - 2 * var(--gutter-screen))", maxWidth: 320, background: "var(--surface-card)",
+                color: "var(--text-body)", borderRadius: "var(--radius-card)", padding: "var(--space-5)", boxShadow: "var(--shadow-raised)",
+                display: "flex", flexDirection: "column", gap: "var(--space-3)", textAlign: "center" }}>
+              <h2 style={{ font: "var(--type-title-3)", color: "var(--text-heading)" }}>되돌릴 수 없어요</h2>
+              <p style={{ font: "var(--type-body)", color: "var(--text-muted)", ...WRAP }}>
+                사용 확인을 누르면 쿠폰이 사용 처리되어 다시 쓸 수 없어요. 결제할 때 맞나요?
+              </p>
+              <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <Button block variant="outline" onClick={() => setAsk(false)}>취소</Button>
+                <Button block onClick={onConfirm}>사용 확인</Button>
+              </div>
+            </div>
+          </Dim>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/* 사용 완료 화면 — 현재 시각이 초 단위로 흐르고 사용 일시가 적힌다 */
+function UsedScreen({ usedAt, onEnter, onClose }) {
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+  const at = usedAt ? new Date(usedAt) : null;
+  return (
+    <Layer>
+      <Frame footer={<>
+        <Button variant="primary" size="lg" icon="store" block onClick={onEnter}>상점가 둘러보기</Button>
+        <TextButton tone="muted" onClick={onClose}>닫기</TextButton>
+      </>}>
+        <Mascot pose="thumbsup" size={112} base={BASE} />
+        <h1 style={{ font: "var(--type-title-1)", color: "var(--text-heading)", textAlign: "center", ...WRAP }}>쿠폰 사용이 완료됐어요</h1>
+        <p style={{ font: "var(--type-body)", color: "var(--text-muted)", textAlign: "center", ...WRAP }}>{COUPON.name} · {COUPON.benefit}</p>
+        <div style={{ width: "100%", background: "var(--surface-card)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)",
+          padding: "var(--space-5)", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-2)" }}>
+          <span style={{ font: "var(--type-caption)", color: "var(--text-muted)" }}>현재 시각</span>
+          <span style={{ font: "var(--type-display)", color: "var(--brand-primary)", fontVariantNumeric: "tabular-nums" }}>{clock(now)}</span>
+          <span style={{ marginTop: "var(--space-2)", font: "var(--type-caption)", color: "var(--text-muted)" }}>사용 일시</span>
+          <span style={{ font: "var(--type-title-3)", color: "var(--text-heading)", fontVariantNumeric: "tabular-nums" }}>{at ? stamp(at) : "-"}</span>
+        </div>
+      </Frame>
+    </Layer>
+  );
+}
+
+export function FestivalCoupon() {
+  /* ?popup=reset — 저장된 상태(받음 · 사용)를 지우고 처음부터 연다 (검수용) */
+  React.useState(() => {
+    try { if (new URLSearchParams(location.search).get("popup") === "reset") clearAll(); } catch { /* 주소를 못 읽는 환경 */ }
+    return 0;
+  });
+  const [step, setStep] = React.useState("closed");   /* closed | sheet | staff | used */
+
+  /* 쿠폰 칸이 부른다 — 받은 쿠폰이면 바텀시트, 쓴 쿠폰이면 완료 화면 (받기는 칸이 issueCoupon 으로 직접 한다) */
+  React.useEffect(() => {
+    const open = () => { const st = couponState(); if (st === "issued") setStep("sheet"); else if (st === "used") setStep("used"); };
     window.addEventListener(COUPON_OPEN, open);
     return () => window.removeEventListener(COUPON_OPEN, open);
   }, []);
-  /* 상태가 바뀌면 상세에 알린다 */
-  React.useEffect(() => { window.dispatchEvent(new Event(COUPON_CHANGE)); }, [step, issued]);
+  React.useEffect(() => { window.dispatchEvent(new Event(COUPON_CHANGE)); }, [step]);
 
-  if (step === "offer") {
-    return <Offer issued={issued}
-      onGet={() => { if (!issued) { write("issued"); setIssued(true); } setStep("ticket"); }}
-      onHide={() => { put(HIDE_KEY, today()); setStep("closed"); }}
-      onClose={() => setStep("closed")} />;
+  const close = () => setStep("closed");
+  if (step === "sheet") return <UseSheet onUse={() => setStep("staff")} onClose={close} />;
+  /* 뒤로(onBack)는 쿠폰을 건드리지 않는다 — 미사용 그대로. 사용 처리는 확인 팝업의 [사용 확인] 뒤에만 */
+  if (step === "staff") {
+    return <StaffScreen onBack={close} onConfirm={() => { write("used"); put(USED_AT, new Date().toISOString()); setStep("used"); }} />;
   }
-  if (step === "ticket") return <Layer><Ticket onConfirm={() => { write("used"); setStep("done"); }} onClose={() => setStep("closed")} /></Layer>;
   /* [상점가 둘러보기] — 아래에 서 있는 축제 상세까지 걷어내고 상점가 탭(셸)에 선다. 상세 하단의
      같은 이름 버튼이 하는 일이다. 해시를 지우고 라우터에 알리면(popstate) 셸의 오버레이가 닫힌다 */
-  if (step === "done") {
-    return <Layer><Done onEnter={() => {
+  if (step === "used") {
+    return <UsedScreen usedAt={couponUsedAt()} onClose={close} onEnter={() => {
       try {
         window.history.replaceState({ shellDepth: 0 }, "", `${location.pathname}${location.search}`);
         window.dispatchEvent(new Event("popstate"));
-      } catch { /* 주소를 못 바꾸는 환경 — 팝업만 닫는다 */ }
-      setStep("closed");
-    }} /></Layer>;
+      } catch { /* 주소를 못 바꾸는 환경 — 층만 닫는다 */ }
+      close();
+    }} />;
   }
   return null;
 }
