@@ -61,7 +61,7 @@ import { STORE_AS_OF } from "../main/config.js";
  * 아니다. "조회 1,240회"는 가게를 고르는 데 도움이 되지 않으면서 적은 쪽 가게에는 불리하게
  * 작용한다. 둘러보기 탭의 "이번 주 조회 1위" 처럼 순위로 감싸 노출하는 자리는 따로 있다.
  */
-export function StoreDetail({ store, district, festival, courses = [], entry = false, onBack, onReport, onCopied, onDistrict, onOpenFestival, onOpenCourse }) {
+export function StoreDetail({ store, district, festival, courses = [], entry = false, onBack, onReport, onCopied, onDistrict, onRoute, onOpenFestival, onOpenCourse }) {
   const s = store;
 
   return (
@@ -94,6 +94,12 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
                   wordBreak: "keep-all", overflowWrap: "anywhere" }}>{s.addr}</p>
               ) : null}
             </div>
+            {/* 길찾기 (2026-10-19, 사용자 요청) — 하단 버튼이 [상점가 둘러보기]로 바뀌면서 길찾기가 갈 곳을 잃어
+                상호 오른쪽에 작게 둔다. 아이콘은 S05 하단 버튼과 같은 발자국이다 */}
+            {onRoute ? (
+              <Button variant="primary" size="xs" icon="footprints" onClick={onRoute}
+                style={{ flex: "0 0 auto", alignSelf: "flex-start" }}>길찾기</Button>
+            ) : null}
           </div>
         </header>
 

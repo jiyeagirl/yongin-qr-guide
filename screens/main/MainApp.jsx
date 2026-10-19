@@ -613,7 +613,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     restoreSnap.current = null;
     setSnap("collapsed");
     if (mapApi.current) mapApi.current.reset();
-    say("QR스캔 위치로 이동했습니다");
+    say(qr && qr.backLabel ? `${qr.backLabel} 이동했습니다` : "QR스캔 위치로 이동했습니다");
   };
 
   /* ── `showFacilityOnMap` 이 여기 있었다 (2026-08-24 삭제, 사용자 요청) ────────
@@ -1022,6 +1022,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         entry={!(window.history.state && window.history.state.shellDepth > 0)}
         onReport={() => goReport(target)}
         onDistrict={() => { closeAll(); changeTab("district"); }}
+        onRoute={() => goRoute(target)}
         onCopied={copied} />
     );
 
@@ -1061,7 +1062,8 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
           2차의 언어·음성·글자 크기 버튼 자리는 코드에서만 비워둔다 (화면에 노출하지 않는다).
           오류 신고는 이 화면에 두지 않는다 — 신고 대상이 특정되는 상세 화면에서 진입한다 */}
       <div style={{ position: "relative", zIndex: "var(--z-filter)", flex: "0 0 auto" }}>
-        <ContextBar place={d.anchor.name}
+        <ContextBar place={qr && qr.bannerLabel ? null : d.anchor.name}
+          label={qr && qr.bannerLabel ? qr.bannerLabel : undefined}
           leading={<Mascot pose="hello" size={22} base="../../design-systems/" alt="" />} />
       </div>
 
@@ -1209,7 +1211,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
                   글자를 다시 떼지는 않는다 — 그림 하나로는 어디로 가는 단추인지 배워야
                   알기 때문에 붙인 글자다 (v1.9). 손가락 자리도 44px 그대로다. */
             subtle
-            items={[{ icon: "qr-code", label: "스캔 위치로", text: "스캔 위치로", onClick: backToAnchor }]} />
+            items={[{ icon: qr && qr.backLabel ? "map-pin" : "qr-code", label: qr && qr.backLabel ? qr.backLabel : "스캔 위치로", text: qr && qr.backLabel ? qr.backLabel : "스캔 위치로", onClick: backToAnchor }]} />
         )}
 
         {/* ── 둘러보기 탭 (S04) — 시트가 아니라 화면 전체를 쓰는 정보 패널 ────────
@@ -1326,6 +1328,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
             ? <FacilitySummary
                 counts={FACILITY_TYPES.reduce((o, t) => ({ ...o, [t]: facilityByType[t].length }), {})}
                 warnings={facilityNotices}
+                basis={qr && qr.basisLabel ? qr.basisLabel : undefined}
                 /* 닫힘을 셸이 들고 있다. 이 줄은 공공시설 탭일 때만 그려져서 탭을 옮기면
                    언마운트되는데, 그 안에 두면 둘러보기를 갔다 올 때마다 말풍선이 다시 열려
                    같은 경고를 몇 번이고 닫아야 했다. 셸은 탭이 바뀌어도 서 있다 (U-CM-16). */
