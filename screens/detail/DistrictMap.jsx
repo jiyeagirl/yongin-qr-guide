@@ -1,9 +1,10 @@
 import React from "react";
 import {
   DetailPage, KakaoMap, MapPreviewCard, MapFilterOverlay, Sheet, Notice,
-  StoreRow, Pagination, CATEGORY_LABELS, DetailNotice, ListControls, OnnuriBadge,
+  StoreRow, Pagination, CATEGORY_LABELS, DetailNotice, ListControls, OnnuriChip,
 } from "../../design-systems/index.js";
 import { KAKAO_APP_KEY } from "../main/config.js";
+import { metersFrom } from "../main/data/districts.js";
 
 /* 다른 상점가의 지도 보기 (2026-10-19 신설, 사용자 요청. 같은 날 건물별 목록 → 상점가 탭형으로 바뀜).
  * `#/district/:id/map` — 둘러보기 탭에서 상점가를 누르면 상점가 안내(DistrictInfo)가 열리고, 거기의
@@ -24,8 +25,8 @@ import { KAKAO_APP_KEY } from "../main/config.js";
  * 길찾기가 그대로 쓴다). 점포 자료가 없는 상점가는 지도에 중심 핀 하나 + 「준비 중」이다 — 이름만 바뀐 가짜
  * 점포를 만들지 않는다 (DistrictInfo 머리말과 같은 판단).
  *
- * 온누리 가맹점은 **수**만 적는다(시 안내 17곳 — 어느 점포인지는 모른다). 켜고 끄는 칩과 정렬은 두지 않는다: 이 점포들은 온누리 가맹 여부와 QR 지점 기준 거리를 모른다
- * (data/dongbaekStores.js 머리말). 점포 좌표는 건물 단위의 대략 위치라 그 사실을 아래 고지가 적는다. */
+ * 시트 제어 줄에는 상점가 탭과 같이 [온누리 가맹점] 칩과 거리순/인기순 드롭다운이 있다. 이 점포들은 온누리 가맹 여부를 몰라
+ * 시연용으로 시 안내의 수만큼 표시하고, 거리순은 QR 스캔 지점 기준이다(줄에는 거리를 적지 않는다) (data/districtStores.js 머리말). 점포 좌표는 건물 단위의 대략 위치라 그 사실을 아래 고지가 적는다. */
 const spaced = name => String(name || "").replace(/(\S)골목형상점가$/, "$1 골목형 상점가");
 const PAGE = 20;
 const CAT_ORDER = ["food", "cafe", "shop", "life", "edu", "culture", "etc"];
@@ -38,6 +39,8 @@ export function DistrictMap({ district, stores = [], onBack, onClose, onOpenStor
   const [ready, setReady] = React.useState(false);
   const [q, setQ] = React.useState("");
   const [cats, setCats] = React.useState([]);
+  const [onnuriOnly, setOnnuriOnly] = React.useState(false);
+  const [sort, setSort] = React.useState("distance");
   const [page, setPage] = React.useState(1);
   const [snap, setSnap] = React.useState("half");
   const [activeId, setActiveId] = React.useState(null);
@@ -54,11 +57,18 @@ export function DistrictMap({ district, stores = [], onBack, onClose, onOpenStor
   /* 지도 핀과 목록이 같은 배열을 본다 — 「12곳」과 지도의 핀 수가 어긋나지 않게 */
   const rows = React.useMemo(() => {
     const t = q.trim();
-    return stores.filter(s => (cats.length === 0 || cats.includes(s.cat))
+    const f = stores.filter(s => (cats.length === 0 || cats.includes(s.cat))
+      && (!onnuriOnly || s.onnuri)
       && (!t || s.name.includes(t) || s.biz.includes(t) || (s.building || "").includes(t)));
-  }, [stores, cats, q]);
+    /* 거리순 = QR 스캔 지점에서 가까운 순(길찾기 출발지와 같은 기준 — 상점가 탭과 같다). 거리 값은 줄에 적지 않는다.
+       인기순은 조회수 — 이 점포들은 조회 기록이 없어 0 이라 거리순과 같아진다 */
+    const far = s => metersFrom(s.lat, s.lng);
+    return sort === "popular"
+      ? [...f].sort((a, b) => b.views - a.views || far(a) - far(b))
+      : [...f].sort((a, b) => far(a) - far(b));
+  }, [stores, cats, onnuriOnly, q, sort]);
 
-  React.useEffect(() => { setPage(1); }, [cats, q]);
+  React.useEffect(() => { setPage(1); }, [cats, onnuriOnly, q, sort]);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE));
   const safePage = Math.min(page, pageCount);
@@ -135,18 +145,16 @@ export function DistrictMap({ district, stores = [], onBack, onClose, onOpenStor
               closeIcon="map"
               closeLabel="지도"
               topInset={filterH}
-              scrollKey={`${cats.join(",")}|${q}|${safePage}`}>
+              scrollKey={`${cats.join(",")}|${onnuriOnly}|${sort}|${q}|${safePage}`}>
               <div style={{ paddingBottom: "var(--space-9)" }}>
-                {/* 목록 제어 (sticky) — 결과 수 + 온누리 가맹점 수. 상점가 탭 시트의 같은 줄이다.
-                    가맹 **수**는 시 안내(17곳)라 어느 점포가 가맹인지는 모른다 — 그래서 켜고 끄는 칩이 아니라 수만 적는다 */}
+                {/* 목록 제어 (sticky) — 결과 수 + 거리순 드롭다운 + [온누리 가맹점] 칩. 상점가 탭 시트의 같은 줄이다
+                    (2026-10-19, 사용자 요청). 점포별 가맹 여부는 자료에 없어 시연용 표시다 (data/districtStores.js 머리말) */}
                 <ListControls
                   title={`${cats.length === 1 ? CATEGORY_LABELS[cats[0]] : cats.length > 1 ? `업종 ${cats.length}종` : "전체"} ${rows.length}곳`}
-                  aside={d.onnuri != null ? (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, font: "var(--type-caption)",
-                      color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                      <OnnuriBadge size="sm" />가맹점 {d.onnuri}곳
-                    </span>
-                  ) : null} />
+                  sort={sort}
+                  onSortChange={setSort}
+                  sortOptions={[{ id: "distance", label: "거리순" }, { id: "popular", label: "인기순" }]}
+                  aside={<OnnuriChip checked={onnuriOnly} onChange={setOnnuriOnly} />} />
                 <div style={{ padding: "var(--space-2) var(--gutter-screen) 0" }}>
                   {rows.length === 0 ? (
                     <Notice tone="danger" size="sm">

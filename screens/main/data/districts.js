@@ -131,7 +131,7 @@ const FESTIVAL_RAW = [
     "2026-10-16", "2026-10-18", "15:00~21:00",
     "언남동 중앙골목 일원", "골목 음악회, 버스킹 무대, 플리마켓, 야간 조명거리"],
   /* ── 동백이음길 골목축제는 **시연용으로 만든 축제**다 (2026-10-19, 사용자 요청) ─────────────────
-     동백 상권과 협의 중이라 이 상점가만 실제 점포 자료를 넣었는데(data/dongbaekStores.js), 시 안내에 이
+     동백 상권과 협의 중이라 이 상점가만 실제 점포 자료를 넣었는데(data/districtStores.js), 시 안내에 이
      상점가의 축제가 없어 상세의 「진행 중인 축제」 자리가 비었다. 이름 · 일정 · 프로그램은 임의의 값이며
      실제 축제 정보가 오면 이 줄과 아래 POSES · PROGRAMS 의 `ft-dongbaekium` 만 바꾼다. */
   ["dongbaekium", "동백이음길 골목축제", "동백이음길 이음 한마당",
@@ -377,7 +377,7 @@ const FESTIVAL_BY_DISTRICT = FESTIVAL_RAW.reduce((o, [did, short, name, start, e
 const GUIDE_BASE = "https://www.yongin.go.kr/yimr/www/marketGuideDetail.do?key=114&";
 
 /* 두 좌표 사이의 직선거리(m). 시 전역 25km 안에서는 평면 근사로 충분하다 */
-function metersFrom(lat, lng) {
+export function metersFrom(lat, lng) {
   return Math.hypot((lng - ANCHOR.lng) * M_PER_DEG_LNG, (lat - ANCHOR.lat) * M_PER_DEG_LAT);
 }
 
@@ -427,6 +427,7 @@ const DISTRICT_PHOTOS = {
 /* 주요 업종 — 시 안내의 상점가 개요 (동백이음길) */
 const DISTRICT_MAIN_BIZ = {
   dongbaekium: ["서비스문화", "미용건강의료", "음식외식"],
+  dongbaekstn: ["음식외식", "미용건강의료", "서비스문화"],
 };
 
 export const DISTRICTS = RAW

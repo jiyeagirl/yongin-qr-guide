@@ -24,8 +24,10 @@ import { FestivalList } from "../detail/FestivalList.jsx";
 import { DistrictList } from "../detail/DistrictList.jsx";
 import { DistrictInfo } from "../detail/DistrictInfo.jsx";
 import { DistrictMap } from "../detail/DistrictMap.jsx";
-import { dongbaekStores, findDongbaekStore, subscribeCoords } from "./data/dongbaekStores.js";
-import { ensureDongbaekGeocoded } from "./data/dongbaekGeo.js";
+import { districtStores, findDistrictStore, subscribeCoords } from "./data/districtStores.js";
+import "./data/dongbaekStores.js";
+import "./data/dongbaekStnStores.js";
+import { ensureDistrictsGeocoded } from "./data/districtGeo.js";
 import { StoreList } from "../detail/StoreList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, replace, back, closeAll } from "./router.js";
@@ -715,11 +717,11 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
   /* ── 상세 오버레이 (S05 / S06) ────────────────────────────────────────
      route 는 URL 이 진실이다. 여기서 id 로 대상을 찾고, 없으면 셸로 되돌린다 —
      딥링크 오타나 데이터 교체로 빈 화면이 뜨는 상태를 만들지 않는다 (S11 의 축소판). */
-  /* 동백이음길 점포의 좌표는 카카오 주소 검색이 건물 좌표를 찾아 오면서 바뀐다 (data/dongbaekGeo.js).
+  /* 동백이음길 점포의 좌표는 카카오 주소 검색이 건물 좌표를 찾아 오면서 바뀐다 (data/districtGeo.js).
      바뀔 때마다 이 값이 올라 target 이 새 좌표로 다시 만들어진다. 한 번만 시작한다 */
   const [geoVer, setGeoVer] = React.useState(0);
   React.useEffect(() => {
-    ensureDongbaekGeocoded();
+    ensureDistrictsGeocoded();
     return subscribeCoords(v => setGeoVer(v));
   }, []);
 
@@ -734,7 +736,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     const id = twoPart ? route.parts[1] : route.id;
     if (!id) return null;
     if (kind === "facility") return FACILITIES.find(x => x.id === id) || null;
-    if (kind === "store") return d.stores.find(x => x.id === id) || findDongbaekStore(id);
+    if (kind === "store") return d.stores.find(x => x.id === id) || findDistrictStore(id);
     if (kind === "course") return d.courses.find(x => x.id === id) || null;
     if (kind === "festival") return FESTIVALS.find(x => x.id === id) || null;
     /* 상점가는 32곳 전부에서 찾는다 — 지금 서 있는 곳(둔전)도 S13 목록에는 들어간다 */
@@ -998,8 +1000,8 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
          (사용자 요청, 2026-10-19). 점포 목록 자료가 있는 상점가는 건물별 목록을 함께 보인다 */
       <DistrictMap
         district={target}
-        /* 점포 자료가 있는 상점가는 동백이음길뿐이다 (data/dongbaekStores.js). geoVer 는 좌표가 바뀔 때 다시 읽게 한다 */
-        stores={target.id === "dongbaekium" ? dongbaekStores() : []}
+        /* 점포 자료가 있는 상점가는 동백이음길 · 동백역이다 (data/districtStores.js 에 등록). geoVer 는 좌표가 바뀔 때 다시 읽게 한다 */
+        stores={districtStores(target.id)}
         onBack={back}
         onClose={closeAll}
         onOpenStore={s => go(`#/store/${s.id}`)}

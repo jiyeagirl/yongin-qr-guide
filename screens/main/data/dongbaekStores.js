@@ -2,19 +2,9 @@
  *
  * 동백 상권과 협의 중이라 이 상점가만 더미가 아니라 받은 자료를 넣는다. 자료는 건물 단위
  * 표(지번 · 도로명 · 점포명)였고, 그것을 옮겨 적었다 — 합계 190곳으로 시 안내의 점포 수(`districts.js`
- * 의 stores 190)와 일치한다.
- *
- * ── 이 자료에 없는 것과 우리가 채운 것 ──────────────────────────────────────
- * 업종 · 온누리 가맹 여부 · 전화 · 영업시간 · 사진 · **좌표**가 없다. 그래서:
- *   · 업종(`cat`·`biz`)은 **점포명의 낱말로 추정**한다(inferCat). 틀릴 수 있다 — 실서비스에서는 자료의 값을 쓴다.
- *   · 온누리 가맹 여부는 모른다(`onnuri: false`, 배지를 달지 않는다). 가맹이 아니라는 뜻이 아니다.
- *   · 좌표는 건물의 도로명주소를 카카오 주소 검색으로 찾는다(`dongbaekGeo.js`). **점포의 좌표는 아니고 건물의**
- *     좌표라, 같은 건물의 점포는 그 둘레 20m 안에 겹치지 않게 흩어 찍는다(점 위치가 아니라 「그 건물 안」이다).
- *     찾기 전이나 못 찾은 건물은 상점가 중심 둘레의 임시 위치를 쓴다.
- *   · 거리(`dist`)는 null 이다 — 화면의 「약 n m」는 QR 지점 기준인데 이 점포들은 다른 동네라 말이 안 된다.
- * 실서비스에서는 서버가 점포 좌표와 이 값들을 채운다. */
-
-export const DONGBAEK_ROAD_PREFIX = "경기도 용인시 기흥구 ";
+ * 의 stores 190)와 일치한다. 업종 · 온누리 · 좌표가 없는 사정과 처리는 `districtStores.js` 머리말.
+ * (같은 방식으로 동백역 골목형상점가가 `dongbaekStnStores.js` 에 있다.) */
+import { registerDistrictStores } from "./districtStores.js";
 
 export const DONGBAEK_BUILDINGS = [
   { id: "b-598-1", jibun: "598-1대", road: "동백중앙로 356", name: "지우프라자", stores: [
@@ -81,56 +71,8 @@ export const DONGBAEK_BUILDINGS = [
   ] },
 ];
 
-/* ── 건물 좌표 표 (찾은 것만) ──────────────────────────────────────────────── */
-const DISTRICT_ID = "dongbaekium";
-const CENTER = { lat: 37.2815767, lng: 127.1608786 };   /* districts.js 의 동백이음길 중심 — 못 찾은 건물의 임시 위치 기준 */
-const buildingPos = new Map();   /* 건물 id → {lat, lng} (카카오 주소 검색 결과) */
-const listeners = new Set();
-let version = 0;
-let cache = null;
-
-export const setBuildingPos = (id, pos) => { buildingPos.set(id, pos); version += 1; cache = null; listeners.forEach(f => f(version)); };
-export const hasBuildingPos = id => buildingPos.has(id);
-export const subscribeCoords = f => { listeners.add(f); return () => listeners.delete(f); };
-
-/* 점포명으로 업종 추정. 순서가 의미다 — 앞 규칙이 먼저 잡는다 */
-const RULES = [
-  [/약국|의원|병원|치과|한의|내과|외과|피부과|이비인후|소아|동물병원/, "life", "의원·약국"],
-  [/필라테스|요가|피트니스|휘트니스|짐 |GYM|복싱|태권도|검도|합기도|주짓수|발레|줄넘기|커브스/, "culture", "운동·체육"],
-  [/스터디카페|독서실/, "edu", "스터디카페"],
-  [/학원|독서|논술|교습|어학|영어|수학|국어|과학|학습|아동발달|언어발달|상담센터|에듀|영재|캠퍼스|해법|킨더|아카데미|씽크빅|잉글리쉬|스터디센터/, "edu", "학원·교육"],
-  [/커피|카페|베이커리|파리바게뜨|배스킨|아이스크림|공차|디저트/, "cafe", "카페·베이커리"],
-  [/미용|헤어|네일|뷰티|코인워시|꽃모닝|컬러링|컷트/, "life", "미용·생활"],
-  [/안경|슈퍼|마켓|더프레시|CU |정육|축산|농협|두부|폰|자연드림|공방|꽃|통닭집|반찬/, "shop", "소매"],
-  [/족발|분식|치킨|떡볶이|버거|피자|마라탕|곱창|초밥|순대|김밥|라면|만두|고깃집|짜장|국수|타코야끼|꽈배기|닭꼬치|떡집|시루|찬방|식당|회관|밥|과일|김선생|키친/, "food", "음식점"],
-];
-const inferCat = name => { for (const [re, cat, biz] of RULES) if (re.test(name)) return [cat, biz]; return ["etc", "기타"]; };
-
-function posOf(b, bi, k) {
-  const base = buildingPos.get(b.id) || (() => {
-    const a = (bi / DONGBAEK_BUILDINGS.length) * Math.PI * 2;
-    return { lat: CENTER.lat + Math.sin(a) * 0.0005, lng: CENTER.lng + Math.cos(a) * 0.0006 };
-  })();
-  /* 같은 건물의 점포를 황금각 나선으로 흩는다 (최대 약 22m) — 겹쳐 하나로 보이지 않게 */
-  const ang = k * 2.39996, r = 4 * Math.sqrt(k + 1);
-  return { lat: base.lat + (r * Math.cos(ang)) / 111320, lng: base.lng + (r * Math.sin(ang)) / (111320 * Math.cos((base.lat * Math.PI) / 180)) };
-}
-
-/* 점포 표 — 좌표가 바뀔 때만 새로 만든다(같은 배열을 돌려줘 렌더가 흔들리지 않는다) */
-export function dongbaekStores() {
-  if (cache) return cache;
-  const out = [];
-  DONGBAEK_BUILDINGS.forEach((b, bi) => b.stores.forEach((name, k) => {
-    const [cat, biz] = inferCat(name);
-    out.push({
-      id: `db-${String(out.length + 1).padStart(3, "0")}`, name, cat, biz, bizL: biz, onnuri: false, dist: null,
-      addr: `기흥구 ${b.road}`, building: b.name, districtId: DISTRICT_ID, visible: true, views: 0,
-      ...posOf(b, bi, k),
-    });
-  }));
-  cache = out;
-  return out;
-}
-export const findDongbaekStore = id => dongbaekStores().find(s => s.id === id) || null;
-
-export const DONGBAEK_STORE_COUNT = DONGBAEK_BUILDINGS.reduce((n, b) => n + b.stores.length, 0);   /* 190 */
+registerDistrictStores({
+  districtId: "dongbaekium", idPrefix: "db", onnuriCount: 17,   /* 시 안내 수 (시연용 표시 — districtStores.js) */
+  center: { lat: 37.2815767, lng: 127.1608786 },   /* districts.js 의 동백이음길 중심 */
+  buildings: DONGBAEK_BUILDINGS,
+});
