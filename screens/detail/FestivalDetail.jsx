@@ -72,10 +72,13 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
     title: p.title,
     body: p.where ? (
       <>
-        <span style={{ display: "block", fontWeight: "var(--fw-semibold)", color: "var(--text-heading)" }}>
+        {/* 위치 — 지도핀 아이콘 + 굵은 글씨 (2026-10-19, 사용자 요청). 아이콘은 지도핀(map-pin)이라
+            소속 상점가 줄의 같은 아이콘과 같은 약속이다. 설명은 그 밑에 한 단계 작은 글씨 */}
+        <span style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: "var(--fw-semibold)", color: "var(--text-heading)" }}>
+          <Icon name="map-pin" size={15} style={{ flex: "0 0 auto" }} />
           {p.where}
         </span>
-        {p.desc}
+        <span style={{ display: "block", marginTop: 2, font: "var(--type-caption)" }}>{p.desc}</span>
       </>
     ) : p.desc,
   }));

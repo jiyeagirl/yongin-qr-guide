@@ -242,7 +242,7 @@ function build() {
   /* 대표 사진 (2026-10-19, 사용자 요청) — 인기 매장 상위 4곳만 자료가 있다. 나머지는 `images` 가 없어
      자리표시(회색 칸)가 선다. 실서비스에서는 점포 사진이 서버에서 온다. 경로는 루트 기준이다 —
      관리자 화면(/admin/)도 같은 표를 읽는데 상대 경로면 거기서 깨진다. 파일은 800px 로 줄인 JPEG 이다. */
-  stores.forEach(s => { if (STORE_PHOTOS[s.id]) s.images = [STORE_PHOTOS[s.id]]; });
+  stores.forEach(s => { const p = STORE_PHOTOS[s.id]; if (p) s.images = Array.isArray(p) ? p : [p]; });
 
   /* 기본 정렬은 거리순 (U-ST-04) */
   stores.sort((a, b) => a.dist - b.dist);
@@ -253,6 +253,8 @@ const STORE_PHOTOS = {
   "dj-106": "/screens/main/assets/stores/dj-106.jpg",   /* 미소족발 */
   "dj-183": "/screens/main/assets/stores/dj-183.jpg",   /* 행복상회 */
   "dj-160": "/screens/main/assets/stores/dj-160.jpg",   /* 가온정육점 */
+  /* 우리의류 (상점 QR 진입 점포) — 임시 사진 두 장 (2026-10-19). 첫 장은 출처 표기(워터마크)가 있는 자료라 실제 점포 사진으로 바꿔야 한다 */
+  "dj-163": ["/screens/main/assets/stores/dj-163-1.jpg", "/screens/main/assets/stores/dj-163-2.jpg"],
   "dj-133": "/screens/main/assets/stores/dj-133.jpg",   /* 청기와카페 */
 };
 

@@ -356,13 +356,13 @@ function StaffScreen({ onConfirm, onBack }) {
         <header style={{ flex: "0 0 auto", minHeight: "var(--appbar-h)", padding: "6px var(--space-2)", display: "flex", alignItems: "center" }}>
           <button type="button" onClick={onBack} aria-label="뒤로" data-back
             style={{ width: 44, height: 44, display: "inline-flex", alignItems: "center", justifyContent: "center",
-              background: "none", border: "none", color: "inherit", cursor: "pointer" }}>
+              background: "none", border: "none", color: "#fff", cursor: "pointer" }}>
             <Icon name="chevron-left" size={24} />
           </button>
         </header>
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "var(--space-4) var(--gutter-screen)",
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--space-5)", textAlign: "center" }}>
-          <h1 style={{ font: "var(--type-title-3)", ...WRAP }}>직원에게 해당 화면을 보여주세요</h1>
+          <h1 style={{ font: "var(--type-title-3)", color: "#fff", ...WRAP }}>직원에게 해당 화면을 보여주세요</h1>
           <div style={{ width: "100%", background: "var(--surface-card)", color: "var(--text-body)", borderRadius: "var(--radius-card)",
             padding: "var(--space-6) var(--space-5)", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-2)" }}>
             <Badge tone="brand">{COUPON.eyebrow}</Badge>
@@ -385,10 +385,10 @@ function StaffScreen({ onConfirm, onBack }) {
                 display: "flex", flexDirection: "column", gap: "var(--space-3)", textAlign: "center" }}>
               <h2 style={{ font: "var(--type-title-3)", color: "var(--text-heading)", ...WRAP }}>쿠폰을 사용 처리할까요?</h2>
               <p style={{ font: "var(--type-body)", color: "var(--text-muted)", ...WRAP }}>
-                사용 확인 시 쿠폰이 사용 처리되며, 다시 사용할 수 없습니다.
+                사용 확인 시 쿠폰이 사용 처리되며,<br />다시 사용할 수 없습니다.
               </p>
-              <p style={{ font: "var(--type-label)", color: "var(--text-heading)", ...WRAP }}>
-                실제 결제가 완료되었는지 확인해 주세요.
+              <p style={{ font: "var(--type-caption)", fontWeight: "var(--fw-semibold)", color: "var(--yong-red-800)", ...WRAP }}>
+                *실제 거래가 완료되었는지 확인해주세요
               </p>
               <div style={{ display: "flex", gap: "var(--space-2)" }}>
                 <Button block variant="outline" onClick={() => setAsk(false)}>취소</Button>
@@ -407,7 +407,7 @@ function UsedScreen({ usedAt, onClose }) {
   const at = usedAt ? new Date(usedAt) : null;
   return (
     <Layer>
-      <Frame footer={<Button variant="primary" size="lg" block onClick={onClose}>닫기</Button>}>
+      <Frame onClose={onClose} footer={<Button variant="primary" size="lg" block onClick={onClose}>닫기</Button>}>
         <Mascot pose="thumbsup" size={112} base={BASE} />
         <h1 style={{ font: "var(--type-title-1)", color: "var(--text-heading)", textAlign: "center", ...WRAP }}>쿠폰 사용이 완료됐어요</h1>
         <p style={{ font: "var(--type-body)", color: "var(--text-muted)", textAlign: "center", ...WRAP }}>{COUPON.name} · {COUPON.benefit}</p>
