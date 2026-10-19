@@ -181,12 +181,16 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
              시민에게는 "주최 상점가"가 더 자연스럽지만 원천 항목명을 그대로 쓴다 —
              관리자 화면과 시민 화면이 다른 이름으로 같은 칸을 부르면 문의가 들어왔을 때
              어느 칸 이야기인지 맞춰봐야 한다. */}
+        {/* 표 위 제목 「축제 개요」 (2026-10-19, 사용자 요청) — 아래 「주요 프로그램 일정」 · 「부스 위치」처럼 이 표도 이름이 선다 */}
+        <section>
+          <SectionHeader title="축제 개요" />
         <InfoList items={[
           { label: "기간", value: f.period },
           /* 소속 상점가는 표 밖, 사진 아래로 올렸다 (2026-10-19, 사용자 요청) — 점포 상세와 같은 자리 */
           { label: "시간", value: f.time },
           { label: "주요 프로그램", value: f.program },
         ]} />
+        </section>
 
         {/* ── 주요 프로그램 일정 (정의서 1-3, 협의 필요) — 자료가 있을 때만 ──
                위 표의 "주요 프로그램"이 한 줄 요약이고, 이것은 그 아래 딸린 시간대별
