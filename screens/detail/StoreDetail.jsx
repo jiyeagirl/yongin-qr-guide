@@ -4,6 +4,7 @@ import {
   Button, Badge, OnnuriBadge, CategoryIcon, CATEGORY_LABELS, FestivalBanner, Icon,
   SectionHeader, CourseCard, PhotoStrip,
 } from "../../design-systems/index.js";
+import { shortName } from "../main/DistrictSheet.jsx";
 import { STORE_AS_OF } from "../main/config.js";
 
 /* S06 점포 상세 (기능명세서 v1.1 4장 S06 행).
@@ -69,7 +70,12 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
       /* 상점 QR 로 막 들어온 첫 화면이면 「뒤로」가 아니라 「홈」이다 — 되돌아갈 이전 화면이 없고,
          누르면 상점가 탭(메인)으로 나간다 (2026-10-16, 사용자 요청) */
       backIcon={entry ? "store" : undefined} backLabel={entry ? "홈" : undefined}
-      footer={<Button variant="primary" size="lg" icon="store" block onClick={onDistrict}>상점가 둘러보기</Button>}>
+      /* 하단 버튼은 **어떻게 들어왔는가**가 정한다 (2026-10-19, 사용자 요청). 상점 QR 로 막 들어온 첫 화면
+         (`entry`)은 [상점가 둘러보기] — 이 가게가 첫 화면이라 상점가로 나가는 길이 필요하다. 앱 안에서
+         둘러보다 연 상세는 종전처럼 [길찾기] — 사람이 이 가게를 골라서 온 것이라 다음 일은 가는 길이다 */
+      footer={entry
+        ? <Button variant="primary" size="lg" icon="store" block onClick={onDistrict}>상점가 둘러보기</Button>
+        : <Button variant="primary" size="lg" icon="footprints" block onClick={onRoute}>길찾기</Button>}>
 
       <DetailBody>
         {/* ── 머리 ───────────────────────────────────────────────────────
@@ -88,37 +94,25 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
             <div style={{ flex: 1, minWidth: 0 }}>
               <h2 style={{ font: "var(--type-title-2)", letterSpacing: "var(--ls-snug)",
                 color: "var(--text-heading)", wordBreak: "keep-all" }}>{s.name}</h2>
-              {/* 도로명주소 — 이름 밑에 작게 (2026-10-16, 사용자 요청). 정보 표에서 옮겨 왔다 */}
+              {/* 이름 밑: 도로명주소, 그 밑에 지도핀 아이콘 + 소속 골목형 상점가 (2026-10-19, 사용자 요청).
+                  슬래시로 한 줄에 잇는 것을 그만뒀다 — 주소와 상점가는 다른 종류의 정보다. 상점가는 링크가
+                  아니다(상점가로 가는 길은 하단 [상점가 둘러보기]) */}
               {s.addr ? (
                 <p style={{ marginTop: 2, font: "var(--type-caption)", color: "var(--text-muted)",
                   wordBreak: "keep-all", overflowWrap: "anywhere" }}>{s.addr}</p>
               ) : null}
+              {district ? (
+                <p style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 4,
+                  font: "var(--type-caption)", color: "var(--text-muted)", wordBreak: "keep-all" }}>
+                  <Icon name="map-pin" size={14} style={{ flex: "0 0 auto" }} />
+                  <span>{shortName(district)}</span>
+                </p>
+              ) : null}
             </div>
-            {/* 길찾기 (2026-10-19, 사용자 요청) — 하단 버튼이 [상점가 둘러보기]로 바뀌면서 길찾기가 갈 곳을 잃어
-                상호 오른쪽에 작게 둔다. 아이콘은 S05 하단 버튼과 같은 발자국이다 */}
-            {onRoute ? (
-              <Button variant="primary" size="xs" icon="footprints" onClick={onRoute}
-                style={{ flex: "0 0 auto", alignSelf: "flex-start" }}>길찾기</Button>
-            ) : null}
           </div>
         </header>
 
         <PhotoStrip images={s.images} name={s.name} label="가게 이미지" />
-
-        {/* 소속 상점가 (2026-10-16) — 상점 QR 로 들어온 사람이 이 가게가 어느 상점가인지 알고
-            그 상점가로 넘어가는 길이다. 누르면 이 상세를 닫고 상점가 탭으로 간다.
-            축제 카드 위에 선다 — 축제는 이 상점가의 것이라 어느 상점가인지가 먼저 읽혀야 한다. */}
-        {district ? (
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "var(--space-2)" }}>
-            <span style={{ font: "var(--type-label)", color: "var(--text-muted)" }}>소속 상점가 :</span>
-            <button type="button" onClick={onDistrict}
-              style={{ background: "none", border: "none", padding: "10px 0", cursor: "pointer",
-                font: "var(--type-body)", fontWeight: "var(--fw-semibold)", color: "var(--brand-primary)",
-                textDecoration: "underline", textUnderlineOffset: 3, textAlign: "left" }}>
-              {district.name}
-            </button>
-          </div>
-        ) : null}
 
         {/* ── 진행중인 축제 (2026-10-16) — 온누리 사용 가능 안내 상자를 대신해 이 자리에 선다.
                온누리 가맹은 머리의 배지가 계속 말한다.
