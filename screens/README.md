@@ -101,7 +101,7 @@ QR 지점 표는 `main/data/qr.js` 다. **셸을 세우는 코드가 둘뿐인 �
 | S11-A 비활성 QR (설치 후 미활성) | `/screens/main/?qr=qr-003` |
 | S11-B 네트워크 오류 | `/screens/main/?net=fail` — **첫 조회만** 실패한다. [다시 시도]를 누르면 들어가진다 (매번 실패하면 그 단추가 되살아나는지 확인할 수 없다) |
 | S03-E 상점가 없음 | `/screens/main/?district=none` → 상점가 탭 |
-| 첫 진입 코치마크 (U-CM-19) | `/screens/main/?coach=1` — 이미 본 브라우저에서도 다시 켠다 |
+| 코치마크 (U-CM-19) — 예외 화면 | `/screens/main/?coach=1` — **이 주소로만 열린다** (2026-10-19 첫 진입에서 자동으로 뜨지 않는다) |
 | 축제 QR (팜플렛 코드) | `/screens/main/?qr=qr-004` — 표에 있는 팜플렛 코드. S09 둔전 축제 상세가 먼저 뜨고 닫으면 S03 상점가 탭이다 |
 | S14 축제 팜플렛 (진행중) **— 예비 화면** | `/screens/main/?pamphlet=ft-dunjeon` — 둔전 축제(진행중) |
 | S14 지난 축제의 팜플렛 (종료) | `/screens/main/?pamphlet=ft-everland` — 문구가 「…은 지난 축제예요」로 갈린다 |

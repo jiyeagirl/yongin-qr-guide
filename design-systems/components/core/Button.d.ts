@@ -4,7 +4,7 @@
  */
 export interface ButtonProps {
   children?: React.ReactNode;
-  variant?: "primary" | "secondary" | "soft" | "outline" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "soft" | "outline" | "ghost" | "danger" | "mint";
   size?: "sm" | "md" | "lg";
   /** Leading Material Symbols ligature. */
   icon?: string;

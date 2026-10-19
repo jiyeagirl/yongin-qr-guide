@@ -24,6 +24,7 @@ import { AppBar, Badge, Button, Icon, Input, Mascot, TextButton } from "../../de
 
 export const COUPON = {
   id: "festival-1107",
+  festivalId: "ft-dunjeon",   /* 이 쿠폰이 걸린 축제 — 축제 상세(S09)의 [쿠폰] 버튼이 이 축제에서만 선다 */
   eyebrow: "11월 7일 단 하루!",
   name: "골목 축제 할인 쿠폰",
   benefit: "1,000원 할인",
@@ -46,6 +47,19 @@ const put = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.remo
 const read = acct => get(acct ? `${KEY}.u.${acct}` : KEY);
 const write = (v, acct) => put(acct ? `${KEY}.u.${acct}` : KEY, v);
 
+/* ── 축제 상세(S09)와 팝업(FestivalCoupon)을 잇는 작은 규약 (2026-10-19) ───────────
+   상세의 우측 상단 [쿠폰]이 `openCoupon()` 을 부르면 팝업 쪽이 열리고, 상태가 바뀔 때마다
+   `COUPON_CHANGE` 가 울려 상세가 단추 글자를 다시 읽는다. 둘 사이에 props 를 놓지 않는 이유는
+   팝업이 셸 밖(App)에 서 있기 때문이다 — 셸을 다시 세우지 않는다(U-CM-16). */
+export const COUPON_OPEN = "yongin:coupon-open";
+export const COUPON_CHANGE = "yongin:coupon-change";
+export const couponState = () => { const v = read(null); return v === "used" ? "used" : v === "issued" ? "issued" : "none"; };
+export const openCoupon = () => window.dispatchEvent(new Event(COUPON_OPEN));
+
+/* 「오늘 하루 보지 않기」 — 팝업(FestivalCoupon)이 쓴다. 날짜만 적는다 */
+const HIDE_KEY = `yongin.coupon.hide.${COUPON.id}`;
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+
 const hash = t => { let h = 5381; for (const c of t) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; return String(h); };
 const ACCOUNTS = `yongin.coupon.accounts`;
 const SESSION = `yongin.coupon.session`;
@@ -66,19 +80,27 @@ const logIn = (id, pw) => {
 function clearAll() {
   const all = accounts();
   Object.keys(all).forEach(id => write(null, id));
-  put(ACCOUNTS, null); put(SESSION, null); write(null);
+  put(ACCOUNTS, null); put(SESSION, null); write(null); put(HIDE_KEY, null);
 }
 
 const BASE = "../../design-systems/";
 const WRAP = { wordBreak: "keep-all", overflowWrap: "anywhere" };
 
 /* 세 화면의 겉틀 — 앱바 + 세로 스크롤 본문 + 바닥에 붙는 단추 자리 */
-function Frame({ children, footer }) {
+function Frame({ children, footer, onClose }) {
   return (
     <div style={{ position: "relative", width: "100%", maxWidth: "var(--screen-max)", height: "100%",
       margin: "0 auto", overflow: "hidden", background: "var(--surface-page)",
       display: "flex", flexDirection: "column" }}>
-      <AppBar title="용인시 위치안내" style={{ flex: "0 0 auto" }} />
+      {/* onClose 를 주면 **오른쪽 위**에 [X] 가 선다 — 받은 쿠폰 화면에서 셸로 나가는 길 (2026-10-19, 사용자 요청) */}
+      <AppBar title="용인시 위치안내" style={{ flex: "0 0 auto" }}
+        actions={onClose ? (
+          <button type="button" onClick={onClose} aria-label="닫기" title="닫기"
+            style={{ width: 44, height: 44, display: "inline-flex", alignItems: "center", justifyContent: "center",
+              background: "none", border: "none", color: "inherit", cursor: "pointer" }}>
+            <Icon name="x" size={24} />
+          </button>
+        ) : null} />
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain",
         WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column" }}>
         <div style={{ margin: "auto 0", padding: "var(--space-5) var(--gutter-screen)",
@@ -199,9 +221,9 @@ function Auth({ onDone, onBack }) {
 }
 
 /* ── C2 쿠폰 ─────────────────────────────────────────────────────────────── */
-function Ticket({ onConfirm }) {
+function Ticket({ onConfirm, onClose }) {
   return (
-    <Frame>
+    <Frame onClose={onClose}>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", textAlign: "center",
         font: "var(--type-title-3)", color: "var(--text-heading)", ...WRAP }}>
         <Icon name="store" size={20} />
@@ -219,9 +241,11 @@ function Ticket({ onConfirm }) {
       </div>
 
       <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-2)" }}>
-        <Button block size="lg" onClick={onConfirm}>확인하기 (상인 전용)</Button>
-        <p style={{ font: "var(--type-caption)", color: "var(--text-muted)", textAlign: "center", ...WRAP }}>
-          이 버튼은 계산할 때 상인분이 눌러주세요
+        <Button block size="lg" onClick={onConfirm}>상인 확인</Button>
+        {/* 붉고 굵게 (2026-10-19, 사용자 요청) — 손님이 눌러 버리면 쿠폰이 쓰인 것으로 남는다 */}
+        <p style={{ font: "var(--type-label)", fontWeight: "var(--fw-bold)", color: "var(--yong-red-800)",
+          textAlign: "center", ...WRAP }}>
+          ※ 상인 전용 버튼입니다. 버튼을 누르면 쿠폰 사용이 완료되어 재사용할 수 없으니, 결제 시에만 눌러 주세요.
         </p>
       </div>
     </Frame>
@@ -229,9 +253,10 @@ function Ticket({ onConfirm }) {
 }
 
 /* ── C3 확인 완료 ────────────────────────────────────────────────────────── */
+/* 하단 버튼은 상세 화면의 것과 같다 (2026-10-19, 사용자 요청 — 버튼 통일): primary · store 아이콘 · 「상점가 둘러보기」 */
 function Done({ onEnter }) {
   return (
-    <Frame footer={<Button block variant="outline" onClick={onEnter}>주변 안내 보러 가기</Button>}>
+    <Frame footer={<Button variant="primary" size="lg" icon="store" block onClick={onEnter}>상점가 둘러보기</Button>}>
       <Mascot pose="thumbsup" size={120} base={BASE} />
       <h1 style={{ font: "var(--type-title-1)", color: "var(--text-heading)", textAlign: "center", ...WRAP }}>
         쿠폰이 확인되었어요
@@ -241,6 +266,129 @@ function Done({ onEnter }) {
       </p>
     </Frame>
   );
+}
+
+/* ── 축제 QR 진입의 쿠폰 팝업 (2026-10-19, 사용자 요청) ─────────────────────────
+   축제 QR(qr-004)로 들어오면 **셸 위에** 가운데 직사각형 팝업이 뜨고 나머지는 어둡게 깔린다
+   (앱의 이벤트 팝업 모양 — 아래 [오늘 하루 보지 않기 | 닫기] 줄). A안이다(가입 없이 발급).
+   [쿠폰 받기] → 상인에게 보여주는 쿠폰(C2, 전체화면) → 상인 확인 → 확인 완료(C3).
+   셸은 이 아래에서 그대로 서 있다(U-CM-16 — 셸을 다시 세우지 않는다).
+
+   이미 받은 쿠폰이 있으면(다시 찍음) [받은 쿠폰 보기]가 되고 「오늘 하루 보지 않기」는 없다 —
+   받은 쿠폰을 상인에게 보여줄 길이 이 팝업뿐이다. 이미 쓴 쿠폰이면 뜨지 않는다.
+   저장은 위 localStorage 이다. 지우려면 `?qr=qr-004&popup=reset` 으로 연다. */
+/* `fixed` 가 아니라 `absolute` 다 — 데스크톱 검수 틀(#root 390×844)을 벗어나 브라우저 창 전체를 덮지 않는다.
+   그래서 #root 가 위치 기준이어야 한다(index.html 의 `#root { position: relative }`). 휴대폰에서는 둘이 같다. */
+const LAYER = { position: "absolute", inset: 0, zIndex: "var(--z-modal)" };
+
+function Offer({ issued, onGet, onHide, onClose }) {
+  React.useEffect(() => {
+    const onKey = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const barBtn = { flex: 1, padding: "var(--space-3) var(--space-2)", background: "none", border: "none",
+    cursor: "pointer", font: "var(--type-label)", color: "var(--text-muted)", minHeight: "var(--tap-min)" };
+
+  return (
+    <div style={{ ...LAYER, display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "var(--gutter-screen)" }}>
+      {/* 나머지는 어둡게 — 손끝을 받는 막. 눌러도 닫히지 않는다(단추로만 닫는다) */}
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0, 0, 0, 0.62)" }} />
+
+      <div role="dialog" aria-modal="true" aria-label={COUPON.name}
+        style={{ position: "relative", width: "100%", maxWidth: 340, maxHeight: "100%",
+          display: "flex", flexDirection: "column", borderRadius: "var(--radius-card)", overflow: "hidden",
+          boxShadow: "var(--shadow-raised)" }}>
+        <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", overscrollBehavior: "contain",
+          background: "var(--surface-card)", padding: "var(--space-6) var(--space-5) var(--space-5)",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)", textAlign: "center" }}>
+          <Badge tone="accent">{COUPON.eyebrow}</Badge>
+          <Mascot pose="excited" size={88} base={BASE} />
+          <p style={{ font: "var(--type-title-3)", color: "var(--text-heading)", ...WRAP }}>{COUPON.name}</p>
+          <p style={{ font: "var(--type-display)", color: "var(--brand-primary)" }}>{COUPON.benefit}</p>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, width: "100%", display: "flex",
+            flexDirection: "column", gap: 4, textAlign: "left" }}>
+            {COUPON.conditions.map(t => (
+              <li key={t} style={{ display: "flex", gap: 6, alignItems: "flex-start",
+                font: "var(--type-caption)", color: "var(--text-body)", ...WRAP }}>
+                <span style={{ flex: "0 0 auto", marginTop: 1, display: "inline-flex" }}>
+                  <Icon name="check" size={14} color="var(--brand-primary)" />
+                </span>
+                <span>{t}</span>
+              </li>
+            ))}
+          </ul>
+          <Button block size="lg" icon="ticket" onClick={onGet}>{issued ? "받은 쿠폰 보기" : "쿠폰 받기"}</Button>
+        </div>
+        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "stretch", background: "var(--surface-card)",
+          borderTop: "var(--stroke-hairline) solid var(--border-default)" }}>
+          {issued ? null : (
+            <>
+              <button type="button" onClick={onHide} style={barBtn}>오늘 하루 보지 않기</button>
+              <span aria-hidden="true" style={{ width: 1, margin: "var(--space-2) 0", background: "var(--border-default)" }} />
+            </>
+          )}
+          <button type="button" onClick={onClose} style={{ ...barBtn, fontWeight: "var(--fw-bold)", color: "var(--text-heading)" }}>닫기</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* 전체화면 층 — 상인에게 보여주는 C2 · C3 가 셸 위에 덮인다 */
+function Layer({ children }) {
+  return <div style={LAYER}>{children}</div>;
+}
+
+export function FestivalCoupon({ auto = true }) {
+  /* ?popup=reset — 저장된 상태(받음 · 사용 · 오늘 하루 보지 않기)를 지우고 처음부터 연다 (검수용) */
+  const [fresh] = React.useState(() => {
+    try { if (new URLSearchParams(location.search).get("popup") === "reset") { clearAll(); return true; } } catch { /* 주소를 못 읽는 환경 */ }
+    return false;
+  });
+  const [issued, setIssued] = React.useState(() => read(null) === "issued");
+  const [step, setStep] = React.useState(() => {
+    if (!auto) return "closed";   /* 축제 QR 진입이 아니면 스스로 뜨지 않고 상세의 [쿠폰]이 부를 때만 열린다 */
+    const saved = read(null);
+    if (saved === "used") return "closed";
+    if (saved === "issued") return "offer";
+    return get(HIDE_KEY) === today() ? "closed" : "offer";
+  });
+
+  /* 상세의 [쿠폰] — 받은 쿠폰이 있으면 곧장 쿠폰 화면, 없으면 받기 팝업, 쓴 뒤면 확인 완료 */
+  React.useEffect(() => {
+    const open = () => {
+      const st = couponState();
+      setIssued(st === "issued");
+      setStep(st === "used" ? "done" : st === "issued" ? "ticket" : "offer");
+    };
+    window.addEventListener(COUPON_OPEN, open);
+    return () => window.removeEventListener(COUPON_OPEN, open);
+  }, []);
+  /* 상태가 바뀌면 상세에 알린다 */
+  React.useEffect(() => { window.dispatchEvent(new Event(COUPON_CHANGE)); }, [step, issued]);
+
+  if (step === "offer") {
+    return <Offer issued={issued}
+      onGet={() => { if (!issued) { write("issued"); setIssued(true); } setStep("ticket"); }}
+      onHide={() => { put(HIDE_KEY, today()); setStep("closed"); }}
+      onClose={() => setStep("closed")} />;
+  }
+  if (step === "ticket") return <Layer><Ticket onConfirm={() => { write("used"); setStep("done"); }} onClose={() => setStep("closed")} /></Layer>;
+  /* [상점가 둘러보기] — 아래에 서 있는 축제 상세까지 걷어내고 상점가 탭(셸)에 선다. 상세 하단의
+     같은 이름 버튼이 하는 일이다. 해시를 지우고 라우터에 알리면(popstate) 셸의 오버레이가 닫힌다 */
+  if (step === "done") {
+    return <Layer><Done onEnter={() => {
+      try {
+        window.history.replaceState({ shellDepth: 0 }, "", `${location.pathname}${location.search}`);
+        window.dispatchEvent(new Event("popstate"));
+      } catch { /* 주소를 못 바꾸는 환경 — 팝업만 닫는다 */ }
+      setStep("closed");
+    }} /></Layer>;
+  }
+  return null;
 }
 
 /* 흐름 — onEnter 는 셸로 들어가는 길이다 (C1 의 [다음에 받을게요] · C3 의 [주변 안내 보러 가기]).
@@ -274,7 +422,7 @@ export function CouponFlow({ onEnter, reset = false, plan = "a" }) {
   };
 
   if (step === "auth") return <Auth onDone={afterAuth} onBack={() => setStep("intro")} />;
-  if (step === "ticket") return <Ticket onConfirm={() => go("done", "used")} />;
+  if (step === "ticket") return <Ticket onConfirm={() => go("done", "used")} onClose={onEnter} />;
   if (step === "done") return <Done onEnter={onEnter} />;
   return b
     ? <Intro cta="쿠폰 받기" note="아이디와 비밀번호만으로 간단하게 가입해요" onGet={() => setStep("auth")} onLater={onEnter} />

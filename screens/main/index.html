@@ -23,7 +23,7 @@
     /* 안전영역 — 홈 인디케이터가 있는 기기에서 시트 바닥이 잘리지 않게 */
     padding-bottom: env(safe-area-inset-bottom);
   }
-  #root { height: 100dvh; }
+  #root { height: 100dvh; position: relative; }   /* 쿠폰 팝업(CouponFlow)이 이 틀 안을 덮는다 */
   /* 데스크톱에서 열었을 때만 기기 틀 안에 세운다. 이 블록은 **검수용 미리보기 틀**이지
      화면 자체가 아니다 — 실제 휴대폰(<640px)에서는 통째로 걸리지 않는다.
 

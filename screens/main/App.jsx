@@ -1,7 +1,7 @@
 import React from "react";
 import { QrEntry } from "../boot/QrEntry.jsx";
 import { EntryFallback } from "../boot/EntryFallback.jsx";
-import { CouponFlow } from "../boot/CouponFlow.jsx";
+import { CouponFlow, FestivalCoupon } from "../boot/CouponFlow.jsx";
 import { MainApp } from "./MainApp.jsx";
 import { readQrCode, readReviewFlags, resolveQr } from "./data/qr.js";
 
@@ -93,8 +93,17 @@ export function App() {
      누르면 여느 진입과 한 픽셀도 다르지 않은 화면에 선다. 갈리는 것은 그 위에 안내가
      한 장 덮이느냐이고, 그것은 셸이 안다 (이 파일 머리말의 「조건이 늘어나면 진입이
      느려진다」). 어느 축제인지는 QR 지점이 들고 온다 (`qr.festivalId`). */
-  return <MainApp qr={result ? result.point : null} noDistrict={flags.noDistrict}
-    forceCoach={flags.coach} pamphlet={flags.pamphlet} />;
+  /* 축제 QR 로 들어왔으면 셸 위에 쿠폰 팝업이 덮인다 (A안, 2026-10-19 — boot/CouponFlow.jsx 의
+     FestivalCoupon). 셸은 이 아래에 그대로 서 있다. `?coupon` 흐름·`?pamphlet` 검수 진입과는 겹치지 않는다. */
+  const festivalQr = Boolean(result && result.point && result.point.kind === "festival" && !flags.coupon && !flags.pamphlet);
+  return (
+    <>
+      <MainApp qr={result ? result.point : null} noDistrict={flags.noDistrict}
+        forceCoach={flags.coach} pamphlet={flags.pamphlet} />
+      {/* 언제나 서 있다 — 축제 QR 이면 스스로 열리고(auto), 아니어도 축제 상세의 [쿠폰]이 부르면 열린다 */}
+      <FestivalCoupon auto={festivalQr} />
+    </>
+  );
 }
 
 export default App;

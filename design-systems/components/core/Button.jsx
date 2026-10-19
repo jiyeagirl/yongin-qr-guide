@@ -10,6 +10,9 @@ const VARIANTS = {
      바탕이 회색이라 카드 사이에서 주 행동처럼 보이지 않는다. 모서리는 알약이다 */
   subtle: { background: "var(--surface-sunken)", color: "var(--text-heading)", border: "none", borderRadius: "var(--radius-pill)" },
   ghost: { background: "transparent", color: "var(--text-body)", border: "none" },
+  /* 민트 — primary 보다 밝고 채도가 낮은 초록. 진한 초록 단추(하단 주 행동) 옆에 서는 보조 강조
+     (2026-10-19, 사용자 요청. 축제 상세의 [쿠폰]). soft 는 너무 연했다. 글자는 진한 초록이다 */
+  mint: { background: "var(--yong-green-400)", color: "var(--yong-green-900)", border: "none" },
   danger: { background: "var(--state-danger)", color: "var(--text-on-dark)", border: "none" },
 };
 /* Heights are minimums — buttons grow with the label so 2차 글자 확대에서 잘리지 않는다.
