@@ -64,7 +64,11 @@ export function StoreList({
 
       <div style={{ padding: "var(--space-2) var(--gutter-screen) var(--space-6)" }}>
         {rows.length === 0 ? (
-          <Notice tone="info">조건에 맞는 매장이 없습니다.</Notice>
+          /* 붉은 계열의 작은 안내 (2026-10-19, 사용자 요청) — 종전 info/md 는 글자가 커서 빈 결과인데도
+              차분한 정보 상자로 읽혔다. 글자색도 같이 붉게 한다(Notice 의 danger 는 상자·아이콘만 붉다) */
+          <Notice tone="danger" size="sm">
+            <span style={{ color: "var(--yong-red-800)", fontWeight: "var(--fw-semibold)" }}>조건에 맞는 매장이 없습니다.</span>
+          </Notice>
         ) : (
           <div role="list">
             {shown.map((s, i) => (

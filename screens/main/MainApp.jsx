@@ -1070,7 +1070,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
           2차의 언어·음성·글자 크기 버튼 자리는 코드에서만 비워둔다 (화면에 노출하지 않는다).
           오류 신고는 이 화면에 두지 않는다 — 신고 대상이 특정되는 상세 화면에서 진입한다 */}
       <div style={{ position: "relative", zIndex: "var(--z-filter)", flex: "0 0 auto" }}>
-        <ContextBar place={qr && qr.bannerLabel ? null : d.anchor.name}
+        <ContextBar place={qr && qr.bannerLabel ? (qr.bannerPlace || null) : d.anchor.name}
           label={qr && qr.bannerLabel ? qr.bannerLabel : undefined}
           leading={<Mascot pose="hello" size={22} base="../../design-systems/" alt="" />} />
       </div>
