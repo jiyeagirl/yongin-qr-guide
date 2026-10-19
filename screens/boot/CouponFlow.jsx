@@ -26,7 +26,10 @@ export const COUPON = {
   id: "festival-1107",
   festivalId: "ft-dunjeon",   /* 이 쿠폰이 걸린 축제 — 축제 상세(S09)의 [쿠폰] 버튼이 이 축제에서만 선다 */
   eyebrow: "11월 7일 단 하루!",
-  name: "골목 축제 할인 쿠폰",
+  name: "축제 할인 쿠폰",
+  /* 축제 상세의 쿠폰 칸(detail/CouponCard.jsx) 두 줄 — 한 줄씩 */
+  lead: "축제 방문객을 위한 특별 혜택",
+  voucher: "1,000원 할인권",
   benefit: "1,000원 할인",
   /* 카드 한 줄 요약 — C2 쿠폰 카드에 들어간다 */
   summary: "2만 원 이상 결제 시, 11.7(토) 당일 한정",
@@ -286,9 +289,9 @@ function Layer({ children }) {
 /* 쿠폰 사용 흐름 (2026-10-19, 사용자 요청) — 축제 상세의 쿠폰 칸(CouponCard)에서 시작한다.
      받기(칸의 ⤓) → 받음 → 칸을 누르면 [바텀시트: 쿠폰 설명 + 「쿠폰 사용하기」]
      → [직원 확인 화면: 다른 바탕색, 「직원에게 이 화면을 보여주세요」 + 「사용 확인」]
-     → [확인 팝업: 「되돌릴 수 없어요」] → 사용 처리 → [완료 화면: 흐르는 현재 시각 + 사용 일시]
+     → [확인 팝업: 「되돌릴 수 없어요」] → 사용 처리 → [완료 화면: 사용 일시]
    직원 확인 화면에서 뒤로 가면 아직 쓴 것이 아니라서 쿠폰은 **미사용 그대로**다. 사용 처리는 확인 팝업을 지난 뒤에만 한다.
-   완료 화면의 시각이 초 단위로 흘러 사진·캡처가 아닌 실제 화면임을 직원이 알아본다. */
+   완료 화면에는 사용 일시가 초 단위까지 적힌다. */
 const pad = n => String(n).padStart(2, "0");
 const clock = d => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 const stamp = d => `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${clock(d)}`;
@@ -359,7 +362,7 @@ function StaffScreen({ onConfirm, onBack }) {
         </header>
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "var(--space-4) var(--gutter-screen)",
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--space-5)", textAlign: "center" }}>
-          <h1 style={{ font: "var(--type-title-1)", ...WRAP }}>직원에게 이 화면을 보여주세요</h1>
+          <h1 style={{ font: "var(--type-title-3)", ...WRAP }}>직원에게 해당 화면을 보여주세요</h1>
           <div style={{ width: "100%", background: "var(--surface-card)", color: "var(--text-body)", borderRadius: "var(--radius-card)",
             padding: "var(--space-6) var(--space-5)", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-2)" }}>
             <Badge tone="brand">{COUPON.eyebrow}</Badge>
@@ -371,22 +374,25 @@ function StaffScreen({ onConfirm, onBack }) {
         <div style={{ flex: "0 0 auto", padding: "var(--space-3) var(--gutter-screen) var(--space-5)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
           <Button block size="lg" variant="mint" onClick={() => setAsk(true)}>사용 확인</Button>
           <p style={{ font: "var(--type-label)", fontWeight: "var(--fw-bold)", color: "#ffb4b4", textAlign: "center", ...WRAP }}>
-            ※ 직원 전용 버튼입니다. 손님은 누르지 마세요.
+            ※ 직원 전용 기능입니다. 직원 외에는 조작하지 마세요.
           </p>
         </div>
         {ask ? (
           <Dim onClick={() => setAsk(false)} align="center">
-            <div role="alertdialog" aria-modal="true" aria-label="되돌릴 수 없어요"
+            <div role="alertdialog" aria-modal="true" aria-label="쿠폰을 사용 처리할까요?"
               style={{ position: "relative", width: "calc(100% - 2 * var(--gutter-screen))", maxWidth: 320, background: "var(--surface-card)",
                 color: "var(--text-body)", borderRadius: "var(--radius-card)", padding: "var(--space-5)", boxShadow: "var(--shadow-raised)",
                 display: "flex", flexDirection: "column", gap: "var(--space-3)", textAlign: "center" }}>
-              <h2 style={{ font: "var(--type-title-3)", color: "var(--text-heading)" }}>되돌릴 수 없어요</h2>
+              <h2 style={{ font: "var(--type-title-3)", color: "var(--text-heading)", ...WRAP }}>쿠폰을 사용 처리할까요?</h2>
               <p style={{ font: "var(--type-body)", color: "var(--text-muted)", ...WRAP }}>
-                사용 확인을 누르면 쿠폰이 사용 처리되어 다시 쓸 수 없어요. 결제할 때 맞나요?
+                사용 확인 시 쿠폰이 사용 처리되며, 다시 사용할 수 없습니다.
+              </p>
+              <p style={{ font: "var(--type-label)", color: "var(--text-heading)", ...WRAP }}>
+                실제 결제가 완료되었는지 확인해 주세요.
               </p>
               <div style={{ display: "flex", gap: "var(--space-2)" }}>
                 <Button block variant="outline" onClick={() => setAsk(false)}>취소</Button>
-                <Button block onClick={onConfirm}>사용 확인</Button>
+                <Button block onClick={onConfirm}>사용처리</Button>
               </div>
             </div>
           </Dim>
@@ -396,26 +402,19 @@ function StaffScreen({ onConfirm, onBack }) {
   );
 }
 
-/* 사용 완료 화면 — 현재 시각이 초 단위로 흐르고 사용 일시가 적힌다 */
-function UsedScreen({ usedAt, onEnter, onClose }) {
-  const [now, setNow] = React.useState(() => new Date());
-  React.useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+/* 사용 완료 화면 — 사용 일시(초 단위까지)가 적힌다. 흐르는 현재 시각은 두지 않는다(사용자 요청) */
+function UsedScreen({ usedAt, onClose }) {
   const at = usedAt ? new Date(usedAt) : null;
   return (
     <Layer>
-      <Frame footer={<>
-        <Button variant="primary" size="lg" icon="store" block onClick={onEnter}>상점가 둘러보기</Button>
-        <TextButton tone="muted" onClick={onClose}>닫기</TextButton>
-      </>}>
+      <Frame footer={<Button variant="primary" size="lg" block onClick={onClose}>닫기</Button>}>
         <Mascot pose="thumbsup" size={112} base={BASE} />
         <h1 style={{ font: "var(--type-title-1)", color: "var(--text-heading)", textAlign: "center", ...WRAP }}>쿠폰 사용이 완료됐어요</h1>
         <p style={{ font: "var(--type-body)", color: "var(--text-muted)", textAlign: "center", ...WRAP }}>{COUPON.name} · {COUPON.benefit}</p>
         <div style={{ width: "100%", background: "var(--surface-card)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-card)",
           padding: "var(--space-5)", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-2)" }}>
-          <span style={{ font: "var(--type-caption)", color: "var(--text-muted)" }}>현재 시각</span>
-          <span style={{ font: "var(--type-display)", color: "var(--brand-primary)", fontVariantNumeric: "tabular-nums" }}>{clock(now)}</span>
-          <span style={{ marginTop: "var(--space-2)", font: "var(--type-caption)", color: "var(--text-muted)" }}>사용 일시</span>
-          <span style={{ font: "var(--type-title-3)", color: "var(--text-heading)", fontVariantNumeric: "tabular-nums" }}>{at ? stamp(at) : "-"}</span>
+          <span style={{ font: "var(--type-caption)", color: "var(--text-muted)" }}>사용 일시</span>
+          <span style={{ font: "var(--type-title-2)", color: "var(--text-heading)", fontVariantNumeric: "tabular-nums" }}>{at ? stamp(at) : "-"}</span>
         </div>
       </Frame>
     </Layer>
@@ -444,16 +443,9 @@ export function FestivalCoupon() {
   if (step === "staff") {
     return <StaffScreen onBack={close} onConfirm={() => { write("used"); put(USED_AT, new Date().toISOString()); setStep("used"); }} />;
   }
-  /* [상점가 둘러보기] — 아래에 서 있는 축제 상세까지 걷어내고 상점가 탭(셸)에 선다. 상세 하단의
-     같은 이름 버튼이 하는 일이다. 해시를 지우고 라우터에 알리면(popstate) 셸의 오버레이가 닫힌다 */
+  /* 완료 화면 — [닫기]만 있다(2026-10-19, 사용자 요청). 닫으면 아래의 축제 상세가 그대로 보인다 */
   if (step === "used") {
-    return <UsedScreen usedAt={couponUsedAt()} onClose={close} onEnter={() => {
-      try {
-        window.history.replaceState({ shellDepth: 0 }, "", `${location.pathname}${location.search}`);
-        window.dispatchEvent(new Event("popstate"));
-      } catch { /* 주소를 못 바꾸는 환경 — 층만 닫는다 */ }
-      close();
-    }} />;
+    return <UsedScreen usedAt={couponUsedAt()} onClose={close} />;
   }
   return null;
 }

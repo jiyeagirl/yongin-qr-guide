@@ -48,6 +48,9 @@ import { CouponCard } from "./CouponCard.jsx";
  * 목록(U-FT-01)이 종료 상태도 노출하므로 상세에도 들어올 수 있다. 이때 프로그램을
  * 그대로 보여주면 아직 열리는 행사로 읽힌다. 맨 위에 끝났다는 사실을 먼저 적는다.
  */
+/* 「둔전골목형상점가」→「둔전 골목형 상점가」 (점포 상세의 shortName 과 같은 규칙) */
+const spacedDistrict = name => String(name).replace(/\s*골목형\s*상점가$/, " 골목형 상점가");
+
 export function FestivalDetail({ festival, courses = [], entry = false, onBack, onOpenDistrict, onDistrict, onOpenCourse }) {
   const f = festival;
   const ended = f.state === "종료";
@@ -120,6 +123,15 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
                   fontWeight: "var(--fw-semibold)", color: "var(--text-body)",
                   wordBreak: "keep-all" }}>{f.name}</p>
               ) : null}
+              {/* 소속 상점가 — 이름 밑에 지도핀 아이콘 + 상점가 이름만 (2026-10-19, 사용자 요청). 점포 상세와 같은 모양이다.
+                  「소속 상점가 :」 라벨과 밑줄 링크는 없앴다 — 상점가로 가는 길은 아래 정보 표의 「상권명」 줄과 하단 [상점가 둘러보기]다 */}
+              {f.districtName ? (
+                <p style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 4,
+                  font: "var(--type-caption)", color: "var(--text-muted)", wordBreak: "keep-all" }}>
+                  <Icon name="map-pin" size={14} style={{ flex: "0 0 auto" }} />
+                  <span>{spacedDistrict(f.districtName)}</span>
+                </p>
+              ) : null}
               {/* 기간·시간 줄은 뺐다 (2026-10-16, 사용자 요청) — 아래 정보 표가 같은 값을 적는다 */}
             </div>
           </div>
@@ -145,29 +157,12 @@ export function FestivalDetail({ festival, courses = [], entry = false, onBack, 
           </Notice>
         ) : null}
 
-        {/* 쿠폰 칸 (2026-10-19, 사용자 요청) — 팝업과 제목 옆 [쿠폰] 단추를 대신한다. 쿠폰이 걸린 축제에서만 선다 */}
-        {f.id === COUPON.festivalId ? <CouponCard /> : null}
-
         {/* 축제 사진 자리 (2026-10-16, 사용자 요청) — 점포 상세와 같은 부품이다. 자료(`festival.images`)가
             들어오면 같은 자리에 사진이 선다. */}
         <PhotoStrip images={f.images} name={f.short || f.name} label="축제 이미지" />
 
-        {/* 소속 상점가 (2026-10-19, 사용자 요청) — 점포 상세와 같은 줄이다. 표 안의 한 칸이던 것을
-            사진 바로 아래로 올렸다. 서비스 안 화면으로만 간다: 누르면 이 상세를 닫고 어디로 갈지는
-            화면(MainApp)이 정한다 — 지금 서 있는 상점가면 상점가 탭, 아니면 준비 중 안내(S13-S). */}
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "var(--space-2)" }}>
-          <span style={{ font: "var(--type-label)", color: "var(--text-muted)" }}>소속 상점가 :</span>
-          {onOpenDistrict ? (
-            <button type="button" onClick={() => onOpenDistrict(f)}
-              style={{ background: "none", border: "none", padding: "10px 0", cursor: "pointer",
-                font: "var(--type-body)", fontWeight: "var(--fw-semibold)", color: "var(--brand-primary)",
-                textDecoration: "underline", textUnderlineOffset: 3, textAlign: "left" }}>
-              {f.districtName}
-            </button>
-          ) : (
-            <span style={{ font: "var(--type-body)", fontWeight: "var(--fw-semibold)" }}>{f.districtName}</span>
-          )}
-        </div>
+        {/* 쿠폰 칸 (2026-10-19, 사용자 요청) — 팝업과 제목 옆 [쿠폰] 단추를 대신한다. 축제 사진 바로 아래다(사용자 요청). 쿠폰이 걸린 축제에서만 선다 */}
+        {f.id === COUPON.festivalId ? <CouponCard /> : null}
 
         {/* ── 기본 정보 (U-FT-02) ──────────────────────────────────────
                "주최 상점가"만 누를 수 있다. 상점가 자체의 소개·연혁·연락처는 우리가 가진

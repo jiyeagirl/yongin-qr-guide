@@ -337,6 +337,10 @@ export function whenLabel(from, to, oneDay) {
   return `${head} ~ ${tail}`;
 }
 
+const FESTIVAL_PHOTOS = {
+  "ft-dunjeon": ["/screens/main/assets/festivals/dunjeon-1.jpg", "/screens/main/assets/festivals/dunjeon-2.jpg"],   /* 제1회 둔전 무지개길 한마당축제 현장 */
+};
+
 const FESTIVAL_BY_DISTRICT = FESTIVAL_RAW.reduce((o, [did, short, name, start, end, time, place, program]) => {
   const id = `ft-${did}`;
   const extra = EXTRAS[id] || {};
@@ -345,6 +349,8 @@ const FESTIVAL_BY_DISTRICT = FESTIVAL_RAW.reduce((o, [did, short, name, start, e
     /* 홍보 카드(S12)가 쓰는 겉모습. 없으면 카드가 기본값으로 그린다.
        카드 색은 여기 없다 — 상태(state)가 정한다 (festivalState.js) */
     pose: POSES[id],
+    /* 축제 사진 (2026-10-19, 사용자 요청) — 자료를 받은 축제만 있다. 없으면 상세는 자리표시 */
+    images: FESTIVAL_PHOTOS[id],
     state: stateOf(start, end),
     date: `${label(start, end)} ${time}`,
     /* 기간을 시간과 분리해 둔다 — 상세(S09)의 정보 표는 "기간"과 "시간"을 다른 줄에 적는다 */
