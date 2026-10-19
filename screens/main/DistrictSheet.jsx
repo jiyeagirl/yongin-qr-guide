@@ -151,7 +151,7 @@ export function DistrictSheet({
               {rows.length}곳 중 {start + 1}–{start + shown.length}
             </p>
             <Pagination page={safePage} pageCount={pageCount} onChange={setPage}
-              label="점포 목록 쪽 넘기기" style={{ marginTop: "var(--space-2)" }} />
+              label="가게 목록 쪽 넘기기" style={{ marginTop: "var(--space-2)" }} />
           </div>
         ) : null}
       </div>
@@ -190,7 +190,7 @@ export function DistrictSheet({
               두 조각으로 갈라 놓을 근거가 없었다 — 둘러보기 탭이 이미 한 줄이다
               (DiscoverPanel). 폭이 모자라면 어차피 접히고, 그때 접히는 자리는
               문장의 자리가 아니라 화면의 자리다 */}
-          점포 정보 {STORE_AS_OF} 기준. 안내 정보는 참고용입니다.
+          가게 정보 {STORE_AS_OF} 기준. 안내 정보는 참고용입니다.
         </p>
       </div>
     </div>

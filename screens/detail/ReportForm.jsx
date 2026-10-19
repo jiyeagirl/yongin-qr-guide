@@ -165,7 +165,7 @@ export function ReportForm({ target, targetKind, onBack, onSubmit, receipt, base
           ) : (
             <>
               <Notice tone="info" title="대상이 지정되지 않았습니다">
-                시설이나 점포 화면에서 [정보 오류 신고]를 누르면 대상이 자동으로 채워집니다.
+                시설이나 가게 화면에서 [정보 오류 신고]를 누르면 대상이 자동으로 채워집니다.
               </Notice>
               <Input label="대상 이름" hint="아는 만큼만 적어 주세요 (선택)"
                 placeholder="예) 둔전마을회관 AED"

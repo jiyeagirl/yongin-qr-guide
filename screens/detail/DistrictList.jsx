@@ -149,7 +149,7 @@ export function DistrictList({ districts = [], guOrder = [], sortNear, pageSize 
              되풀이했다. 119 는 이 화면에 안전시설이 한 줄도 없어서 끈다 — S08·S09·S12 와
              같은 이유다 (DetailNotice 의 emergency 주석). */}
         <DetailNotice emergency={false} style={{ marginTop: "var(--space-6)" }}>
-          안내 정보는 참고용이며, 점포 수와 온누리 가맹 수는 시 안내 기준이라
+          안내 정보는 참고용이며, 가게 수와 온누리 가맹 수는 시 안내 기준이라
           실제와 다를 수 있습니다.
         </DetailNotice>
       </div>

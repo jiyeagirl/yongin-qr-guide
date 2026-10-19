@@ -152,7 +152,7 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
                 두 영역이 아니라 이 가게에서 시작되는 한 번의 탐방으로 읽히게 한다. 이 가게가 코스 안에 있으면 카드가
                 그 줄을 표시한다(currentId) */}
             <FootprintTrail style={{ marginBottom: "var(--space-3)" }} />
-            <SectionHeader title="현재 가게에서 이어지는 골목 한 바퀴" />
+            <SectionHeader title="현재 가게에서 시작하는 골목 한바퀴 코스" />
             <p style={{ marginTop: "calc(-1 * var(--space-1))", marginBottom: "var(--space-3)",
               font: "var(--type-caption)", color: "var(--text-muted)", wordBreak: "keep-all" }}>
               주변 가게들을 따라 골목의 다양한 매력을 발견해 보세요.

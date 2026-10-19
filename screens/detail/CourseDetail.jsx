@@ -870,7 +870,7 @@ export function CourseDetail({ course, anchor, asOf, onBack, onPickStore, onRout
              둘째 줄이 이미 "이건 확정이 아니다"를 말하는데 셋째 줄이 "참고용입니다"로
              같은 말을 한 번 더 했다. 두 문장을 하나로 잇고, 119 는 껐다 — 이 화면에는
              안전시설이 한 줄도 없다 (DetailNotice 의 emergency 주석. S09·S12 와 같은 이유). */}
-        <DetailNotice emergency={false} asOf={`점포 정보 ${asOf} 기준`}>
+        <DetailNotice emergency={false} asOf={`가게 정보 ${asOf} 기준`}>
           <span style={{ display: "block" }}>
             안내 정보는 참고용이며, 코스는 추천 경로입니다.
             영업시간과 휴무는 매장마다 다르니 방문 전에 확인해 주세요.

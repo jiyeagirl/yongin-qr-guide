@@ -36,7 +36,7 @@ export const COUPON = {
   conditions: [
     "2만 원 이상 결제 시 사용 가능",
     "11월 7일(토) 축제 당일에만 사용 가능",
-    "참여 점포에서만 사용 가능",
+    "참여 가게에서만 사용 가능",
     "결제 1회당 1장 사용",
   ],
 };
@@ -135,7 +135,7 @@ function Intro({ onGet, onLater, note, cta }) {
           골목 축제에 오신 걸 환영해요
         </h1>
         <p style={{ font: "var(--type-body)", color: "var(--text-muted)", ...WRAP }}>
-          참여 점포에서 쓸 수 있는 할인 쿠폰을 받아가세요
+          참여 가게에서 쓸 수 있는 할인 쿠폰을 받아가세요
         </p>
       </div>
 

@@ -41,7 +41,7 @@ export function DistrictInfo({ district, festival, onBack, onClose, onOpenFestiv
     <DetailPage title={spaced(d.name)} onBack={onBack} onClose={onClose}
       /* [지도 보기] — 이 상점가의 점포를 지도와 목록으로 본다 (2026-10-19, 사용자 요청). 상점가 탭으로 옮기지 않고
          둘러보기 안에서 한 칸 더 들어간다(DistrictMap). 지금 서 있는 상점가는 상점가 탭이 그 지도라 단추가 없다 */
-      footer={onOpenMap ? <Button variant="primary" size="lg" icon="store" block onClick={onOpenMap}>점포 둘러보기</Button> : undefined}>
+      footer={onOpenMap ? <Button variant="primary" size="lg" icon="map" block onClick={onOpenMap}>가게 둘러보기</Button> : undefined}>
       <DetailBody>
         {/* 점포 · 축제 상세와 같은 머리 — 왼쪽 아이콘 하나 + 이름 + 그 아래 작은 주소 (2026-10-19, 사용자 요청) */}
         <header>
@@ -73,7 +73,7 @@ export function DistrictInfo({ district, festival, onBack, onClose, onOpenFestiv
         ) : null}
 
         <InfoList items={[
-          { label: "점포 수", value: `${d.stores}곳` },
+          { label: "가게 수", value: `${d.stores}곳` },
           ...(d.mainBiz ? [{ label: "주요 업종", value: d.mainBiz.join(", ") }] : []),
           { label: "온누리 가맹점", value: d.onnuri != null ? `${d.onnuri}곳` : "-" },
           { label: "거리", value: km },
@@ -81,7 +81,7 @@ export function DistrictInfo({ district, festival, onBack, onClose, onOpenFestiv
 
 
         <DetailNotice emergency={false}>
-          점포 수와 온누리 가맹 수는 시 안내 기준이라 실제와 다를 수 있습니다. 안내 정보는 참고용입니다.
+          가게 수와 온누리 가맹 수는 시 안내 기준이라 실제와 다를 수 있습니다. 안내 정보는 참고용입니다.
         </DetailNotice>
       </DetailBody>
     </DetailPage>

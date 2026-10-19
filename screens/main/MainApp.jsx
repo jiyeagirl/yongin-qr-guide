@@ -571,7 +571,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     /* 구와 거리만 적는다 (2026-10-19, 사용자 요청) — 축제명과 읍·면·동은 뺐다. 축제는 카드가 없애고,
        소재는 상점가 안내(DistrictInfo)가 적는다. 점포 수와 온누리 수는 아래 줄이다 */
     ...x, biz: x.gu,
-    addr: `점포 ${x.stores}곳${x.onnuri != null ? `, 온누리 ${x.onnuri}곳` : ""}`,
+    addr: `가게 ${x.stores}곳${x.onnuri != null ? `, 온누리 ${x.onnuri}곳` : ""}`,
   }), [pickOnMap]);
 
   /* 다른 상점가 줄을 누르면 **지도가 그 상점가로 넘어가** 핀이 켜지고 미리보기 카드가 뜬다

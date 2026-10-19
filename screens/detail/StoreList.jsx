@@ -84,12 +84,12 @@ export function StoreList({
               {rows.length}곳 중 {start + 1}–{start + shown.length}
             </p>
             <Pagination page={safePage} pageCount={pageCount} onChange={setPage}
-              label="점포 목록 쪽 넘기기" style={{ marginTop: "var(--space-2)" }} />
+              label="가게 목록 쪽 넘기기" style={{ marginTop: "var(--space-2)" }} />
           </div>
         ) : null}
 
         <DetailNotice emergency={false} style={{ marginTop: "var(--space-5)" }}>
-          점포 정보 {STORE_AS_OF} 기준. 안내 정보는 참고용입니다.
+          가게 정보 {STORE_AS_OF} 기준. 안내 정보는 참고용입니다.
         </DetailNotice>
       </div>
     </DetailPage>

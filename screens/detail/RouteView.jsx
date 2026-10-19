@@ -150,7 +150,7 @@ export function RouteView({ dest, origin, fromAnchor = true,
   /* 고를 것이 하나뿐이면 드롭다운을 그리지 않는다 (머리말) */
   const canPickOrigin = origins.length > 1 && Boolean(onOriginChange);
   const isFacility = Boolean(dest.type && FACILITY_LABELS[dest.type]);
-  const kindLabel = isFacility ? (FACILITY_LABELS[dest.type] || "공공시설") : (CATEGORY_LABELS[dest.cat] || "점포");
+  const kindLabel = isFacility ? (FACILITY_LABELS[dest.type] || "공공시설") : (CATEGORY_LABELS[dest.cat] || "가게");
 
   return (
     /* 뒤로는 한 칸(대개 도착지 상세)으로, [X]는 지도로 나간다. 이 화면은 목록 → 상세 →
@@ -355,7 +355,7 @@ export function RouteView({ dest, origin, fromAnchor = true,
                문장의 앞 절("안내 정보는 참고용입니다")만 여기서 직접 적는다. */}
         {/* 기준일은 카테고리 단위다 (정의서 3-2). 시설은 유형마다 값이 다르다 */}
         <DetailNotice emergency={isFacility}
-          asOf={isFacility ? `공공시설 정보 ${FACILITY_AS_OF[dest.type] || ""} 기준` : `점포 정보 ${STORE_AS_OF} 기준`}>
+          asOf={isFacility ? `공공시설 정보 ${FACILITY_AS_OF[dest.type] || ""} 기준` : `가게 정보 ${STORE_AS_OF} 기준`}>
           <span style={{ display: "block" }}>
             {result && !failed ? "거리는 실제 보행 경로 기준이며, 도보 시간은 상황에 따라 달라질 수 있습니다. " : ""}
             {isFacility ? null : "안내 정보는 참고용입니다."}

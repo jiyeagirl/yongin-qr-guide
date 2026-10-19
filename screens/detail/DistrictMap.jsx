@@ -174,11 +174,11 @@ export function DistrictMap({ district, stores = [], onBack, onClose, onOpenStor
                         {rows.length}곳 중 {start + 1}–{start + shown.length}
                       </p>
                       <Pagination page={safePage} pageCount={pageCount} onChange={setPage}
-                        label="점포 목록 쪽 넘기기" style={{ marginTop: "var(--space-2)" }} />
+                        label="가게 목록 쪽 넘기기" style={{ marginTop: "var(--space-2)" }} />
                     </div>
                   ) : null}
                   <DetailNotice emergency={false} style={{ marginTop: "var(--space-5)" }}>
-                    점포 목록은 상권에서 받은 자료 기준이며, 지도의 점포 위치는 건물 주소로 찾은 대략의 위치입니다. 안내 정보는 참고용입니다.
+                    가게 목록은 상권에서 받은 자료 기준이며, 지도의 가게 위치는 건물 주소로 찾은 대략의 위치입니다. 안내 정보는 참고용입니다.
                   </DetailNotice>
                 </div>
               </div>
@@ -187,8 +187,8 @@ export function DistrictMap({ district, stores = [], onBack, onClose, onOpenStor
         ) : (
           <div style={{ position: "absolute", left: "var(--gutter-screen)", right: "var(--gutter-screen)",
             bottom: "var(--space-5)", zIndex: "var(--z-float)" }}>
-            <Notice tone="info" title="점포 목록은 준비 중이에요">
-              현재 상점가의 개별 점포 정보가 제공되지 않아, 지도에는 상점가 중심 위치만 표시됩니다.
+            <Notice tone="info" title="가게 목록은 준비 중이에요">
+              현재 상점가의 개별 가게 정보가 제공되지 않아, 지도에는 상점가 중심 위치만 표시됩니다.
             </Notice>
           </div>
         )}
