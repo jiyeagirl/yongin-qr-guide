@@ -11,7 +11,7 @@ import {
  *   상점가 이름 (골목형상점가 앞을 띄운다)
  *   구 · 행정동 · 소재지 (한 줄 — 표에는 소재지 칸이 없다)
  *   [사진 줄]  ← 자료가 없으면 자리표시 카드
- *   점포 수 / 온누리 가맹점 / 지금 계신 곳에서의 거리
+ *   점포 수 / 온누리 가맹점 / 현 위치에서의 거리
  *   ─────────────────────────────────
  *   상점가 축제  (있을 때만)          ← FestivalCard → S09
  *   ─────────────────────────────────
@@ -34,7 +34,7 @@ const locationLine = d => (/^\S+[읍면동]\s/.test(d.addr || "") ? `${d.gu} ${d
 export function DistrictInfo({ district, festival, onBack, onClose, onOpenFestival,
   base = "../../design-systems/" }) {
   const d = district;
-  const km = d.dist === 0 ? "지금 계신 곳"
+  const km = d.dist === 0 ? "현 위치"
     : d.dist >= 1000 ? `${(d.dist / 1000).toFixed(1)}km` : `${d.dist}m`;
 
   return (

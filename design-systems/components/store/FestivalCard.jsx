@@ -11,7 +11,7 @@ import { festivalPalette, festivalBadge } from "./festivalState.js";
  *   │ 둔전 골목축제                        │🐉│ │
  *   │ 둔전 골목상권 활성화 한마당 축제      ╰──╯ │
  *   │ ────────────────────────────────           │
- *   │ 둔전골목형상점가 · 지금 계신 곳             │
+ *   │ 둔전골목형상점가 · 현 위치             │
  *   └──────────────────────────────────────────┘
  *
  * ── 제목 아래 한 줄은 **실제 축제명**이다 (2026-08-20) ───────────────────────
@@ -120,7 +120,7 @@ export function FestivalCard({
      이름은 **실제 축제명 하나만** 읽는다 (2026-08-20). 화면에는 짧은 제목과 실제 명칭이
      함께 서지만, 소리로는 "에버랜드마을 골목축제, 에버랜드마을 골목축제 stage78" 처럼
      같은 말을 두 번 듣게 된다 — 짧은 제목이 말하는 상점가는 뒤의 상점가명이 어차피 읽는다. */
-  const label = `${f.state} · ${f.name}. ${f.date}. ${f.districtName} ${f.dist === 0 ? "지금 계신 곳" : km}.`;
+  const label = `${f.state} · ${f.name}. ${f.date}. ${f.districtName} ${f.dist === 0 ? "현 위치" : km}.`;
 
   /* [X] 가 없으면 카드 전체가 곧 버튼이다 — [자세히 보기] 같은 버튼을 따로 붙이면
      카드마다 같은 말이 한 번씩 더 늘어난다.
@@ -199,8 +199,8 @@ export function FestivalCard({
           }}>
             <Icon name="map-pin" size={13} />
             {/* U-DC-01 — 상점가명과 거리를 반드시 병기한다. 거리 0 은 숫자로 적을 수 없어
-                "지금 계신 곳"이라고 쓴다 (FestivalRow 와 같은 말을 쓴다) */}
-            {f.districtName} · {f.dist === 0 ? "지금 계신 곳" : km}
+                "현 위치"이라고 쓴다 (FestivalRow 와 같은 말을 쓴다) */}
+            {f.districtName} · {f.dist === 0 ? "현 위치" : km}
           </div>
         ) : null}
       </div>

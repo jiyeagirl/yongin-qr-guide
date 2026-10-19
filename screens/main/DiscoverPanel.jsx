@@ -22,7 +22,7 @@ import { PopularSection, CourseSection, DistrictPreviewSection } from "./HomeSec
  *   상점가 축제 정보         상점가 전체   ← 기간 한정이라 최상단 (U-DC-05). 진행중·예정만
  *   골목 한바퀴 코스 추천     현재 상점가
  *   인기 매장                현재 상점가   ← 「신규 매장」 레일이 여기 함께 있었다 (2026-08-25 삭제)
- *   용인시 골목형 상점가 정보 상점가 전체   ← 최하단 (U-DC-04). 줄마다 용인시 누리집으로 나간다
+ *   용인 골목형 상점가 상점가 전체   ← 최하단 (U-DC-04). 줄마다 용인시 누리집으로 나간다
  *
  * 위에서부터 **넓은 답 → 좁은 답**이다. 축제와 코스는 "지금 이 동네에서 뭘 하지"에,
  * 인기 매장은 그보다 한 걸음 좁은 "어느 가게에 가지"에 답한다 (2026-08-18 순서 변경).
@@ -123,16 +123,12 @@ export function DiscoverPanel({
       </section>
 
       {/* ── 2·3. 현재 상점가 대상 섹션 — 없으면 통째로 숨긴다 (U-DC-06) ──────
-             **코스가 매장보다 위다** (2026-08-18 순서 변경). 축제와 코스는 둘 다 "지금 이
-             동네에서 뭘 하지"에 답하는 자리이고, 신규·인기 매장은 그보다 한 걸음 좁은
-             "어느 가게에 가지"다. 같은 결의 둘을 붙여두면 위에서부터 넓은 답 → 좁은 답으로
-             읽히고, 축제가 없는 기간에도 코스가 첫 화면에 남는다. */}
+             **인기 매장이 코스보다 위다** (2026-10-19, 사용자 요청). 2026-08-18 에는 코스가 매장보다
+             위였는데(축제·코스는 "뭘 하지", 매장은 한 걸음 좁은 "어느 가게에 가지"), 상점가 시트의
+             순서(인기 매장 → 코스)와 달라 같은 앱에서 두 탭이 다르게 읽혔고, 가게를 찾아온 사람이
+             코스 레일을 지나쳐야 했다. 이제 두 자리가 같은 순서다. */}
       {currentDistrict ? (
         <>
-          {/* 골목 한바퀴 추천 코스 (U-DC-03) — 시트와 같은 조각 (HomeSections) */}
-          <CourseSection courses={courses} note={currentDistrict.name} onPick={onOpenCourse}
-            style={{ marginTop: "var(--space-6)" }} />
-
           {/* ── 인기 매장 (U-DC-02) ────────────────────────────────────────
                  **「신규 매장」 레일이 이 위에 있었다** (2026-08-25 삭제, 사용자 요청).
                  뽑는 근거가 **등록 일자**인 목록인데, 그 값은 원천의 `created_at` 이라
@@ -144,6 +140,10 @@ export function DiscoverPanel({
                  남은 레일은 하나라 색으로 갈라야 할 상대도 없어졌다 — `tone="hot"` 은
                  그대로 둔다 (인기라는 근거가 색에도 남는다. StoreRail 주석). */}
           <PopularSection items={popular} note={currentDistrict.name} onPick={onOpenStore}
+            style={{ marginTop: "var(--space-6)" }} />
+
+          {/* 골목 한바퀴 추천 코스 (U-DC-03) — 시트와 같은 조각 (HomeSections) */}
+          <CourseSection courses={courses} note={currentDistrict.name} onPick={onOpenCourse}
             style={{ marginTop: "var(--space-5)" }} />
         </>
       ) : (
@@ -173,7 +173,7 @@ export function DiscoverPanel({
              줄을 누르면 용인시 누리집의 그 상점가 안내 페이지로 나간다 (2026-08-18).
              우리에게는 다른 상점가의 점포도 지도도 없어서, 앱 안에서 열면 이 줄에 이미
              적힌 이름·규모·거리를 한 번 더 보게 된다 (DistrictRow 의 external 주석). */}
-      <DistrictPreviewSection title="용인시 골목형 상점가 정보" districts={preview}
+      <DistrictPreviewSection title="용인 골목형 상점가" districts={preview}
         onOpenAll={onOpenAllDistricts} onOpen={onOpenDistrict}
         style={{ marginTop: "var(--space-6)" }} />
 

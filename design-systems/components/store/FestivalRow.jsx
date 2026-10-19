@@ -21,7 +21,7 @@ import { festivalBadge } from "./festivalState.js";
    회원가입이 없고 소속도 없다 — 안내판을 찍고 들어온 사람에게 상인회 쪽 말버릇이
    그대로 나간 셈이었다 (코드 주석과 명세서의 U-FT-03 에서 쓰는 말이다).
 
-   대신 "지금 계신 곳"이라고 쓴다. 설명이 필요 없는 말이고, 상단 띠가 말하는 QR 지점과
+   대신 "현 위치"이라고 쓴다. 설명이 필요 없는 말이고, 상단 띠가 말하는 QR 지점과
    같은 것을 가리킨다. 그 줄을 읽은 사람은 여기서 한 번 더 배울 것이 없다. */
 
 export function FestivalRow({ festival, onClick, divider = true, style, ...rest }) {
@@ -42,7 +42,7 @@ export function FestivalRow({ festival, onClick, divider = true, style, ...rest 
       meta={<>
         {f.date}
         {/* 상점가명과 거리는 한 줄로 내린다 — 날짜와 같은 줄에 넣으면 넷이 붙어 읽히지 않는다 */}
-        <span style={{ display: "block" }}>{f.districtName} · {f.dist === 0 ? "지금 계신 곳" : km}</span>
+        <span style={{ display: "block" }}>{f.districtName} · {f.dist === 0 ? "현 위치" : km}</span>
       </>}
       style={done ? { opacity: 0.62, ...style } : style}
       {...rest} />

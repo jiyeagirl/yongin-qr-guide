@@ -11,7 +11,7 @@ import { PopularSection, CourseSection, DistrictPreviewSection } from "./HomeSec
  *   인기 매장                                                  ← 가로 레일 (HomeSections)
  *   골목 한바퀴 코스 추천                                      ← 가로 카드 (HomeSections)
  *   [둔전 골목형 상점가 전체보기 >]                            ← S15 (#/stores). 회색 알약
- *   근처 골목형 상점가   [전체보기]                            ← 가까운 3곳 → 지도로 이동
+ *   주변 골목형 상점가   [전체보기]                            ← 가까운 3곳 → 지도로 이동
  *   기준일자·고지
  *
  * ── 왜 가게 목록이 빠졌나 ───────────────────────────────────────────────
@@ -69,8 +69,8 @@ export function DistrictSheet({
       </div>
 
       {otherDistricts.length ? (
-        <DistrictPreviewSection title="근처 골목형 상점가" districts={otherDistricts}
-          allButtonLabel="근처 골목형 상점가 전체보기"
+        <DistrictPreviewSection title="주변 골목형 상점가" districts={otherDistricts}
+          allButtonLabel="주변 골목형 상점가 전체보기"
           onOpenAll={onOpenAllDistricts} onOpen={onOpenDistrict}
           style={{ marginTop: "var(--space-5)" }} />
       ) : null}

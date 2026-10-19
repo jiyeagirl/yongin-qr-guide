@@ -1044,7 +1044,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
 
      **가운뎃점 앞뒤를 띄운다** (2026-08-20). 붙여 쓰면("대피소·쉼터·화장실") 19px 굵은
      제목에서 세 낱말이 한 덩어리로 뭉쳐 하나의 긴 이름처럼 읽힌다. 이 화면의 다른 자리도
-     전부 띄어 쓴다 — "둔전골목형상점가 · 지금 계신 곳", "10.17 (금) · 15:00~21:00". */
+     전부 띄어 쓴다 — "둔전골목형상점가 · 현 위치", "10.17 (금) · 15:00~21:00". */
   const sheetTitle = isFacility
     ? (fcTypes.length === 0 || fcTypes.length === FACILITY_TYPES.length
         ? "주변 공공시설"
