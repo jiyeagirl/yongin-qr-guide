@@ -1,4 +1,4 @@
-import { STORES } from "../../screens/main/data/dunjeon.js";
+import { STORES } from "../../screens/main/data/current.js";
 import { DISTRICTS, GU_ORDER } from "../../screens/main/data/districts.js";
 /* 이 파일만 디자인 시스템을 끌어온다. 다른 data/ 파일은 그러지 않는다 (stats.js 머리말) —
    그것들은 서버 응답으로 통째로 갈아끼울 자리라 이름표가 딸려 오면 안 되지만, 이 표는
@@ -113,7 +113,7 @@ export function checkPassword(pw) {
 export const DISTRICT_FIELDS = [
   { key: "name", spec: "name", label: "골목형 상점가명", required: true, type: "text",
     range: "2~40자 · 전역 유일", minLength: 2, maxLength: 40,
-    example: "둔전골목형상점가", span: 2 },
+    example: "동백이음길 골목형상점가", span: 2 },
   { key: "gu", spec: "gu", label: "소속 구", required: true, type: "select", options: GU_OPTIONS,
     example: "처인구" },
   /* ── 번호가 아니라 주소를 받는다 (2026-08-24, 사용자 요청) ──────────────────
@@ -243,9 +243,9 @@ export const STORE_FIELDS = [
   { key: "branch", spec: "branch_name", label: "지점명", required: false, type: "text",
     range: "최대 40자", maxLength: 40, example: "에버랜드점" },
   { key: "districtId", spec: "market_id", label: "소속 골목형 상점가", required: true, type: "select",
-    options: DISTRICT_OPTIONS, example: "둔전골목형상점가" },
+    options: DISTRICT_OPTIONS, example: "동백이음길 골목형상점가" },
   { key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
-    range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 },
+    range: "최대 100자", maxLength: 100, example: "기흥구 동백중앙로 358-19", span: 2 },
   /* 지도를 여기에도 둔다 (2026-08-20). 점포도 **지도에 핀으로 찍히는 자료**다 — 상점가 탭의
      335개 마커가 이 좌표다. 공공시설 폼에만 지도가 있으면 담당자는 점포 좌표가 어디서
      정해지는지 알 수 없고, 주소가 애매해 핀이 뒷골목에 박혀도 확인할 자리가 없다.
@@ -429,9 +429,9 @@ export function deriveChip(v) {
    할 일이 된다. 종료일이 지나도 **숨기지 않고 완료 카테고리로 옮겨** 계속 노출한다. */
 export const FESTIVAL_FIELDS = [
   { key: "name", spec: "name", label: "축제명", required: true, type: "text",
-    range: "2~40자", minLength: 2, maxLength: 40, example: "둔전 골목축제", span: 2 },
+    range: "2~40자", minLength: 2, maxLength: 40, example: "동백이음길 가을마실 축제", span: 2 },
   { key: "districtId", spec: "market_id", label: "상권명", required: true, type: "select",
-    options: DISTRICT_OPTIONS, example: "둔전골목형상점가", span: 2,
+    options: DISTRICT_OPTIONS, example: "동백이음길 골목형상점가", span: 2,
     hint: "주최 골목형 상점가" },
   { key: "start", spec: "date_from", label: "시작일", required: true, type: "date", example: "2026-10-17" },
   { key: "end", spec: "date_to", label: "종료일", required: true, type: "date", example: "2026-10-17",
@@ -607,7 +607,7 @@ export const COURSE_FIELDS = [
   { key: "name", spec: "name", label: "코스명", required: true, type: "text",
     range: "2~40자", minLength: 2, maxLength: 40, example: "먹자골목 한바퀴", span: 2 },
   { key: "districtId", spec: "market_id", label: "골목형 상점가", required: true, type: "select",
-    options: DISTRICT_OPTIONS, example: "둔전골목형상점가", span: 2,
+    options: DISTRICT_OPTIONS, example: "동백이음길 골목형상점가", span: 2,
     hint: "코스에 넣을 점포는 이 상점가의 것 중에서 고릅니다" },
   /* 설명이 필수인 이유: 둘러보기 탭의 코스 카드와 상세(S08) 머리에 **코스명 바로 밑**으로
      나가는 한 줄이라, 비면 그 자리가 빈 채로 선다. 「무엇을 도는 코스인가」를 말하는
@@ -669,7 +669,7 @@ export function storeOptionsOf(stores, districtId) {
    덮어쓰기 규칙은 서버가 자기 기준으로 판단한다. */
 
 const ADDR ={ key: "addr", spec: "address_road", label: "도로명주소", required: true, type: "address",
-  range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 };
+  range: "최대 100자", maxLength: 100, example: "기흥구 동백중앙로 358-19", span: 2 };
 
 /* 좌표(COORD)는 점포와 함께 쓰므로 2-2 위쪽에 한 번만 선언해 두었다 */
 
@@ -690,7 +690,7 @@ const COMMON_TAIL = [
    그래서 주소를 고르면 자동으로 채워지되, 그 뒤로는 보통 입력칸이다. **손으로 고친
    이름은 주소를 다시 골라도 덮이지 않는다** (Facilities.jsx 의 onAddress). */
 const DERIVED_NAME = { key: "name", spec: "—", label: "명칭", required: true, type: "text",
-  range: "2~60자", minLength: 2, maxLength: 60, span: 2, example: "둔전로 42 AED",
+  range: "2~60자", minLength: 2, maxLength: 60, span: 2, example: "동백중앙로 358-12 AED",
   hint: "도로명주소를 선택하면 이름이 자동으로 입력됩니다. 현장에서 사용하는 명칭과 다른 경우 수정하면 됩니다" };
 
 export const FACILITY_FIELDS = {
@@ -706,7 +706,7 @@ export const FACILITY_FIELDS = {
   ],
   toilet: [
     { key: "name", spec: "name", label: "화장실명", required: true, type: "text",
-      range: "2~60자", minLength: 2, maxLength: 60, example: "둔전시장 공중화장실", span: 2 },
+      range: "2~60자", minLength: 2, maxLength: 60, example: "내꽃공원 공중화장실", span: 2 },
     ADDR,
     COORD,
     /* 개방시간이 칸수보다 위인 이유: 나머지 일곱은 "가서 쓸 만한가"를 말하는데
@@ -728,7 +728,7 @@ export const FACILITY_FIELDS = {
   ],
   rest: [
     { key: "name", spec: "name", label: "쉼터명칭", required: true, type: "text",
-      range: "2~60자", minLength: 2, maxLength: 60, example: "둔전마을회관 무더위쉼터", span: 2 },
+      range: "2~60자", minLength: 2, maxLength: 60, example: "백현마을 경로당 무더위쉼터", span: 2 },
     ADDR,
     COORD,
     { key: "hours", spec: "open_hours", label: "운영시간", required: false, type: "text",
@@ -828,7 +828,7 @@ export const QR_FIELDS = [
      노출되므로 40자를 넘기지 않습니다」. 길이는 칸 안의 범위 표시(2~40자)가 이미 적고
      `maxLength` 가 막는다. 어디에 나가는지는 이 칸을 채우는 일과 상관이 없다 */
   { key: "name", spec: "name", label: "지점명", required: true, type: "text",
-    range: "2~40자", minLength: 2, maxLength: 40, example: "둔전 시장 입구 버스정류장" },
+    range: "2~40자", minLength: 2, maxLength: 40, example: "백현마을 버스정류장" },
   /* ── 앵커를 어디서 얻는가가 코드마다 다르다 (2026-09-02, 사용자 요청) ─────────
      QR 이 붙는 자리가 안내판만은 아니다 — **축제 팜플렛에도 인쇄된다** (시민 S14 · U-CM-20).
      그런데 팜플렛은 **종이라서 붙어 있는 자리가 없다.** 도로명주소를 필수로 두면 담당자가
@@ -858,7 +858,7 @@ export const QR_FIELDS = [
        담당자가 무엇을 잘못했는지 되짚게 된다. 검색해 고르는 칸이므로 할 일을 적는다
        (V-02 · `districtId` 의 `requiredMsg` 와 같은 이유). */
     requiredMsg: "도로명주소를 검색해 선택해주세요.",
-    range: "최대 100자", maxLength: 100, example: "처인구 포곡읍 둔전로 42", span: 2 },
+    range: "최대 100자", maxLength: 100, example: "기흥구 동백중앙로 358-19", span: 2 },
   /* `COORD` 를 그대로 쓰지 않고 조건만 갈아 끼운다 — 그 상수는 점포·공공시설과 **함께
      쓰는 값**이라, 여기서 고치면 저쪽 둘의 좌표까지 조건부가 된다 */
   { ...COORD, required: "cond", when: v => !isPamphlet(v) },

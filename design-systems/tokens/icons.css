@@ -36,6 +36,14 @@
    온누리 가맹 마커는 목록·상세의 온누리 배지와 같은 teal 계열로 맞춘다 (U-ST-06). */
 --pin-store:var(--yong-ink-500); /* @kind color */
 --pin-store-onnuri:var(--yong-teal-500); /* @kind color */
+/* 건물 핀 (2026-10-30, 사용자 요청) — 가게가 건물 몇 채에 몰린 상점가에서 가게 핀 대신 찍는 알약.
+   바탕은 쉼터 핀(--pin-rest)과 같은 teal-500 이다 — 브랜드 초록(green-700)은 [전체] 칩 · 버튼의 켜진 색과
+   같아 핀이 버튼처럼 읽혔다. 가게 핀과 건물 핀은 한 화면에 함께 뜨지 않는다.
+   고르면 시설 · 가게 핀의 고른 색(--pin-selected 민트)으로 바뀐다. 민트 위 흰 글자는 읽히지 않아 글자는 짙은 잉크다. */
+--pin-building:var(--yong-teal-500); /* @kind color */
+--pin-building-count:var(--yong-teal-700); /* @kind color */
+--pin-building-ink:var(--yong-white); /* @kind color */
+--pin-building-selected-ink:var(--yong-ink-900); /* @kind color */
 /* QR 스캔 지점("내 위치") — 유일하게 브랜드 초록을 쓰지 않는 마커다.
    점포 클러스터가 초록이라 앵커까지 초록이면 수백 개 중 하나로 묻힌다.
    파랑은 지도에서 "현재 위치"를 뜻하는 관습색이고, 초록(점포)·빨강(응급시설)과도 겹치지 않는다.

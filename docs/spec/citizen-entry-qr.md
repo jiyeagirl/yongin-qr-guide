@@ -64,16 +64,17 @@
 
 | code | active | 이름 | kind | 연결 | 설치 상태 | 결과 |
 |---|---|---|---|---|---|---|
-| `qr-001` | true | 우리의류 (`ANCHOR.name`) | `store` | `storeId: dj-163`, `districtId: dunjeon` | 설치완료 | ok — 상점 상세 먼저 |
-| `qr-002` | false | (구) 둔전 시장 안내판 | — | `replacedBy: qr-001` | 철거 | S11 |
-| `qr-003` | false | 둔전 시장 서편 출입구 | — | `districtId: dunjeon` | 설치완료 | S11-A |
-| `qr-005` | true | 둔전 시장 입구 버스정류장 | `sign` | `anchorName: 둔전 시장 입구 버스정류장`, `districtId: dunjeon` | 설치완료 | ok — 상점가 탭 (상세 없음) |
-| `qr-004` | true | 둔전 골목축제 안내 팜플렛 | `festival` | `festivalId: ft-dunjeon`, `anchorName: 둔전 골목형 상점가 중심 거리`, `bannerLabel: 둔전 골목형 상점가 기준 안내`, `bannerPlace: 축제 QR`(띠 뒤쪽 굵은 글자), `basisLabel: 둔전 골목형 상점가 기준 직선거리 · 가까운 순`, `backLabel: 상점가 중심으로` | 설치완료 | ok — 축제 상세 먼저 |
+| `qr-001` | true | 우리동네 통닭집 (`ANCHOR.name`) | `store` | `storeId: db-198`(`ENTRY_STORE_ID`), `districtId: dongbaekium` | 설치완료 | ok — 상점 상세 먼저 |
+| `qr-002` | false | (구) 동백이음길 안내판 | — | `replacedBy: qr-001` | 철거 | S11 |
+| `qr-003` | false | 동백이음길 동백7로 입구 | — | `districtId: dongbaekium` | 설치완료 | S11-A |
+| `qr-005` | true | 백현마을 버스정류장 | `sign` | `anchorName: 백현마을 버스정류장`, `districtId: dongbaekium` | 설치완료 | ok — 상점가 탭 (상세 없음) |
+| `qr-004` | true | 동백이음길 가을마실 축제 안내 팜플렛 | `festival` | `festivalId: ft-dongbaekium`, `anchorName: 동백이음길 골목형 상점가 중심 거리`, `bannerLabel: 동백이음길 골목형 상점가 기준 안내`, `bannerPlace: 축제 QR`(띠 뒤쪽 굵은 글자), `basisLabel: 동백이음길 골목형 상점가 기준 직선거리 · 가까운 순`, `backLabel: 상점가 중심으로` | 설치완료 | ok — 축제 상세 먼저 |
+| `qr-006` | true | 동백문고 (상인회 **정회원** 상점) | `store` | `storeId`: 동백문고, `anchorName: 동백문고`, 좌표 = 백현프라자(동백중앙로 358-8), `districtId: dongbaekium` | 설치완료 | ok — 상점 상세 먼저(「이음길 함께가게」 배지). 셸이 거리 · 차례 · 코스 · 시설 거리를 이 좌표에서 다시 잰다(`currentAt` · `facilitiesFrom`) |
 
 - `bannerLabel`·`basisLabel`·`backLabel` 은 팜플렛 사용자가 스캔 지점을 모르므로 상단 띠 · 공공시설 시트 기준 문구 · 지도 위 복귀 버튼(아이콘은 map-pin)을 상점가 말로 적는 선택 항목이다. 없는 코드는 「QR 스캔 지점」 문구 그대로다.
 - 항목: `code · active · name · lat · lng · dong · addr · kind · storeId/festivalId · districtId · installStatus · installedAt · locationDetail · memo · replacedBy · anchorName`. 시민 화면이 읽는 것은 `status` 판정에 쓰는 `active`·`installStatus`, 진입에 쓰는 `kind`·`storeId`·`festivalId`, 기준점 이름에 쓰는 `anchorName` 이다. 나머지는 관리자용 항목이다.
 - `qr-004` 에는 `addr` 가 없다. 좌표는 `districtAnchor("dunjeon")` — `DISTRICTS` 의 소속 상점가 `lat/lng` 를 읽는다.
-- 셸의 기준점(컨텍스트 바 이름 · 거리 기준 · 길찾기 출발지)은 지점의 `lat/lng/name` 이 아니라 `DUNJEON.anchor`(`ANCHOR`: 우리의류, 37.28874 / 127.19931)다. `qr.anchorName` 이 있으면 이름만 덮는다 (`MainApp`).
+- 셸의 기준점(컨텍스트 바 이름 · 거리 기준 · 길찾기 출발지)은 (2026-10-30 부터) 지점의 `lat/lng` 이 기본 지점과 다르면 그 좌표다(`qr-006`). 그 밖에는 지점의 `lat/lng/name` 이 아니라 `CURRENT.anchor`(`ANCHOR`: 우리동네 통닭집, 그 건물 미래도프라자의 좌표 37.2815767 / 127.1608786 — `current.js`)다. `qr.anchorName` 이 있으면 이름만 덮는다 (`MainApp`).
 - 더미 점포 · 시설 · 거리는 모두 `ANCHOR` 한 점 기준이다. 셸을 세우는 코드는 `qr-001`, `qr-004` 둘이다.
 - 종류(kind) 이름 · 칸 구성은 「미정」(`direction_v2_rules.md` 3-3).
 

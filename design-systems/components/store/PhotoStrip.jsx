@@ -5,11 +5,15 @@ import { Icon } from "../core/Icon.jsx";
    쓴다 — 두 화면의 사진 자리가 다르게 생기면 안 된다. 사진 자료가 없으면(`images` 가 비어 있다)
    자리표시 카드 셋을 그린다. 한 장씩 맞춰 멈추고(scroll-snap) 다음 장이 오른쪽에 살짝 보여 더
    있다는 것을 알린다. 높이는 상수가 아니라 가로세로 비율로 잡는다(고정 높이 금지).
-   본문 좌우 여백(--gutter-screen)을 음수로 풀어 화면 가장자리까지 밀린다. */
+   본문 좌우 여백(--gutter-screen)을 음수로 풀어 화면 가장자리까지 밀린다.
+   사진 파일을 못 받으면(경로는 있는데 파일이 없다 · 깨졌다) 그 칸만 자리표시로 돌린다(2026-10-30) —
+   깨진 그림 기호가 가게 상세 한가운데 서지 않게 한다. */
 const PHOTO_SLOTS = 3;
 
 export function PhotoStrip({ images, name = "", label = "이미지" }) {
-  const list = images && images.length ? images : Array.from({ length: PHOTO_SLOTS }, () => null);
+  const [broken, setBroken] = React.useState(() => new Set());
+  const given = images && images.length ? images : Array.from({ length: PHOTO_SLOTS }, () => null);
+  const list = given.map(src => (src && !broken.has(src) ? src : null));
   return (
     <div role="group" aria-label={`${name} ${label}`.trim()}
       style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto", scrollSnapType: "x mandatory",
@@ -20,7 +24,8 @@ export function PhotoStrip({ images, name = "", label = "이미지" }) {
         <div key={i} style={{ flex: "0 0 78%", maxWidth: 320, aspectRatio: "4 / 3", scrollSnapAlign: "start",
           borderRadius: "var(--radius-card)", overflow: "hidden", background: "var(--surface-sunken)",
           display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {src ? <img src={src} alt={`${name} ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {src ? <img src={src} alt={`${name} ${i + 1}`}
+              onError={() => setBroken(b => new Set(b).add(src))} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             : (
               <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                 color: "var(--text-muted)", fontSize: "var(--fs-caption)" }}>

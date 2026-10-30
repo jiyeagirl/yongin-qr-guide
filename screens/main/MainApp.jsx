@@ -6,8 +6,9 @@ import {
   DistrictSummary, FacilitySummary, FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, SAFETY,
   Icon, Mascot, token, VisuallyHidden, eun, i as iJosa,
 } from "../../design-systems/index.js";
-import { DUNJEON, coursesFrom } from "./data/dunjeon.js";
-import { FACILITIES, RADIUS_STEPS, RADIUS_DEFAULT, NEAR_ENOUGH } from "./data/facilities.js";
+import { currentAt, coursesFrom, BUILDINGS, buildingIdOf } from "./data/current.js";
+import { BuildingSheet } from "./BuildingSheet.jsx";
+import { facilitiesFrom, RADIUS_STEPS, RADIUS_DEFAULT, NEAR_ENOUGH } from "./data/facilities.js";
 import { DISTRICTS, OTHER_DISTRICTS, FESTIVALS, FESTIVALS_OPEN, byFestivalNear,
   CURRENT_FESTIVAL, CURRENT_DISTRICT_ID, DISTRICT_COUNT,
   byDistrictNear, GU_ORDER } from "./data/districts.js";
@@ -33,7 +34,7 @@ import { StoreList } from "../detail/StoreList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, replace, back, closeAll } from "./router.js";
 import { useCoachMarks } from "./data/coachMarks.js";
-import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
+import { KAKAO_APP_KEY, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
   DISTRICT_LIST_PAGE_SIZE, PAGE_SIZE } from "./config.js";
 
 /* 시민용 모바일 웹의 본 화면 — 지도 1개 + 하단 탭 3개 (기능명세서 v1.1 확정 결정사항 11).
@@ -86,6 +87,8 @@ import { KAKAO_APP_KEY, MAP_LEVEL, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
  */
 
 const SNAP_LABEL = { collapsed: "접힘", half: "절반", full: "전체" };
+/* 상점가 탭이 가게 핀 대신 건물 핀을 쓰면서(2026-10-30) 가게 레이어는 늘 비어 있다 — 렌더마다 새 배열을 넘기면 지도가 클러스터를 매번 비운다 */
+const NO_STORES = [];
 
 /* 하단 탭 3개 (U-CM-03). 아이콘은 기능명세서 5-2 확정값.
 
@@ -133,8 +136,8 @@ const tabOf = id => TABS.find(t => t.id === id);
    자리는 상단 띠 하나이고(한 화면에 하나), 그 띠는 코치마크가 떠 있는 동안에도 그 자리에
    있다.
 
-   상점가 이름은 **적어 넣지 않고 받는다.** 지금은 유효한 QR 지점이 둔전 하나뿐이라
-   어느 쪽이든 같은 글자가 나오지만, 안내판은 시 전역에 서고 그때 이 문장만 둔전을
+   상점가 이름은 **적어 넣지 않고 받는다.** 지금은 유효한 QR 지점이 동백이음길 하나뿐이라
+   어느 쪽이든 같은 글자가 나오지만, 안내판은 시 전역에 서고 그때 이 문장만 동백이음길을
    가리키고 있으면 화면이 조용히 거짓말을 한다. 상점가가 아예 없는 지점(S03-E)에서는
    **이 걸음을 통째로 뺀다** — 그 탭에 깔리는 것은 점포 목록이 아니라 "가까운 상점가가
    없습니다" 안내라(U-ST-16), 업종과 온누리를 말하는 문장이 그 위에 서면 안 된다.
@@ -218,19 +221,28 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      걷어냈다 (2026-08-24. DistrictSheet 의 해당 자리 주석 · facilities.js 의 U-ST-07 항목).
      축제는 그대로다: 6건이 32개소에 흩어져 있어 `districts.js` 가 소유하고, 여기서
      지금 상점가의 것 하나를 얹는다 (순환 참조를 피하려고 데이터 파일이 아니라 화면이 합친다). */
-  /* 상점 QR 로 들어왔으면 코스는 그 가게에서 출발한다 (dunjeon.js 의 coursesFrom) */
+  /* 상점 QR 로 들어왔으면 코스는 그 가게에서 출발한다 (current.js 의 coursesFrom) */
   const entryStoreId = qr && qr.kind === "store" ? qr.storeId : null;
-  /* 팜플렛 QR 은 가게가 아니라 종이라 기준점 이름이 「우리의류」일 수 없다 (2026-10-19, 사용자 요청) —
+  /* 팜플렛 QR 은 가게가 아니라 종이라 기준점 이름이 가게 이름일 수 없다 (2026-10-19, 사용자 요청) —
      QR 지점 표의 `anchorName`(상점가 중심 거리 등)을 이름으로 쓴다. 좌표는 더미 세계가 한 점에
      매달려 있어 그대로다 (data/qr.js 머리말). */
   const anchorName = qr && qr.anchorName ? qr.anchorName : null;
-  const d = React.useMemo(() => ({ ...DUNJEON, festival: CURRENT_FESTIVAL,
-    anchor: anchorName ? { ...DUNJEON.anchor, name: anchorName } : DUNJEON.anchor,
-    courses: entryStoreId ? coursesFrom(entryStoreId) : DUNJEON.courses }), [entryStoreId, anchorName]);
+  /* 기준점 좌표도 QR 이 들고 온다 (2026-10-30) — 다른 건물의 상점 QR(정회원 `qr-006` 동백문고)이면 거리 · 차례 ·
+     코스 · 시설 거리를 그 자리에서 다시 잰다 (current.js 의 `currentAt`). 기본 지점과 같은 좌표면 상수 그대로다 */
+  const qrLat = qr && qr.lat, qrLng = qr && qr.lng;
+  const d = React.useMemo(() => {
+    const cur = currentAt(qrLat && qrLng ? { lat: qrLat, lng: qrLng } : null, entryStoreId);
+    return { ...cur, festival: CURRENT_FESTIVAL,
+      anchor: anchorName ? { ...cur.anchor, name: anchorName } : cur.anchor };
+  }, [entryStoreId, anchorName, qrLat, qrLng]);
+  const facilities = React.useMemo(() => facilitiesFrom(d.anchor), [d.anchor]);
 
   const [tab, setTab] = React.useState("district");   /* 진입은 상점가 탭 (U-CM-03, 2026-10-16 방향 변경 — 종전 공공시설) */
   const [snap, setSnap] = React.useState("half");
   const [selected, setSelected] = React.useState(null);   /* 지도에서 탭한 대상 */
+  /* 지도에서 고른 **건물** (2026-10-30) — 상점가 탭은 가게 대신 건물마다 핀을 찍고, 고르면 시트가 그 건물의
+     층별 가게 목록이 된다(BuildingSheet). `selected`(미리보기 카드)와는 따로다 — 둘이 동시에 서지 않는다 */
+  const [buildingId, setBuildingId] = React.useState(null);
 
   /* 상세 오버레이 (S05 / S06). 아래 상태들과 **별개**로 움직인다 — 오버레이가 열리고 닫혀도
      탭·시트 스냅·필터는 건드리지 않는다. 그게 페이지를 나누지 않은 이유 그 자체다. */
@@ -388,12 +400,12 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
   const facilityByType = React.useMemo(() => {
     const out = {};
     for (const t of FACILITY_TYPES) {
-      const all = FACILITIES.filter(f => f.type === t);                 /* 이미 거리순 */
+      const all = facilities.filter(f => f.type === t);                 /* 이미 거리순 */
       const within = all.filter(f => f.dist <= radius);
       out[t] = within.length ? within : all.slice(0, 2);                /* U-FC-09 폴백 */
     }
     return out;
-  }, [radius]);
+  }, [radius, facilities]);
 
   /* 칩 개수는 상한을 적용한 뒤의 개수다 — 칩에 6이라 적고 목록에 5줄이 나오면
      사용자는 한 곳이 사라졌다고 읽는다. 0건인 유형은 FilterBar 가 칩째로 숨긴다 (U-ST-10 과 같은 규칙) */
@@ -527,6 +539,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      내리기 전 자리를 적어 두고, 카드를 [x] 로 닫을 때 되돌린다 (restoreSnap). */
   const pickOnMap = React.useCallback(item => {
     clearTimeout(holdTimer.current);
+    setBuildingId(null);
     const show = () => {
       setSelected(item);
       requestAnimationFrame(() => requestAnimationFrame(() => focus(item.lat, item.lng)));
@@ -601,6 +614,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
 
   const backToAnchor = () => {
     setSelected(null);
+    setBuildingId(null);
     restoreSnap.current = null;
     setSnap("collapsed");
     if (mapApi.current) mapApi.current.reset();
@@ -675,6 +689,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     if (id === tab) return;
     setTab(id);
     setSelected(null);
+    setBuildingId(null);
     /* 되돌릴 자리 기억도 함께 버린다 — 저 탭에서 접혔던 사정이 이 탭의 시트에 남으면 안 된다 */
     restoreSnap.current = null;
     setSnap("half");
@@ -687,17 +702,63 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
        에서는 화면 밖이라는 것이 근거였는데, 반경 고르개 자체가 축척을 건드리지 않게
        되면서(아래 시트의 `titleAside`) 이 줄만 남으면 **탭을 다녀오는 것이 축척을 바꾸는 길**이
        된다. 5-3 #6 이 되돌리는 것은 탭마다 정해진 한 자리다. */
+    if (id === "district" && hasDistrict) { viewBlock(); return; }
     if (id !== "discover") {
       mapApi.current.setView(d.anchor.lat, d.anchor.lng, TAB_MAP_LEVEL[id]);
     }
   };
+
+  /* ── 상점가 탭의 카메라는 **건물 블록 가운데**다 (2026-10-30, 사용자 요청) ────────────────
+     5-3 #6 은 탭을 바꾸면 QR 지점으로 되돌린다고 정했는데, 동백이음길의 QR 지점(미래도프라자)은 블록 동쪽 끝이라
+     건물 핀이 화면 서쪽 밖으로 잘린다. 상점가 탭만 건물 핀 전체의 가운데를 보이는 띠 가운데로 잡는다 —
+     QR 지점(내 위치 점)은 그 안에 들어온다. [스캔 위치로]는 종전대로 QR 지점으로 간다 */
+  const blockCenter = React.useMemo(() => {
+    if (!BUILDINGS.length) return null;
+    const lats = BUILDINGS.map(b => b.lat), lngs = BUILDINGS.map(b => b.lng);
+    return { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lng: (Math.min(...lngs) + Math.max(...lngs)) / 2 };
+  }, []);
+  const viewBlock = React.useCallback(() => {
+    if (!mapApi.current || !blockCenter) return;
+    mapApi.current.setView(blockCenter.lat, blockCenter.lng, TAB_MAP_LEVEL.district);
+    setTimeout(() => mapApi.current && mapApi.current.focus(blockCenter.lat, blockCenter.lng), SHEET_SETTLE);
+  }, [blockCenter]);
 
   /* U-CM-17 — 시설 마커와 점포 마커를 동시에 노출하지 않는다. 탭이 소유한 레이어만 그린다.
      상점가 탭의 "주변 공공시설"은 목록으로만 제공하고 지도에는 찍지 않는다.
 
      상점가 지점 레이어는 없앴다 — 둘러보기가 지도를 쓰지 않게 되면서 그릴 곳이 사라졌다.
      KakaoMap 의 districts prop 자체는 남겨둔다 (S03-E 의 "근처 가볼만한 상점가"가 쓸 자리다). */
-  const storeMarkers = isDistrict && hasDistrict ? storeRows : [];
+  /* ── 가게 핀 대신 **건물 핀** (2026-10-30, 사용자 요청) ─────────────────────────
+     동백이음길은 227곳이 건물 12채에 몰려 있어 가게마다 핀을 찍으면 건물 위에 핀이 수십 개 겹친다.
+     건물마다 핀 하나에 **지금 조건에 걸린 가게 수**를 적는다 — 업종 칩 · 검색어 · 온누리를 걸면 수가 바뀌고
+     0곳인 건물은 핀이 빠진다. 핀을 누르면 시트가 그 건물의 층별 목록이 된다 (pickBuilding · BuildingSheet).
+     가게를 고른 상태(목록 · 둘러보기 카드에서)에서는 그 가게의 건물 핀이 켜진다 (아래 mapSelectedId). */
+  const storeMarkers = NO_STORES;
+  const buildingMarkers = React.useMemo(() => {
+    if (!(isDistrict && hasDistrict)) return [];
+    const count = new Map();
+    storeRows.forEach(s => count.set(s.building, (count.get(s.building) || 0) + 1));
+    return BUILDINGS.map(b => ({ ...b, kind: "building", count: count.get(b.name) || 0 }));
+  }, [isDistrict, hasDistrict, storeRows]);
+  const building = buildingId ? BUILDINGS.find(b => b.id === buildingId) || null : null;
+  const buildingRows = React.useMemo(
+    () => (building ? storeRows.filter(s => s.building === building.name) : []), [building, storeRows]);
+  const mapSelectedId = buildingId
+    || (selected ? (selected.building && selected.kind !== "district" && selected.kind !== "facility"
+      ? buildingIdOf(selected.building) : selected.id) : null);
+
+  /* 건물 핀을 누르면 — 카드를 걷고, 시트를 절반으로 올려 층별 목록을 보이고, 그 핀을 보이는 띠 가운데로 */
+  const pickBuilding = React.useCallback(b => {
+    clearTimeout(holdTimer.current);
+    setSelected(null);
+    setPreviewH(0);
+    restoreSnap.current = null;
+    /* 고른 핀을 다시 누르면 상점가 시트로 돌아간다 (닫기 단추 대신) */
+    if (buildingId === b.id) { setBuildingId(null); return; }
+    setBuildingId(b.id);
+    setSnap("half");
+    setTimeout(() => focus(b.lat, b.lng), SHEET_SETTLE);
+  }, [focus, buildingId]);
 
   /* S03-E 의 "가볼 만한 상점가" 는 목록과 지도가 같은 것을 가리켜야 한다 (U-ST-16).
      시설 마커와 겹치지 않는다 — 상점가 탭이 소유한 레이어이므로 U-CM-17 을 지킨다. */
@@ -709,7 +770,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
   const facilityMarkers = isFacility ? facilityRows : [];
 
   /* 상점가 구역 면 (2026-10-19) — **줄을 눌러 고른 상점가**에서만 그린다 (사용자 요청). 상점가 탭의 평소
-     화면(둔전)에는 그리지 않는다 — 점포 핀이 이미 그 안을 채운다. 경계는 대략이다 (districts.js 의 zone 주석) */
+     화면(현재 상점가)에는 그리지 않는다 — 점포 핀이 이미 그 안을 채운다. 경계는 대략이다 (districts.js 의 zone 주석) */
   const areaLayers = React.useMemo(() => (
     isDistrict && selected && selected.kind === "district" && selected.zone
       ? [{ id: selected.id, path: selected.zone }] : []
@@ -718,7 +779,8 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
   /* ── 상세 오버레이 (S05 / S06) ────────────────────────────────────────
      route 는 URL 이 진실이다. 여기서 id 로 대상을 찾고, 없으면 셸로 되돌린다 —
      딥링크 오타나 데이터 교체로 빈 화면이 뜨는 상태를 만들지 않는다 (S11 의 축소판). */
-  /* 동백이음길 점포의 좌표는 카카오 주소 검색이 건물 좌표를 찾아 오면서 바뀐다 (data/districtGeo.js).
+  /* 점포 자료 상점가(동백역 · 동백중심상가)의 좌표는 카카오 주소 검색이 건물 좌표를 찾아 오면서 바뀐다 (data/districtGeo.js).
+     현재 상점가(동백이음길)는 건물 좌표를 표에 적어 두어 바뀌지 않는다 (dongbaekStores.js).
      바뀔 때마다 이 값이 올라 target 이 새 좌표로 다시 만들어진다. 한 번만 시작한다 */
   const [geoVer, setGeoVer] = React.useState(0);
   React.useEffect(() => {
@@ -736,14 +798,14 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     const kind = twoPart ? route.parts[0] : route.name;
     const id = twoPart ? route.parts[1] : route.id;
     if (!id) return null;
-    if (kind === "facility") return FACILITIES.find(x => x.id === id) || null;
+    if (kind === "facility") return facilities.find(x => x.id === id) || null;
     if (kind === "store") return d.stores.find(x => x.id === id) || findDistrictStore(id);
     if (kind === "course") return d.courses.find(x => x.id === id) || findDistrictCourse(id);
     if (kind === "festival") return FESTIVALS.find(x => x.id === id) || null;
-    /* 상점가는 32곳 전부에서 찾는다 — 지금 서 있는 곳(둔전)도 S13 목록에는 들어간다 */
+    /* 상점가는 32곳 전부에서 찾는다 — 지금 서 있는 곳(동백이음길)도 S13 목록에는 들어간다 */
     if (kind === "district") return DISTRICTS.find(x => x.id === id) || null;
     return null;
-  }, [route, d.stores, d.courses, geoVer]);
+  }, [route, d.stores, d.courses, geoVer, facilities]);
 
   /* ── 길찾기의 출발지 (2026-08-18 · 08-19 고를 수 있게 바뀜) ─────────────────
      기본은 QR 스캔 지점이다 (제안서 3-1 — 화면의 "내 위치"는 언제나 그 고정 좌표다).
@@ -1014,7 +1076,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
         festival={FESTIVALS.find(f => f.districtId === target.id) || null}
         onBack={back}
         onClose={closeAll}
-        /* 지금 서 있는 상점가(둔전)는 지도가 상점가 탭이라 [지도 보기]를 두지 않는다 */
+        /* 지금 서 있는 상점가(동백이음길)는 지도가 상점가 탭이라 [지도 보기]를 두지 않는다 */
         onOpenMap={target.id === CURRENT_DISTRICT_ID ? undefined : () => go(`#/district/${encodeURIComponent(target.id)}/map`)}
         onOpenFestival={f => go(`#/festival/${f.id}`)} />
 
@@ -1032,12 +1094,13 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
          고르는 자리는 공공시설 탭 하나뿐이다** (U-ST-07 은 화면에서 사라졌다). */
       <StoreDetail
         store={target}
-        /* 다른 상점가의 점포(동백이음길)는 그 상점가가 소속이다 — 둔전 상점가 이름·축제·코스를 달지 않는다 */
+        /* 다른 상점가의 점포(동백역 등)는 그 상점가가 소속이다 — 현재 상점가 이름·축제·코스를 달지 않는다.
+           현재 상점가 점포는 `districtId` 가 없다 (current.js) */
         district={target.districtId ? (DISTRICTS.find(x => x.id === target.districtId) || null) : d.district}
         onBack={back}
         /* 어떤 길로 들어와도 그 가게 둘레의 코스가 붙는다 (2026-10-19, 사용자 요청) — 상점 QR · 검색 ·
            지도 카드 · 목록 어디서 열든 상세가 같은 모양이어야 한다. 종전에는 QR 로 들어온 가게만 받았다 */
-        courses={target.districtId ? districtCoursesFrom(target.id) : coursesFrom(target.id)}
+        courses={target.districtId ? districtCoursesFrom(target.id) : coursesFrom(target.id, d.stores, d.anchor)}
         onOpenCourse={c => go(`#/course/${c.id}`)}
         festival={!target.districtId && d.festival && d.festival.state === "진행중" ? d.festival : null}
         onOpenFestival={() => go(`#/festival/${d.festival.id}`)}
@@ -1111,12 +1174,19 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
              대개 화면 밖이라, 원만 남기면 **가장자리에 걸친 호(弧) 한 조각**이 된다 —
              무엇의 일부인지 알 수 없는 선이다. 반경이 하는 일은 목록의 곳수를 정하는
              것이고, 그것은 목록이 적는다. */
-          level={MAP_LEVEL}
+          /* 첫 탭이 상점가라 그 탭의 축척으로 뜬다 (2026-10-30 — 종전 MAP_LEVEL 4) */
+          level={TAB_MAP_LEVEL.district}
           stores={storeMarkers}
           facilities={facilityMarkers}
           districts={districtMarkers}
           areas={areaLayers}
-          selectedId={selected ? selected.id : null}
+          buildings={buildingMarkers}
+          onSelectBuilding={pickBuilding}
+          /* 지도 빈 곳을 누르면 건물 목록에서 상점가 시트로 돌아간다 */
+          onMapClick={() => { if (buildingId) setBuildingId(null); }}
+          /* 첫 화면(상점가 탭)도 건물 블록 가운데로 (viewBlock 머리말) */
+          onReady={() => { if (tab === "district" && hasDistrict) viewBlock(); }}
+          selectedId={mapSelectedId}
           /* 앵커가 지도 칸을 벗어났는지. [스캔 위치로]가 이 값일 때만 뜬다 */
           onAnchorOffscreen={setAnchorOff}
           topPad={mapPadTop}
@@ -1270,13 +1340,14 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
             U-FC-03 의 "목록과 지도 토글"이 이것이다 — 별도 버튼을 두지 않는다.
             둘러보기 탭에는 시트 자체가 없다. */}
         {isDiscover ? null : <Sheet
-          title={sheetTitle}
+          title={isDistrict && building ? building.name : sheetTitle}
           snap={snap}
           /* 전체 스냅으로 올라가면 선택 자체가 풀린다 (changeSnap 머리말) */
           onSnapChange={changeSnap}
           onHeightChange={setSheetH}
           /* 전체 스냅에서는 지도가 완전히 가려지므로 돌아갈 길을 헤더에 명시한다.
              핸들을 아래로 끄는 방법만 남기면 지도로 못 돌아가는 사용자가 생긴다 */
+          /* 건물 목록에는 [닫기]가 없다 (2026-10-30, 사용자 요청) — 같은 핀을 다시 누르거나 지도 빈 곳을 누르면 돌아간다 */
           onClose={snap === "full" ? () => setSnap("half") : undefined}
           closeIcon="map"
           closeLabel="지도"
@@ -1296,7 +1367,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
             /* 반경도 조건이다 (2026-08-26) — 4km 로 늘려 아래까지 읽다가 2km 로 되돌리면
                목록의 뒤쪽이 통째로 없어지는데, 스크롤만 남으면 빈 자리에 서 있게 된다 */
             ? `facility|${fcTypes.join(",")}|${radius}|${fcPage}`
-            : `district|${cats.join(",")}|${onnuriOnly}|${sort}|${q}|${page}`}
+            : `district|${buildingId || ""}|${cats.join(",")}|${onnuriOnly}|${sort}|${q}|${page}`}
           /* ── 제목 줄 **오른쪽 끝** (Sheet 의 titleAside) — 탭마다 다른 것이 선다 ──────
                 상점가는 U-ST-02 구역 안내(2026-08-18), 공공시설은 **안내 반경 고르개**다
                 (2026-08-26 저녁, 사용자 요청 — 「공공시설 탭에는 이 자리에 넣을 것이
@@ -1345,7 +1416,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
                 value={radius} options={RADIUS_STEPS.map(m => ({ id: m, label: `${m / 1000}km` }))}
                 buttonLabel={`반경 ${radius / 1000}km`} menuMinWidth={96}
                 onChange={setRadius} />
-            : isDistrict && hasDistrict
+            : isDistrict && hasDistrict && !building
               ? <DistrictSummary district={d.district} /> : null}
           headerExtra={isFacility
             /* U-FC-02 기준 + U-FC-04 안전시설 개수 — 접힘 상태에서도 보여야 하므로 스크롤 영역 밖.
@@ -1388,6 +1459,9 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
               /* 이 자리도 안내 주소가 없는 줄만 탄다 (2026-08-24). 지금까지는 아무도
                  넘기지 않아 그런 줄이 눌러도 아무 일이 없었다 */
               onPickDistrict={x => go(`#/district/${encodeURIComponent(x.id)}`)} />
+          ) : isDistrict && building ? (
+            <BuildingSheet building={building} rows={buildingRows}
+              onOpenStore={s => go(`#/store/${s.id}`)} />
           ) : isDistrict ? (
             <DistrictSheet
               data={d}

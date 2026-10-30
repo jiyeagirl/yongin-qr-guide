@@ -38,7 +38,7 @@ CLAUDE.md 줄 번호는 개편 전(git HEAD) 본문 기준이다.
 | # | 영역 | 문서 서술(파일·줄) | 코드 실제(파일·줄) | 판정 |
 |---|---|---|---|---|
 | 1 | 문서 버전 | `CLAUDE.md:9` 시민용 명세서 `v1.23` | `docs/functional_specifications.md:1` 제목이 `v1.25` | 문서 오래됨 |
-| 2 | 기준점 이름 | `CLAUDE.md:110` · `screens/README.md:83` 「둔전 시장 입구 한 지점 기준」 | `screens/main/data/dunjeon.js:21` `ANCHOR = { name: "우리의류", … }`, `qr.js:70` 지점 이름이 `ANCHOR.name` | 문서 오래됨 |
+| 2 | 기준점 이름 | (해소 2026-10-30) 문서와 코드 모두 동백이음길 「우리동네 통닭집」 한 지점 기준 | `screens/main/data/current.js` `ANCHOR = { name: "우리동네 통닭집", … }`(건물 미래도프라자 좌표), `qr.js` 지점 이름이 `ANCHOR.name` | 해소 |
 | 3 | 팜플렛 대화상자 단추 | `functional_specifications.md:778`(U-CM-20) [주변 안내보기] = 「닫고 공공시설 탭에 그대로 선다」 | `MainApp.jsx:227` 첫 탭 `district`, `MainApp.jsx:1428` [주변 안내보기]는 닫기만 함 → 상점가 탭에 선다 | 문서 오래됨 |
 | 4 | S14 진입 경로 | `screens/README.md:47` · `:103` S14 는 `?qr=qr-004` 로 열린다, `:55` 팜플렛 코드면 셸 위에 S14 안내 | `App.jsx:51-57` `qr-004`(`kind: festival`)는 `#/festival/ft-dunjeon` 으로 해시를 바꿔 축제 상세가 먼저 뜬다. `MainApp.jsx:364-366` 대화상자는 `?pamphlet` 플래그로만 열린다 | 문서 오래됨 |
 | 5 | 정상 진입 화면 | `screens/README.md:96` 「정상 진입 (S01 → S02)」 | `MainApp.jsx:227` 첫 탭 `district`(상점가, S03). `qr-001` 은 점포 상세가 먼저(`App.jsx:52`) | 문서 오래됨 |

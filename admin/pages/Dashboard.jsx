@@ -12,7 +12,7 @@ import {
 import { REPORTS } from "../data/reports.js";
 /* `QR_POINTS` 를 여기서 읽었다 — 「설치 미완료 QR」 배지가 나가면서 함께 빠졌다
    (2026-08-24). 지점별 스캔 표가 쓰던 `SCANS_BY_POINT` 도 이제 없다 */
-import { discoverPicks, DISCOVER_PICK } from "../../screens/main/data/dunjeon.js";
+import { discoverPicks, DISCOVER_PICK } from "../../screens/main/data/current.js";
 import { CURRENT_DISTRICT_ID, GU_ORDER } from "../../screens/main/data/districts.js";
 import { STORE_ROWS, FACILITY_ROWS, DISTRICT_ROWS } from "../data/sources.js";
 /* `QUOTA_DEFAULTS`(하루 한도 · 경고 임계치)를 읽었다 — API 사용량 카드와 함께 나갔다 */

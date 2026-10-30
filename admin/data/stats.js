@@ -21,7 +21,7 @@ import { TODAY } from "../../screens/main/config.js";
  *
  * 그래도 세 가지 결은 그대로다:
  *   1. 주말이 평일보다 높다 (골목 상점가를 찾는 때가 그때다)
- *   2. 둔전 축제일(10.17)에 크게 튄다 — config.TODAY 가 그날이라 그래프 오른쪽 끝에 보인다
+ *   2. 10.17 에 크게 튄다(종전 둔전 축제일) — config.TODAY 가 그날이라 그래프 오른쪽 끝에 보인다
  *   3. 나머지는 완만한 우상향 (안내판이 계속 붙는 중이라는 전제)
  *
  * ── 결정적으로 만든다 ───────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ function seeded(seed) {
 }
 
 const DAYS = 60;
-const FESTIVAL_DAY = "2026-10-17";   /* 둔전 골목축제 (districts.js) */
+const FESTIVAL_DAY = "2026-10-17";   /* 스캔이 튀는 날 — config.TODAY 와 같은 날이라 그래프 오른쪽 끝에 보인다 (종전 둔전 골목축제) */
 
 function dateOf(base, offset) {
   const [y, m, d] = base.split("-").map(Number);
@@ -176,8 +176,8 @@ export const FACILITY_SHARE = [
    (U-CM-02 · S11 의 두 갈래). 지우면 그 사람들이 「등록되지 않은 코드」를 만난다. */
 const OLD_SIGN_SCANS = 148;
 export const SCANS_BY_POINT = [
-  { code: "qr-001", name: "우리의류", active: true, scans: TOTAL_SCANS - OLD_SIGN_SCANS },
-  { code: "qr-002", name: "(구) 둔전 시장 안내판", active: false, scans: OLD_SIGN_SCANS },
+  { code: "qr-001", name: "우리동네 통닭집", active: true, scans: TOTAL_SCANS - OLD_SIGN_SCANS },
+  { code: "qr-002", name: "(구) 동백이음길 안내판", active: false, scans: OLD_SIGN_SCANS },
 ];
 
 /* ── 카카오맵 API 사용량 (명세서 6장 "운영") ────────────────────────────────

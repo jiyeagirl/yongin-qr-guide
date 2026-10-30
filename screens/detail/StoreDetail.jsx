@@ -109,7 +109,22 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
                 </p>
               ) : null}
             </div>
+            {/* 상인회 정회원 배지 「이음길 함께가게」 (2026-10-30, 사용자 요청) — 정회원(`member`) 가게에만, 가게 이름 오른쪽.
+                배지 글자는 그림 안에 있어 읽기 보조용 이름을 alt 로 단다. 경로는 루트 기준이다(관리자도 같은 표를 읽는다) */}
+            {s.member ? (
+              <img src="/screens/main/assets/badges/ieumgil-member.png" alt="이음길 함께가게 (상인회 정회원)"
+                width={64} height={63} style={{ flex: "0 0 auto", alignSelf: "flex-start", width: 64, height: "auto" }} />
+            ) : null}
           </div>
+          {/* 가게 해시태그 (2026-10-30, 사용자 요청 — 정의서 1-2 밖의 항목이다. 받은 가게만 있고 없으면 줄을 두지 않는다).
+              브랜드 색 캡션으로 한 줄에 잇는다(좁으면 태그 단위로 줄을 바꾼다). 한 줄 소개 문장도 받았으나 「해시태그만이
+              깔끔하다」고 해서 뺐다 */}
+          {s.tags && s.tags.length ? (
+            <p style={{ marginTop: "var(--space-3)", display: "flex", flexWrap: "wrap", columnGap: 8, rowGap: 2,
+              font: "var(--type-caption)", fontWeight: "var(--fw-medium)", color: "var(--brand-primary)" }}>
+              {s.tags.map(t => <span key={t} style={{ whiteSpace: "nowrap" }}>#{t}</span>)}
+            </p>
+          ) : null}
         </header>
 
         <PhotoStrip images={s.images} name={s.name} label="가게 이미지" />

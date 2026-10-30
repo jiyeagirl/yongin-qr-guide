@@ -24,7 +24,7 @@ import { AppBar, Badge, Button, Icon, Input, Mascot, TextButton } from "../../de
 
 export const COUPON = {
   id: "festival-1107",
-  festivalId: "ft-dunjeon",   /* 이 쿠폰이 걸린 축제 — 축제 상세(S09)의 [쿠폰] 버튼이 이 축제에서만 선다 */
+  festivalId: "ft-dongbaekium",   /* 동백이음길 가을마실 축제 (11.7) — 이 쿠폰이 걸린 축제 — 축제 상세(S09)의 [쿠폰] 버튼이 이 축제에서만 선다 */
   eyebrow: "11월 7일 단 하루!",
   name: "축제 할인 쿠폰",
   /* 축제 상세의 쿠폰 칸(detail/CouponCard.jsx) 두 줄 — 한 줄씩 */

@@ -2,7 +2,7 @@
  *
  * 화면(RouteView.jsx)은 이 파일의 `requestWalkRoute` 하나만 부른다. 경로가 어디서 오는지 —
  * 실 API 인지, 캐시인지, 아래의 예시 경로인지 — 는 화면이 알 필요가 없고, 알면 안 된다.
- * 연동 시 고칠 파일이 여기 하나로 끝나야 한다 (facilities.js · dunjeon.js · districts.js 와 같은 자리다).
+ * 연동 시 고칠 파일이 여기 하나로 끝나야 한다 (facilities.js · current.js · districts.js 와 같은 자리다).
  *
  * ══ 먼저, 카카오 "도보" 길찾기 API 에 대해 ══════════════════════════════════
  *
@@ -32,7 +32,7 @@
  *   straight  true 면 path 가 실제 길이 아니라 출발-도착 직선이다 (지도가 점선으로 낮춰 긋는다)
  */
 
-import { ANCHOR } from "./dunjeon.js";
+import { ANCHOR } from "./current.js";
 import { safeStore } from "./sessionStore.js";
 import { WALK_M_PER_MIN, WALK_ROUTE_ENDPOINT, WALK_ROUTE_QUOTA, WALK_ROUTE_TIMEOUT, SAMPLE_ROUTE_DELAY } from "../config.js";
 
@@ -218,7 +218,7 @@ async function callApi(origin, dest) {
 }
 
 /* ── 예시 경로 (엔드포인트가 없을 때) ──────────────────────────────────────
-   더미 데이터 셋(facilities · dunjeon · districts)과 같은 성격이다. 좌표를 손으로 찍지 않고
+   더미 데이터 셋(facilities · current · districts)과 같은 성격이다. 좌표를 손으로 찍지 않고
    규칙으로 만들어, 목록의 "약 320m"와 지도의 선이 서로 어긋나지 않게 한다.
 
    골목을 계단식으로 오른다. 도보 경로가 직선이 아닌 이유가 실제로 그것이기 때문이다 —
@@ -229,14 +229,14 @@ async function callApi(origin, dest) {
 
    결정적이다 — 같은 목적지는 새로고침해도 같은 경로가 나온다 (검수 가능). */
 
-/* 둔전 일대 도로 축. 정북이 아니라 북북동으로 기울어 있다 (위성지도의 골목 방향).
-   이 각도 하나가 "생성한 티가 나는 격자"와 "그럴듯한 골목"을 가른다. */
-const GRID_BEARING = 24;
+/* 동백이음길 일대 도로 축. 동백중앙로가 북서–남동(약 130°)으로 나 있어 격자가 북동(40°)으로 기운다
+   (2026-10-30, 종전 둔전 24°). 이 각도 하나가 "생성한 티가 나는 격자"와 "그럴듯한 골목"을 가른다. */
+const GRID_BEARING = 40;
 
 /* 축별 길 이름. 세로축(GRID)과 가로축(GRID+90)에 다른 묶음을 쓴다 —
    한 묶음에서 뽑으면 좌회전했는데 같은 길 이름이 계속 나오는 일이 생긴다. */
-const ROADS_MAIN = ["둔전로", "둔전1로", "포곡로", "둔전중앙로"];
-const ROADS_CROSS = ["둔전2로", "금어로", "삼계로", "에버랜드로"];
+const ROADS_MAIN = ["동백7로", "동백8로", "동백죽전대로", "동백1로"];
+const ROADS_CROSS = ["동백중앙로", "동백5로", "동백2로", "동백6로"];
 
 function rng(seed) {
   let s = seed >>> 0;

@@ -1,6 +1,6 @@
 /* 공공시설 탭(S02) 더미 데이터 — QR 지점 주변의 AED · 화장실 · 쉼터 · 대피소.
  *
- * 좌표는 손으로 찍지 않고 (거리, 방위) → 좌표 순으로 계산한다. 상점가 데이터(dunjeon.js)와 같은 규칙이라
+ * 좌표는 손으로 찍지 않고 (거리, 방위) → 좌표 순으로 계산한다. 상점가 데이터(current.js)와 같은 규칙이라
  * 목록의 "약 340m"와 지도 마커 위치가 어긋나지 않는다. 실데이터 연동 시 이 파일만 서버 응답으로 바꾼다.
  *
  * ── 수치를 이렇게 잡은 이유 ────────────────────────────────────────────────
@@ -8,14 +8,14 @@
  * 둘 다 "보통은 안 보이는" 규칙이라 데이터가 전부 가까우면 구현했는지 확인할 방법이 없다.
  *
  *   AED      최근접 120m   — 정상. 배너 없음
- *   화장실   최근접 210m   — 정상
+ *   화장실   최근접 185m   — 정상
  *   쉼터     최근접  90m   — 정상
- *   대피소   최근접 1,400m — 목록에는 나오지만 "가깝지 않다".
+ *   대피소   최근접 1,180m — 목록에는 나오지만 "가깝지 않다".
  *                            → U-FC-09 배너가 뜬다. 기능명세서의 예시 문구와 같은 상황이다
  *
- * 둔전에 1km 안쪽 대피소가 없는 것은 부자연스럽지 않다. 지진 옥외대피장소와 민방위 대피시설은
+ * 1km 안쪽 대피소가 없는 것은 부자연스럽지 않다. 지진 옥외대피장소와 민방위 대피시설은
  * 지정된 곳만 대피소이고, 근처 공원이라고 자동으로 대피소가 되지는 않는다.
- * (그래서 둔전근린공원은 화장실로만 등록되어 있고 대피소 목록에는 없다.)
+ * (그래서 내꽃공원 · 백현근린공원은 화장실 · 쉼터로만 등록되어 있고 대피소 목록에는 없다.)
  *
  * ── 2~4km 밴드에 일부러 넣어둔 넷 (2026-08-26) ──────────────────────────────
  * 반경이 고정 2km 에서 **사용자가 고르는 2·3·4km** 가 되면서(아래 `RADIUS_STEPS`),
@@ -31,7 +31,8 @@
  *   합계      17         20         22
  */
 
-import { ANCHOR } from "./dunjeon.js";
+import { ANCHOR } from "./current.js";
+import { gapM } from "./coursePlan.js";
 
 const M_PER_DEG_LAT = 111320;
 const M_PER_DEG_LNG = 111320 * Math.cos((ANCHOR.lat * Math.PI) / 180);
@@ -73,66 +74,70 @@ function at(dist, bearingDeg) {
  * U-FC-05 는 "개방 여부"를 적고 있으나 그것은 원천 항목을 확정하기 전의 문구다 —
  * 명세서 쪽을 정의서에 맞춰야 한다. */
 const RAW = [
+  /* ── 동백이음길 기준으로 다시 적었다 (2026-10-30, 사용자 요청 — 종전 둔전) ─────────────────────
+     **줄 차례는 그대로다** — 시설 id(fc-001…)가 이 차례에서 나오고 관리자 오류신고(admin/data/reports.js)가
+     그 id 를 가리킨다. 실제 장소 이름을 단 줄(용인백현초 · 내꽃공원 · 동백1동행정복지센터 · 동백호수공원 ·
+     동백역)은 카카오 장소 검색 좌표에서 거리 · 방위를 잰 값이고, 나머지는 여전히 더미다. */
   /* ── AED — place = 설치 위치 (2-1 필수). 예) 관리사무소 건물 1층 출입구 ────── */
   { type: "aed", dist: 120, bearing: 335,
-    addr: "처인구 포곡읍 둔전로 42", place: "1층 로비 자동심장충격기함" },
-  { type: "aed", dist: 340, bearing: 58,
-    addr: "처인구 포곡읍 둔전로 91", place: "1층 민원실 입구 벽면" },
+    addr: "기흥구 동백중앙로 358-12", place: "1층 로비 자동심장충격기함" },
+  { type: "aed", dist: 220, bearing: 28,
+    addr: "기흥구 동백8로 108", place: "용인백현초등학교 본관 1층 현관" },
   { type: "aed", dist: 520, bearing: 148,
-    addr: "처인구 포곡읍 둔전2로 8", place: "관리동 출입구 옆 외부 보관함" },
+    addr: "기흥구 동백8로 41", place: "관리동 출입구 옆 외부 보관함" },
   { type: "aed", dist: 690, bearing: 272,
-    addr: "처인구 포곡읍 포곡로 133", place: "1층 대기실 안내데스크" },
-  { type: "aed", dist: 1150, bearing: 96,
-    addr: "처인구 포곡읍 에버랜드로 305", place: "대합실 매표소 옆" },
+    addr: "기흥구 동백죽전대로 487", place: "1층 대기실 안내데스크" },
+  { type: "aed", dist: 900, bearing: 244,
+    addr: "기흥구 동백죽전대로 444", place: "동백1동행정복지센터 1층 민원실 입구 벽면" },
   /* 아래 둘은 반경 고르개용이다 (머리말 표). 3km 칸과 4km 칸에서 각각 하나씩 들어온다 */
-  { type: "aed", dist: 2340, bearing: 78,
-    addr: "처인구 포곡읍 전대로 44", place: "1층 안내데스크 옆 벽면" },
+  { type: "aed", dist: 2340, bearing: 210,
+    addr: "기흥구 동백2로 58", place: "1층 안내데스크 옆 벽면" },
   { type: "aed", dist: 3480, bearing: 300,
-    addr: "처인구 포곡읍 유운로 21", place: "관리동 1층 복도 소화전 옆" },
+    addr: "기흥구 마북로 240", place: "관리동 1층 복도 소화전 옆" },
 
-  /* ── 대피소 — 최근접이 1.4km 라 U-FC-09 배너가 뜬다 ─────────────────────────
+  /* ── 대피소 — 최근접이 1km 를 넘어 U-FC-09 배너가 뜬다 ─────────────────────────
         place = 실제 위치(시설명) (2-4 필수) · capacity = 최대 수용 인원 (선택) */
-  { type: "shelter", dist: 1400, bearing: 24,
-    addr: "처인구 포곡읍 금어로 216", place: "포곡중학교 운동장 전체 (지진 옥외대피장소)",
+  { type: "shelter", dist: 1180, bearing: 237,
+    addr: "기흥구 동백5로 12", place: "동백호수공원 잔디광장 (지진 옥외대피장소)",
     capacity: 1200 },
-  { type: "shelter", dist: 1760, bearing: 63,
-    addr: "처인구 포곡읍 둔전로 91 지하", place: "포곡읍행정복지센터 지하 1층 주차장",
+  { type: "shelter", dist: 1570, bearing: 207,
+    addr: "기흥구 동백죽전대로 314 지하", place: "동백역 지하 1층 대합실",
     capacity: 480 },
-  { type: "shelter", dist: 2050, bearing: 189,
-    addr: "처인구 포곡읍 삼계로 77", place: "포곡체육공원 다목적구장 (지진 옥외대피장소)",
+  { type: "shelter", dist: 2050, bearing: 195,
+    addr: "기흥구 동백2로 12", place: "동백 근린공원 다목적구장 (지진 옥외대피장소)",
     capacity: null },
 
   /* ── 화장실 — 칸수 4종 · 비상벨 · 기저귀 교환대 · 입구 CCTV 는 전부 **선택**이다 (2-2).
         한 줄 문자열이 아니라 항목으로 나눈 이유: 비상벨이나 기저귀 교환대는 있고 없고가
         갈 곳을 바꾸는 값이라, 문장 안에 섞여 있으면 훑어서 찾을 수 없다. */
-  { type: "toilet", name: "둔전 공영주차장 공중화장실", dist: 210, bearing: 128,
-    addr: "처인구 포곡읍 둔전2로 8", hours: "상시 개방",
+  { type: "toilet", name: "내꽃공원 공중화장실", dist: 185, bearing: 60,
+    addr: "기흥구 동백8로 90", hours: "상시 개방",
     menToilet: 2, menUrinal: 3, womenToilet: 3, womenUrinal: null,
     emergencyBell: true, diaperTable: true, entranceCctv: true },
-  { type: "toilet", name: "포곡읍행정복지센터 화장실", dist: 350, bearing: 60,
-    addr: "처인구 포곡읍 둔전로 91", hours: "평일 09:00~18:00",
+  { type: "toilet", name: "동백1동행정복지센터 화장실", dist: 905, bearing: 244,
+    addr: "기흥구 동백죽전대로 444", hours: "평일 09:00~18:00",
     menToilet: 2, menUrinal: 2, womenToilet: 2, womenUrinal: null,
     emergencyBell: true, diaperTable: false, entranceCctv: null },
-  { type: "toilet", name: "둔전시장 공중화장실", dist: 380, bearing: 213,
-    addr: "처인구 포곡읍 둔전로 55", hours: "06:00~22:00",
+  { type: "toilet", name: "백현마을 공영주차장 공중화장실", dist: 380, bearing: 213,
+    addr: "기흥구 동백7로 52", hours: "06:00~22:00",
     menToilet: 2, menUrinal: 2, womenToilet: 2, womenUrinal: null,
     emergencyBell: null, diaperTable: null, entranceCctv: null },
   /* 간이화장실이라 남녀 구분 칸수 자체가 원천에 없다 — 네 줄이 모두 "-" 로 남는다 */
-  { type: "toilet", name: "둔전사거리 간이화장실", dist: 640, bearing: 301,
-    addr: "처인구 포곡읍 포곡로 108", hours: "상시 개방",
+  { type: "toilet", name: "동백중앙로 간이화장실", dist: 640, bearing: 301,
+    addr: "기흥구 동백중앙로 410", hours: "상시 개방",
     menToilet: null, menUrinal: null, womenToilet: null, womenUrinal: null,
     emergencyBell: false, diaperTable: false, entranceCctv: null },
-  { type: "toilet", name: "둔전근린공원 화장실", dist: 870, bearing: 166,
-    addr: "처인구 포곡읍 둔전1로 24", hours: "05:00~23:00",
+  { type: "toilet", name: "백현근린공원 화장실", dist: 870, bearing: 166,
+    addr: "기흥구 동백8로 12", hours: "05:00~23:00",
     menToilet: 3, menUrinal: 4, womenToilet: 4, womenUrinal: null,
     emergencyBell: true, diaperTable: true, entranceCctv: false },
-  { type: "toilet", name: "포곡천 산책로 화장실", dist: 1240, bearing: 341,
-    addr: "처인구 포곡읍 금어로 12", hours: null,
+  { type: "toilet", name: "동백호수공원 화장실", dist: 1240, bearing: 240,
+    addr: "기흥구 동백5로 12", hours: null,
     menToilet: 2, menUrinal: 2, womenToilet: 2, womenUrinal: null,
     emergencyBell: null, diaperTable: null, entranceCctv: null },
   /* 반경 고르개의 4km 칸에서 들어온다 (머리말 표) */
-  { type: "toilet", name: "전대리마을회관 화장실", dist: 3720, bearing: 86,
-    addr: "처인구 포곡읍 전대로 88", hours: "평일 09:00~18:00",
+  { type: "toilet", name: "청덕동 마을회관 화장실", dist: 3720, bearing: 260,
+    addr: "기흥구 청덕동로 20", hours: "평일 09:00~18:00",
     menToilet: 1, menUrinal: 1, womenToilet: 2, womenUrinal: null,
     emergencyBell: false, diaperTable: false, entranceCctv: null },
 
@@ -150,20 +155,20 @@ const RAW = [
 
         가운뎃점은 **화면이 스스로 잇는 자리**에만 남는다 (「음식 · 카페」 칩 요약처럼
         우리가 두 값을 나란히 놓는 자리). 한 칸에 담당자가 적어 넣는 문장은 그 반대다. */
-  { type: "rest", name: "둔전 버스정류장 한파쉼터", dist: 90, bearing: 12,
-    addr: "처인구 포곡읍 둔전로 38", hours: "24시간 개방", capacity: null,
+  { type: "rest", name: "백현마을 버스정류장 한파쉼터", dist: 90, bearing: 12,
+    addr: "기흥구 동백중앙로 360", hours: "24시간 개방", capacity: null,
     extra: "한파쉼터, 12~2월 온열의자 가동, 지붕과 방풍막 있음" },
-  { type: "rest", name: "둔전마을회관 무더위쉼터", dist: 150, bearing: 331,
-    addr: "처인구 포곡읍 둔전로 42", hours: "평일 09:00~18:00", capacity: 40,
+  { type: "rest", name: "백현마을 경로당 무더위쉼터", dist: 150, bearing: 331,
+    addr: "기흥구 동백7로 70", hours: "평일 09:00~18:00", capacity: 40,
     extra: "실내 무더위쉼터, 냉방기 있음, 정수기 있음" },
-  { type: "rest", name: "둔전사거리 그늘막쉼터", dist: 260, bearing: 74,
-    addr: "처인구 포곡읍 둔전로 70", hours: "5~9월 상시", capacity: null,
+  { type: "rest", name: "내꽃공원 그늘막쉼터", dist: 200, bearing: 62,
+    addr: "기흥구 동백8로 90", hours: "5~9월 상시", capacity: null,
     extra: "야외 무더위쉼터, 그늘막, 벤치 4석" },
-  { type: "rest", name: "포곡천 둔치 그늘막쉼터", dist: 1080, bearing: 347,
-    addr: "처인구 포곡읍 금어로 20", hours: null, capacity: null, extra: null },
+  { type: "rest", name: "동백호수공원 그늘막쉼터", dist: 1200, bearing: 236,
+    addr: "기흥구 동백5로 20", hours: null, capacity: null, extra: null },
   /* 반경 고르개의 3km 칸에서 들어온다 (머리말 표) */
-  { type: "rest", name: "삼계리 경로당 무더위쉼터", dist: 2870, bearing: 205,
-    addr: "처인구 포곡읍 삼계로 132", hours: "평일 09:00~18:00", capacity: 25,
+  { type: "rest", name: "중동 경로당 무더위쉼터", dist: 2870, bearing: 205,
+    addr: "기흥구 동백2로 132", hours: "평일 09:00~18:00", capacity: 25,
     extra: "실내 무더위쉼터, 냉방기 있음, 정수기 있음" },
 ];
 
@@ -173,9 +178,9 @@ const RAW = [
  * 지도 카드, 길찾기 도착지에는 부를 것이 있어야 한다. 없는 이름을 지어 데이터에 적어 두면
  * 그 뒤로는 원천 값인지 우리가 만든 것인지 구분되지 않으므로, **규칙을 코드에 둔다.**
  *
- * 도로명 + 건물번호 + 유형 → "둔전로 42 AED" · "금어로 216 대피소".
- * 도로명만 떼면 짧지만 유일하지 않다 — 이 더미만 해도 둔전로에 AED 가 둘이다. 두 줄이
- * "둔전로 AED" 로 똑같이 보이면 목록에서 어느 쪽을 눌렀는지 알 수 없다. 번호까지 붙이면
+ * 도로명 + 건물번호 + 유형 → "동백8로 108 AED" · "동백5로 12 대피소".
+ * 도로명만 떼면 짧지만 유일하지 않다 — 이 더미만 해도 동백8로에 AED 가 둘이다. 두 줄이
+ * "동백8로 AED" 로 똑같이 보이면 목록에서 어느 쪽을 눌렀는지 알 수 없다. 번호까지 붙이면
  * 언제나 유일하고, 무엇보다 **이름이 곧 위치**라 지어낸 이름보다 실제로 쓸모가 있다.
  *
  * 시·구·읍면동은 뗀다. 이 서비스는 QR 지점 반경 안만 다뤄서 앞부분이 전부 같고,
@@ -206,6 +211,13 @@ export const FACILITIES = RAW
     ...at(f.dist, f.bearing),
   }))
   .sort((a, b) => a.dist - b.dist);
+
+/* 기준점이 다른 QR(정회원 상점 QR 등, current.js 의 `currentAt`)이면 거리를 그 자리에서 다시 잰다 (2026-10-30).
+   시설의 좌표는 그대로이고 `dist` 만 바뀐다. 같은 자리면 위 상수를 그대로 돌려준다 */
+export function facilitiesFrom(at) {
+  if (!at || (at.lat === ANCHOR.lat && at.lng === ANCHOR.lng)) return FACILITIES;
+  return FACILITIES.map(f => ({ ...f, dist: Math.round(gapM(at, f)) })).sort((a, b) => a.dist - b.dist);
+}
 
 /* ── 안내 반경과 "가깝다"의 선 — 서로 다른 두 값 ──────────────────────────────
  *

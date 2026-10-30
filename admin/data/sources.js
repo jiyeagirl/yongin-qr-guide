@@ -1,4 +1,4 @@
-import { STORES, COURSES } from "../../screens/main/data/dunjeon.js";
+import { STORES, COURSES } from "../../screens/main/data/current.js";
 import { DISTRICTS, FESTIVALS, CURRENT_DISTRICT_ID } from "../../screens/main/data/districts.js";
 import { FACILITIES } from "../../screens/main/data/facilities.js";
 import { QR_POINTS } from "../../screens/main/data/qr.js";

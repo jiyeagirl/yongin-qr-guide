@@ -5,8 +5,8 @@
  * 실연동 때는 lookup() 안쪽만 fetch 로 갈아끼우면 되고 화면은 그대로다.
  *
  * ── 유효한 코드가 하나뿐인 이유 ────────────────────────────────────────────
- * 더미 데이터(점포 335곳, 공공시설, 거리, 좌표)는 전부 **우리의류**
- * 한 지점을 기준으로 계산돼 있다 (data/dunjeon.js). 표에 다른 지점을 더해두면 이름만
+ * 점포 거리 · 공공시설 · 좌표는 전부 동백이음길의 **우리동네 통닭집**
+ * 한 지점을 기준으로 계산돼 있다 (data/current.js. 2026-10-30 — 종전 둔전 「우리의류」). 표에 다른 지점을 더해두면 이름만
  * 바뀌고 거리는 그대로라, 화면이 조용히 거짓말을 하게 된다. 그래서 **유효한 코드는 하나뿐**이고,
  * 나머지 줄들은 전부 셸을 세우지 않는 코드다 — 안내 화면의 갈래를 검수할 대상이 필요하기
  * 때문이다. 셸로 들어가지 않으므로 더미 거리와 어긋날 일이 없다.
@@ -16,12 +16,12 @@
  *   qr-003    설치 후 미활성 → S11-A (표에 있으나 아직 시작하지 않은 코드)
  *   qr-004    유효 (셸) + 축제 팜플렛 → 축제 상세 + 쿠폰 칸
  *   qr-005    유효 (셸) — 버스정류장 안내판 → 상점가 탭 (2026-10-19)
+ *   qr-006    유효 (셸) — **정회원** 상점 QR(동백문고) → 그 상점 상세 (2026-10-30)
  *   그 밖의 문자열 → S11  (표에 없는 코드)
  *
- * `qr-004` 가 하나 더 늘어난 것은 위 규칙을 어기지 않는다 — **소속 상점가가 둔전**이고
- * 팜플렛의 앵커는 그 상점가에서 읽으므로(아래 `districtAnchor`), 더미 거리가 그대로
- * 맞는다. 그 값이 `ANCHOR` 와 같은 것은 우연이 아니라 `districts.js` 가 둔전만 상권
- * 좌표를 QR 지점으로 두었기 때문이다.
+ * `qr-004` · `qr-005` 가 늘어난 것은 위 규칙을 어기지 않는다 — **소속 상점가가 동백이음길**이고
+ * 앵커는 그 상점가에서 읽으므로(아래 `districtAnchor`), 거리가 그대로 맞는다. 상점가 대표주소
+ * (동백중앙로 358-19)가 QR 점포의 건물이라 두 좌표가 같다 (current.js 의 ANCHOR 는 건물 좌표다).
  *
  * ── 코드가 「둔전…」에서 `qr-001` 이 됐다 (2026-08-26. 2026-08-25 회의 결정사항) ──
  * QR ID 는 이제 담당자가 짓지 않는다 — **미리 만들어 둔 50개(`qr-001` ~ `qr-050`) 중
@@ -33,7 +33,12 @@
  * **조회 자체가 안 될 수도 있다** → S11-B. 코드가 아니라 통신이 문제라 표와 무관하고,
  * 검수 플래그 `?net=fail` 로만 켠다 (맨 아래).
  */
-import { ANCHOR } from "./dunjeon.js";
+import { ANCHOR, ENTRY_STORE_ID, STORES } from "./current.js";
+import { DONGBAEK_BUILDINGS } from "./dongbaekStores.js";
+
+/* 정회원 상점 QR 시연 점포 (2026-10-30, 사용자 요청) — 동백문고, 백현프라자 2층. 좌표는 그 건물이다 */
+const MEMBER_STORE = STORES.find(s => s.name === "동백문고");
+const MEMBER_BUILDING = DONGBAEK_BUILDINGS.find(b => b.name === "백현프라자");
 import { DISTRICTS } from "./districts.js";
 
 /* ── 팜플렛 코드의 앵커는 소속 상점가에서 읽는다 (2026-09-02, 사용자 요청) ─────────
@@ -45,10 +50,8 @@ import { DISTRICTS } from "./districts.js";
    대표주소가 바뀌었는데 팜플렛 코드가 옛 좌표를 들고 있으면, 그 코드로 들어온 시민이
    보는 **모든 거리**가 옛 자리 기준이 된다.
 
-   둔전에서는 이 값이 `ANCHOR` 와 같은데 **우연이 아니다** — 시 자료의 둔전 상권 좌표는
-   우리 QR 지점에서 2.7km 떨어져 있지만, 더미 세계가 전부 QR 지점에 매달려 있어
-   `districts.js` 가 둔전만 상권 좌표를 QR 지점으로 두었다 (그쪽 머리말). 그래서 여기서
-   상점가를 읽으면 그 값이 나온다. 다른 상점가의 팜플렛이었다면 달라진다. */
+   동백이음길에서는 이 값이 `ANCHOR` 와 같다 — 대표주소 건물(미래도프라자)에 QR 점포가 있다.
+   다른 상점가의 팜플렛이었다면 달라진다. */
 const districtAnchor = id => {
   const d = DISTRICTS.find(x => x.id === id);
   return d ? { lat: d.lat, lng: d.lng } : {};
@@ -71,14 +74,14 @@ export const QR_POINTS = [
     name: ANCHOR.name,
     lat: ANCHOR.lat,
     lng: ANCHOR.lng,
-    dong: "처인구 포곡읍 둔전리",
-    addr: "처인구 포곡읍 둔전로 42",
+    dong: "기흥구 동백1동",
+    addr: "기흥구 동백중앙로 358-19",
     /* 종류 (2026-10-16 방향 변경): store = 개별 상점에 붙은 QR → 그 상점 상세가 먼저 뜬다.
        더미에서는 안내판 지점 하나를 상점 QR 로 쓰고 `storeId` 를 걸었다 — 실서비스에서는
        상점마다 지점이 하나씩이고 앵커도 그 상점이다 (`docs/direction_v2_rules.md` 3장). */
     kind: "store",
-    storeId: "dj-163",
-    districtId: "dunjeon",          /* U-ST-01 — 관리자가 등록 시 직접 지정한다 (앱이 계산하지 않는다) */
+    storeId: ENTRY_STORE_ID,        /* 우리동네 통닭집 (current.js) */
+    districtId: "dongbaekium",      /* U-ST-01 — 관리자가 등록 시 직접 지정한다 (앱이 계산하지 않는다) */
     installStatus: "설치완료",
     installedAt: "2026-03-14",
     locationDetail: "가게 출입문 옆 유리창, 눈높이(지면 1.4m)",
@@ -89,16 +92,16 @@ export const QR_POINTS = [
        "등록된 적 없는 코드"와 "지금은 안 쓰는 코드"는 사용자에게 할 말이 다르다 (U-CM-02). */
     code: "qr-002",
     active: false,
-    name: "(구) 둔전 시장 안내판",
+    name: "(구) 동백이음길 안내판",
     replacedBy: "qr-001",
-    dong: "처인구 포곡읍 둔전리",
-    addr: "처인구 포곡읍 둔전로 40",
-    lat: 37.28861,
-    lng: 127.19908,
-    districtId: "dunjeon",
+    dong: "기흥구 동백1동",
+    addr: "기흥구 동백중앙로 358-12",
+    lat: 37.2819813,
+    lng: 127.1602221,
+    districtId: "dongbaekium",
     installStatus: "철거",
     installedAt: "2019-05-02",
-    locationDetail: "시장 입구 옛 안내판 하단. 2026.03 교체 시 철거",
+    locationDetail: "유타운 앞 옛 안내판 하단. 2026.03 교체 시 철거",
     memo: "철거했으나 코드는 남긴다 — 아직 이 코드를 찍는 사람이 있다 (대시보드 지점별 스캔 참조).",
   },
   {
@@ -118,15 +121,15 @@ export const QR_POINTS = [
        그대로다. */
     code: "qr-003",
     active: false,
-    name: "둔전 시장 서편 출입구",
-    dong: "처인구 포곡읍 둔전리",
-    addr: "처인구 포곡읍 둔전로 51",
-    lat: 37.28802,
-    lng: 127.19842,
-    districtId: "dunjeon",
+    name: "동백이음길 동백7로 입구",
+    dong: "기흥구 동백1동",
+    addr: "기흥구 동백7로 73",
+    lat: 37.2820302,
+    lng: 127.1595831,
+    districtId: "dongbaekium",
     installStatus: "설치완료",
     installedAt: "2026-08-21",
-    locationDetail: "서편 출입구 왼쪽 기둥, 눈높이(지면 1.4m)",
+    locationDetail: "경안빌딩 앞 가로등 기둥, 눈높이(지면 1.4m)",
     memo: "안내판 설치는 끝났고 주변 시설 자료 확인 후 활성화 예정.",
   },
   {
@@ -162,25 +165,25 @@ export const QR_POINTS = [
        (안내판만 있던 시절의 항목표다). */
     code: "qr-004",
     active: true,
-    name: "둔전 골목축제 안내 팜플렛",
+    name: "동백이음길 가을마실 축제 안내 팜플렛",
     /* 시민 화면의 기준점 이름 (2026-10-19, 사용자 요청) — 종이 팜플렛은 가게가 아니므로 상점가의
        중심 거리를 기준으로 안내한다. 임의로 정한 값이며 실제 축제 장소가 정해지면 바꾼다. */
-    anchorName: "둔전 골목형 상점가 중심 거리",
+    anchorName: "동백이음길 골목형 상점가 중심 거리",
     /* 상단 띠 문구 (2026-10-19, 사용자 요청) — 팜플렛을 든 사람은 「QR 스캔 지점」이 어디인지 모른다.
        내부 앵커는 중심 거리지만 화면에는 상점가 기준이라고만 적는다. */
-    bannerLabel: "둔전 골목형 상점가 기준 안내",
+    bannerLabel: "동백이음길 골목형 상점가 기준 안내",
     /* 띠 뒤쪽 굵은 글자 (2026-10-19, 사용자 요청) — 상점 QR 이 「· 우리의류」를 굵게 적는 것과 같은 자리다 */
     bannerPlace: "축제 QR",
     /* 같은 이유로 시트의 기준 문구와 지도 위 복귀 버튼도 상점가 말로 적는다 (2026-10-19) */
-    basisLabel: "둔전 골목형 상점가 기준 직선거리 · 가까운 순",
+    basisLabel: "동백이음길 골목형 상점가 기준 직선거리 · 가까운 순",
     backLabel: "상점가 중심으로",
-    /* 소속 상점가에서 읽는다 — 둔전에서는 그 값이 `ANCHOR` 와 같다 (위 머리말) */
-    ...districtAnchor("dunjeon"),
-    dong: "처인구 포곡읍 둔전리",
-    districtId: "dunjeon",
+    /* 소속 상점가에서 읽는다 (위 머리말) */
+    ...districtAnchor("dongbaekium"),
+    dong: "기흥구 동백1동",
+    districtId: "dongbaekium",
     /* 종류 festival = 축제 홍보 QR → 그 축제 상세(S09)가 먼저 뜬다 (2026-10-16 방향 변경) */
     kind: "festival",
-    festivalId: "ft-dunjeon",
+    festivalId: "ft-dongbaekium",
     installStatus: "설치완료",
     installedAt: "2026-09-25",
     locationDetail: "축제 안내 팜플렛 뒷면 하단 (배포본)",
@@ -194,21 +197,44 @@ export const QR_POINTS = [
        `kind: sign` 은 첫 화면을 정하는 상세가 없다 — 해시를 달지 않으므로 셸이 상점가 탭(진입 시
        첫 탭)으로 선다. 코치마크는 이제 뜨지 않는다 (2026-10-19).
 
-       앵커는 둔전이라 더미 거리가 그대로 맞는다 (위 머리말 — `qr-004` 와 같은 이유). 다른 정류장
+       앵커는 동백이음길이라 거리가 그대로 맞는다 (위 머리말 — `qr-004` 와 같은 이유). 다른 정류장
        이름을 더하면 이름만 바뀌고 거리는 그대로이므로 **이 한 곳만 둔다.** 기준점 이름은
-       「둔전 시장 입구 버스정류장」이다. 좌표는 소속 상점가에서 읽는다 (`districtAnchor`). */
+       「백현마을 버스정류장」이다(더미 이름). 좌표는 소속 상점가에서 읽는다 (`districtAnchor`). */
     code: "qr-005",
     active: true,
-    name: "둔전 시장 입구 버스정류장",
-    anchorName: "둔전 시장 입구 버스정류장",
-    ...districtAnchor("dunjeon"),
-    dong: "처인구 포곡읍 둔전리",
-    districtId: "dunjeon",
+    name: "백현마을 버스정류장",
+    anchorName: "백현마을 버스정류장",
+    ...districtAnchor("dongbaekium"),
+    dong: "기흥구 동백1동",
+    districtId: "dongbaekium",
     kind: "sign",
     installStatus: "설치완료",
     installedAt: "2026-03-14",
     locationDetail: "버스정류장 안내판 하단, 눈높이(지면 1.4m)",
     memo: null,
+  },
+  {
+    /* ── 정회원 상점 QR (2026-10-30, 사용자 요청) ───────────────────────────────
+       `qr-001`(우리동네 통닭집)이 **일반** 상점 QR 이고, 이 줄이 상인회 **정회원** 상점 QR 이다. 진입 흐름은 같고
+       (그 상점 상세가 먼저 → 닫으면 상점가 탭), 상세 머리에 「이음길 함께가게」 배지가 선다(StoreDetail).
+       기준점이 다른 건물(백현프라자)이라 셸이 거리 · 차례 · 코스를 그 건물에서 다시 잰다 (current.js 의
+       `currentAt` · facilities.js 의 `facilitiesFrom`) — 위 머리말의 「유효한 코드가 하나뿐인 이유」가 이 줄에는
+       걸리지 않는다. 상점가 · 시설 거리(100m 단위)는 기본 지점 값 그대로다 — 96m 차이라 끊는 단위 안이다. */
+    code: "qr-006",
+    active: true,
+    name: MEMBER_STORE ? MEMBER_STORE.name : "동백문고",
+    anchorName: MEMBER_STORE ? MEMBER_STORE.name : "동백문고",
+    lat: MEMBER_BUILDING.lat,
+    lng: MEMBER_BUILDING.lng,
+    dong: "기흥구 동백1동",
+    addr: "기흥구 동백중앙로 358-8",
+    kind: "store",
+    storeId: MEMBER_STORE ? MEMBER_STORE.id : null,
+    districtId: "dongbaekium",
+    installStatus: "설치완료",
+    installedAt: "2026-10-30",
+    locationDetail: "가게 출입문 옆 유리창, 눈높이(지면 1.4m)",
+    memo: "상인회 정회원 시연 점포.",
   },
 ];
 
@@ -293,7 +319,7 @@ export function lookup(code) {
 
 /* ── 검수 플래그 ───────────────────────────────────────────────────────────
  * S03-E(U-ST-16)는 "QR 지점에서 임계 거리 안에 지정 상점가가 없을 때"의 화면인데,
- * 유효한 QR 지점이 둔전 하나뿐이라 실제로는 그 상태에 들어갈 수가 없다.
+ * 유효한 QR 지점이 동백이음길 한 곳뿐이라 실제로는 그 상태에 들어갈 수가 없다.
  * 없는 지점을 표에 지어넣는 대신(위 머리말 참조) 플래그로 그 상태만 켠다.
  * config.js 의 TODAY 와 같은 성격이다 — 실서비스에서는 제거한다.
  *
@@ -308,7 +334,7 @@ export function lookup(code) {
  * 이 플래그가 없으면 두 번째부터는 새 프로필을 열어야 검수할 수 있다.
  *
  * ── `?pamphlet` 이 있는데 `qr-004` 도 있는 이유 ─────────────────────────────
- * 표의 코드(`qr-004`)가 가리키는 축제는 둔전 하나이고 그것은 **진행중**이다. 그런데 이
+ * 표의 코드(`qr-004`)가 가리키는 축제는 동백이음길 하나이고 그것은 **예정**이다 (TODAY 10.17 기준). 그런데 이
  * 팝업이 하는 말은 축제의 상태를 따라 셋으로 갈린다(진행중 · 예정 · 종료) — 팜플렛은
  * 종이라서 축제보다 오래 남고, 끝난 축제의 팜플렛을 찍는 사람이 실제로 있다. 표에
  * 코드를 셋 더 넣으면 **같은 자리에 선 같은 지점이 셋**이 되므로(지점의 성격이 아니라

@@ -74,6 +74,49 @@ function clusterStyles() {
 }
 
 const NO_AREAS = [];   /* 기본값을 렌더마다 새 배열로 만들면 구역 effect 가 매번 다시 돈다 */
+const NO_BUILDINGS = [];
+
+/* ── 건물 핀 (2026-10-30, 사용자 요청) ─────────────────────────────────────────
+   가게가 건물 몇 채에 몰린 상점가(동백이음길: 12채에 227곳)는 가게마다 핀을 찍으면 한 건물 위에 핀
+   수십 개가 겹친다. 그래서 **건물 하나에 핀 하나** — 건물 이름과 가게 수를 적은 알약에 꼬리를 단다.
+   마커 이미지(PNG)가 아니라 DOM 이라 글자를 얹을 수 있다(코스 순번 핀과 같은 이유).
+   바탕은 **쉼터 핀과 같은 청록**(--pin-building), 글자는 흰색이다(2026-10-30 개정, 사용자 요청 — 흰 알약은 지도 글자와
+   섞였고, 브랜드 초록은 [전체] 칩의 켜진 색과 같아 버튼처럼 읽혔다). 가게 수 칩은 한 단 짙은 청록.
+   고른 건물은 시설 · 가게 핀과 같은 **민트**(--pin-selected)로 바꾸고 글자를 짙은 잉크로 내린다. */
+function esc(t) {
+  return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function buildingPinElement(b) {
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "position:relative;padding-bottom:9px;cursor:pointer";
+  wrap.setAttribute("role", "button");
+  wrap.setAttribute("tabindex", "0");
+  wrap.setAttribute("aria-label", `${b.name} 가게 ${b.count}곳`);   /* 읽어 주는 이름은 원래 이름이다 */
+  wrap.innerHTML =
+    `<span data-face style="display:inline-flex;align-items:center;gap:5px;padding:4px 5px 4px 10px;`
+    + `border-radius:var(--radius-pill);background:var(--pin-building);color:var(--pin-building-ink);`
+    + `border:var(--stroke-outline) solid var(--pin-stroke);box-shadow:var(--shadow-raised);`
+    + `font-family:var(--font-sans);font-size:var(--fs-micro);font-weight:var(--fw-medium);line-height:1.3;white-space:nowrap">`
+    + `<span>${esc(b.label || b.name)}</span>`
+    + `<span data-count style="min-width:20px;padding:1px 6px;border-radius:var(--radius-pill);text-align:center;`
+    + `background:var(--pin-building-count);color:var(--pin-building-ink);font-weight:var(--fw-bold)">${b.count}</span></span>`
+    /* 꼬리 — 45도 돌린 정사각형. 알약과 같은 바탕이라 이어 붙어 보인다 */
+    + `<span data-tail style="position:absolute;left:50%;bottom:5px;width:9px;height:9px;margin-left:-4.5px;`
+    + `background:var(--pin-building);border-right:var(--stroke-outline) solid var(--pin-stroke);`
+    + `border-bottom:var(--stroke-outline) solid var(--pin-stroke);transform:rotate(45deg)"></span>`;
+  return wrap;
+}
+function paintBuildingPin(el, on) {
+  const face = el.querySelector("[data-face]"), count = el.querySelector("[data-count]"), tail = el.querySelector("[data-tail]");
+  if (!face) return;
+  const fill = on ? "var(--pin-selected)" : "var(--pin-building)";
+  face.style.background = fill;
+  face.style.color = on ? "var(--pin-building-selected-ink)" : "var(--pin-building-ink)";
+  face.style.fontWeight = on ? "var(--fw-bold)" : "var(--fw-medium)";
+  /* 민트 위의 수 칩은 브랜드 짙은 초록 — 흰 숫자가 그대로 읽힌다 */
+  count.style.background = on ? "var(--brand-primary-strong)" : "var(--pin-building-count)";
+  tail.style.background = fill;
+}
 
 export function KakaoMap({
   appKey,
@@ -111,6 +154,9 @@ export function KakaoMap({
   stores = [],                /* [{id, name, lat, lng, onnuri}] — 상점가 탭. 클러스터링(U-ST-13) */
   facilities = [],            /* [{id, name, type, lat, lng}] — 공공시설 탭. 유형 4종 색 */
   districts = [],             /* [{id, name, lat, lng, festival}] — 상점가 지점 (S03-E 의 근처 상점가) */
+  /* [{id, name, label?, lat, lng, count}] — 건물 핀 (2026-10-30). label 이 있으면 핀에는 그것을 적는다. 가게가 건물에 몰린 상점가에서 `stores` 대신 쓴다.
+     클러스터에 넣지 않는다 — 건물 수가 적고, 핀 하나가 이미 묶음이다 */
+  buildings = NO_BUILDINGS,
   areas = NO_AREAS,                 /* [{id, path:[{lat,lng}]}] — 상점가 **구역**. 핀과 함께 반투명 면으로 그린다 (2026-10-19) */
   course = [],                /* [{id, name, lat, lng}] — S08 코스 상세. **순서가 있는 배열**이다 */
   /* 코스에서 이미 들른 곳의 id. 그 핀을 흐리게 둔다 — 목록에서 체크한 것이 지도에도
@@ -138,6 +184,8 @@ export function KakaoMap({
   onSelectStore,
   onSelectFacility,
   onSelectDistrict,
+  onSelectBuilding,
+  onMapClick,                 /* 지도 빈 곳을 눌렀을 때 (2026-10-30) — 핀 · 오버레이를 누른 것은 오지 않는다 */
   onSelectCourseStop,
   onSelectDest,
   onReady,
@@ -156,6 +204,7 @@ export function KakaoMap({
   const facilityMarkers = React.useRef(new Map());
   const districtMarkers = React.useRef(new Map());
   const areaPolys = React.useRef(new Map());
+  const buildingOverlays = React.useRef(new Map());
   /* 코스는 마커가 아니라 CustomOverlay 다 — 순번 숫자를 넣어야 하는데
      마커 이미지는 미리 만든 PNG 라 숫자를 얹을 수 없다 */
   const courseOverlays = React.useRef(new Map());
@@ -179,7 +228,7 @@ export function KakaoMap({
 
   /* 콜백은 ref 로 — 부모가 인라인 함수를 넘겨도 지도를 다시 만들지 않는다 */
   const cb = React.useRef({});
-  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onSelectCourseStop, onSelectDest, onSelectTurn, onReady, onError, onPick, onAnchorOffscreen };
+  cb.current = { onSelectStore, onSelectFacility, onSelectDistrict, onSelectBuilding, onMapClick, onSelectCourseStop, onSelectDest, onSelectTurn, onReady, onError, onPick, onAnchorOffscreen };
   const pickMarker = React.useRef(null);
 
   /* 실제로 보이는 띠 = 상단 필터 바 아래 ~ 시트 위. 그 한가운데로 마커를 옮긴다.
@@ -305,6 +354,7 @@ export function KakaoMap({
          두는 이유는 onPick 이 인라인 함수로 들어와도 지도를 다시 만들지 않기 위해서다.
          onPick 을 넘기지 않은 화면에서는 아무 일도 일어나지 않는다. */
       kakao.maps.event.addListener(m, "click", e => {
+        if (cb.current.onMapClick) cb.current.onMapClick();
         if (!cb.current.onPick) return;
         const ll = e.latLng;
         cb.current.onPick(+ll.getLat().toFixed(6), +ll.getLng().toFixed(6));
@@ -457,6 +507,34 @@ export function KakaoMap({
       districtMarkers.current.set(x.id, mk);
     });
   }, [districts, baseImage, ready]);
+
+  /* 건물 핀 (위 buildingPinElement 머리말) — 목록(필터 결과)이 바뀌면 가게 수가 바뀌므로 통째로 다시 그린다 */
+  React.useEffect(() => {
+    const k = kakaoRef.current, m = map.current;
+    if (!k || !m) return;
+    buildingOverlays.current.forEach(ov => ov.setMap(null));
+    buildingOverlays.current.clear();
+    buildings.filter(b => b.lat && b.lng && b.count > 0).forEach(b => {
+      const el = buildingPinElement(b);
+      const pick = e => { if (e) e.stopPropagation(); cb.current.onSelectBuilding && cb.current.onSelectBuilding(b); };
+      el.addEventListener("click", pick);
+      el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(e); } });
+      const ov = new k.maps.CustomOverlay({ map: m, position: new k.maps.LatLng(b.lat, b.lng), content: el,
+        yAnchor: 1, clickable: true, zIndex: 5 });
+      buildingOverlays.current.set(b.id, ov);
+    });
+  }, [buildings, ready]);
+
+  /* 고른 건물 핀을 뒤집고 앞으로 꺼낸다 */
+  React.useEffect(() => {
+    buildingOverlays.current.forEach((ov, id) => {
+      const el = ov.getContent();
+      if (!el || !el.querySelector) return;
+      const on = id === selectedId;
+      paintBuildingPin(el, on);
+      ov.setZIndex(on ? 9 : 5);
+    });
+  }, [selectedId, buildings, ready]);
 
   /* ── 코스 레이어 (S08 골목 한바퀴 상세) ─────────────────────────────────
      다른 레이어와 성격이 다르다. 점포·시설·상점가는 **집합**이지만 코스는 **순서**다.

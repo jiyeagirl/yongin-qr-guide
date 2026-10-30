@@ -174,7 +174,11 @@ export function Sheet({ open = true, title, subtitle, titleAside, headerExtra, c
           <div style={{ flex: "0 0 auto", padding: "0 var(--gutter-screen) var(--space-1)" }}>
             {/* 제목 줄을 titleAside · 닫기 버튼과 나눠 쓴다 */}
             <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              {/* 제목 칸의 높이를 손가락 자리(44px)로 맞추고 제목을 그 가운데에 둔다 (2026-10-30, 사용자 요청).
+                  공공시설 탭은 오른쪽에 44px 짜리 반경 고르개가 서서 제목이 손잡이에서 한 뼘 내려와 있었고,
+                  상점가 탭(작은 소재지 글자)은 제목이 손잡이에 붙어 **탭마다 손잡이–제목 간격이 달랐다.**
+                  세로 flex 의 기준선은 첫 줄(제목)이라 오른쪽 조각과의 baseline 정렬은 그대로다 */}
+              <div style={{ flex: 1, minWidth: 0, minHeight: "var(--tap-min)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                 {title ? <h2 style={{ fontSize: "var(--fs-title-2)", fontWeight: "var(--fw-bold)", letterSpacing: "var(--ls-snug)" }}>{title}</h2> : null}
                 {subtitle ? <div style={{ fontSize: "var(--fs-caption)", color: "var(--text-muted)", marginTop: 4 }}>{subtitle}</div> : null}
               </div>

@@ -60,7 +60,7 @@ export const ALL_PAGES = [
 export const SEED_ACCOUNTS = [
   { id: SUPER_ID, pw: "admin1234!", name: "최종 관리자",
     email: "admin@yongin.go.kr", phone: "031-324-2114", active: true },
-  { id: "yongin", pw: "yongin1234", name: "포곡읍 김담당",
+  { id: "yongin", pw: "yongin1234", name: "동백1동 김담당",
     email: "gis@yongin.go.kr", phone: "031-324-8000", active: true },
 ];
 
