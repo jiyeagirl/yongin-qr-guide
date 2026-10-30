@@ -280,7 +280,7 @@ export const DONGBAEK_BUILDINGS = [
    사진(`images`)은 가게 상세의 사진 줄(PhotoStrip)에 선다 — 파일은 `screens/main/assets/stores/` */
 export const DONGBAEK_INTROS = {
   "동백문고": { tags: ["문제집, 참고서", "단골 많은집", "다양한도서"],
-    images: [1, 2, 3].map(n => `/screens/main/assets/stores/dongbaekmungo-${n}.jpg`) },   /* 신간 · 계산대 · 베스트 서가 (사용자 전달) */
+    images: [1, 2, 3].map(n => `/screens/main/assets/stores/dongbaekmungo-${n}.jpg`) },   /* 사용자 전달 사진 셋 */
 };
 
 registerDistrictStores({
