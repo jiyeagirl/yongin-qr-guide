@@ -104,3 +104,4 @@ export { PhotoStrip } from "./components/store/PhotoStrip.jsx";
 export { Mascot, MASCOT_POSES, MASCOT_FULL, MASCOT_BUST } from "./components/brand/Mascot.jsx";
 export { MascotBubble } from "./components/brand/MascotBubble.jsx";
 export { StatTile } from "./components/brand/StatTile.jsx";
+export { Shimmer } from "./components/brand/Shimmer.jsx";

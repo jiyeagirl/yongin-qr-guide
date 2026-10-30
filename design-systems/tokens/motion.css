@@ -23,6 +23,13 @@
   100%{transform:scale(1);opacity:0}
 }
 
+/* 반짝임 (Shimmer, 2026-10-30) — 정회원 배지 위를 비스듬한 빛줄기가 지나간다. 지나간 뒤 한참 쉬었다(3.6s 중 앞 40%만 움직임)
+   다시 지나가야 「반짝」으로 읽힌다 — 쉬지 않고 흐르면 로딩 표시처럼 보인다. 움직임 최소화 기기에서는 한 번에 끝나 빛줄기가 화면 밖에 머문다. */
+@keyframes yong-shimmer{
+  0%{transform:translateX(-160%) skewX(-20deg)}
+  40%,100%{transform:translateX(260%) skewX(-20deg)}
+}
+
 /* 움직임 최소화 요청 존중 — 컴포넌트마다 matchMedia 를 다시 쓰지 않아도 되도록 여기서 한 번에 끈다.
    0.01ms 로 두는 이유는 0s 로 두면 animationend 를 기다리는 코드가 영영 깨어나지 않기 때문이다. */
 @media (prefers-reduced-motion: reduce){

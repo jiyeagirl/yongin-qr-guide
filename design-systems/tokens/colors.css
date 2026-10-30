@@ -3,8 +3,16 @@
 --yong-green-50:#f1fbf5;--yong-green-100:#ddf5e8;--yong-green-200:#beebd3;--yong-green-300:#97dfb8;--yong-green-400:#7ad6a5;--yong-green-500:#66ce94;--yong-green-600:#45b579;--yong-green-700:#2f9260;--yong-green-800:#216e48;--yong-green-900:#144a30;
 --yong-teal-50:#e8f6f6;--yong-teal-100:#c9ebeb;--yong-teal-300:#6bc5c6;--yong-teal-500:#179496;--yong-teal-700:#0f6e70;--yong-teal-900:#084244;
 --yong-cream-100:#fffce6;--yong-cream-300:#fef8cc;--yong-cream-500:#fef5aa;--yong-cream-700:#f0dc72;--yong-cream-900:#b99f2c;
---yong-ink-900:#16221c;--yong-ink-700:#2f3d36;--yong-ink-500:#5b6a62;--yong-ink-300:#8b9a92;--yong-ink-200:#c3cec8;--yong-ink-100:#dce4df;--yong-ink-50:#eef2f0;
+--yong-ink-900:#16221c;--yong-ink-700:#2f3d36;--yong-ink-500:#5b6a62;--yong-ink-400:#73827a;--yong-ink-300:#8b9a92;--yong-ink-200:#c3cec8;--yong-ink-100:#dce4df;--yong-ink-50:#eef2f0;
 --yong-white:#ffffff;--yong-mist:#f5f8f6;
+/* ── 골드 — 상인회 정회원(「이음길 함께가게」) 가게 상세의 포인트 색 (2026-10-30, 사용자 요청) ──────────
+   쨍한 노랑(cream-700) 대신 톤 다운한 골드 세 단: 포인트 500 · 흰 바탕에서 읽히는 글자 700 · 바탕 크림 50.
+   정회원 배지 그림의 금테와 같은 계열이다. 정회원 화면 밖에서 쓰지 않는다 — 다른 자리에 퍼지면 「정회원이라 다르다」가 흐려진다. */
+--yong-gold-50:#fff8e6;--yong-gold-500:#c9a227;--yong-gold-700:#a8841a;
+--member-accent:var(--yong-gold-500); /* @kind color */
+--member-ink:var(--yong-gold-700); /* @kind color */
+--member-soft:var(--yong-gold-50); /* @kind color */
+--member-shine:rgba(255,255,255,.75); /* @kind color */   /* Shimmer 빛줄기 한가운데 */
 /* ── 보조 램프 — 카드·칩 틴트용으로 50·100·300·500·700 다섯 단으로 확장 (2026-08-19)
    Claude Design 프로젝트("용인 실증지원 Design System")의 램프를 들여온 것이다.
    `tokens/surfaces.css` 의 10틴트가 이 값들 위에 선다.

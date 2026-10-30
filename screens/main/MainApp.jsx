@@ -1340,7 +1340,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
             U-FC-03 의 "목록과 지도 토글"이 이것이다 — 별도 버튼을 두지 않는다.
             둘러보기 탭에는 시트 자체가 없다. */}
         {isDiscover ? null : <Sheet
-          title={isDistrict && building ? building.name : sheetTitle}
+          title={isDistrict && building ? (building.label || building.name) : sheetTitle}
           snap={snap}
           /* 전체 스냅으로 올라가면 선택 자체가 풀린다 (changeSnap 머리말) */
           onSnapChange={changeSnap}

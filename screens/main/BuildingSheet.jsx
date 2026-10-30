@@ -1,5 +1,5 @@
 import React from "react";
-import { ListRow, CategoryIcon, OnnuriBadge, Badge, Notice } from "../../design-systems/index.js";
+import { ListRow, CategoryIcon, OnnuriBadge, Notice } from "../../design-systems/index.js";
 
 /* 상점가 탭 — **건물 하나의 가게 목록, 층별** (2026-10-30, 사용자 요청).
  *
@@ -13,8 +13,11 @@ import { ListRow, CategoryIcon, OnnuriBadge, Badge, Notice } from "../../design-
  *   「6·7층」처럼 여러 층을 쓰는 가게는 낮은 층에 선다.
  * - 줄을 누르면 가게 상세로 간다. 지도에는 건물 핀만 있어 가게를 「지도에서 켤」 자리가 없다.
  * - 거리를 적지 않는다 — 한 건물 안이라 모두 같다. 대신 업종을 적는다.
- * - 상인회 정회원 가게에는 「함께가게」 배지가 선다(상세의 「이음길 함께가게」 배지와 같은 뜻).
+ * - 상인회 정회원 표시는 목록 줄에 두지 않는다(2026-10-30, 사용자 요청 — 한때 「함께가게」 배지가 있었다). 정회원은 가게 상세의 「이음길 함께가게」 배지가 말한다.
  */
+/* 층 표기 — 「1층」→「1F」, 「6·7층」→「6·7F」, 「지하1층」→「B1F」 (2026-10-30, 사용자 요청). 자료는 받은 그대로 「층」이고 화면만 바꾼다 */
+export const floorLabel = f => String(f).replace(/^지하\s*(\d+)층$/, "B$1F").replace(/층$/, "F");
+
 const floorKey = f => {
   if (!f) return 999;
   const m = String(f).match(/\d+/);   /* 「2·3층」은 앞의 2 로 선다 */
@@ -38,16 +41,15 @@ export function BuildingSheet({ building, rows = [], onOpenStore }) {
     <div style={{ padding: "var(--space-1) var(--gutter-screen) var(--space-9)" }}>
       {/* 「주소 · 가게 n곳 · 함께가게 m곳」 줄을 뺐다 (2026-10-30, 사용자 요청) — 건물명은 시트 제목이, 가게 수는 지도 핀이 적는다 */}
       {rows.length === 0 ? <Notice tone="info">조건에 맞는 매장이 없습니다.</Notice> : groups.map(([floor, list]) => (
-        <section key={floor} aria-label={floor} style={{ marginTop: floor === groups[0][0] ? 0 : "var(--space-3)" }}>
+        <section key={floor} aria-label={floor /* 읽어 줄 때는 「1층」이 자연스럽다 */} style={{ marginTop: floor === groups[0][0] ? 0 : "var(--space-3)" }}>
           <h3 style={{ font: "var(--type-label)", color: "var(--text-heading)", padding: "var(--space-1) 0",
-            borderBottom: "var(--stroke-hairline) solid var(--border-default)" }}>{floor}</h3>
+            borderBottom: "var(--stroke-hairline) solid var(--border-default)" }}>{floorLabel(floor)}</h3>
           <div role="list">
             {list.map((s, i) => (
               <ListRow key={s.id} role="listitem" divider={i < list.length - 1}
                 icon={<CategoryIcon type={s.cat} size={22} />}
                 title={s.name}
                 tag={<>
-                  {s.member ? <Badge tone="brand" size="sm">함께가게</Badge> : null}
                   {s.onnuri ? <OnnuriBadge size="sm" /> : null}
                 </>}
                 meta={s.biz}

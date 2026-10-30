@@ -50,7 +50,8 @@ export const ENTRY_STORE_ID = entry.id;
 export const buildingIdOf = name => `bld:${name}`;
 export const BUILDINGS = DONGBAEK_BUILDINGS.map(b => ({
   id: buildingIdOf(b.name), name: b.name, road: b.road,
-  /* 지도 핀 글자 — 「모아아파트상가동」처럼 긴 이름은 이웃 핀을 덮어 줄인다(시트 제목은 원래 이름) */
+  /* 보여 주는 이름 — 「모아아파트상가동」처럼 긴 이름은 「모아 상가」로 줄인다. 지도 핀 · 건물 시트 제목이 같은 이름을 쓴다
+     (2026-10-30, 사용자 요청 — 핀과 시트 제목이 달랐다). 가게 묶음(`s.building`)은 원래 이름 그대로다 */
   label: b.name.replace(/아파트상가동$/, " 상가"), addr: `기흥구 ${b.road}`, lat: b.lat, lng: b.lng,
 }));
 

@@ -2,7 +2,7 @@ import React from "react";
 import {
   DetailPage, DetailBody, DetailNotice,
   Button, Badge, OnnuriBadge, CategoryIcon, CATEGORY_LABELS, FestivalBanner, Icon,
-  SectionHeader, CourseCard, PhotoStrip, FootprintTrail,
+  SectionHeader, CourseCard, PhotoStrip, FootprintTrail, Shimmer,
 } from "../../design-systems/index.js";
 import { shortName } from "../main/DistrictSheet.jsx";
 import { STORE_AS_OF } from "../main/config.js";
@@ -64,6 +64,10 @@ import { STORE_AS_OF } from "../main/config.js";
  */
 export function StoreDetail({ store, district, festival, courses = [], entry = false, onBack, onReport, onCopied, onDistrict, onRoute, onOpenFestival, onOpenCourse }) {
   const s = store;
+  /* ── 상인회 정회원 가게는 골드 포인트 (2026-10-30, 사용자 요청 — direction_v2_rules 10장) ─────────────
+     머리 영역에 연한 크림 → 바탕으로 내려가는 그라데이션, 해시태그는 진한 골드, 배지에 반짝임, 발자국 길은 골드,
+     하단 주 버튼은 손대지 않는다(골드 테두리를 두었다가 사용자 요청으로 뺐다). 골드는 --member-* 토큰(colors.css)이다. */
+  const member = !!s.member;
 
   return (
     <DetailPage title={s.name} onBack={onBack}
@@ -80,7 +84,12 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
       <DetailBody>
         {/* ── 머리 ───────────────────────────────────────────────────────
                S05 와 같은 배치다 — 배지는 제 줄, 아이콘은 **업체명 옆**. */}
-        <header>
+        <header style={member ? {
+          /* 본문 위 · 좌우 여백(DetailBody)을 풀어 화면 끝까지 칠하고, 같은 만큼 안쪽 여백으로 되돌린다 */
+          margin: "calc(-1 * var(--space-4)) calc(-1 * var(--gutter-screen)) 0",
+          padding: "var(--space-4) var(--gutter-screen) var(--space-3)",
+          background: "linear-gradient(180deg, var(--member-soft) 0%, var(--member-soft) 35%, transparent 100%)",
+        } : undefined}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "var(--space-2)" }}>
             <Badge tone="neutral">{CATEGORY_LABELS[s.cat] || "기타"}</Badge>
             {/* 목록·상세·지도 마커가 같은 기호를 쓴다 (U-ST-06). 배지를 화면마다
@@ -93,7 +102,9 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <h2 style={{ font: "var(--type-title-2)", letterSpacing: "var(--ls-snug)",
-                color: "var(--text-heading)", wordBreak: "keep-all" }}>{s.name}</h2>
+                color: "var(--text-heading)", wordBreak: "keep-all" }}>
+                {s.name}
+              </h2>
               {/* 이름 밑: 도로명주소, 그 밑에 지도핀 아이콘 + 소속 골목형 상점가 (2026-10-19, 사용자 요청).
                   슬래시로 한 줄에 잇는 것을 그만뒀다 — 주소와 상점가는 다른 종류의 정보다. 상점가는 링크가
                   아니다(상점가로 가는 길은 하단 [상점가 둘러보기]) */}
@@ -111,9 +122,11 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
             </div>
             {/* 상인회 정회원 배지 「이음길 함께가게」 (2026-10-30, 사용자 요청) — 정회원(`member`) 가게에만, 가게 이름 오른쪽.
                 배지 글자는 그림 안에 있어 읽기 보조용 이름을 alt 로 단다. 경로는 루트 기준이다(관리자도 같은 표를 읽는다) */}
-            {s.member ? (
-              <img src="/screens/main/assets/badges/ieumgil-member.png" alt="이음길 함께가게 (상인회 정회원)"
-                width={64} height={63} style={{ flex: "0 0 auto", alignSelf: "flex-start", width: 64, height: "auto" }} />
+            {member ? (
+              <Shimmer style={{ flex: "0 0 auto", alignSelf: "flex-start" }}>
+                <img src="/screens/main/assets/badges/ieumgil-member.png" alt="이음길 함께가게 (상인회 정회원)"
+                  width={64} height={63} style={{ display: "block", width: 64, height: "auto" }} />
+              </Shimmer>
             ) : null}
           </div>
           {/* 가게 해시태그 (2026-10-30, 사용자 요청 — 정의서 1-2 밖의 항목이다. 받은 가게만 있고 없으면 줄을 두지 않는다).
@@ -121,7 +134,7 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
               깔끔하다」고 해서 뺐다 */}
           {s.tags && s.tags.length ? (
             <p style={{ marginTop: "var(--space-3)", display: "flex", flexWrap: "wrap", columnGap: 8, rowGap: 2,
-              font: "var(--type-caption)", fontWeight: "var(--fw-medium)", color: "var(--brand-primary)" }}>
+              font: "var(--type-caption)", fontWeight: "var(--fw-medium)", color: member ? "var(--member-ink)" : "var(--brand-primary)" }}>
               {s.tags.map(t => <span key={t} style={{ whiteSpace: "nowrap" }}>#{t}</span>)}
             </p>
           ) : null}
@@ -166,7 +179,7 @@ export function StoreDetail({ store, district, festival, courses = [], entry = f
             {/* 가게에서 코스로 이어지는 발자국 길 + 문구 (2026-10-19, 사용자 요청) — 가게 상세와 코스 추천이 따로 노는
                 두 영역이 아니라 이 가게에서 시작되는 한 번의 탐방으로 읽히게 한다. 이 가게가 코스 안에 있으면 카드가
                 그 줄을 표시한다(currentId) */}
-            <FootprintTrail style={{ marginBottom: "var(--space-3)" }} />
+            <FootprintTrail tone={member ? "member" : undefined} style={{ marginBottom: "var(--space-3)" }} />
             <SectionHeader title="현재 가게에서 시작하는 골목 한바퀴 코스" />
             <p style={{ marginTop: "calc(-1 * var(--space-1))", marginBottom: "var(--space-3)",
               font: "var(--type-caption)", color: "var(--text-muted)", wordBreak: "keep-all" }}>

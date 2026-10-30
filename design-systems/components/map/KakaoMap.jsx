@@ -80,9 +80,9 @@ const NO_BUILDINGS = [];
    가게가 건물 몇 채에 몰린 상점가(동백이음길: 12채에 227곳)는 가게마다 핀을 찍으면 한 건물 위에 핀
    수십 개가 겹친다. 그래서 **건물 하나에 핀 하나** — 건물 이름과 가게 수를 적은 알약에 꼬리를 단다.
    마커 이미지(PNG)가 아니라 DOM 이라 글자를 얹을 수 있다(코스 순번 핀과 같은 이유).
-   바탕은 **쉼터 핀과 같은 청록**(--pin-building), 글자는 흰색이다(2026-10-30 개정, 사용자 요청 — 흰 알약은 지도 글자와
-   섞였고, 브랜드 초록은 [전체] 칩의 켜진 색과 같아 버튼처럼 읽혔다). 가게 수 칩은 한 단 짙은 청록.
-   고른 건물은 시설 · 가게 핀과 같은 **민트**(--pin-selected)로 바꾸고 글자를 짙은 잉크로 내린다. */
+   바탕은 **연한 회색**(--pin-building = ink-400 #73827A, 사용자 요청), 글자는 흰색이다(2026-10-30 — 흰 알약은 지도 글자와
+   섞였고, 브랜드 초록은 [전체] 칩의 켜진 색과 같아 버튼처럼 읽혔고, 청록을 거쳤다). 가게 수 칩은 한 단 짙은 회색.
+   고른 건물은 시설 · 가게 핀과 같은 **민트**(--pin-selected)로 바꾸고 글자를 짙은 잉크로 내린다. 꼬리 끝에서 같은 물결이 번진다. */
 function esc(t) {
   return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
@@ -91,7 +91,7 @@ function buildingPinElement(b) {
   wrap.style.cssText = "position:relative;padding-bottom:9px;cursor:pointer";
   wrap.setAttribute("role", "button");
   wrap.setAttribute("tabindex", "0");
-  wrap.setAttribute("aria-label", `${b.name} 가게 ${b.count}곳`);   /* 읽어 주는 이름은 원래 이름이다 */
+  wrap.setAttribute("aria-label", `${b.label || b.name} 가게 ${b.count}곳`);   /* 읽어 주는 이름도 핀 글자와 같다 */
   wrap.innerHTML =
     `<span data-face style="display:inline-flex;align-items:center;gap:5px;padding:4px 5px 4px 10px;`
     + `border-radius:var(--radius-pill);background:var(--pin-building);color:var(--pin-building-ink);`
@@ -525,15 +525,23 @@ export function KakaoMap({
     });
   }, [buildings, ready]);
 
-  /* 고른 건물 핀을 뒤집고 앞으로 꺼낸다 */
+  /* 고른 건물 핀을 뒤집고 앞으로 꺼낸다. 시설 · 가게 핀처럼 꼬리 끝(건물 좌표)에서 물결이 번진다
+     (2026-10-30, 사용자 요청 — haloElement, --pin-selected-halo) */
   React.useEffect(() => {
+    const k = kakaoRef.current, m = map.current;
+    let halo = null;
     buildingOverlays.current.forEach((ov, id) => {
       const el = ov.getContent();
       if (!el || !el.querySelector) return;
       const on = id === selectedId;
       paintBuildingPin(el, on);
       ov.setZIndex(on ? 9 : 5);
+      if (on && k && m) {
+        halo = new k.maps.CustomOverlay({ map: m, position: ov.getPosition(), content: haloElement(),
+          yAnchor: 0.5, xAnchor: 0.5, zIndex: 1 });
+      }
     });
+    return () => { if (halo) halo.setMap(null); };
   }, [selectedId, buildings, ready]);
 
   /* ── 코스 레이어 (S08 골목 한바퀴 상세) ─────────────────────────────────

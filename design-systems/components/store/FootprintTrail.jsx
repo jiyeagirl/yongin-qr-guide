@@ -34,10 +34,13 @@ const LEFT = { box: "2 1 9 18", d: ["M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1
 const RIGHT = { box: "13 5 9 18", d: ["M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z", "M16 17h4"] };
 const FOOT_H = 15;   /* 발 하나의 높이(px) — 네 개가 모두 같다 */
 
-export function FootprintTrail({ style, ...rest }) {
+/* tone="member" — 상인회 정회원 가게 상세에서는 길을 골드(--member-accent)로 칠한다 (2026-10-30, 사용자 요청).
+   골드는 초록보다 밝아 같은 45% 로는 흐려져 70% 로 둔다 */
+export function FootprintTrail({ tone, style, ...rest }) {
+  const member = tone === "member";
   return (
     <div aria-hidden="true" style={{ position: "relative", width: "100%", aspectRatio: `${W} / ${H}`,
-      color: "var(--brand-primary)", opacity: 0.45, ...style }} {...rest}>
+      color: member ? "var(--member-accent)" : "var(--brand-primary)", opacity: member ? 0.7 : 0.45, ...style }} {...rest}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" focusable="false" style={{ position: "absolute", inset: 0 }}>
         <path d={`M${P[0]} C ${P[1]}, ${P[2]}, ${P[3]}`} fill="none" stroke="currentColor" strokeWidth="1.5"
           strokeLinecap="round" strokeDasharray="1 6" />

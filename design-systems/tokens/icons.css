@@ -37,11 +37,13 @@
 --pin-store:var(--yong-ink-500); /* @kind color */
 --pin-store-onnuri:var(--yong-teal-500); /* @kind color */
 /* 건물 핀 (2026-10-30, 사용자 요청) — 가게가 건물 몇 채에 몰린 상점가에서 가게 핀 대신 찍는 알약.
-   바탕은 쉼터 핀(--pin-rest)과 같은 teal-500 이다 — 브랜드 초록(green-700)은 [전체] 칩 · 버튼의 켜진 색과
-   같아 핀이 버튼처럼 읽혔다. 가게 핀과 건물 핀은 한 화면에 함께 뜨지 않는다.
+   바탕은 **회색 ink-400(#73827A)**, 글자는 흰색이다(2026-10-30 — 사용자가 지정한 ink-500 #5B6A62 와 더 연한 ink-300 #8B9A92 의
+   「중간 느낌」으로 사용자가 골랐다. ink-400 은 이를 위해 colors.css 에 새로 넣은 단이다). 그전에는 브랜드 초록
+   (green-700 — [전체] 칩의 켜진 색과 같아 버튼처럼 읽혔다) → 쉼터 핀 청록(teal-500)을 거쳤고, ink-700 도 잠시 시도했다.
+   가게 수 칩은 한 단 짙은 ink-500.
    고르면 시설 · 가게 핀의 고른 색(--pin-selected 민트)으로 바뀐다. 민트 위 흰 글자는 읽히지 않아 글자는 짙은 잉크다. */
---pin-building:var(--yong-teal-500); /* @kind color */
---pin-building-count:var(--yong-teal-700); /* @kind color */
+--pin-building:var(--yong-ink-400); /* @kind color */
+--pin-building-count:var(--yong-ink-500); /* @kind color */
 --pin-building-ink:var(--yong-white); /* @kind color */
 --pin-building-selected-ink:var(--yong-ink-900); /* @kind color */
 /* QR 스캔 지점("내 위치") — 유일하게 브랜드 초록을 쓰지 않는 마커다.
