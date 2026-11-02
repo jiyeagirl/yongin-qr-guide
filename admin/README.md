@@ -170,7 +170,7 @@ xlsx 로 오고(한 파일 = 한 상점가), 파일 안의 이름은 **한 글�
 - 머리 오른쪽에 [목록]/[QR] 토글(`SegmentedTabs` pill + 아이콘), 그 오른쪽 끝에 [QR 지점 등록].
 - 필터 다섯(전체 종류 · 전체 골목형 상점가 · 설치 상태 전체 · 사용 여부 전체 · 검색)은 두 보기가 같이 쓰고,
   제목 옆 「n곳」도 필터 결과다. 보기는 `#/qr?view=qr` 로 주소에 남는다(`router.js` 의 `hashParam`).
-- [QR] 보기는 표 자리에 `QrCardGrid` · `QrCard`(디자인 시스템 `components/admin/QrCard.jsx`) — 20장씩 같은
+- [QR] 보기는 표 자리에 `QrCardGrid` · `QrCard`(디자인 시스템 `components/admin/QrCard.jsx`) — 28장 이상인 첫 온 줄(7장·4장→28 · 6장·5장→30)로
   쪽 나눔이고, QR 그림은 모든 카드가 같은 자리표시(`assets/qr-placeholder.svg`)다.
 - 실서버의 [QR 목록] 모달에 해당하는 코드는 이 저장소에 원래 없었다.
 

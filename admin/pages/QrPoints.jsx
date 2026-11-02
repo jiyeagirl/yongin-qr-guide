@@ -15,7 +15,7 @@ import { QR_FIELDS, INSTALL_STATUS } from "../data/fields.js";
 import { hashParam, setHashParam } from "../router.js";
 import { useCollection, readCollection, readHistory } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
-import { useListState, ListSearch, SearchHint } from "./useListState.js";
+import { useListState, ListSearch, SearchHint, PAGE_SIZE } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
 import { EditorModal } from "./EditorModal.jsx";
 
@@ -165,6 +165,8 @@ const STATUS_OPTIONS = [{ value: "", label: "설치 상태 전체" }]
 /* QR 그림(`QR_IMAGE`)은 qrExport.js 로 옮겼다 — 지금은 **모든 지점이 같은 자리표시 그림**이다
    (2026-11-02, 사용자 요청). 코드를 그림으로 인코딩하는 일은 개발 쪽이다 (qrCodes.js 머리말) */
 
+/* [QR] 보기 한 쪽의 최소 장수 — 실제 쪽 크기는 이것 이상인 첫 온 줄이다(qrPageSize) */
+const QR_PAGE_MIN = 28;
 const VIEW_LIST = "list";
 const VIEW_QR = "qr";
 const readView = () => (hashParam("view") === VIEW_QR ? VIEW_QR : VIEW_LIST);
@@ -209,6 +211,8 @@ export function QrPoints({ onToast }) {
   const list0 = useListState([kind, district, status, active]);
   /* [QR] 보기에서 카드를 눌렀을 때 뜨는 출력 창의 대상 — 수정 창(ed)과 따로다 */
   const [sheet, setSheet] = React.useState(null);
+  /* [QR] 보기에서 지금 한 줄에 서는 카드 수 (QrCardGrid 가 잰다) */
+  const [cardCols, setCardCols] = React.useState(7);
 
   /* 고르개에 오르는 상점가 — 항목표의 붙박이 목록(QR_FIELDS 의 options)이 아니라 **지금
      살아 있는 것**을 쓴다. 지워진 상점가가 고르개에 남아 있으면, 지점을 옮겨 살려 두려던
@@ -303,7 +307,11 @@ export function QrPoints({ onToast }) {
        인쇄물의 코드이거나 「어디에 붙은 것」이라는 이름 둘 중 하나다. */
     return `${p.code} ${p.name}`.includes(list0.term);
   });
-  const paged = list0.paginate(filtered);
+  /* [QR] 보기의 쪽 크기 — **28장 이상인 첫 「온 줄」**이다 (2026-11-02, 사용자 요청:
+     마지막 줄이 비어 보였고, 21장은 한 줄 모자랐다). 한 줄 7장이면 28, 6장·5장이면 30,
+     4장이면 28. 표는 그대로 20행이다 */
+  const qrPageSize = cardCols * Math.ceil(QR_PAGE_MIN / cardCols);
+  const paged = list0.paginate(filtered, view === VIEW_QR ? qrPageSize : PAGE_SIZE);
   const allFilteredOn = filtered.length > 0 && filtered.every(p => list0.selected.includes(p.id));
 
   /* 폼 **위**에 서는 상자 셋 — 여기서 한 번에 판단한다. 자리가 위인 이유는 아래
@@ -423,12 +431,12 @@ export function QrPoints({ onToast }) {
       ) : null}
 
       {view === VIEW_QR ? (
-        /* [QR] 보기 — 표와 같은 행, 같은 쪽 나눔(20장)이다. 예전 모달의 「미리보기 240개」
-           같은 상한은 없다: 쪽을 넘긴다. 카드를 누르면 **출력 창**이 뜬다(아래 sheet) —
+        /* [QR] 보기 — 표와 같은 행이고, 쪽 크기는 한 줄 장수에 맞춘다(qrPageSize). 예전
+           모달의 「미리보기 240개」 같은 상한은 없다: 쪽을 넘긴다. 카드를 누르면 **출력 창**이 뜬다(아래 sheet) —
            이 보기에 오는 이유가 QR 을 뽑는 일이라 수정 폼을 먼저 내밀지 않는다 */
         paged.rows.length ? (
           <>
-            <QrCardGrid aria-label="QR 코드 카드 목록">
+            <QrCardGrid aria-label="QR 코드 카드 목록" onColumnsChange={setCardCols}>
               {paged.rows.map(p => (
                 <QrCard key={p.id} image={QR_IMAGE} title={p.name} code={p.code}
                   onClick={() => setSheet(p)}

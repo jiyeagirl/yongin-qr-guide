@@ -21,10 +21,26 @@ import { CopyField } from "../core/CopyField.jsx";
  *
  * 그리드는 `auto-fill` 이라 화면 폭에 따라 한 줄의 장수가 저절로 바뀐다. 카드 높이는
  * 고정하지 않는다 (지점명이 두 줄이 되면 카드가 늘어난다 — 화면 공통 규칙).
+ *
+ * `onColumnsChange` 를 주면 지금 한 줄에 몇 장이 서는지 알려준다 (2026-11-02) — 화면이
+ * 쪽 크기를 그 배수로 맞춰 마지막 줄이 비지 않게 하려는 것이다. 폭이 바뀔 때마다 다시 잰다.
  */
-export function QrCardGrid({ children, min = 200, style, ...rest }) {
+export function QrCardGrid({ children, min = 200, onColumnsChange, style, ...rest }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el || !onColumnsChange || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => {
+      const n = getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length;
+      if (n > 0) onColumnsChange(n);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [onColumnsChange]);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${min}px, 1fr))`,
+    <div ref={ref} style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${min}px, 1fr))`,
       gap: "var(--space-4)", ...style }} {...rest}>
       {children}
     </div>

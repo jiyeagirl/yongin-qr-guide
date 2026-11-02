@@ -58,10 +58,12 @@ export function useListState(deps = []) {
      보여주되(q), 거르는 데 쓰는 값은 이것이다 */
   const term = q.trim().length >= MIN_SEARCH ? q.trim() : "";
 
-  const paginate = React.useCallback((list) => {
-    const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  /* `size` 는 카드 그리드만 넘긴다 — 한 줄 장수의 배수로 맞춰 마지막 줄이 비지 않게
+     (QR 지점 관리 [QR] 보기, 2026-11-02). 표는 늘 PAGE_SIZE 다 */
+  const paginate = React.useCallback((list, size = PAGE_SIZE) => {
+    const pageCount = Math.max(1, Math.ceil(list.length / size));
     const safe = Math.min(page, pageCount);
-    return { pageCount, page: safe, rows: list.slice((safe - 1) * PAGE_SIZE, safe * PAGE_SIZE) };
+    return { pageCount, page: safe, rows: list.slice((safe - 1) * size, safe * size) };
   }, [page]);
 
   return { q, setQ, term, page, setPage, selected, setSelected, paginate };
