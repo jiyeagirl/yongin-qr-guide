@@ -280,7 +280,8 @@ export function QrPoints({ onToast }) {
   /* ── 출력 (2026-11-02, 사용자 요청) ─────────────────────────────────────────
      인쇄 · SVG 는 한 건이든 고른 여러 건이든 같은 함수다 (qrExport.js).
      [CSV 저장]도 있었다가 같은 날 빠졌다 (사용자 요청 — 필요한 출력이 아니다) */
-  const toItem = p => ({ code: p.code, name: p.name, url: qrUrl(p.code) });
+  /* district = 안내 카드 맨 윗줄(소속 상점가 이름). 지워진 상점가는 표의 열처럼 비워 둔다 */
+  const toItem = p => ({ code: p.code, name: p.name, url: qrUrl(p.code), district: DISTRICT_NAME[p.districtId] || "" });
   const selectedRows = rows.filter(p => list0.selected.includes(p.id));
   const doPrint = list => printQrs(list.map(toItem));
   const doSvg = list => {
