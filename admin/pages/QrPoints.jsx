@@ -1,15 +1,16 @@
 import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Select, Badge, Switch, Notice, Pagination, Button,
-  CoordField, fixCoord, EMPTY_MARK, FormField, OptionPicker,
+  CoordField, fixCoord, EMPTY_MARK, FormField, OptionPicker, SegmentedTabs, QrCard, QrCardGrid,
 } from "../../design-systems/admin.js";
 import { KAKAO_APP_KEY } from "../../screens/main/config.js";
-import { DISTRICTS, GU_ORDER, guOf } from "../../screens/main/data/districts.js";
+import { DISTRICTS } from "../../screens/main/data/districts.js";
 import { QR_ROWS, DISTRICT_ROWS } from "../data/sources.js";
 import { QR_CODE_POOL, QR_CODE_TOTAL } from "../data/qrCodes.js";
-/* `INSTALL_STATUS` 를 여기서 가져오지 않는다 (2026-08-26) — 설치 상태 고르개가 없어졌다.
-   항목표(`QR_FIELDS`)의 그 칸은 그대로이고 폼에서 여전히 고른다 */
-import { QR_FIELDS } from "../data/fields.js";
+/* `INSTALL_STATUS` 를 2026-08-26 에 뺐다가 2026-11-02 에 되가져왔다 — 설치 상태 고르개가
+   돌아왔다 (아래 「필터 다섯」) */
+import { QR_FIELDS, INSTALL_STATUS } from "../data/fields.js";
+import { hashParam, setHashParam } from "../router.js";
 import { useCollection, readCollection } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
@@ -136,8 +137,36 @@ const DISTRICT_NAME = DISTRICTS.reduce((o, d) => { o[d.id] = d.name; return o; }
    대신 목록이 커졌을 때 실제로 필요한 축을 세운다. 지금은 세 곳이지만 안내판은 시 전역에
    붙고, 그때 담당자가 하는 일은 **자기 구의 지점을 훑는 것**이다. 공공시설과 같은 고르개이고
    같은 규칙이다 — 구는 지점의 항목이 아니라 **주소에서 읽는 값**이다 (districts.js 의 `guOf`).
-   `GU_ORDER` 셋을 그대로 세운다: 자료에 있는 구만 세우면 화면마다 고르개의 길이가 달라진다. */
-const GU_OPTIONS = [{ value: "", label: "전체 구" }].concat(GU_ORDER.map(g => ({ value: g, label: g })));
+   `GU_ORDER` 셋을 그대로 세운다: 자료에 있는 구만 세우면 화면마다 고르개의 길이가 달라진다.
+
+   ── 필터 다섯 (2026-11-02, 사용자 요청) ─────────────────────────────────────
+   실제 서버에서 돌아가는 관리자 화면에 맞춘다: **전체 종류 / 전체 골목형 상점가 / 설치 상태
+   전체 / 사용 여부 전체 / QR ID, 지점명 검색.** 구 고르개(`GU_OPTIONS`)는 빠지고, 위에서
+   읽는 값이라며 뺐던 설치 상태가 돌아왔다. 다섯은 [목록]·[QR] 두 보기가 함께 쓴다.
+
+   종류는 QR 지점 표의 `kind` 다 (direction_v2 3장). `골목형 상점가`(district)는 이 표에
+   아직 줄이 없다. `kind` 가 비어 있는 옛 줄(qr-002 · qr-003)과 화면에서 등록한 줄은
+   안내판으로 읽는다 — 셸이 상세를 띄우지 않는 쪽이 안내판이다 (App.jsx). */
+const KINDS = [
+  { value: "sign", label: "안내판" },
+  { value: "store", label: "점포" },
+  { value: "district", label: "골목형 상점가" },
+  { value: "festival", label: "축제" },
+];
+const KIND_LABEL = KINDS.reduce((o, k) => { o[k.value] = k.label; return o; }, {});
+const kindOf = p => (KIND_LABEL[p.kind] ? p.kind : "sign");
+const KIND_OPTIONS = [{ value: "", label: "전체 종류" }].concat(KINDS);
+
+const STATUS_OPTIONS = [{ value: "", label: "설치 상태 전체" }]
+  .concat(INSTALL_STATUS.map(v => ({ value: v, label: v })));
+
+/* [QR] 보기의 그림 — 지금은 **모든 카드가 같은 자리표시 그림**이다 (2026-11-02, 사용자 요청).
+   코드를 그림으로 인코딩하는 일은 개발 쪽이다 (qrCodes.js 머리말) */
+const QR_IMAGE = "./assets/qr-placeholder.svg";
+
+const VIEW_LIST = "list";
+const VIEW_QR = "qr";
+const readView = () => (hashParam("view") === VIEW_QR ? VIEW_QR : VIEW_LIST);
 
 const ACTIVE_OPTIONS = [
   { value: "", label: "사용 여부 전체" },
@@ -147,20 +176,34 @@ const ACTIVE_OPTIONS = [
 
 const STATUS_TONE = { 설치예정: "warning", 설치완료: "success", 훼손: "danger", 철거: "neutral" };
 
+/* 두 보기가 같은 배지를 쓴다 — 표의 열과 카드가 같은 값을 다른 색으로 적지 않게 */
+const KindBadge = ({ p }) => <Badge tone="neutral" size="sm">{KIND_LABEL[kindOf(p)]}</Badge>;
+const StatusBadge = ({ p }) => (
+  <Badge tone={STATUS_TONE[p.installStatus] || "neutral"} size="sm">{p.installStatus || "설치예정"}</Badge>
+);
+
 export function QrPoints({ onToast }) {
   /* `remove` 를 더 이상 꺼내지 않는다 (2026-08-26) — 이 화면에 지우는 자리가 없다.
      `patch` 는 표의 [사용 여부] 토글이 한 줄을 바로 끄고 켜는 데 쓴다 */
   const { rows, upsert, patch, patchMany } = useCollection("qr", QR_ROWS, null, "QR 지점");
-  const [gu, setGu] = React.useState("");
+  const [kind, setKind] = React.useState("");
+  const [district, setDistrict] = React.useState("");
+  const [status, setStatus] = React.useState("");
   const [active, setActive] = React.useState("");
-  const list0 = useListState([gu, active]);
+  /* 보기는 주소(`#/qr?view=qr`)에 남겨 새로고침해도 그대로 선다. 필터는 화면 상태라
+     보기를 바꿔도 언마운트되지 않아 그대로 남는다. 보기가 바뀌면 첫 쪽으로 가고 선택을
+     비운다(useListState) — [QR] 보기에는 체크박스가 없다 */
+  const [view, setViewState] = React.useState(readView);
+  const setView = v => { setHashParam("view", v === VIEW_QR ? VIEW_QR : null); setViewState(v); };
+  const list0 = useListState([kind, district, status, active, view]);
 
   /* 고르개에 오르는 상점가 — 항목표의 붙박이 목록(QR_FIELDS 의 options)이 아니라 **지금
      살아 있는 것**을 쓴다. 지워진 상점가가 고르개에 남아 있으면, 지점을 옮겨 살려 두려던
      담당자가 방금 지운 상점가를 다시 고르게 되고 그 지점은 그대로 다시 사라진다.
      32개짜리 배열이라 렌더마다 다시 만들어도 값이 나가지 않는다. */
-  const districtOptions = [{ value: "", label: "— 지정 안 함 —" }]
-    .concat(readCollection("districts", DISTRICT_ROWS).map(d => ({ value: d.id, label: d.name })));
+  const liveDistricts = readCollection("districts", DISTRICT_ROWS).map(d => ({ value: d.id, label: d.name }));
+  const districtOptions = [{ value: "", label: "— 지정 안 함 —" }].concat(liveDistricts);
+  const districtFilterOptions = [{ value: "", label: "전체 골목형 상점가" }].concat(liveDistricts);
 
   /* **열 항목 전부** 폼에 선다 (2026-08-24. 머리말). 종전에는 여기서 여섯 개만 골라
      냈다 (`EDIT_KEYS`). 항목표를 그대로 쓰되 하나만 갈아끼운다 — 소속 상점가는 항목표의
@@ -210,12 +253,14 @@ export function QrPoints({ onToast }) {
   };
 
   const filtered = rows.filter(p => {
-    if (gu && guOf(p.addr || p.dong) !== gu) return false;
+    if (kind && kindOf(p) !== kind) return false;
+    if (district && p.districtId !== district) return false;
+    if (status && (p.installStatus || "설치예정") !== status) return false;
     if (active === "y" && !p.active) return false;
     if (active === "n" && p.active) return false;
     if (!list0.term) return true;
     /* **QR ID 와 지점명 둘만 본다** (2026-08-26, 사용자 요청). 넷을 이어 담고 있었는데
-       뒤의 둘(행정동 · 도로명주소)은 이제 왼쪽 구 고르개가 그 일의 실질을 하고, 남겨
+       뒤의 둘(행정동 · 도로명주소)은 그때 왼쪽 구 고르개가 그 일의 실질을 했고, 남겨
        두면 「포곡」을 친 담당자가 구 고르개를 쓴 것과 비슷하되 미묘하게 다른 목록을
        받는다. 여기서 찾는 것은 **안내판 하나**이고, 담당자가 손에 들고 있는 것은
        인쇄물의 코드이거나 「어디에 붙은 것」이라는 이름 둘 중 하나다. */
@@ -277,10 +322,24 @@ export function QrPoints({ onToast }) {
           지점이 함께 사라지던 시절의 이야기이고, 그 연쇄 삭제 자체가 v1.15 에서
           없어졌다. 날마다 여는 화면 맨 위에서 매번 읽는 문장으로 둘 것이 아니다.
           명세서 10장의 「QR 지점 관리 화면의 안내 줄」 조항도 그렇게 고쳤다. */}
-      <PageHeader title="QR 지점 관리" count={`${filtered.length}곳`}
-        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>QR 지점 등록</Button>} />
+      {/* 건수는 **필터 결과**다 — 두 보기가 같은 수를 센다.
+          ── [목록]/[QR] 보기 전환 (2026-11-02, 사용자 요청) ───────────────────
+          실제 서버 화면에서는 이 자리의 [QR 목록]이 모달을 열어 필터와 상관없이 전체 QR 을
+          보여줬다. 같은 페이지 안의 보기 전환으로 바꿨다 — 필터를 걸어 둔 채 QR 로 넘기면
+          걸린 것만 카드로 선다. 주 행동 [등록]은 그대로 오른쪽 끝이다 */}
+      <PageHeader title="QR 지점 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`}
+        action={
+          <>
+            <SegmentedTabs variant="pill" value={view} onChange={setView} aria-label="보기 전환"
+              items={[
+                { id: VIEW_LIST, label: "목록", icon: "list" },
+                { id: VIEW_QR, label: "QR", icon: "qr-code" },
+              ]} />
+            <Button variant="primary" icon="plus" onClick={ed.openNew}>QR 지점 등록</Button>
+          </>
+        } />
 
-      <Toolbar actions={list0.selected.length ? (
+      <Toolbar actions={view === VIEW_LIST && list0.selected.length ? (
         <>
           <span style={{ fontSize: "var(--fs-label)", color: "var(--text-body)", whiteSpace: "nowrap" }}>
             {list0.selected.length}건 선택
@@ -289,12 +348,32 @@ export function QrPoints({ onToast }) {
           <Button variant="outline" size="sm" icon="eye-off" onClick={() => bulkActive(false)}>미사용</Button>
         </>
       ) : null}>
-        <Select value={gu} options={GU_OPTIONS} onChange={e => setGu(e.target.value)} />
+        <Select value={kind} options={KIND_OPTIONS} onChange={e => setKind(e.target.value)} />
+        <Select value={district} options={districtFilterOptions} onChange={e => setDistrict(e.target.value)} />
+        <Select value={status} options={STATUS_OPTIONS} onChange={e => setStatus(e.target.value)} />
         <Select value={active} options={ACTIVE_OPTIONS} onChange={e => setActive(e.target.value)} />
         <ListSearch state={list0} placeholder="QR ID, 지점명 검색" />
         <SearchHint state={list0} />
       </Toolbar>
 
+      {view === VIEW_QR ? (
+        /* [QR] 보기 — 표와 같은 행, 같은 쪽 나눔(20장)이다. 예전 모달의 「미리보기 240개」
+           같은 상한은 없다: 쪽을 넘긴다. 카드를 누르면 줄을 누른 것과 같이 수정 창이 뜬다 */
+        paged.rows.length ? (
+          <QrCardGrid aria-label="QR 코드 카드 목록">
+            {paged.rows.map(p => (
+              <QrCard key={p.id} image={QR_IMAGE} title={p.name} code={p.code}
+                onClick={() => ed.openEdit(p)}
+                badges={<><KindBadge p={p} /><StatusBadge p={p} /></>} />
+            ))}
+          </QrCardGrid>
+        ) : (
+          <p style={{ padding: "var(--space-8) var(--space-5)", textAlign: "center",
+            fontSize: "var(--fs-body)", fontWeight: "var(--fw-bold)", color: "var(--text-heading)" }}>
+            조건에 맞는 지점이 없습니다.
+          </p>
+        )
+      ) : (
       <DataTable
         caption="등록된 QR 설치 지점 목록"
         rows={paged.rows} rowKey="id" onRowClick={ed.openEdit}
@@ -306,6 +385,9 @@ export function QrPoints({ onToast }) {
           : p.installStatus === "훼손" ? "danger" : null)}
         columns={[
           { key: "code", label: "QR ID", width: 160, sortable: true },
+          /* 종류 (2026-11-02) — 필터의 「전체 종류」와 같은 값. [QR] 보기의 카드도 같은 배지다 */
+          { key: "kind", label: "종류", width: 130, sortable: true,
+            render: p => <KindBadge p={p} />, sortValue: p => KIND_LABEL[kindOf(p)] },
           { key: "name", label: "지점명", sortable: true },
           { key: "addr", label: "도로명주소", render: p => p.addr || p.dong || EMPTY_MARK },
           { key: "districtId", label: "소속 골목형 상점가", width: 190,
@@ -313,11 +395,7 @@ export function QrPoints({ onToast }) {
               ? DISTRICT_NAME[p.districtId]
               : <span style={{ color: "var(--text-muted)" }}>지정 안 함</span>) },
           { key: "installStatus", label: "설치 상태", width: 110, align: "center", sortable: true,
-            render: p => (
-              <Badge tone={STATUS_TONE[p.installStatus] || "neutral"} size="sm">
-                {p.installStatus || "설치예정"}
-              </Badge>
-            ) },
+            render: p => <StatusBadge p={p} /> },
           { key: "installedAt", label: "설치일자", width: 110, render: p => p.installedAt || EMPTY_MARK },
           /* ── 배지에서 **토글**로 (2026-08-26, 사용자 요청) ────────────────────
              「활성/비활성」 배지가 서 있었다. 배지는 **읽는 값**의 모양인데 이 칸은
@@ -336,6 +414,7 @@ export function QrPoints({ onToast }) {
              안에 [삭제] 하나뿐이었다. 정보 관리 다섯이 v1.15 에서 같은 자리를 같은 이유로
              비웠다 (Facilities.jsx 의 그 자리 주석) */
         ]} />
+      )}
 
       <div style={{ marginTop: "var(--space-5)" }}>
         <Pagination page={paged.page} pageCount={paged.pageCount} onChange={list0.setPage} />

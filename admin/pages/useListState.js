@@ -75,7 +75,9 @@ export function useListState(deps = []) {
    두엇만 있는 화면에서는 오른쪽이 통째로 비는데, 정작 이 줄에서 가장 많이 쓰는 칸이
    가장 좁았다 — 담당자가 목록에 오는 이유의 대부분이 **한 곳을 찾는 것**이다.
 
-   `flex: 1 1 360px` 이라 고르개가 적으면 넓게 펴지고 많으면 360px 까지 물러선다.
+   `flex: 1 1 280px` 이라 고르개가 적으면 넓게 펴지고 많으면 280px 까지 물러선 뒤에야
+   다음 줄로 내려간다 (2026-11-02. 360px 이던 것을 낮췄다 — QR 지점 관리의 고르개가 넷이
+   되면서 1,440px 화면에서 검색창 혼자 둘째 줄로 떨어졌다).
    280px 밑으로는 줄이지 않는다 — 가장 긴 문구(「QR ID, 지점명 검색」)와 지우기 단추가
    함께 서는 폭이다. (2026-08-26 이전에는 「내용, 대상, 접수번호 검색」이 그 기준이었다.
    문구가 짧아졌지만 하한은 그대로 둔다 — 검색창이 필터 줄에서 가장 많이 쓰는 칸이라
@@ -94,7 +96,7 @@ export function useListState(deps = []) {
 export function ListSearch({ state, placeholder }) {
   return (
     <SearchField value={state.q} onChange={e => state.setQ(e.target.value)} onClear={() => state.setQ("")}
-      placeholder={placeholder} style={{ flex: "1 1 360px", minWidth: 280 }} />
+      placeholder={placeholder} style={{ flex: "1 1 280px", minWidth: 280 }} />
   );
 }
 

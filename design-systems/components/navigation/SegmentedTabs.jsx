@@ -1,6 +1,9 @@
 import React from "react";
+import { Icon } from "../core/Icon.jsx";
 
-/* In-page segmented control. Underline style for content switching. */
+/* In-page segmented control. Underline style for content switching.
+   pill 의 항목은 `icon`(lucide 이름)을 더 받는다 (2026-11-02) — 관리자 QR 지점 관리의
+   [목록]/[QR] 보기 전환이 처음 쓴다. 글자 왼쪽에 16px 로 선다. */
 export function SegmentedTabs({ items = [], value, onChange, variant = "underline", style, ...rest }) {
   if (variant === "pill") {
     /* 보이는 크기와 누를 수 있는 영역을 분리한다 (Chip 과 같은 방식).
@@ -17,13 +20,16 @@ export function SegmentedTabs({ items = [], value, onChange, variant = "underlin
               style={{ display: "inline-flex", alignItems: "center", justifyContent: "center",
                 minHeight: "var(--tap-min)", margin: "-7px 0", padding: 0,
                 background: "none", border: "none", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", minHeight: 30, padding: "0 12px",
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minHeight: 30, padding: "0 12px",
                 borderRadius: 999, whiteSpace: "nowrap",
                 fontFamily: "var(--font-sans)", fontSize: "var(--fs-caption)", fontWeight: "var(--fw-bold)",
                 background: on ? "var(--surface-card)" : "transparent",
                 color: on ? "var(--text-heading)" : "var(--text-muted)",
                 boxShadow: on ? "var(--shadow-card)" : "none",
-                transition: "background var(--dur-fast) var(--ease-standard)" }}>{it.label}</span>
+                transition: "background var(--dur-fast) var(--ease-standard)" }}>
+                {it.icon ? <Icon name={it.icon} size={16} /> : null}
+                {it.label}
+              </span>
             </button>
           );
         })}

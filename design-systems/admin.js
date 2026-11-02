@@ -41,6 +41,7 @@ export { Repeater } from "./components/admin/Repeater.jsx";
 export { OptionPicker } from "./components/admin/OptionPicker.jsx";
 export { AssetPicker } from "./components/admin/AssetPicker.jsx";
 export { FileField } from "./components/admin/FileField.jsx";
+export { QrCard, QrCardGrid } from "./components/admin/QrCard.jsx";
 
 /* ── 공용: 기본 부품 ─────────────────────────────────────────────────────── */
 export { Icon, Button, TextButton, IconButton, Card, Badge, Chip } from "./index.js";

@@ -26,8 +26,26 @@ import { ALL_PAGES } from "./data/account.js";
 export const PAGES = ALL_PAGES;
 
 export function parseHash(hash) {
-  const raw = String(hash || "").replace(/^#\/?/, "").split("/").filter(Boolean)[0];
+  const raw = String(hash || "").replace(/^#\/?/, "").split("?")[0].split("/").filter(Boolean)[0];
   return PAGES.includes(raw) ? raw : null;
+}
+
+/* 화면 안의 보기 상태를 해시 뒤 쿼리로 둔다 (2026-11-02. `#/qr?view=qr`).
+   location.search 가 아니라 해시에 두는 이유: go() 가 search 를 그대로 들고 다니므로
+   거기 두면 다른 화면으로 옮겨 가도 `?view=qr` 이 따라붙는다. 해시는 화면을 바꾸면 같이 바뀐다. */
+export function hashParam(key) {
+  const q = String(location.hash || "").split("?")[1] || "";
+  return new URLSearchParams(q).get(key);
+}
+
+/* 쿼리만 갈아끼운다 — 히스토리에 쌓지 않는다. 보기 전환은 화면 이동이 아니다:
+   쌓으면 뒤로가기가 [목록]↔[QR] 을 되짚어, 이전 화면으로 가려던 담당자가 제자리에 남는다 */
+export function setHashParam(key, value) {
+  const [path, q = ""] = String(location.hash || "").split("?");
+  const p = new URLSearchParams(q);
+  if (value == null || value === "") p.delete(key); else p.set(key, value);
+  const s = p.toString();
+  window.history.replaceState({}, "", `${location.pathname}${location.search}${path}${s ? `?${s}` : ""}`);
 }
 
 export function useHashPage() {
