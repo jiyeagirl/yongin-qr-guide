@@ -133,7 +133,7 @@ const DISTRICT_NAME = DISTRICTS.reduce((o, d) => { o[d.id] = d.name; return o; }
 /* ── 설치 상태 고르개가 없어지고 **소속 구**가 그 자리에 섰다 (2026-08-26, 사용자 요청) ──
    `STATUS_OPTIONS`(「전체 설치 상태」 + 넷)가 여기 있었다. 뺀 이유는 그 값이 이 화면에서
    **좁히는 축이 아니라 읽는 값**이기 때문이다 — 표에 배지로 서 있고, 손이 가야 하는
-   조합(설치완료인데 꺼짐)은 `rowTone` 이 줄째로 세워 이미 눈에 띈다. 담당자가 여기서
+   조합(설치완료인데 꺼짐)은 그때 `rowTone` 이 줄째로 세웠다(2026-11-02 삭제). 담당자가 여기서
    「철거된 것만」을 골라 훑는 일은 없다.
 
    대신 목록이 커졌을 때 실제로 필요한 축을 세운다. 지금은 세 곳이지만 안내판은 시 전역에
@@ -451,10 +451,9 @@ export function QrPoints({ onToast }) {
         rows={paged.rows} rowKey="id" onRowClick={ed.openEdit}
         selectable selected={list0.selected} onSelectedChange={list0.setSelected}
         empty={{ title: "조건에 맞는 지점이 없습니다." }}
-        /* 설치는 끝났는데 아직 안 켠 지점 — 안내판은 붙어 있고 찍으면 준비 중 안내가
-           뜬다 (S11-A). 남은 일 중 가장 급한 것이라 줄째로 세운다 */
-        rowTone={p => (p.installStatus === "설치완료" && !p.active ? "warning"
-          : p.installStatus === "훼손" ? "danger" : null)}
+        /* 줄 색(`rowTone`)이 여기 있었다 (2026-11-02 삭제, 사용자 요청) — 설치완료인데 꺼진
+           줄은 경고 색, 훼손은 위험 색이었다. 설치 상태는 배지가, 사용 여부는 토글이 이미
+           적고 있어 줄 바탕까지 물들일 이유가 없다. 설치완료 + 꺼짐의 경고는 수정 창 상자가 한다 */
         columns={[
           /* 정렬은 번호로 — 글자로 하면 m-10 이 m-2 보다 앞에 선다 (qrCodes.js) */
           { key: "code", label: "QR ID", width: 160, sortable: true, sortValue: p => qrCodeOrder(p.code) },

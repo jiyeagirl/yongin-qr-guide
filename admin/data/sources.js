@@ -149,7 +149,7 @@ function demoQrRows() {
       code: `m-${n}`,
       installStatus,
       installedAt: done ? `2026-${String(1 + (n % 9)).padStart(2, "0")}-${String(1 + ((n * 7) % 28)).padStart(2, "0")}` : null,
-      /* 설치완료인데 꺼진 줄(n % 17)이 몇 줄 있어야 표의 경고 줄 색이 보인다 */
+      /* 설치완료인데 꺼진 줄(n % 17)도 몇 줄 둔다 — 수정 창의 경고 상자 검수용 */
       active: installStatus === "설치완료" && n % 17 !== 0,
     };
   });
