@@ -176,8 +176,8 @@ export const FACILITY_SHARE = [
    (U-CM-02 · S11 의 두 갈래). 지우면 그 사람들이 「등록되지 않은 코드」를 만난다. */
 const OLD_SIGN_SCANS = 148;
 export const SCANS_BY_POINT = [
-  { code: "qr-001", name: "우리동네 통닭집", active: true, scans: TOTAL_SCANS - OLD_SIGN_SCANS },
-  { code: "qr-002", name: "(구) 동백이음길 안내판", active: false, scans: OLD_SIGN_SCANS },
+  { code: "m-1", name: "우리동네 통닭집", active: true, scans: TOTAL_SCANS - OLD_SIGN_SCANS },
+  { code: "m-2", name: "(구) 동백이음길 안내판", active: false, scans: OLD_SIGN_SCANS },
 ];
 
 /* ── 카카오맵 API 사용량 (명세서 6장 "운영") ────────────────────────────────

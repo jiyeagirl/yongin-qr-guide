@@ -178,7 +178,7 @@ export const CURRENT = { anchor: ANCHOR, district: DISTRICT, chips: CHIPS, store
   popular: POPULAR, courses: COURSES };
 export default CURRENT;
 
-/* ── 기준점이 다른 QR 로 들어왔을 때 (2026-10-30, 사용자 요청 — 정회원 상점 QR `qr-006` 동백문고) ──────────
+/* ── 기준점이 다른 QR 로 들어왔을 때 (2026-10-30, 사용자 요청 — 정회원 상점 QR `m-6` 동백문고) ──────────
    상점 QR 의 기준점은 그 가게의 건물이다. 기본 지점(미래도프라자)과 다른 건물의 가게 QR 이면 거리 · 차례 ·
    코스를 그 건물에서 다시 잰다 — 이름만 바꾸고 거리를 그대로 두면 서 있는 가게가 목록에서 「약 96m」로 뜬다.
    같은 좌표면 위의 상수를 그대로 돌려준다. */

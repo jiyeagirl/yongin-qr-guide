@@ -2,16 +2,18 @@ import React from "react";
 import {
   PageHeader, Toolbar, DataTable, Select, Badge, Switch, Notice, Pagination, Button,
   CoordField, fixCoord, EMPTY_MARK, FormField, OptionPicker, SegmentedTabs, QrCard, QrCardGrid,
+  QrCodePanel, SelectionBar, Accordion, Modal,
 } from "../../design-systems/admin.js";
+import { QR_IMAGE, qrUrl, printQrs, downloadSvgs } from "./qrExport.js";
 import { KAKAO_APP_KEY } from "../../screens/main/config.js";
 import { DISTRICTS } from "../../screens/main/data/districts.js";
 import { QR_ROWS, DISTRICT_ROWS } from "../data/sources.js";
-import { QR_CODE_POOL, QR_CODE_TOTAL } from "../data/qrCodes.js";
+import { QR_CODE_POOL, QR_CODE_TOTAL, qrCodeOrder } from "../data/qrCodes.js";
 /* `INSTALL_STATUS` 를 2026-08-26 에 뺐다가 2026-11-02 에 되가져왔다 — 설치 상태 고르개가
    돌아왔다 (아래 「필터 다섯」) */
 import { QR_FIELDS, INSTALL_STATUS } from "../data/fields.js";
 import { hashParam, setHashParam } from "../router.js";
-import { useCollection, readCollection } from "../data/store.js";
+import { useCollection, readCollection, readHistory } from "../data/store.js";
 import { useRecordEditor } from "./useRecordEditor.js";
 import { useListState, ListSearch, SearchHint } from "./useListState.js";
 import { RecordForm } from "./RecordForm.jsx";
@@ -144,8 +146,8 @@ const DISTRICT_NAME = DISTRICTS.reduce((o, d) => { o[d.id] = d.name; return o; }
    전체 / 사용 여부 전체 / QR ID, 지점명 검색.** 구 고르개(`GU_OPTIONS`)는 빠지고, 위에서
    읽는 값이라며 뺐던 설치 상태가 돌아왔다. 다섯은 [목록]·[QR] 두 보기가 함께 쓴다.
 
-   종류는 QR 지점 표의 `kind` 다 (direction_v2 3장). `골목형 상점가`(district)는 이 표에
-   아직 줄이 없다. `kind` 가 비어 있는 옛 줄(qr-002 · qr-003)과 화면에서 등록한 줄은
+   종류는 QR 지점 표의 `kind` 다 (direction_v2 3장). `골목형 상점가`(district)는 시민 표에는
+   줄이 없고 관리자 더미(sources.js 의 `demoQrRows`)에만 있다. `kind` 가 비어 있는 옛 줄(m-2 · m-3)과 화면에서 등록한 줄은
    안내판으로 읽는다 — 셸이 상세를 띄우지 않는 쪽이 안내판이다 (App.jsx). */
 const KINDS = [
   { value: "sign", label: "안내판" },
@@ -160,9 +162,8 @@ const KIND_OPTIONS = [{ value: "", label: "전체 종류" }].concat(KINDS);
 const STATUS_OPTIONS = [{ value: "", label: "설치 상태 전체" }]
   .concat(INSTALL_STATUS.map(v => ({ value: v, label: v })));
 
-/* [QR] 보기의 그림 — 지금은 **모든 카드가 같은 자리표시 그림**이다 (2026-11-02, 사용자 요청).
-   코드를 그림으로 인코딩하는 일은 개발 쪽이다 (qrCodes.js 머리말) */
-const QR_IMAGE = "./assets/qr-placeholder.svg";
+/* QR 그림(`QR_IMAGE`)은 qrExport.js 로 옮겼다 — 지금은 **모든 지점이 같은 자리표시 그림**이다
+   (2026-11-02, 사용자 요청). 코드를 그림으로 인코딩하는 일은 개발 쪽이다 (qrCodes.js 머리말) */
 
 const VIEW_LIST = "list";
 const VIEW_QR = "qr";
@@ -175,6 +176,15 @@ const ACTIVE_OPTIONS = [
 ];
 
 const STATUS_TONE = { 설치예정: "warning", 설치완료: "success", 훼손: "danger", 철거: "neutral" };
+
+/* 수정 창에 서는 항목 (2026-11-02. 아래 fieldsFor 주석) */
+const EDIT_KEYS = ["installStatus", "installedAt", "active", "locationDetail", "memo"];
+const FIELD_LABEL = QR_FIELDS.reduce((o, f) => { o[f.key] = f.label; return o; }, {});
+const fmtAt = iso => {
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 
 /* 두 보기가 같은 배지를 쓴다 — 표의 열과 카드가 같은 값을 다른 색으로 적지 않게 */
 const KindBadge = ({ p }) => <Badge tone="neutral" size="sm">{KIND_LABEL[kindOf(p)]}</Badge>;
@@ -190,12 +200,15 @@ export function QrPoints({ onToast }) {
   const [district, setDistrict] = React.useState("");
   const [status, setStatus] = React.useState("");
   const [active, setActive] = React.useState("");
-  /* 보기는 주소(`#/qr?view=qr`)에 남겨 새로고침해도 그대로 선다. 필터는 화면 상태라
-     보기를 바꿔도 언마운트되지 않아 그대로 남는다. 보기가 바뀌면 첫 쪽으로 가고 선택을
-     비운다(useListState) — [QR] 보기에는 체크박스가 없다 */
+  /* 보기는 주소(`#/qr?view=qr`)에 남겨 새로고침해도 그대로 선다. 필터 · 쪽 · **선택**은
+     화면 상태라 보기를 바꿔도 그대로 남는다 — 두 보기는 같은 행을 다른 모양으로 보여줄
+     뿐이고, 표에서 고른 열두 건을 카드로 넘겨 확인한 뒤 인쇄하는 것이 이 전환의 쓰임이다
+     (2026-11-02. 처음에는 보기가 바뀌면 선택을 비웠다) */
   const [view, setViewState] = React.useState(readView);
   const setView = v => { setHashParam("view", v === VIEW_QR ? VIEW_QR : null); setViewState(v); };
-  const list0 = useListState([kind, district, status, active, view]);
+  const list0 = useListState([kind, district, status, active]);
+  /* [QR] 보기에서 카드를 눌렀을 때 뜨는 출력 창의 대상 — 수정 창(ed)과 따로다 */
+  const [sheet, setSheet] = React.useState(null);
 
   /* 고르개에 오르는 상점가 — 항목표의 붙박이 목록(QR_FIELDS 의 options)이 아니라 **지금
      살아 있는 것**을 쓴다. 지워진 상점가가 고르개에 남아 있으면, 지점을 옮겨 살려 두려던
@@ -209,9 +222,17 @@ export function QrPoints({ onToast }) {
      냈다 (`EDIT_KEYS`). 항목표를 그대로 쓰되 하나만 갈아끼운다 — 소속 상점가는 항목표의
      붙박이 목록이 아니라 **지금 살아 있는** 상점가를 봐야 한다.
 
-     식별자 칸의 안내 줄을 등록/수정에서 가르던 갈래가 여기 있었다 (2026-08-25 삭제) */
-  const fieldsFor = () => QR_FIELDS
-    .map(f => (f.key === "districtId" ? { ...f, options: districtOptions } : f));
+     식별자 칸의 안내 줄을 등록/수정에서 가르던 갈래가 여기 있었다 (2026-08-25 삭제)
+
+     ── 수정 창은 **현장 기록 다섯만** (2026-11-02, 사용자 요청) ──────────────────
+     설치 상태 · 설치일자 · 사용 여부 · 설치 상세 위치 · 관리 메모. 지점을 가리키는 값
+     (QR ID · 지점명 · 주소 · 좌표 · 소속)은 수정 창에서 빠지고, 그 자리 맨 위에 **QR 코드
+     판**이 선다 — 이 창을 여는 일의 대부분이 안내판을 다시 뽑거나 현장 점검 결과를 적는
+     일이라서다. 좌표 지도도 함께 빠졌다. 등록 창은 그대로 열 항목 전부다 (새 지점은
+     가리키는 값부터 정해야 한다). 등록 창에는 `id` 가 없다 (아래 onSave 주석) */
+  const fieldsFor = values => (values && values.id
+    ? QR_FIELDS.filter(f => EDIT_KEYS.includes(f.key))
+    : QR_FIELDS.map(f => (f.key === "districtId" ? { ...f, options: districtOptions } : f)));
 
   const ed = useRecordEditor({
     fieldsFor,
@@ -252,6 +273,22 @@ export function QrPoints({ onToast }) {
     list0.setSelected([]);
   };
 
+  /* ── 출력 (2026-11-02, 사용자 요청) ─────────────────────────────────────────
+     인쇄 · SVG 는 한 건이든 고른 여러 건이든 같은 함수다 (qrExport.js).
+     [CSV 저장]도 있었다가 같은 날 빠졌다 (사용자 요청 — 필요한 출력이 아니다) */
+  const toItem = p => ({ code: p.code, name: p.name, url: qrUrl(p.code) });
+  const selectedRows = rows.filter(p => list0.selected.includes(p.id));
+  const doPrint = list => printQrs(list.map(toItem));
+  const doSvg = list => {
+    downloadSvgs(list.map(toItem));
+    onToast(list.length === 1 ? `${list[0].code}.svg 를 내려받습니다.` : `SVG ${list.length}개를 내려받습니다.`);
+  };
+  const onCopied = ok => onToast(ok ? "QR 주소를 복사했습니다." : "복사하지 못했습니다. 주소를 직접 선택해 복사해 주세요.");
+
+  /* 이 지점의 변경 이력 — 저장소의 기록(store.js 의 readHistory) 중 이 지점 id 로 남은 것.
+     여러 건을 한꺼번에 바꾼 기록은 「n건」으로만 남아 어느 지점인지 모르므로 여기 서지 않는다 */
+  const historyOf = id => readHistory().filter(h => h.target === "QR 지점" && h.id === id);
+
   const filtered = rows.filter(p => {
     if (kind && kindOf(p) !== kind) return false;
     if (district && p.districtId !== district) return false;
@@ -267,20 +304,20 @@ export function QrPoints({ onToast }) {
     return `${p.code} ${p.name}`.includes(list0.term);
   });
   const paged = list0.paginate(filtered);
+  const allFilteredOn = filtered.length > 0 && filtered.every(p => list0.selected.includes(p.id));
 
   /* 폼 **위**에 서는 상자 셋 — 여기서 한 번에 판단한다. 자리가 위인 이유는 아래
      `before` 주석 참조.
 
        ID 바닥남     **등록할 때만.** 사전 생성된 50개가 다 걸려 고를 것이 없는 상태다
        준비 중 경고    설치완료인데 꺼져 있을 때. 등록 기본값(설치예정)에서는 걸리지 않는다
-       소속 없음      **고칠 때만.** 등록 창에서는 아직 아무것도 고르지 않은 것이 당연하고,
-                     비웠을 때 무슨 일이 생기는지는 그 칸 아래 한 줄이 이미 적는다
 
-     등록 창에만 서던 안내 상자가 여기 셋째로 있었다 (2026-08-25 삭제, 사용자 요청) */
+     「소속 없음」 상자가 셋째로 있었다 (2026-11-02 삭제) — 수정 창에서 소속 칸이 빠져,
+     읽고 나서 할 수 있는 일이 그 창에 남지 않았다.
+     등록 창에만 서던 안내 상자도 여기 있었다 (2026-08-25 삭제, 사용자 요청) */
   const dv = ed.draft ? ed.draft.values : {};
   const isNew = !!(ed.draft && ed.draft.isNew);
   const warnPending = dv.installStatus === "설치완료" && !dv.active;
-  const warnNoDistrict = !isNew && !dv.districtId;
 
   /* ── 고를 수 있는 QR ID (2026-08-26. 머리말) ────────────────────────────────
      사전 생성된 50개를 두 무리로 가른다 — 아직 아무 지점에도 걸리지 않은 것과 이미 걸린 것.
@@ -339,6 +376,9 @@ export function QrPoints({ onToast }) {
           </>
         } />
 
+      {/* [목록] 보기의 일괄 단추는 **필터 줄 오른쪽 끝**이다 — 다른 목록 화면과 같은 자리.
+          같은 날 아래 SelectionBar 로 옮겼다가 사용자 요청으로 돌아왔다. [QR] 보기의 출력 단추만
+          결과 위 액션바에 선다 */}
       <Toolbar actions={view === VIEW_LIST && list0.selected.length ? (
         <>
           <span style={{ fontSize: "var(--fs-label)", color: "var(--text-body)", whiteSpace: "nowrap" }}>
@@ -356,17 +396,49 @@ export function QrPoints({ onToast }) {
         <SearchHint state={list0} />
       </Toolbar>
 
+      {/* ── 선택 액션바 — [QR] 보기에만 (2026-11-02, 사용자 요청) ─────────────────
+          카드를 고르면 카드 바로 위에 선다: [인쇄] · [SVG 내려받기]. **두 보기가 같은 선택
+          목록**을 쓰므로 표에서 고르고 카드로 넘겨도 그대로다. 처음에는 두 보기에 다 서서
+          출력과 사용 · 미사용을 함께 들었다 — [목록] 보기의 일괄 단추는 위 필터 줄로 돌아갔다 */}
+      {view === VIEW_QR ? (
+        <SelectionBar count={list0.selected.length} onClear={() => list0.setSelected([])}>
+          <Button variant="outline" size="sm" icon="printer" onClick={() => doPrint(selectedRows)}>인쇄</Button>
+          <Button variant="outline" size="sm" icon="download" onClick={() => doSvg(selectedRows)}>SVG 내려받기</Button>
+        </SelectionBar>
+      ) : null}
+
+      {/* ── 전체 선택 (2026-11-02, 사용자 요청) ─────────────────────────────────
+          **필터 결과 전부**를 고른다 — 쪽을 넘겨도 남는다. 처음에는 [QR] 보기에만 「이 쪽 모두
+          선택」(지금 보이는 20장)으로 섰는데, 이름을 「전체 선택」으로 바꾸면서 하는 일도 이름에
+          맞췄고 두 보기에 같이 세웠다. 표 머리의 체크박스는 그대로 **보이는 줄만** 고른다 */}
+      {filtered.length ? (
+        <label style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
+          marginBottom: "var(--space-3)", fontSize: "var(--fs-label)", color: "var(--text-body)", cursor: "pointer" }}>
+          <input type="checkbox" checked={allFilteredOn}
+            ref={el => { if (el) el.indeterminate = !allFilteredOn && list0.selected.length > 0; }}
+            onChange={() => list0.setSelected(allFilteredOn ? [] : filtered.map(p => p.id))}
+            style={{ width: 18, height: 18, margin: 0, accentColor: "var(--brand-primary)", cursor: "pointer" }} />
+          전체 선택
+        </label>
+      ) : null}
+
       {view === VIEW_QR ? (
         /* [QR] 보기 — 표와 같은 행, 같은 쪽 나눔(20장)이다. 예전 모달의 「미리보기 240개」
-           같은 상한은 없다: 쪽을 넘긴다. 카드를 누르면 줄을 누른 것과 같이 수정 창이 뜬다 */
+           같은 상한은 없다: 쪽을 넘긴다. 카드를 누르면 **출력 창**이 뜬다(아래 sheet) —
+           이 보기에 오는 이유가 QR 을 뽑는 일이라 수정 폼을 먼저 내밀지 않는다 */
         paged.rows.length ? (
-          <QrCardGrid aria-label="QR 코드 카드 목록">
-            {paged.rows.map(p => (
-              <QrCard key={p.id} image={QR_IMAGE} title={p.name} code={p.code}
-                onClick={() => ed.openEdit(p)}
-                badges={<><KindBadge p={p} /><StatusBadge p={p} /></>} />
-            ))}
-          </QrCardGrid>
+          <>
+            <QrCardGrid aria-label="QR 코드 카드 목록">
+              {paged.rows.map(p => (
+                <QrCard key={p.id} image={QR_IMAGE} title={p.name} code={p.code}
+                  onClick={() => setSheet(p)}
+                  selected={list0.selected.includes(p.id)}
+                  onSelectChange={on => list0.setSelected(on ? list0.selected.concat(p.id)
+                    : list0.selected.filter(id => id !== p.id))}
+                  badges={<><KindBadge p={p} /><StatusBadge p={p} /></>} />
+              ))}
+            </QrCardGrid>
+          </>
         ) : (
           <p style={{ padding: "var(--space-8) var(--space-5)", textAlign: "center",
             fontSize: "var(--fs-body)", fontWeight: "var(--fw-bold)", color: "var(--text-heading)" }}>
@@ -384,7 +456,8 @@ export function QrPoints({ onToast }) {
         rowTone={p => (p.installStatus === "설치완료" && !p.active ? "warning"
           : p.installStatus === "훼손" ? "danger" : null)}
         columns={[
-          { key: "code", label: "QR ID", width: 160, sortable: true },
+          /* 정렬은 번호로 — 글자로 하면 m-10 이 m-2 보다 앞에 선다 (qrCodes.js) */
+          { key: "code", label: "QR ID", width: 160, sortable: true, sortValue: p => qrCodeOrder(p.code) },
           /* 종류 (2026-11-02) — 필터의 「전체 종류」와 같은 값. [QR] 보기의 카드도 같은 배지다 */
           { key: "kind", label: "종류", width: 130, sortable: true,
             render: p => <KindBadge p={p} />, sortValue: p => KIND_LABEL[kindOf(p)] },
@@ -455,11 +528,23 @@ export function QrPoints({ onToast }) {
                  남는 것은 **상자 셋**이고(위 dv 주석), 자리는 그대로 폼 **위**다
                  (2026-08-20) — 폼이 「관리 메모」로 끝나야 하고(마지막 칸이 마지막에
                  보인다), 무엇보다 경고는 값을 고치기 **전에** 읽어야 한다. */
-              poolEmpty || warnPending || warnNoDistrict ? (
-                /* 둘 다 안 걸리면 자리째 비운다 — 빈 상자가 여백만 만들면 폼 첫 칸이
+              !isNew || poolEmpty || warnPending ? (
+                /* 아무것도 안 걸리면 자리째 비운다 — 빈 상자가 여백만 만들면 폼 첫 칸이
                    까닭 없이 내려앉는다 */
                 <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column",
                   gap: "var(--space-3)", paddingBottom: "var(--space-4)" }}>
+                  {/* QR 코드 판 — **수정 창에만** (2026-11-02, 사용자 요청). 지도 자리를
+                      이것이 받았다: 이 창에서 가장 많이 하는 일이 안내판을 다시 뽑는 것이다 */}
+                  {!isNew ? (
+                    <QrCodePanel image={QR_IMAGE} code={dv.code} url={qrUrl(dv.code)} onCopied={onCopied}
+                      actions={
+                        <>
+                          <Button variant="outline" size="sm" icon="download" onClick={() => doSvg([dv])}>SVG 내려받기</Button>
+                          <Button variant="outline" size="sm" icon="printer" onClick={() => doPrint([dv])}>인쇄</Button>
+                        </>
+                      } />
+                  ) : null}
+
                   {poolEmpty ? (
                     <Notice tone="danger" size="sm">
                       사전 생성된 QR ID {QR_CODE_TOTAL}개가 모두 지점에 매칭되어 고를 수 있는 ID 가 없습니다.
@@ -483,18 +568,68 @@ export function QrPoints({ onToast }) {
                       설치는 완료되었으나 지금은 쓰지 않는 상태입니다. 운영을 시작하려면 [사용 여부]를 켜 주세요.
                     </Notice>
                   ) : null}
-
-                  {warnNoDistrict ? (
-                    <Notice tone="neutral" size="sm">
-                      소속을 비워 두면 이 지점으로 들어온 사용자에게 가까운 골목형 상점가 3곳을 대신 안내합니다.
-                      근처에 골목형 상점가가 없는 자리(공원 · 관공서 앞)에서는 그것이 맞는 화면입니다.
-                    </Notice>
-                  ) : null}
                 </div>
               ) : null
             } />
         ) : null}
+
+        {/* ── 변경 이력 — 접어 둔다 (2026-11-02, 사용자 요청) ─────────────────────
+            폼 **아래**, 처음에는 닫힌 채로 선다. 펴 두면 창이 길어져 QR 판 · 폼 · 저장이 한
+            눈에 안 들어오고, 인쇄할 때 쓰는 창이라 짧아야 한다. 꺾쇠를 누르면 주르륵 열린다 */}
+        {ed.draft && !isNew ? (() => {
+          const hist = historyOf(dv.id);
+          return (
+            <Accordion style={{ marginTop: "var(--space-5)" }}
+              items={[{
+                title: `변경 이력 ${hist.length}건`,
+                body: hist.length ? (
+                  <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column",
+                    gap: "var(--space-2)", fontSize: "var(--fs-label)" }}>
+                    {hist.map((h, i) => (
+                      <li key={h.at + i} style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                        <span style={{ color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{fmtAt(h.at)}</span>
+                        <span style={{ fontWeight: "var(--fw-semibold)" }}>{h.by}</span>
+                        <span>
+                          {h.action}{h.fields && h.fields.length
+                            ? ` · ${h.fields.map(k => FIELD_LABEL[k] || k).join(", ")}` : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span style={{ fontSize: "var(--fs-label)", color: "var(--text-muted)" }}>
+                    이 브라우저에서 고친 기록이 없습니다. 서버 연동 전이라 다른 사람이 고친 기록은 보이지 않습니다.
+                  </span>
+                ),
+              }]} />
+          );
+        })() : null}
       </EditorModal>
+
+      {/* ── [QR] 보기의 출력 창 (2026-11-02, 사용자 요청) ──────────────────────────
+          카드를 누르면 폼이 아니라 이것이 뜬다 — 인쇄 · SVG 를 바로 누른다.
+          고칠 일이 있으면 [정보 수정]이 수정 창으로 넘긴다 */}
+      <Modal open={!!sheet} size="lg" onClose={() => setSheet(null)}
+        title={sheet ? sheet.name : ""}
+        description={sheet ? `${KIND_LABEL[kindOf(sheet)]} · ${sheet.installStatus || "설치예정"}` : undefined}
+        footer={
+          <>
+            <Button variant="ghost" icon="pencil" onClick={() => { const p = sheet; setSheet(null); ed.openEdit(p); }}>
+              정보 수정
+            </Button>
+            <Button variant="primary" onClick={() => setSheet(null)}>닫기</Button>
+          </>
+        }>
+        {sheet ? (
+          <QrCodePanel image={QR_IMAGE} code={sheet.code} url={qrUrl(sheet.code)} onCopied={onCopied}
+            actions={
+              <>
+                <Button variant="outline" size="sm" icon="printer" onClick={() => doPrint([sheet])}>인쇄</Button>
+                <Button variant="outline" size="sm" icon="download" onClick={() => doSvg([sheet])}>SVG 내려받기</Button>
+              </>
+            } />
+        ) : null}
+      </Modal>
 
       {/* 삭제 확인 창이 여기 있었다 (2026-08-24 신설 → 2026-08-26 삭제, 사용자 요청).
           각주가 「QR 코드를 교체했다면 삭제 대신 [철거] + 비활성」을 적던 자리다 —

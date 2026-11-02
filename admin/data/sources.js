@@ -113,4 +113,44 @@ export const COURSE_ROWS = COURSES.map(c => ({
 /* QR 지점만 채우는 것이 기본값이 아니라 **열쇠**다. qr.js 의 표는 `code` 를 열쇠로 쓰고
    덮개 저장소는 `id` 를 쓴다 — 저쪽 데이터의 모양을 바꾸지 않고 여기서 맞춘다.
    화면에서 등록한 지점은 이 규칙 밖이다(덮개가 매기는 일련번호를 쓴다. QrPoints.jsx). */
-export const QR_ROWS = QR_POINTS.map(p => ({ ...p, id: p.code }));
+export const QR_ROWS = QR_POINTS.map(p => ({ ...p, id: p.code })).concat(demoQrRows());
+
+/* ── 관리자 목록 더미 — 100줄까지 (2026-11-02, 사용자 요청) ──────────────────────
+   시민 화면의 QR 표(qr.js)는 여섯 줄이고 **거기에는 더하지 않는다** — 셸을 세우는 코드를
+   표에 늘리면 이름만 바뀌고 거리는 그대로인 화면이 된다 (.claude/rules/entry-and-qr.md).
+   그래서 이 94줄은 **관리자 목록에만** 선다: 목록 · 필터 · 쪽 나눔 · 선택 출력을 실서버
+   규모에 가깝게 검수하려는 것이다. 이 코드로 시민 화면을 열면 S11(등록되지 않은 QR)이다.
+
+   이름은 지어내지 않고 이미 있는 자료에서 읽는다 — 상점가 32곳(종류 「골목형 상점가」),
+   축제 9개(「축제」), 공공시설 22곳(「안내판」), 그리고 동백이음길 가게로 100줄을 채운다
+   (「점포」. 시민 표가 이미 쓰는 가게는 뺀다). QR ID 는 `m-7` 부터 차례로 매긴다.
+   설치 상태 · 사용 여부 · 설치일자는 차례 번호에서 규칙으로 정한다 — 필터마다 몇 줄씩
+   걸리게 하려는 것이고 현장 기록이 아니다. */
+function demoQrRows() {
+  const taken = new Set(QR_POINTS.map(p => p.storeId).filter(Boolean));
+  const base = [
+    ...DISTRICTS.map(d => ({ kind: "district", name: d.name, addr: [d.gu, d.addr].filter(Boolean).join(" "),
+      districtId: d.id, lat: d.lat, lng: d.lng })),
+    ...FESTIVALS.map(f => ({ kind: "festival", name: f.name, addr: "", dong: f.place,
+      districtId: f.districtId })),
+    ...FACILITIES.map(f => ({ kind: "sign", name: f.name, addr: f.addr,
+      districtId: CURRENT_DISTRICT_ID, lat: f.lat, lng: f.lng })),
+    ...STORES.filter(s => !taken.has(s.id)).map(s => ({ kind: "store", name: s.name, addr: s.addr,
+      districtId: CURRENT_DISTRICT_ID, storeId: s.id, lat: s.lat, lng: s.lng })),
+  ];
+  const start = QR_POINTS.length + 1;
+  return base.slice(0, 100 - QR_POINTS.length).map((r, i) => {
+    const n = start + i;
+    const installStatus = n % 11 === 0 ? "훼손" : n % 13 === 0 ? "철거" : n % 5 === 0 ? "설치예정" : "설치완료";
+    const done = installStatus !== "설치예정";
+    return {
+      ...r,
+      id: `m-${n}`,
+      code: `m-${n}`,
+      installStatus,
+      installedAt: done ? `2026-${String(1 + (n % 9)).padStart(2, "0")}-${String(1 + ((n * 7) % 28)).padStart(2, "0")}` : null,
+      /* 설치완료인데 꺼진 줄(n % 17)이 몇 줄 있어야 표의 경고 줄 색이 보인다 */
+      active: installStatus === "설치완료" && n % 17 !== 0,
+    };
+  });
+}

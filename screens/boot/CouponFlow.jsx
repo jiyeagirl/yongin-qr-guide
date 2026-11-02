@@ -276,7 +276,7 @@ function Done({ onEnter }) {
    축제 QR 로 들어와도 **팝업이 뜨지 않는다.** 쿠폰은 축제 상세 본문의 「쿠폰」 칸(detail/CouponCard.jsx)에서 받고,
    그 칸이 `openCoupon()` 을 부르면 여기서 전체화면 층이 열린다: 받기 전이면 곧바로 발급하고 상인에게 보이는 쿠폰(C2),
    받은 뒤면 같은 쿠폰 화면, 쓴 뒤면 확인 완료(C3). A안이다(가입 없이 발급). 셸은 이 아래에서 그대로 서 있다(U-CM-16).
-   저장은 위 localStorage 이다. 지우려면 `?qr=qr-004&popup=reset` 으로 연다. */
+   저장은 위 localStorage 이다. 지우려면 `?qr=m-4&popup=reset` 으로 연다. */
 /* `fixed` 가 아니라 `absolute` 다 — 데스크톱 검수 틀(#root 390×844)을 벗어나 브라우저 창 전체를 덮지 않는다.
    그래서 #root 가 위치 기준이어야 한다(index.html 의 `#root { position: relative }`). 휴대폰에서는 둘이 같다. */
 const LAYER = { position: "absolute", inset: 0, zIndex: "var(--z-modal)" };

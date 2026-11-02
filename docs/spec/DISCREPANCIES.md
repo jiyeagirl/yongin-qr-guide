@@ -40,8 +40,8 @@ CLAUDE.md 줄 번호는 개편 전(git HEAD) 본문 기준이다.
 | 1 | 문서 버전 | `CLAUDE.md:9` 시민용 명세서 `v1.23` | `docs/functional_specifications.md:1` 제목이 `v1.25` | 문서 오래됨 |
 | 2 | 기준점 이름 | (해소 2026-10-30) 문서와 코드 모두 동백이음길 「우리동네 통닭집」 한 지점 기준 | `screens/main/data/current.js` `ANCHOR = { name: "우리동네 통닭집", … }`(건물 미래도프라자 좌표), `qr.js` 지점 이름이 `ANCHOR.name` | 해소 |
 | 3 | 팜플렛 대화상자 단추 | `functional_specifications.md:778`(U-CM-20) [주변 안내보기] = 「닫고 공공시설 탭에 그대로 선다」 | `MainApp.jsx:227` 첫 탭 `district`, `MainApp.jsx:1428` [주변 안내보기]는 닫기만 함 → 상점가 탭에 선다 | 문서 오래됨 |
-| 4 | S14 진입 경로 | `screens/README.md:47` · `:103` S14 는 `?qr=qr-004` 로 열린다, `:55` 팜플렛 코드면 셸 위에 S14 안내 | `App.jsx:51-57` `qr-004`(`kind: festival`)는 `#/festival/ft-dunjeon` 으로 해시를 바꿔 축제 상세가 먼저 뜬다. `MainApp.jsx:364-366` 대화상자는 `?pamphlet` 플래그로만 열린다 | 문서 오래됨 |
-| 5 | 정상 진입 화면 | `screens/README.md:96` 「정상 진입 (S01 → S02)」 | `MainApp.jsx:227` 첫 탭 `district`(상점가, S03). `qr-001` 은 점포 상세가 먼저(`App.jsx:52`) | 문서 오래됨 |
+| 4 | S14 진입 경로 | `screens/README.md:47` · `:103` S14 는 `?qr=m-4` 로 열린다, `:55` 팜플렛 코드면 셸 위에 S14 안내 | `App.jsx:51-57` `m-4`(`kind: festival`)는 `#/festival/ft-dunjeon` 으로 해시를 바꿔 축제 상세가 먼저 뜬다. `MainApp.jsx:364-366` 대화상자는 `?pamphlet` 플래그로만 열린다 | 문서 오래됨 |
+| 5 | 정상 진입 화면 | `screens/README.md:96` 「정상 진입 (S01 → S02)」 | `MainApp.jsx:227` 첫 탭 `district`(상점가, S03). `m-1` 은 점포 상세가 먼저(`App.jsx:52`) | 문서 오래됨 |
 | 6 | S13-S | `screens/README.md:6-7` 화면 상태에 「S13-S(상점가 안내 준비 중)」 | `MainApp.jsx:992-998` `#/district/:id` 는 `DistrictInfo`(S13-A). `README.md:39` 도 S13-A 로 적는다 | 문서 오래됨 |
 | 7 | S03-E 줄 동작 | `functional_specifications.md:852`(U-ST-16) 줄을 누르면 「용인시 누리집의 그 상점가 안내로 나간다」 | `MainApp.jsx:1360` `onPickDistrict` → `go("#/district/{id}")` 앱 안 S13-A. `DistrictRow.jsx:31-33` 누리집 갈래 제거 | 문서 오래됨 |
 | 8 | S15 여는 길 | `functional_specifications.md:847`(U-ST-04) · `screens/README.md:40` 「지도 위 검색창 Enter」 | `MapFilterOverlay.jsx:87-88` 검색창 포커스(누름) 또는 Enter 둘 다 `onQuerySubmit` 호출. `direction_v2_rules.md:108` 「누르는 것」은 맞음 | 문서 오래됨 (부분) |
@@ -49,7 +49,7 @@ CLAUDE.md 줄 번호는 개편 전(git HEAD) 본문 기준이다.
 | 10 | 시트 섹션 순서 | `direction_v2_rules.md:103-104` 축제 배너 → 인기 매장 → 코스 → 다른 골목형 상점가 → [가게 전체보기] | `DistrictSheet.jsx:50-76` 축제 → 인기 → 코스 → [가게 전체보기] → 주변 골목형 상점가 → 고지 | 문서 오래됨 |
 | 11 | 상점가 줄 → S13-A | `functional_specifications.md:857`(U-ST-14) 시트 3곳 줄은 앱 안 상점가 안내(S13-A)로 간다. `screens/README.md:111` S13-A 는 다른 상점가 줄 어디서든 열린다 | `MainApp.jsx:589-593,1372,915` 줄은 `showDistrictOnMap`(지도 이동 + 카드). S13-A 는 카드 [상점가 안내](`MainApp.jsx:1139-1140`)와 S03-E 줄(`:1360`)에서만. 방향 문서 `direction_v2_rules.md:112-114` 는 코드와 일치 | 문서 오래됨 |
 | 12 | S13 진입 경로 | `screens/README.md:38` S13 는 둘러보기 탭 [전체보기] | `MainApp.jsx:1371` 상점가 탭 시트의 [주변 골목형 상점가 전체보기]도 `#/districts` 를 연다 (`DistrictSheet.jsx:72-75`) | 문서 오래됨 (부분) |
-| 13 | 기준점 이름 출처 | `functional_specifications.md:765`(U-CM-04) 지점명은 QR 지점 표의 이름 — 상점 QR 에서는 그 상점이 기준점 | `MainApp.jsx:219-225` 컨텍스트 바 이름은 `DUNJEON.anchor.name`(우리의류), `qr.anchorName` 이 있을 때만 덮는다. `qr.name` · `qr.lat/lng` 는 셸이 읽지 않는다. 현재 `qr-001` 의 이름이 `ANCHOR.name` 과 같아 겉으로는 같다 | 불명 (실서비스에서 QR 별 기준점을 어떻게 받을지 문서 · 코드 모두 미정) |
+| 13 | 기준점 이름 출처 | `functional_specifications.md:765`(U-CM-04) 지점명은 QR 지점 표의 이름 — 상점 QR 에서는 그 상점이 기준점 | `MainApp.jsx:219-225` 컨텍스트 바 이름은 `DUNJEON.anchor.name`(우리의류), `qr.anchorName` 이 있을 때만 덮는다. `qr.name` · `qr.lat/lng` 는 셸이 읽지 않는다. 현재 `m-1` 의 이름이 `ANCHOR.name` 과 같아 겉으로는 같다 | 불명 (실서비스에서 QR 별 기준점을 어떻게 받을지 문서 · 코드 모두 미정) |
 | 14 | 길찾기 출발지 (참고, 영역 밖) | `screens/README.md:488` 「출발지를 고르는 자리는 없다」 | `MainApp.jsx:787-814` `routeOrigins` · `setRouteOrigin` 으로 코스 지점 중에서 고른다. `functional_specifications.md:834`(U-NV-01) 은 코드와 일치 | 문서 오래됨 |
 
 ## 2. 코드 주석이 코드와 다른 곳 (참고, 문서 아님)
@@ -61,7 +61,7 @@ CLAUDE.md 줄 번호는 개편 전(git HEAD) 본문 기준이다.
 | a | `screens/detail/StoreList.jsx:31-32` | 점포 행을 누르면 상세(S06)로 바로 간다 | `MainApp.jsx:929-931` `closeAll()` + `showStoreOnMap` — 지도 핀 + 미리보기 카드 |
 | b | `screens/detail/DistrictList.jsx:54-57, 59-61` | 줄을 누르면 앱 밖(누리집)으로 나간다 | `MainApp.jsx:915` `onOpenDistrict={showDistrictOnMap}` |
 | c | `screens/main/DistrictEmpty.jsx:102-103` | 줄을 누르면 누리집의 그 상점가 안내로 나간다 | `MainApp.jsx:1360` 앱 안 `#/district/{id}` |
-| d | `screens/main/data/qr.js:14-18, 1-12` | `qr-004` 는 「유효 (셸) + 팜플렛 → S14」, 유효한 코드는 하나뿐, `ok` → 공공시설 탭으로 | `qr-001` · `qr-004` 둘이 셸을 세운다 / `qr-004` 는 축제 상세가 먼저 / 첫 탭은 상점가 |
+| d | `screens/main/data/qr.js:14-18, 1-12` | `m-4` 는 「유효 (셸) + 팜플렛 → S14」, 유효한 코드는 하나뿐, `ok` → 공공시설 탭으로 | `m-1` · `m-4` 둘이 셸을 세운다 / `m-4` 는 축제 상세가 먼저 / 첫 탭은 상점가 |
 | e | `screens/main/MainApp.jsx:113, 157, 1431` · `screens/boot/QrEntry.jsx:5-8` | 진입은 언제나 공공시설 탭 | 첫 탭 `district` (`MainApp.jsx:227`) |
 | f | `screens/main/router.js:34-36` | `district` 는 안내 주소가 아직 없을 때만 열린다 (S13-S) | 모든 `DISTRICTS` id 에서 열린다(`MainApp.jsx:745`) |
 
@@ -104,7 +104,7 @@ CLAUDE.md 줄 번호는 개편 전(git HEAD) 본문 기준이다.
 | 12 | 미리보기 카드 예외 | S03 문서:227-228 「남은 예외는 없다 … 어디서 눌러도 지도의 미리보기 카드를 거친다. 축제(S09)와 **코스(S10)** 만 곧장 상세로」 | `MainApp.jsx:1363` S03-E 의 상점가 줄은 카드를 거치지 않고 곧장 `#/district/:id`. 코스 상세는 S08 이고 S10 은 오류신고다 | 문서 오래됨 |
 | 13 | 셸 상단 도식 | S03 문서:438-439 도식 첫 줄 「AppBar — 조아용 · 지금 계신 곳 / OO 버스정류장」 | `MainApp.jsx:1049-1067` 상단은 `ContextBar` 한 줄뿐(앱바 없음, `QR 스캔 지점 기준 안내 · …`). 같은 문서 :36 본문은 앱바 제거를 적는다 | 문서 오래됨 (도식) |
 | 14 | 업종 칩 개수 표기 | S03 문서:608(§7 표) 「검색 + 업종 칩 6종」, 명세서:1240 「업종 칩(6종)」 · :766(U-CM-05) 「업종 6종 아이콘」, README:920 「업종 칩 8종 개수」(바로 아래 목록은 7개) | `dunjeon.js:142-166` `CATS` 7종, `FilterBar.jsx` 가 맨 앞에 [전체]를 더한다. 명세서 U-ST-10(:853) · 3-4(:1052)는 7종으로 일치 | 문서 오래됨 |
-| 15 | 플로팅 버튼 이름 | S03 문서:607(§7 표) 「[QR 지점으로] 1개」 | `MainApp.jsx:1214` 라벨 · 글자 「스캔 위치로」(`qr.backLabel` 이 있는 지점 `qr-004` 만 「상점가 중심으로」 + `map-pin`), 토스트 :616 「QR스캔 위치로 이동했습니다」. S03 문서:391-411 본문은 「스캔 위치로」로 일치 | 문서 오래됨 |
+| 15 | 플로팅 버튼 이름 | S03 문서:607(§7 표) 「[QR 지점으로] 1개」 | `MainApp.jsx:1214` 라벨 · 글자 「스캔 위치로」(`qr.backLabel` 이 있는 지점 `m-4` 만 「상점가 중심으로」 + `map-pin`), 토스트 :616 「QR스캔 위치로 이동했습니다」. S03 문서:391-411 본문은 「스캔 위치로」로 일치 | 문서 오래됨 |
 | 16 | 플로팅 버튼 · 반경 고르개 위치 | 명세서:1239(5-3-1 #3) 「글자가 아이콘 **아래로** 내려가 작게 적히고 … 안내 반경 고르개는 … 상단 필터 바로 내려갔다」 | `FloatingControls.jsx:141` 아이콘 옆에 글자(`subtle`). 반경 고르개는 시트 헤더(`MainApp.jsx:1309-1319`, `titleAside`). S03 문서:332-337 · :344-390 · 명세서 U-FC-08(:794)은 코드와 일치 | 문서 오래됨 |
 | 17 | z 레이어 단계 수 | CLAUDE.md(HEAD):71 「지도 오버레이 레이어 7단계」, 명세서:1208-1217 (5-3 표 8행, 550 없음) | `layers.css:14-22` 값이 9개(지도 100 · 마커 200 · 필터 300 · 플로팅 400 · 탭바 450 · 시트 500 · **팝오버 550** · 모달 600 · 토스트 700). 같은 파일 :6 머리는 「z 8단계」 | 문서 오래됨 |
 | 18 | 반경 필터 | 명세서:688(결정 8) 「반경 필터 UI를 두지 않는다」, :1128(4장) 「화면에 두지 않는 것: … 반경 필터」 | `MainApp.jsx:1309-1319` 공공시설 시트 헤더에 「반경 2km」 고르개(2 · 3 · 4km, `facilities.js:244-246`). 명세서 U-FC-08(:794)은 고르개를 적고 코드와 일치 | 문서 오래됨 (명세서 내부 모순) |
@@ -124,12 +124,12 @@ CLAUDE.md 줄 번호는 개편 전(git HEAD) 본문 기준이다.
 
 | # | 영역 | 문서 서술(파일·줄) | 코드 실제(파일·줄) | 판정 |
 |---|---|---|---|---|
-| 30 | 팜플렛 코드 | CLAUDE.md(HEAD):117 「팜플렛 코드 `qr-004`(S14)만 셸을 세우는데 그래도 규칙을 어기지 않는다」 | `qr.js:68-82,162-179` 셸을 세우는 코드는 `qr-001`(`kind: store`)과 `qr-004`(`kind: festival`) 둘이고, `qr-004` 는 S14 대화상자가 아니라 축제 상세가 먼저 뜬다(`App.jsx:51-57`). S14 는 `?pamphlet` 플래그로만 열린다(`MainApp.jsx:364-366`) | 문서 오래됨 |
+| 30 | 팜플렛 코드 | CLAUDE.md(HEAD):117 「팜플렛 코드 `m-4`(S14)만 셸을 세우는데 그래도 규칙을 어기지 않는다」 | `qr.js:68-82,162-179` 셸을 세우는 코드는 `m-1`(`kind: store`)과 `m-4`(`kind: festival`) 둘이고, `m-4` 는 S14 대화상자가 아니라 축제 상세가 먼저 뜬다(`App.jsx:51-57`). S14 는 `?pamphlet` 플래그로만 열린다(`MainApp.jsx:364-366`) | 문서 오래됨 |
 
 ## 3. 영역 A 표와 겹치는 건 (다시 세지 않음)
 
 - 둘러보기 · S13 · S13-A 줄이 앱 안으로 가는 것: A #7 · #11 (S03-E · 시트 · S13 · 둘러보기 줄의 동작).
-- S14 의 진입 경로(`?qr=qr-004` → 실제로는 축제 상세): A #4. [주변 안내보기] 이후 탭: A #3.
+- S14 의 진입 경로(`?qr=m-4` → 실제로는 축제 상세): A #4. [주변 안내보기] 이후 탭: A #3.
 - 길찾기 출발지를 고르는 자리가 있다는 점(README:488): A #14.
 - S15 여는 길 · 시트 [가게 전체보기] 글 · 시트 섹션 순서: A #8 · #9 · #10.
 

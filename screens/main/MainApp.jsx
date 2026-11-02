@@ -227,7 +227,7 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
      QR 지점 표의 `anchorName`(상점가 중심 거리 등)을 이름으로 쓴다. 좌표는 더미 세계가 한 점에
      매달려 있어 그대로다 (data/qr.js 머리말). */
   const anchorName = qr && qr.anchorName ? qr.anchorName : null;
-  /* 기준점 좌표도 QR 이 들고 온다 (2026-10-30) — 다른 건물의 상점 QR(정회원 `qr-006` 동백문고)이면 거리 · 차례 ·
+  /* 기준점 좌표도 QR 이 들고 온다 (2026-10-30) — 다른 건물의 상점 QR(정회원 `m-6` 동백문고)이면 거리 · 차례 ·
      코스 · 시설 거리를 그 자리에서 다시 잰다 (current.js 의 `currentAt`). 기본 지점과 같은 좌표면 상수 그대로다 */
   const qrLat = qr && qr.lat, qrLng = qr && qr.lng;
   const d = React.useMemo(() => {

@@ -25,7 +25,7 @@
 
 - 모든 더미의 거리 · 좌표는 **기준점 한 점**(`ANCHOR` = 우리동네 통닭집, 그 건물 미래도프라자 37.2815767 / 127.1608786)에 매달려 있다. 점포 · 시설 · 코스 · 경로 · 상점가 거리가 같은 한 점에서 계산된다.
 - 결정적 생성이다: 점포는 고정 씨앗 난수로 만들어 새로고침해도 같은 목록이 나온다.
-- 화면이 읽는 합쳐진 객체 `d` (`MainApp`): `{ anchor, district, chips, stores, popular, courses, festival(=CURRENT_FESTIVAL) }`. 상점 QR 진입이면 `courses` 가 그 가게 둘레 코스, 기준점 이름은 QR 지점 표의 `anchorName` 이 있을 때만 덮고, 상단 띠 문구는 `bannerLabel`, 공공시설 시트의 기준 문구는 `basisLabel`, 지도 위 복귀 버튼 문구는 `backLabel` 이 있을 때만 바꾼다(넷 모두 현재 `qr-004` 에만 있다).
+- 화면이 읽는 합쳐진 객체 `d` (`MainApp`): `{ anchor, district, chips, stores, popular, courses, festival(=CURRENT_FESTIVAL) }`. 상점 QR 진입이면 `courses` 가 그 가게 둘레 코스, 기준점 이름은 QR 지점 표의 `anchorName` 이 있을 때만 덮고, 상단 띠 문구는 `bannerLabel`, 공공시설 시트의 기준 문구는 `basisLabel`, 지도 위 복귀 버튼 문구는 `backLabel` 이 있을 때만 바꾼다(넷 모두 현재 `m-4` 에만 있다).
 
 ## 2. 점포 (`dunjeon.js`)
 

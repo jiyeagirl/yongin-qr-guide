@@ -36,7 +36,7 @@
 - 셸이 서기 전에 갈린다. 비정상 코드는 지도 SDK 를 받지 않는다.
 - `active` 를 먼저 본다. 활성이면 설치 상태와 무관하게 `ok`.
 - `[다시 시도]`(S11-B)는 `QrEntry` 를 새 `key` 로 다시 세워 조회를 처음부터 건다.
-- **쿠폰은 팝업이 아니라 축제 상세의 「쿠폰」 칸에서 쓴다** (2026-10-19 — 종전의 진입 팝업 · 제목 옆 [쿠폰] 단추는 없앴다). 축제 QR(`kind: festival`, qr-004)로 들어오면 축제 상세가 열리고 그 본문의 쿠폰 칸(`detail/CouponCard.jsx`, 회색 바탕 + 흰 카드)이 글자는 한 줄씩 두 줄(초록 윗줄 + 「축제 할인 쿠폰」)이고 오른쪽은 화살표(>)뿐이다. 칸을 누르면(받기 전이면 발급과 함께) **바텀시트**(쿠폰 설명 + [쿠폰 사용하기], 「매장에서 결제할 때 눌러주세요」) → 다른 바탕색의 **직원 확인 화면**(「직원에게 해당 화면을 보여주세요」, [사용 확인] — 뒤로 가면 쿠폰은 미사용 그대로) → **확인 팝업**(「쿠폰을 사용 처리할까요?」 — 사용 확인 시 쿠폰이 사용 처리되며, / 다시 사용할 수 없습니다 두 줄 · 붉은 작은 글씨 「*실제 거래가 완료되었는지 확인해주세요」, [취소] / [사용처리]) → 사용 처리 → **완료 화면**(사용 일시(초 단위까지, 흐르는 현재 시각은 없다), [닫기]만 있다). 저장은 `localStorage`(상태 · 사용 일시), 검수로 지우려면 `?qr=qr-004&popup=reset` 으로 연다. `?coupon` 흐름(C1~C3)은 종전 그대로다.
+- **쿠폰은 팝업이 아니라 축제 상세의 「쿠폰」 칸에서 쓴다** (2026-10-19 — 종전의 진입 팝업 · 제목 옆 [쿠폰] 단추는 없앴다). 축제 QR(`kind: festival`, m-4)로 들어오면 축제 상세가 열리고 그 본문의 쿠폰 칸(`detail/CouponCard.jsx`, 회색 바탕 + 흰 카드)이 글자는 한 줄씩 두 줄(초록 윗줄 + 「축제 할인 쿠폰」)이고 오른쪽은 화살표(>)뿐이다. 칸을 누르면(받기 전이면 발급과 함께) **바텀시트**(쿠폰 설명 + [쿠폰 사용하기], 「매장에서 결제할 때 눌러주세요」) → 다른 바탕색의 **직원 확인 화면**(「직원에게 해당 화면을 보여주세요」, [사용 확인] — 뒤로 가면 쿠폰은 미사용 그대로) → **확인 팝업**(「쿠폰을 사용 처리할까요?」 — 사용 확인 시 쿠폰이 사용 처리되며, / 다시 사용할 수 없습니다 두 줄 · 붉은 작은 글씨 「*실제 거래가 완료되었는지 확인해주세요」, [취소] / [사용처리]) → 사용 처리 → **완료 화면**(사용 일시(초 단위까지, 흐르는 현재 시각은 없다), [닫기]만 있다). 저장은 `localStorage`(상태 · 사용 일시), 검수로 지우려면 `?qr=m-4&popup=reset` 으로 연다. `?coupon` 흐름(C1~C3)은 종전 그대로다.
 - **축제 상세(S09) 머리의 축제명과 같은 행 오른쪽 끝의 [쿠폰]**(쿠폰이 걸린 축제 `ft-dunjeon` 에서만, 2026-10-19)이 같은 쿠폰을 다시 연다: 받기 전 → 받기 팝업, 받은 뒤 → 쿠폰 화면, 쓴 뒤 → 확인 완료(단추 글자 「사용완료」). 팝업을 닫거나 [X] 로 나가도 되돌아올 길이다. 둘은 `openCoupon()` / `COUPON_CHANGE` 이벤트로 잇는다(`FestivalCoupon` 은 언제나 서 있고 축제 QR 이면 스스로 열린다).
 - 쿠폰 흐름은 `ok` 이후에만 선다. `?coupon=1&qr=<없는코드>` 는 S11 이 먼저다.
 
@@ -46,7 +46,7 @@
 |---|---|
 | `/s/{code}` | 경로 정규식 `\/s\/([^/?#]+)` — `decodeURIComponent` |
 | `?qr={code}` | 앞뒤 공백 제거 |
-| 둘 다 없음 | 기본 `qr-001` (오류 화면 없음) |
+| 둘 다 없음 | 기본 `m-1` (오류 화면 없음) |
 | 해시 `#/…` | 상세 오버레이용. QR 읽기에 쓰지 않는다 |
 
 ### 1-2. S01 로딩 (`QrEntry`)
@@ -64,18 +64,18 @@
 
 | code | active | 이름 | kind | 연결 | 설치 상태 | 결과 |
 |---|---|---|---|---|---|---|
-| `qr-001` | true | 우리동네 통닭집 (`ANCHOR.name`) | `store` | `storeId: db-198`(`ENTRY_STORE_ID`), `districtId: dongbaekium` | 설치완료 | ok — 상점 상세 먼저 |
-| `qr-002` | false | (구) 동백이음길 안내판 | — | `replacedBy: qr-001` | 철거 | S11 |
-| `qr-003` | false | 동백이음길 동백7로 입구 | — | `districtId: dongbaekium` | 설치완료 | S11-A |
-| `qr-005` | true | 백현마을 버스정류장 | `sign` | `anchorName: 백현마을 버스정류장`, `districtId: dongbaekium` | 설치완료 | ok — 상점가 탭 (상세 없음) |
-| `qr-004` | true | 동백이음길 가을마실 축제 안내 팜플렛 | `festival` | `festivalId: ft-dongbaekium`, `anchorName: 동백이음길 골목형 상점가 중심 거리`, `bannerLabel: 동백이음길 골목형 상점가 기준 안내`, `bannerPlace: 축제 QR`(띠 뒤쪽 굵은 글자), `basisLabel: 동백이음길 골목형 상점가 기준 직선거리 · 가까운 순`, `backLabel: 상점가 중심으로` | 설치완료 | ok — 축제 상세 먼저 |
-| `qr-006` | true | 동백문고 (상인회 **정회원** 상점) | `store` | `storeId`: 동백문고, `anchorName: 동백문고`, 좌표 = 백현프라자(동백중앙로 358-8), `districtId: dongbaekium` | 설치완료 | ok — 상점 상세 먼저(「이음길 함께가게」 배지). 셸이 거리 · 차례 · 코스 · 시설 거리를 이 좌표에서 다시 잰다(`currentAt` · `facilitiesFrom`) |
+| `m-1` | true | 우리동네 통닭집 (`ANCHOR.name`) | `store` | `storeId: db-198`(`ENTRY_STORE_ID`), `districtId: dongbaekium` | 설치완료 | ok — 상점 상세 먼저 |
+| `m-2` | false | (구) 동백이음길 안내판 | — | `replacedBy: m-1` | 철거 | S11 |
+| `m-3` | false | 동백이음길 동백7로 입구 | — | `districtId: dongbaekium` | 설치완료 | S11-A |
+| `m-5` | true | 백현마을 버스정류장 | `sign` | `anchorName: 백현마을 버스정류장`, `districtId: dongbaekium` | 설치완료 | ok — 상점가 탭 (상세 없음) |
+| `m-4` | true | 동백이음길 가을마실 축제 안내 팜플렛 | `festival` | `festivalId: ft-dongbaekium`, `anchorName: 동백이음길 골목형 상점가 중심 거리`, `bannerLabel: 동백이음길 골목형 상점가 기준 안내`, `bannerPlace: 축제 QR`(띠 뒤쪽 굵은 글자), `basisLabel: 동백이음길 골목형 상점가 기준 직선거리 · 가까운 순`, `backLabel: 상점가 중심으로` | 설치완료 | ok — 축제 상세 먼저 |
+| `m-6` | true | 동백문고 (상인회 **정회원** 상점) | `store` | `storeId`: 동백문고, `anchorName: 동백문고`, 좌표 = 백현프라자(동백중앙로 358-8), `districtId: dongbaekium` | 설치완료 | ok — 상점 상세 먼저(「이음길 함께가게」 배지). 셸이 거리 · 차례 · 코스 · 시설 거리를 이 좌표에서 다시 잰다(`currentAt` · `facilitiesFrom`) |
 
 - `bannerLabel`·`basisLabel`·`backLabel` 은 팜플렛 사용자가 스캔 지점을 모르므로 상단 띠 · 공공시설 시트 기준 문구 · 지도 위 복귀 버튼(아이콘은 map-pin)을 상점가 말로 적는 선택 항목이다. 없는 코드는 「QR 스캔 지점」 문구 그대로다.
 - 항목: `code · active · name · lat · lng · dong · addr · kind · storeId/festivalId · districtId · installStatus · installedAt · locationDetail · memo · replacedBy · anchorName`. 시민 화면이 읽는 것은 `status` 판정에 쓰는 `active`·`installStatus`, 진입에 쓰는 `kind`·`storeId`·`festivalId`, 기준점 이름에 쓰는 `anchorName` 이다. 나머지는 관리자용 항목이다.
-- `qr-004` 에는 `addr` 가 없다. 좌표는 `districtAnchor("dunjeon")` — `DISTRICTS` 의 소속 상점가 `lat/lng` 를 읽는다.
-- 셸의 기준점(컨텍스트 바 이름 · 거리 기준 · 길찾기 출발지)은 (2026-10-30 부터) 지점의 `lat/lng` 이 기본 지점과 다르면 그 좌표다(`qr-006`). 그 밖에는 지점의 `lat/lng/name` 이 아니라 `CURRENT.anchor`(`ANCHOR`: 우리동네 통닭집, 그 건물 미래도프라자의 좌표 37.2815767 / 127.1608786 — `current.js`)다. `qr.anchorName` 이 있으면 이름만 덮는다 (`MainApp`).
-- 더미 점포 · 시설 · 거리는 모두 `ANCHOR` 한 점 기준이다. 셸을 세우는 코드는 `qr-001`, `qr-004` 둘이다.
+- `m-4` 에는 `addr` 가 없다. 좌표는 `districtAnchor("dunjeon")` — `DISTRICTS` 의 소속 상점가 `lat/lng` 를 읽는다.
+- 셸의 기준점(컨텍스트 바 이름 · 거리 기준 · 길찾기 출발지)은 (2026-10-30 부터) 지점의 `lat/lng` 이 기본 지점과 다르면 그 좌표다(`m-6`). 그 밖에는 지점의 `lat/lng/name` 이 아니라 `CURRENT.anchor`(`ANCHOR`: 우리동네 통닭집, 그 건물 미래도프라자의 좌표 37.2815767 / 127.1608786 — `current.js`)다. `qr.anchorName` 이 있으면 이름만 덮는다 (`MainApp`).
+- 더미 점포 · 시설 · 거리는 모두 `ANCHOR` 한 점 기준이다. 셸을 세우는 코드는 `m-1`, `m-4` 둘이다.
 - 종류(kind) 이름 · 칸 구성은 「미정」(`direction_v2_rules.md` 3-3).
 
 ## 3. 첫 화면 결정 (QR 종류별)
@@ -130,7 +130,7 @@
 
 | 플래그 | 효과 | 읽는 곳 |
 |---|---|---|
-| `?qr=<code>` | 코드 지정 (`qr-001`~`qr-004`, 그 밖은 S11) | `readQrCode` |
+| `?qr=<code>` | 코드 지정 (`m-1`~`m-4`, 그 밖은 S11) | `readQrCode` |
 | `?net=fail` | **첫 조회만** 통신 오류로 실패 → S11-B. 모듈 변수 `netFailed` 로 기억 (새로고침하면 다시 실패) | `lookup` |
 | `?district=none` | 현재 상점가 없음 → 상점가 탭이 S03-E 로, 코치마크 둘째 걸음 제외 | `MainApp` `noDistrict` |
 | `?coach=1` | 코치마크를 연다 (**유일한 입구** — 첫 진입에서 자동으로 뜨지 않는다, 2026-10-19). 닫아도 기억하지 않는다 | `useCoachMarks(force)` |
@@ -144,7 +144,7 @@
 
 ## 6. S14 축제 팜플렛 진입 안내 (예비 화면)
 
-- 열리는 길은 `?pamphlet=<축제 id>` 플래그뿐이다. `qr-004`(`kind: festival`)는 이 대화상자를 열지 않고 축제 상세로 간다.
+- 열리는 길은 `?pamphlet=<축제 id>` 플래그뿐이다. `m-4`(`kind: festival`)는 이 대화상자를 열지 않고 축제 상세로 간다.
 - 도입 여부는 확정되지 않았다 (`screens/README.md` 의 「예비 화면」 표기).
 - 조건: `pamphletOpen` 이고 대상 축제가 `FESTIVALS` 에 있고 현재 라우트가 셸(`main`)일 때. 열림 상태는 이번 진입 안에서만 산다 — 어느 단추를 눌러도 닫히고, 축제 상세를 보고 돌아와도 다시 뜨지 않는다. `localStorage` 에 기록하지 않는다.
 - 구성: 조아용 · 제목 · 기간 줄(`festival.date`) · 단추 둘. [×] 없음. Esc(`onDismiss`)는 [주변 안내보기]와 같다.
