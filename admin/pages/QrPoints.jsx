@@ -371,18 +371,10 @@ export function QrPoints({ onToast }) {
           ── [목록]/[QR] 보기 전환 (2026-11-02, 사용자 요청) ───────────────────
           실제 서버 화면에서는 이 자리의 [QR 목록]이 모달을 열어 필터와 상관없이 전체 QR 을
           보여줬다. 같은 페이지 안의 보기 전환으로 바꿨다 — 필터를 걸어 둔 채 QR 로 넘기면
-          걸린 것만 카드로 선다. 주 행동 [등록]은 그대로 오른쪽 끝이다 */}
+          걸린 것만 카드로 선다. 전환 단추는 아래 「전체 선택」 줄 오른쪽 끝 — 표 · 카드 바로
+          위다 (같은 날 사용자 요청. 처음에는 머리 줄 [등록] 왼쪽에 섰다) */}
       <PageHeader title="QR 지점 관리" count={`${filtered.length.toLocaleString("ko-KR")}곳`}
-        action={
-          <>
-            <SegmentedTabs variant="pill" value={view} onChange={setView} aria-label="보기 전환"
-              items={[
-                { id: VIEW_LIST, label: "목록", icon: "list" },
-                { id: VIEW_QR, label: "QR", icon: "qr-code" },
-              ]} />
-            <Button variant="primary" icon="plus" onClick={ed.openNew}>QR 지점 등록</Button>
-          </>
-        } />
+        action={<Button variant="primary" icon="plus" onClick={ed.openNew}>QR 지점 등록</Button>} />
 
       {/* [목록] 보기의 일괄 단추는 **필터 줄 오른쪽 끝**이다 — 다른 목록 화면과 같은 자리.
           같은 날 아래 SelectionBar 로 옮겼다가 사용자 요청으로 돌아왔다. [QR] 보기의 출력 단추만
@@ -418,17 +410,26 @@ export function QrPoints({ onToast }) {
       {/* ── 전체 선택 (2026-11-02, 사용자 요청) ─────────────────────────────────
           **필터 결과 전부**를 고른다 — 쪽을 넘겨도 남는다. 처음에는 [QR] 보기에만 「이 쪽 모두
           선택」(지금 보이는 20장)으로 섰는데, 이름을 「전체 선택」으로 바꾸면서 하는 일도 이름에
-          맞췄고 두 보기에 같이 세웠다. 표 머리의 체크박스는 그대로 **보이는 줄만** 고른다 */}
-      {filtered.length ? (
-        <label style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
-          marginBottom: "var(--space-3)", fontSize: "var(--fs-label)", color: "var(--text-body)", cursor: "pointer" }}>
-          <input type="checkbox" checked={allFilteredOn}
-            ref={el => { if (el) el.indeterminate = !allFilteredOn && list0.selected.length > 0; }}
-            onChange={() => list0.setSelected(allFilteredOn ? [] : filtered.map(p => p.id))}
-            style={{ width: 18, height: 18, margin: 0, accentColor: "var(--brand-primary)", cursor: "pointer" }} />
-          전체 선택
-        </label>
-      ) : null}
+          맞췄고 두 보기에 같이 세웠다. 표 머리의 체크박스는 그대로 **보이는 줄만** 고른다.
+          같은 줄 오른쪽 끝이 [목록]/[QR] 전환이다 — 결과가 없어도 전환은 선다 */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap",
+        gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
+        {filtered.length ? (
+          <label style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)",
+            fontSize: "var(--fs-label)", color: "var(--text-body)", cursor: "pointer" }}>
+            <input type="checkbox" checked={allFilteredOn}
+              ref={el => { if (el) el.indeterminate = !allFilteredOn && list0.selected.length > 0; }}
+              onChange={() => list0.setSelected(allFilteredOn ? [] : filtered.map(p => p.id))}
+              style={{ width: 18, height: 18, margin: 0, accentColor: "var(--brand-primary)", cursor: "pointer" }} />
+            전체 선택
+          </label>
+        ) : <span />}
+        <SegmentedTabs variant="pill" value={view} onChange={setView} aria-label="보기 전환"
+          items={[
+            { id: VIEW_LIST, label: "목록", icon: "list" },
+            { id: VIEW_QR, label: "QR", icon: "qr-code" },
+          ]} />
+      </div>
 
       {view === VIEW_QR ? (
         /* [QR] 보기 — 표와 같은 행이고, 쪽 크기는 한 줄 장수에 맞춘다(qrPageSize). 예전
