@@ -45,6 +45,7 @@
 | S11 잘못된 QR (미등록 · 훼손/철거) | **완료** | `boot/EntryFallback.jsx` — `?qr=<없는코드>` |
 | S11-A 비활성 QR 안내 (설치 완료 전) | **완료** | `boot/EntryFallback.jsx` — 같은 컴포넌트의 `pending` 갈래 (`?qr=m-3`) |
 | S11-B 네트워크 오류 | **완료** | `boot/EntryFallback.jsx` — 같은 컴포넌트의 `error` 갈래 (`?net=fail`). 여기만 [다시 시도]가 있다 |
+| 만족도 조사 카드 | **완료 (2026-11-09)** | `main/data/survey.js`(조건 · 재노출 · 저장) + 디자인 시스템 `SurveyPrompt` — 셸이 상세 오버레이 위 하단에 띄운다. 검수 `?survey=reset` · `?survey=1`. 명세 `docs/spec/citizen-survey.md` |
 | S14 축제 팜플렛 진입 안내 | **완료 (예비 화면 — 도입 미확정)** | `main/MainApp.jsx` — 셸 위의 `WelcomeDialog` (`?pamphlet=<축제 id>` 플래그로만 열린다). 문구 표는 같은 파일의 `PAMPHLET_COPY` |
 
 ### 진입은 셸보다 앞에서 갈라진다 (2026-08-18)

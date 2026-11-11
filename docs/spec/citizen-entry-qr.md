@@ -135,6 +135,7 @@
 | `?district=none` | 현재 상점가 없음 → 상점가 탭이 S03-E 로, 코치마크 둘째 걸음 제외 | `MainApp` `noDistrict` |
 | `?coach=1` | 코치마크를 연다 (**유일한 입구** — 첫 진입에서 자동으로 뜨지 않는다, 2026-10-19). 닫아도 기억하지 않는다 | `useCoachMarks(force)` |
 | `?pamphlet=<축제 id>` | S14 대화상자를 연다 (아래 6장). 이 플래그가 있으면 3장의 해시 갈아 끼우기를 하지 않는다 | `MainApp` |
+| `?survey=reset` · `?survey=1` | 만족도 조사 기록을 지우고 시작 · 지우고 바로 띄운다 (`citizen-survey.md`) | `MainApp` → `data/survey.js` |
 | `?coupon=1` | 쿠폰 흐름을 셸 앞에 세운다 (저장된 상태가 있으면 그 자리에서 이어감) | `App` |
 | `?coupon=reset` | 쿠폰 저장 상태를 지우고 처음부터 | `CouponFlow` |
 | `&plan=b` | 쿠폰 B안(간편 가입 후 발급). 그 밖은 A안 | `couponPlan` |

@@ -58,6 +58,8 @@ export { FloatingControls } from "./components/feedback/FloatingControls.jsx";
 export { CoachMarks } from "./components/feedback/CoachMarks.jsx";
 /* 화면 한가운데 서서 한 마디 하고 갈 길을 내주는 대화상자 (U-CM-20 축제 팜플렛 진입) */
 export { WelcomeDialog } from "./components/feedback/WelcomeDialog.jsx";
+/* 화면 아래에서 만족도 한 문항을 묻는 카드 (2026-11-09). 언제 띄울지는 부르는 쪽이 안다 */
+export { SurveyPrompt, SURVEY_SCALE } from "./components/feedback/SurveyPrompt.jsx";
 export { EmptyState } from "./components/feedback/EmptyState.jsx";
 export { LoadingBar } from "./components/feedback/LoadingBar.jsx";
 export { ProgressBar } from "./components/feedback/ProgressBar.jsx";

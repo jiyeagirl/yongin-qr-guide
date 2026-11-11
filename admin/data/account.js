@@ -49,6 +49,7 @@ export const ALL_PAGES = [
   "facilities",
   "qr",
   "reports",
+  "survey",
   /* "asof"(데이터 갱신 현황)가 여기 있었다 (2026-08-25 삭제) — 그 앞줄의 "settings"
      (환경 설정)와 같은 이유다. 둘 다 AdminApp 의 NAV 주석이 사연을 적는다 */
   "accounts",

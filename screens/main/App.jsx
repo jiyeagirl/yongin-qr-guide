@@ -96,7 +96,7 @@ export function App() {
   return (
     <>
       <MainApp qr={result ? result.point : null} noDistrict={flags.noDistrict}
-        forceCoach={flags.coach} pamphlet={flags.pamphlet} />
+        forceCoach={flags.coach} pamphlet={flags.pamphlet} survey={flags.survey} />
       {/* 언제나 서 있다 — 팝업은 없고, 축제 상세의 쿠폰 칸(CouponCard)이 부를 때만 쿠폰 화면이 열린다 */}
       <FestivalCoupon />
     </>

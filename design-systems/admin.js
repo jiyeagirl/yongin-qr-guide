@@ -63,6 +63,8 @@ export { FESTIVAL_STATES, FESTIVAL_STATE_TONE, FESTIVAL_BADGE_TONE, festivalTone
 
 /* ── 공용: 알림 ──────────────────────────────────────────────────────────── */
 export { Notice, Toast, EmptyState, LoadingBar, ProgressBar } from "./index.js";
+/* 만족도 5단계(이모지 · 이름) — 관리자 [사용자 만족도 조사]가 시민 카드와 같은 표를 읽는다 (2026-11-09) */
+export { SURVEY_SCALE } from "./index.js";
 
 /* ── 공용: 그 밖 ─────────────────────────────────────────────────────────── */
 export { SegmentedTabs, StatTile, token, josa, eul } from "./index.js";

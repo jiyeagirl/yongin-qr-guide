@@ -12,6 +12,7 @@
 | citizen-facility-tab.md | 공공시설 탭: 목록·반경·안전 안내 |
 | citizen-discover-festival.md | 둘러보기 탭, 축제 목록·상세, 코스, S14 |
 | citizen-detail-route-report.md | 해시 라우터 오버레이, 상점·시설 상세, 도보 길찾기, 오류신고 |
+| citizen-survey.md | 사용자 만족도 조사: 노출 조건 · 시점, 재노출 제어, 저장 항목, 검수 플래그, 관리자 보기(M17) |
 | citizen-map-overlay.md | 지도 레이어, 바텀시트 스냅, 패딩, 지도 인스턴스 유지 |
 | data-and-policy.md | 더미 데이터, 업종 칩 매핑, 구역·온누리 판정, 공통 UI 정책 |
 

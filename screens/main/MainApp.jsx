@@ -2,7 +2,7 @@ import React from "react";
 import { flushSync } from "react-dom";
 import {
   ContextBar, KakaoMap, MapPreviewCard, MapFilterOverlay, InlineSelect, Sheet, Toast, TabBar, FloatingControls,
-  CoachMarks, WelcomeDialog,
+  CoachMarks, WelcomeDialog, SurveyPrompt,
   DistrictSummary, FacilitySummary, FacilityIcon, FACILITY_LABELS, FACILITY_TYPES, SAFETY,
   Icon, Mascot, token, VisuallyHidden, eun, i as iJosa,
 } from "../../design-systems/index.js";
@@ -34,6 +34,7 @@ import { StoreList } from "../detail/StoreList.jsx";
 import { RouteView } from "../detail/RouteView.jsx";
 import { useHashRoute, go, replace, back, closeAll } from "./router.js";
 import { useCoachMarks } from "./data/coachMarks.js";
+import { useSurvey, SURVEY_QUESTION } from "./data/survey.js";
 import { KAKAO_APP_KEY, TAB_MAP_LEVEL, FACILITY_AS_OF, STORE_AS_OF,
   DISTRICT_LIST_PAGE_SIZE, PAGE_SIZE } from "./config.js";
 
@@ -216,7 +217,7 @@ function receiptNo(now = new Date()) {
   return `YG-${day}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
 }
 
-export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pamphlet = null }) {
+export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pamphlet = null, survey: surveyFlag = null }) {
   /* `nearby`(U-ST-07 주변 공공시설 4줄)가 여기서 합쳐졌다 — 읽는 화면이 없어져 함께
      걷어냈다 (2026-08-24. DistrictSheet 의 해당 자리 주석 · facilities.js 의 U-ST-07 항목).
      축제는 그대로다: 6건이 32개소에 흩어져 있어 `districts.js` 가 소유하고, 여기서
@@ -369,6 +370,13 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
     return id ? FESTIVALS.find(f => f.id === id) || null : null;
   }, [pamphlet, qr]);
   const [pamphletOpen, setPamphletOpen] = React.useState(Boolean(pamphletFestival));
+
+  /* 만족도 조사 (2026-11-09) — 노출 조건 · 재노출 제어 · 저장은 data/survey.js. 코치마크는 셸에서만 뜨므로
+     그 조건(`route.name === "main"`)까지 함께 본다. 신고 폼을 쓰는 중에도 비켜선다 */
+  const survey = useSurvey(route, {
+    paused: (pamphletOpen && route.name === "main") || (coachOpen && route.name === "main") || route.name === "report",
+    flag: surveyFlag,
+  });
 
   /* ── S03 상점가: 필터 + 정렬 ──────────────────────────────────────────
      목록과 지도 마커가 같은 배열을 본다 (U-ST-10/11/12/15 → U-ST-13).
@@ -1558,6 +1566,15 @@ export function MainApp({ qr = null, noDistrict = false, forceCoach = false, pam
              지도 영역이 아니라 **루트의 자식**이다. 지도 영역 안에 두면 탭바(형제, z 450)를
              덮지 못해 상세 화면 아래에 탭바가 남는다. 상세는 페이지이지 시트가 아니다. */}
       {detail}
+
+      {/* ── 만족도 조사 (2026-11-09) — z-prompt 650 ──────────────────────────
+             상세 오버레이(600) 위, 토스트(700) 아래다. 언제 뜨는지는 data/survey.js 가 정하고
+             여기는 자리만 준다. 다른 막(팜플렛 안내 · 코치마크)이 떠 있거나 신고 폼을 쓰는
+             중이면 비켜서 있다가 그것이 닫히면 뜬다 (`paused`). */}
+      {survey.phase ? (
+        <SurveyPrompt question={SURVEY_QUESTION} step={survey.phase}
+          onSubmit={survey.submit} onComment={survey.comment} onClose={survey.close} onNever={survey.never} />
+      ) : null}
 
       {/* ── 토스트 — 항상 최상단 (z 700) ────────────────────────────────────
              오버레이(z 600)보다 위에 있어야 상세 화면의 "주소를 복사했습니다"가 보인다.

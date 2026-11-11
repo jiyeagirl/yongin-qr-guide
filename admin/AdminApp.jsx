@@ -15,6 +15,7 @@ import { Courses } from "./pages/Courses.jsx";
 import { Facilities } from "./pages/Facilities.jsx";
 import { QrPoints } from "./pages/QrPoints.jsx";
 import { Reports } from "./pages/Reports.jsx";
+import { Survey } from "./pages/Survey.jsx";
 /* `./pages/DataAsOf.jsx` 가 여기 있었다 (2026-08-25 삭제. 아래 NAV 주석) */
 import { Accounts } from "./pages/Accounts.jsx";
 
@@ -101,6 +102,11 @@ const NAV = [
   { section: "민원 관리" },
   { key: "reports", label: "오류신고 관리", icon: "inbox" },
 
+  /* 시민 화면의 만족도 카드로 들어온 응답 (2026-11-09, 사용자 요청). 조회만 한다 — 민원이 아니라
+     서비스에 대한 평가라 「민원 관리」와 나눈다 */
+  { section: "이용자 의견" },
+  { key: "survey", label: "사용자 만족도 조사", icon: "smile" },
+
   { section: "시스템 운영" },
   /* ── [데이터 갱신 현황]이 여기 있었다 (2026-08-25 삭제, 사용자 요청) ──────────
      카테고리별 기준일과 그것이 시민 화면 하단에 어떤 문장으로 나가는지를 **보여주기만**
@@ -121,6 +127,7 @@ const PAGES = {
   facilities: Facilities,
   qr: QrPoints,
   reports: Reports,
+  survey: Survey,
   accounts: Accounts,
 };
 

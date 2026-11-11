@@ -355,6 +355,8 @@ export function readReviewFlags(loc = typeof location !== "undefined" ? location
   const pamphlet = (p.get("pamphlet") || "").trim();
   /* ?coupon=1 축제 쿠폰 흐름을 셸 앞에 세운다 · ?coupon=reset 저장된 상태를 지우고 처음부터 · &plan=b B안(간편 가입 후 발급) */
   const coupon = (p.get("coupon") || "").trim();
+  /* ?survey=reset 만족도 조사 기록을 지우고 시작 · ?survey=1 지우고 바로 띄운다 (data/survey.js) */
+  const survey = (p.get("survey") || "").trim();
   return {
     couponPlan: p.get("plan") === "b" ? "b" : "a",
     coupon: coupon === "1" || coupon === "reset" ? coupon : null,
@@ -362,6 +364,7 @@ export function readReviewFlags(loc = typeof location !== "undefined" ? location
     netFail: p.get("net") === "fail",
     coach: p.get("coach") === "1",
     pamphlet: pamphlet || null,
+    survey: survey === "1" || survey === "reset" ? survey : null,
   };
 }
 
