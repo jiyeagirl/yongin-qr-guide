@@ -17,7 +17,7 @@ import { useListState, ListSearch, SearchHint } from "./useListState.js";
  *   응답 일시 · 응답 값 · 페이지 유형과 항목(ID) · QR 유입 위치 · 이유(고르게 쓴 것)
  * URL 파라미터 원문 · 어느 때 떴는지 같은 나머지는 줄을 눌러 여는 상세에 둔다.
  *
- * 위 네 칸(응답 수 · 평균 · 만족 비율 · 이유 작성)과 점수 분포는 **지금 걸린 필터**를 따른다 —
+ * 위 네 칸(응답 수 · 평균 · CSAT · 이유 작성)과 점수 분포는 **지금 걸린 필터**를 따른다 —
  * 「축제 페이지에서 받은 점수」처럼 좁혀 보는 것이 이 화면을 여는 이유다.
  */
 
@@ -78,7 +78,7 @@ export function Survey() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "var(--space-4)" }}>
         <StatTile label="응답 수" value={total.toLocaleString("ko-KR")} unit="건" icon="inbox" tone="brand" />
         <StatTile label="평균 만족도" value={total ? avg.toFixed(1) : "-"} unit="/ 5" icon="smile" />
-        <StatTile label="만족 비율 (만족 · 매우 만족)" value={total ? Math.round((good / total) * 100) : "-"} unit="%" icon="heart" />
+        <StatTile label="CSAT (만족·매우 만족 비율)" value={total ? Math.round((good / total) * 100) : "-"} unit="%" icon="heart" />
         <StatTile label="이유 작성" value={commented.toLocaleString("ko-KR")} unit="건" icon="message-square" />
       </div>
 
