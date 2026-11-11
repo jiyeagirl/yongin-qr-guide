@@ -41,26 +41,21 @@ export function Survey() {
   const rows = React.useMemo(() => readSurveyResponses(), []);
   const [pageType, setPageType] = React.useState("");
   const [value, setValue] = React.useState("");
-  const [qr, setQr] = React.useState("");
-  const list0 = useListState([pageType, value, qr]);
+  /* 필터는 응답 값 → 페이지 유형 → 검색 순. QR 유입 위치 필터는 뺐다(2026-11-11, 사용자 요청 — 굳이 필요 없다).
+     QR 유입 위치는 표의 열과 상세에 그대로 남는다 */
+  const list0 = useListState([value, pageType]);
   const [open, setOpen] = React.useState(null);
-
-  const qrOptions = React.useMemo(() => {
-    const codes = Array.from(new Set(rows.map(r => r.qr).filter(Boolean))).sort();
-    return codes.map(c => [c, qrName(c) ? `${c} ${qrName(c)}` : c]);
-  }, [rows]);
 
   const filtered = React.useMemo(() => rows
     .filter(r => {
-      if (pageType && r.pageType !== pageType) return false;
       if (value && String(r.value) !== value) return false;
-      if (qr && r.qr !== qr) return false;
+      if (pageType && r.pageType !== pageType) return false;
       if (!list0.term) return true;
       const name = itemName(r.pageType, r.itemId) || "";
       return name.includes(list0.term) || String(r.comment || "").includes(list0.term);
     })
     .sort((a, b) => String(b.answeredAt).localeCompare(String(a.answeredAt))),
-  [rows, pageType, value, qr, list0.term]);
+  [rows, value, pageType, list0.term]);
 
   const paged = list0.paginate(filtered);
 
@@ -108,11 +103,10 @@ export function Survey() {
       </div>
 
       <Toolbar style={{ marginTop: "var(--space-6)" }}>
-        <Select value={pageType} options={opt(Object.entries(PAGE_TYPE_LABEL), "전체 페이지 유형")}
-          onChange={e => setPageType(e.target.value)} />
         <Select value={value} options={opt(SURVEY_SCALE.slice().reverse().map(s => [s.value, `${s.emoji} ${s.label}`]), "전체 응답 값")}
           onChange={e => setValue(e.target.value)} />
-        <Select value={qr} options={opt(qrOptions, "전체 QR 유입 위치")} onChange={e => setQr(e.target.value)} />
+        <Select value={pageType} options={opt(Object.entries(PAGE_TYPE_LABEL), "전체 페이지 유형")}
+          onChange={e => setPageType(e.target.value)} />
         <ListSearch state={list0} placeholder="항목명, 이유 검색" />
         <SearchHint state={list0} />
       </Toolbar>
